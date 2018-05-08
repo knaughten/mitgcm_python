@@ -29,7 +29,7 @@ import sys
 def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Check for conflicting arguments
-    if time_index is not None and time_average=True:
+    if time_index is not None and time_average==True:
         print 'Error (read_netcdf.py): you selected a specific time index (time_index=' + str(time_index) + '), and also want time averaging (time_average=True). Choose one or the other.'
         sys.exit()
 
@@ -56,11 +56,17 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
         t_end = num_time
 
     # Now read the variable
-    data = id.variables[var_name][t_start:t_end,:]
+    if time_index is not None:
+        data = id.variables[var_name][time_index,:]
+    else:
+        data = id.variables[var_name][t_start:t_end,:]
     id.close()
 
     # Time-average if necessary
     if time_average:
         data = np.mean(data, axis=0)
+
+    # Remove any one-dimensional entries
+    data = np.squeeze(data)
 
     return data
