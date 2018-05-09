@@ -1,3 +1,0 @@
-util/
-
-read_netcdf.py: Read a single variable from a NetCDF file. You can read the entire record, a specific time index, a range of time indices, and/or time-average.
