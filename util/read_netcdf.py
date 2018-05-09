@@ -2,6 +2,8 @@ import netCDF4 as nc4
 import numpy as np
 import sys
 
+# FUNCTION read_netcdf
+
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
 
 # Arguments:
@@ -13,6 +15,8 @@ import sys
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
+
+# Output: numpy array containing the variable
 
 # Examples:
 # Read the entire record:
