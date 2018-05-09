@@ -10,8 +10,8 @@ import numpy as np
 def fix_lon_range (lon):
 
     index = lon > 180
-    lon[index] = lon[index] + 360
-    index = lon < -180
     lon[index] = lon[index] - 360
+    index = lon < -180
+    lon[index] = lon[index] + 360
 
     return lon

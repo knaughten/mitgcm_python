@@ -13,6 +13,7 @@ import sys
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
+# mask: boolean indicating to mask values that are identically zero. Default True.
 
 # Output: numpy array containing the variable
 
@@ -28,7 +29,7 @@ import sys
 # Read the last 12 time indices and time-average:
 # temp = read_netcdf('temp.nc', 'temp', t_start=-12, time_average=True)
 
-def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
+def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False, mask=True):
 
     # Check for conflicting arguments
     if time_index is not None and time_average==True:
@@ -40,39 +41,50 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
     # Figure out if this variable is time-dependent. We consider this to be the case if the name of its first dimension clearly looks like a time variable (not case sensitive) or if its first dimension is unlimited.
     first_dim = id.variables[var_name].dimensions[0]
+
     if first_dim.upper() in ['T', 'TIME', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'SECOND', 'TIME_INDEX', 'DELTAT'] or id.dimensions[first_dim].isunlimited():
-        time_dependent = True
+        # Time-dependent
+
         num_time = id.dimensions[first_dim].size
         # Make sure the variable itself isn't time
         if len(id.variables[var_name].shape) == 1:
             print 'Error (read_netcdf.py): you are trying to read the time variable. Use netcdf_time.py instead.'
             sys.exit()
+
+        # Choose range of time values to consider
+        # If t_start and/or t_end are already set, use those bounds
+        # Otherwise, start at the first time_index and/or end at the last time_index in the file
+        if t_start is None:
+            t_start = 0
+        if t_end is None:
+            t_end = num_time
+
+        # Now read the variable
+        if time_index is not None:
+            data = id.variables[var_name][time_index,:]
+        else:
+            data = id.variables[var_name][t_start:t_end,:]
+        id.close()
+
+        # Time-average if necessary
+        if time_average:
+            data = np.mean(data, axis=0)    
+
     else:
-        time_dependent = False
+        # Not time-dependent
+
         if time_index is not None or time_average==True or t_start is not None or t_end is not None:
             print 'Error (read_netcdf.py): you want to do something fancy with the time dimension of variable ' + var_name + ' in file ' + file_path + ', but this does not appear to be a time-dependent variable.'
             sys.exit()
 
-    # Choose range of time values to consider
-    # If t_start and/or t_end are already set, use those bounds
-    # Otherwise, start at the first time_index and/or end at the last time_index in the file
-    if t_start is None:
-        t_start = 0
-    if t_end is None:
-        t_end = num_time
-
-    # Now read the variable
-    if time_index is not None:
-        data = id.variables[var_name][time_index,:]
-    else:
-        data = id.variables[var_name][t_start:t_end,:]
-    id.close()
-
-    # Time-average if necessary
-    if time_average:
-        data = np.mean(data, axis=0)
+        # Read the variable
+        data = id.variables[var_name][:]
 
     # Remove any one-dimensional entries
     data = np.squeeze(data)
+
+    # Mask
+    if mask:
+        data = np.ma.masked_where(data==0, data)        
 
     return data

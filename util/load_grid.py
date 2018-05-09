@@ -81,25 +81,24 @@ class Grid:
             # Vertical grid
             # Assumes we're in the ocean so using z-levels - not sure how this
             # would handle atmospheric pressure levels.
-            # Flip everything so it starts from the surface.
             # Depth axis at centres of z-levels
-            self.z = flip(read_netcdf(path, 'Z'), 0)
+            self.z = read_netcdf(path, 'Z')
             # Depth axis at edges of z-levels
-            self.z_edges = flip(read_netcdf(path, 'Zp1'), 0)
+            self.z_edges = read_netcdf(path, 'Zp1')
 
             # Vertical integrands of distance
             # Across cells
-            self.dz = flip(read_netcdf(path, 'drF'), 0)
+            self.dz = read_netcdf(path, 'drF')
             # Between centres
-            self.dz_t = flip(read_netcdf(path, 'drC'), 0)
+            self.dz_t = read_netcdf(path, 'drC')
 
             # Partial cell fractions
             # At centres
-            self.hfac = flip(read_netcdf(path, 'HFacC'), 0)
+            self.hfac = read_netcdf(path, 'HFacC')
             # At u-points
-            self.hfac_u = flip(read_netcdf(path, 'HFacW'), 0)
+            self.hfac_u = read_netcdf(path, 'HFacW')
             # At v-points
-            self.hfac_v = flip(read_netcdf(path, 'HFacS'), 0)
+            self.hfac_v = read_netcdf(path, 'HFacS')
 
             # Topography
             # Bathymetry (bottom depth)
@@ -108,6 +107,15 @@ class Grid:
             self.zice = read_netcdf(path, 'Ro_surf')
             # Water column thickness
             self.wct = read_netcdf(path, 'Depth')
+
+            # Create a couple of masks
+            self.land_mask = self.bathy == 0
+            self.zice_mask = self.zice == 0
+
+            # Apply land mask to the topography
+            self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
+            self.zice = np.ma.masked_where(self.land_mask, self.zice)
+            self.wct = np.ma.masked_where(self.land_mask, self.wct)
 
         else:
 
