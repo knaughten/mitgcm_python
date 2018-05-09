@@ -41,6 +41,10 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     if first_dim.upper() in ['T', 'TIME', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'SECOND', 'TIME_INDEX', 'DELTAT'] or id.dimensions[first_dim].isunlimited():
         time_dependent = True
         num_time = id.dimensions[first_dim].size
+        # Make sure the variable itself isn't time
+        if len(id.variables[var_name].shape) == 1:
+            print 'Error (read_netcdf.py): you are trying to read the time variable. Use netcdf_time.py instead.'
+            sys.exit()
     else:
         time_dependent = False
         if time_index is not None or time_average==True or t_start is not None or t_end is not None:
