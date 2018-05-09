@@ -42,13 +42,12 @@ def netcdf_time (file_path, var_name='T', t_start=None, t_end=None, return_date=
         t_end = num_time
 
     # Read the variable
-    time
     if return_date:
         # Return as handy Date objects
-        time = nc4.num2date(time_id[:], units=time_id.units, calendar=time_id.calendar.lower())
+        time = nc4.num2date(time_id[t_start:t_end], units=time_id.units)
     else:
         # Return just as scalar values
-        time = time_id[:]
+        time = time_id[t_start:t_end]
     id.close()
 
     return time
