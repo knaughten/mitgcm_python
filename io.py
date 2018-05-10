@@ -1,4 +1,4 @@
-import netCDF4 as nc4
+import netCDF4 as nc
 import numpy as np
 import sys
 from utils import fix_lon_range
@@ -39,7 +39,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
         sys.exit()
 
     # Open the file
-    id = nc4.Dataset(file_path, 'r')
+    id = nc.Dataset(file_path, 'r')
 
     # Figure out if this variable is time-dependent. We consider this to be the case if the name of its first dimension clearly looks like a time variable (not case sensitive) or if its first dimension is unlimited.
     first_dim = id.variables[var_name].dimensions[0]
@@ -121,7 +121,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
 
     # Open the file and get the length of the record
-    id = nc4.Dataset(file_path, 'r')
+    id = nc.Dataset(file_path, 'r')
     time_id = id.variables[var_name]    
     num_time = time_id.size
 
@@ -136,7 +136,7 @@ def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_da
     # Read the variable
     if return_date:
         # Return as handy Date objects
-        time = nc4.num2date(time_id[t_start:t_end], units=time_id.units)
+        time = nc.num2date(time_id[t_start:t_end], units=time_id.units)
     else:
         # Return just as scalar values
         time = time_id[t_start:t_end]
