@@ -99,7 +99,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 # file_path: path to NetCDF file to read
 
 # Optional keyword arguments
-# var_name: name of time axis. Default 'T'.
+# var_name: name of time axis. Default 'TIME'.
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
@@ -109,8 +109,8 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 # Examples:
 # Read the entire time axis as Date objects:
 # time = netcdf_time('sample.nc')
-# Read a time axis which is named something other than 'T':
-# time = netcdf_time('sample.nc', var_name='time')
+# Read a time axis which is named something other than 'TIME':
+# time = netcdf_time('sample.nc', var_name='T')
 # Read only the first 12 time indices:
 # time = netcdf_time('sample.nc', t_end=12)
 # Read only the last 12 time indices:
@@ -118,7 +118,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 # Return as scalars rather than Date objects:
 # time = netcdf_time('sample.nc', return_date=False)
 
-def netcdf_time (file_path, var_name='T', t_start=None, t_end=None, return_date=True):
+def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
 
     # Open the file and get the length of the record
     id = nc4.Dataset(file_path, 'r')
@@ -149,16 +149,12 @@ def netcdf_time (file_path, var_name='T', t_start=None, t_end=None, return_date=
 # Load all the useful grid variables and store them in a Grid object.
 
 # (Initialisation) Arguments:
-# path: path to NetCDF grid file (if nc=True) or run directory containing all the binary grid files (if nc=False)
-# nc: Default True. If False, reads the grid from binary files instead of from a NetCDF file.
+# file_path: path to NetCDF grid file
 
 # Output: Grid object containing lots of grid variables - read comments in code to find them all.
 
-# Examples:
-# Read grid from NetCDF file:
+# Example:
 # grid = Grid('grid.nc')
-# Read grid from binary files in run directory
-# grid = Grid('../run/', nc=False)
 # A few of the grid variables:
 # grid.lon_2d
 # grid.lat_2d
@@ -168,95 +164,87 @@ def netcdf_time (file_path, var_name='T', t_start=None, t_end=None, return_date=
 
 class Grid:
     
-    def __init__ (self, path, nc=True):
+    def __init__ (self, file_path):
 
-        if nc:
-            # Read grid from a NetCDF file
+        # 1D lon and lat axes on regular grids
+        # Make sure longitude is between -180 and 180
+        # Cell centres
+        self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'))
+        self.lat_1d = read_netcdf(file_path, 'Y')
+        # Cell corners
+        self.lon_psi_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'))
+        self.lat_psi_1d = read_netcdf(file_path, 'Yp1')
 
-            # 1D lon and lat axes on regular grids
-            # Make sure longitude is between -180 and 180
-            # Cell centres
-            self.lon_1d = fix_lon_range(read_netcdf(path, 'X'))
-            self.lat_1d = read_netcdf(path, 'Y')
-            # Cell corners
-            self.lon_psi_1d = fix_lon_range(read_netcdf(path, 'Xp1'))
-            self.lat_psi_1d = read_netcdf(path, 'Yp1')
+        # 2D lon and lat fields on any grid
+        # Cell centres
+        self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'))
+        self.lat_2d = read_netcdf(file_path, 'YC')
+        # Cell corners
+        self.lon_psi_2d = fix_lon_range(read_netcdf(file_path, 'XG'))
+        self.lat_psi_2d = read_netcdf(file_path, 'YG')
 
-            # 2D lon and lat fields on any grid
-            # Cell centres
-            self.lon_2d = fix_lon_range(read_netcdf(path, 'XC'))
-            self.lat_2d = read_netcdf(path, 'YC')
-            # Cell corners
-            self.lon_psi_2d = fix_lon_range(read_netcdf(path, 'XG'))
-            self.lat_psi_2d = read_netcdf(path, 'YG')
+        # 2D integrands of distance
+        # Across faces
+        self.dx = read_netcdf(file_path, 'dxF')
+        self.dy = read_netcdf(file_path, 'dyF')
+        # Between centres
+        self.dx_t = read_netcdf(file_path, 'dxC')
+        self.dy_t = read_netcdf(file_path, 'dyC')
+        # Between u-points
+        self.dx_u = self.dx  # Equivalent to distance across face
+        self.dy_u = read_netcdf(file_path, 'dyU')
+        # Between v-points
+        self.dx_v = read_netcdf(file_path, 'dxV')
+        self.dy_v = self.dy  # Equivalent to distance across face
+        # Between corners
+        self.dx_psi = read_netcdf(file_path, 'dxG')
+        self.dy_psi = read_netcdf(file_path, 'dyG')
 
-            # 2D integrands of distance
-            # Across faces
-            self.dx = read_netcdf(path, 'dxF')
-            self.dy = read_netcdf(path, 'dyF')
-            # Between centres
-            self.dx_t = read_netcdf(path, 'dxC')
-            self.dy_t = read_netcdf(path, 'dyC')
-            # Between u-points
-            self.dx_u = self.dx  # Equivalent to distance across face
-            self.dy_u = read_netcdf(path, 'dyU')
-            # Between v-points
-            self.dx_v = read_netcdf(path, 'dxV')
-            self.dy_v = self.dy  # Equivalent to distance across face
-            # Between corners
-            self.dx_psi = read_netcdf(path, 'dxG')
-            self.dy_psi = read_netcdf(path, 'dyG')
+        # 2D integrands of area
+        # Area of faces
+        self.dA = read_netcdf(file_path, 'rA')
+        # Centered on u-points
+        self.dA_u = read_netcdf(file_path, 'rAw')
+        # Centered on v-points
+        self.dA_v = read_netcdf(file_path, 'rAs')
+        # Centered on corners
+        self.dA_psi = read_netcdf(file_path, 'rAz')
 
-            # 2D integrands of area
-            # Area of faces
-            self.dA = read_netcdf(path, 'rA')
-            # Centered on u-points
-            self.dA_u = read_netcdf(path, 'rAw')
-            # Centered on v-points
-            self.dA_v = read_netcdf(path, 'rAs')
-            # Centered on corners
-            self.dA_psi = read_netcdf(path, 'rAz')
+        # Vertical grid
+        # Assumes we're in the ocean so using z-levels - not sure how this
+        # would handle atmospheric pressure levels.
+        # Depth axis at centres of z-levels
+        self.z = read_netcdf(file_path, 'Z')
+        # Depth axis at edges of z-levels
+        self.z_edges = read_netcdf(file_path, 'Zp1')
 
-            # Vertical grid
-            # Assumes we're in the ocean so using z-levels - not sure how this
-            # would handle atmospheric pressure levels.
-            # Depth axis at centres of z-levels
-            self.z = read_netcdf(path, 'Z')
-            # Depth axis at edges of z-levels
-            self.z_edges = read_netcdf(path, 'Zp1')
+        # Vertical integrands of distance
+        # Across cells
+        self.dz = read_netcdf(file_path, 'drF')
+        # Between centres
+        self.dz_t = read_netcdf(file_path, 'drC')
 
-            # Vertical integrands of distance
-            # Across cells
-            self.dz = read_netcdf(path, 'drF')
-            # Between centres
-            self.dz_t = read_netcdf(path, 'drC')
+        # Partial cell fractions
+        # At centres
+        self.hfac = read_netcdf(file_path, 'HFacC')
+        # At u-points
+        self.hfac_u = read_netcdf(file_path, 'HFacW')
+        # At v-points
+        self.hfac_v = read_netcdf(file_path, 'HFacS')
 
-            # Partial cell fractions
-            # At centres
-            self.hfac = read_netcdf(path, 'HFacC')
-            # At u-points
-            self.hfac_u = read_netcdf(path, 'HFacW')
-            # At v-points
-            self.hfac_v = read_netcdf(path, 'HFacS')
+        # Topography
+        # Bathymetry (bottom depth)
+        self.bathy = read_netcdf(file_path, 'R_low')
+        # Ice shelf draft (surface depth)
+        self.zice = read_netcdf(file_path, 'Ro_surf')
+        # Water column thickness
+        self.wct = read_netcdf(file_path, 'Depth')
 
-            # Topography
-            # Bathymetry (bottom depth)
-            self.bathy = read_netcdf(path, 'R_low')
-            # Ice shelf draft (surface depth)
-            self.zice = read_netcdf(path, 'Ro_surf')
-            # Water column thickness
-            self.wct = read_netcdf(path, 'Depth')
+        # Create a couple of masks
+        self.land_mask = self.bathy == 0
+        self.zice_mask = self.zice == 0
 
-            # Create a couple of masks
-            self.land_mask = self.bathy == 0
-            self.zice_mask = self.zice == 0
-
-            # Apply land mask to the topography
-            self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
-            self.zice = np.ma.masked_where(self.land_mask, self.zice)
-            self.wct = np.ma.masked_where(self.land_mask, self.wct)
-
-        else:
-
-            print 'Error (class Grid): the code has only been written for NetCDF grids so far.'
-            sys.exit()
+        # Apply land mask to the topography
+        self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
+        self.zice = np.ma.masked_where(self.land_mask, self.zice)
+        self.wct = np.ma.masked_where(self.land_mask, self.wct)
