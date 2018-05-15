@@ -17,3 +17,12 @@ def yearly_ticks (ax):
 
     ax.xaxis.set_major_locator(dt.YearLocator())
     ax.xaxis.set_major_formatter(dt.DateFormatter('%Y'))
+
+
+# If a figure name is defined, save the figure to that file. Otherwise, display the figure on screen.
+def finished_plot (fig, fig_name=None):
+
+    if fig_name is not None:
+        fig.savefig(fig_name)
+    else:
+        fig.show()
