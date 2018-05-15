@@ -24,9 +24,9 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
     if time_dependent:
         # 4D arrays
         num_time = temp.shape[0]
-        z = np.tile(grid.z, (num_time, 1, grid.ny, grid.nx))
+        z = np.tile(np.expand_dims(np.expand_dims(grid.z,1),2), (num_time, 1, grid.ny, grid.nx))
     else:
         # 3D arrays
-        z = np.tile(grid.z, (1, grid.ny, grid.nx))
+        z = np.tile(np.expand_dims(np.expand_dims(grid.z,1),2), (1, grid.ny, grid.nx))
 
     return temp - tfreeze(temp, salt, z)
