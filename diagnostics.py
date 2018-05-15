@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+import constants as const
 
 # Helper function for t_minus_tf
 # Assumes temp, salt, z are all the same size
@@ -30,3 +31,17 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
         z = np.tile(np.expand_dims(np.expand_dims(grid.z,1),2), (1, grid.ny, grid.nx))
 
     return temp - tfreeze(temp, salt, z)
+
+
+# Calculate the total mass loss (result='massloss', default) or area-averaged melt rate (result='meltrate').
+def total_melt (ismr, dA, mask, result='massloss'):
+
+    if result == 'meltrate':
+        # Area-averaged melt rate
+        return sum(ismr*dA*mask)/sum(dA*mask)
+    elif result == 'massloss':
+        # Total mass loss
+        return sum(ismr*dA*mask)*const.rho_ice*1e-12
+
+
+

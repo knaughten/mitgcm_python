@@ -219,6 +219,11 @@ class Grid:
         # Between centres
         self.dz_t = read_netcdf(file_path, 'drC')
 
+        # Dimension lengths (on tracer grid)
+        self.nx = self.lon_1d.size
+        self.ny = self.lat_1d.size
+        self.nz = self.z.size
+
         # Partial cell fractions
         # At centres
         self.hfac = read_netcdf(file_path, 'HFacC')
@@ -226,32 +231,36 @@ class Grid:
         self.hfac_u = read_netcdf(file_path, 'HFacW')
         # At v-points
         self.hfac_v = read_netcdf(file_path, 'HFacS')
-        # Work out land mask
+        # Create land mask
         self.land_mask = np.sum(self.hfac, axis=0) == 0
 
         # Topography
         # Bathymetry (bottom depth)
         self.bathy = read_netcdf(file_path, 'R_low')
-        # Ice shelf draft (surface depth)
+        # Ice shelf draft (surface depth, 0 in land or open-ocean points)
         self.zice = read_netcdf(file_path, 'Ro_surf')
-        # Make sure open ocean points have zero ice shelf draft
+        self.zice[self.land_mask] = 0
         hfac_sfc = self.hfac[0,:]
         index = hfac_sfc == 1
-        self.zice[index] = 0
-        # Make sure land points have zero ice shelf draft
-        index = self.land_mask
         self.zice[index] = 0
         # Work out ice shelf mask
         self.zice_mask = self.zice != 0
         # Water column thickness
-        self.wct = read_netcdf(file_path, 'Depth')
+        self.wct = read_netcdf(file_path, 'Depth')        
 
         # Apply land mask to the topography
         self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
         self.zice = np.ma.masked_where(self.land_mask, self.zice)
         self.wct = np.ma.masked_where(self.land_mask, self.wct)
 
-        # Dimension lengths (on tracer grid)
-        self.nx = self.lon_1d.size
-        self.ny = self.lat_1d.size
-        self.nz = self.z.size
+        # Calculate FRIS mask
+        self.fris_mask = np.zeros(self.zice_mask.shape, dtype='bool')
+        # Identify FRIS in two parts, split along the line 45W
+        # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
+        regions = [[-85, -45, -84, -74.7], [-45, -29, -84, -77.85]]
+        for bounds in regions:
+            # Select the ice shelf points within these bounds
+            index = np.nonzero(self.zice_mask*(self.lon_2d >= bounds[0])*(self.lon_2d <= bounds[1])*(self.lat_2d >= bounds[2])*(self.lat_2d <= bounds[3]))
+            self.fris_mask[index] = True
+
+        

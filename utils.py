@@ -83,27 +83,28 @@ def apply_mask (data, mask, time_dependent=False):
 # Mask land out of a 2D field. It can be time-dependent (i.e. 3D) with the optional keyword argument.
 def mask_land (data, grid, time_dependent=False):
 
-    return apply_mask(data, grid.land_mask, time_dependent)
+    return apply_mask(data, grid.land_mask, time_dependent=time_dependent)
 
 
 # Mask land and ice shelves out of a 2D field, just leaving the open ocean. It can be time-dependent (i.e. 3D) with the optional keyword argument.
 def mask_land_zice (data, grid, time_dependent=False):
 
-    return apply_mask(data, grid.land_mask+grid.zice_mask, time_dependent)
+    return apply_mask(data, grid.land_mask+grid.zice_mask, time_dependent=time_dependent)
 
 
 # Mask land and open ocean out of a 2D field, just leaving ice shelves. It can be time-dependent (i.e. 3D) with the optional keyword argument.
-def mask_land_ocn (data, grid, time_dependent=False):
+def mask_except_zice (data, grid, time_dependent=False):
 
-    return apply_mask(data, np.invert(grid.zice_mask), time_dependent)
+    return apply_mask(data, np.invert(grid.zice_mask), time_dependent=time_dependent)
+
+
+# Mask everything except FRIS out of a 2D field. It can be time-dependent (i.e. 3D) with the optional keyword argument.
+def mask_except_fris (data, grid, time_dependent=False):
+
+    return apply_mask(data, np.invert(grid.fris_mask), time_dependent=time_dependent)
 
 
 # Apply the 3D hfac mask. It can be time-dependent (i.e. 4D) with the optional keyword argument.
 def mask_3d (data, grid, time_dependent=False):
 
-    return apply_mask(data, grid.hfac==0, time_dependent)
-
-
-    
-
-    
+    return apply_mask(data, grid.hfac==0, time_dependent=time_dependent)
