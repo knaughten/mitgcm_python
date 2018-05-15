@@ -20,7 +20,7 @@ def convert_ismr (shifwflx):
 
 
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
-# The only assumption about the input array is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
+# The only assumptions about the input array are that 1) it is masked with hfac (see mask_3d below), 2) the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
 def select_top (data):
 
     # Figure out the dimensions of the data when the vertical dimension is removed
@@ -55,6 +55,53 @@ def select_bottom (data):
     data_top = np.ma.masked_where(np.isnan(data_bottom), data_bottom)
 
     return data_bottom
+
+
+# Helper function for masking functions below
+def apply_mask (data, mask, time_dependent=False):
+
+    if time_dependent:
+        # Tile the mask in the time dimension
+        num_time = data.shape[0]
+        if len(mask.shape) == 2:
+            # Starting with a 2D mask
+            mask = np.tile(mask, (num_time, 1, 1))
+        elif len(mask.shape) == 3:
+            # Starting with a 3D mask
+            mask = np.tile(mask, (num_time, 1, 1, 1))
+        else:
+            print 'Error (apply_mask): invalid dimensions of mask'
+            sys.exit()
+
+    if len(mask.shape) != len(data.shape):
+        print 'Error (apply_mask): invalid dimensions of data'
+
+    data = np.ma.masked_where(mask, data)
+    return data
+
+
+# Mask land out of a 2D field. It can be time-dependent (i.e. 3D) with the optional keyword argument.
+def mask_land (data, grid, time_dependent=False):
+
+    return apply_mask(data, grid.land_mask, time_dependent)
+
+
+# Mask land and ice shelves out of a 2D field, just leaving the open ocean. It can be time-dependent (i.e. 3D) with the optional keyword argument.
+def mask_land_zice (data, grid, time_dependent=False):
+
+    return apply_mask(data, grid.land_mask+grid.zice_mask, time_dependent)
+
+
+# Mask land and open ocean out of a 2D field, just leaving ice shelves. It can be time-dependent (i.e. 3D) with the optional keyword argument.
+def mask_land_ocn (data, grid, time_dependent=False):
+
+    return apply_mask(data, np.invert(grid.zice_mask), time_dependent)
+
+
+# Apply the 3D hfac mask. It can be time-dependent (i.e. 4D) with the optional keyword argument.
+def mask_3d (data, grid, time_dependent=False):
+
+    return apply_mask(data, grid.hfac==0, time_dependent)
 
 
     

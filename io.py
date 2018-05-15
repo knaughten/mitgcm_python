@@ -15,7 +15,6 @@ from utils import fix_lon_range
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
-# mask: boolean indicating to mask values that are identically zero. Default True.
 
 # Output: numpy array containing the variable
 
@@ -31,7 +30,7 @@ from utils import fix_lon_range
 # Read the last 12 time indices and time-average:
 # temp = read_netcdf('temp.nc', 'temp', t_start=-12, time_average=True)
 
-def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False, mask=True):
+def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Check for conflicting arguments
     if time_index is not None and time_average==True:
@@ -84,10 +83,6 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
     # Remove any one-dimensional entries
     data = np.squeeze(data)
-
-    # Mask
-    if mask:
-        data = np.ma.masked_where(data==0, data)        
 
     return data
 
@@ -231,18 +226,25 @@ class Grid:
         self.hfac_u = read_netcdf(file_path, 'HFacW')
         # At v-points
         self.hfac_v = read_netcdf(file_path, 'HFacS')
+        # Work out land mask
+        self.land_mask = np.sum(self.hfac, axis=0) == 0
 
         # Topography
         # Bathymetry (bottom depth)
         self.bathy = read_netcdf(file_path, 'R_low')
         # Ice shelf draft (surface depth)
         self.zice = read_netcdf(file_path, 'Ro_surf')
+        # Make sure open ocean points have zero ice shelf draft
+        hfac_sfc = self.hfac[0,:]
+        index = hfac_sfc == 1
+        self.zice[index] = 0
+        # Make sure land points have zero ice shelf draft
+        index = self.land_mask
+        self.zice[index] = 0
+        # Work out ice shelf mask
+        self.zice_mask = self.zice != 0
         # Water column thickness
         self.wct = read_netcdf(file_path, 'Depth')
-
-        # Create a couple of masks
-        self.land_mask = self.bathy == 0
-        self.zice_mask = self.zice == 0
 
         # Apply land mask to the topography
         self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
