@@ -4,3 +4,4 @@ from utils import fix_lon_range, convert_ismr, select_top, select_bottom, apply_
 import constants
 from diagnostics import tfreeze, t_minus_tf, total_melt
 from timeseries import fris_melt
+from plots_1d import plot_fris_massbalance
