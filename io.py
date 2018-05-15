@@ -250,3 +250,8 @@ class Grid:
         self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
         self.zice = np.ma.masked_where(self.land_mask, self.zice)
         self.wct = np.ma.masked_where(self.land_mask, self.wct)
+
+        # Dimension lengths (on tracer grid)
+        self.nx = self.lon_1d.size
+        self.ny = self.lat_1d.size
+        self.nz = self.z.size
