@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+
 import constants as const
 
 # Helper function for t_minus_tf
@@ -33,15 +34,22 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
     return temp - tfreeze(temp, salt, z)
 
 
-# Calculate the total mass loss (result='massloss', default) or area-averaged melt rate (result='meltrate').
-def total_melt (ismr, dA, mask, result='massloss'):
+# Calculate the total mass loss or area-averaged melt rate.
+# Arguments:
+# ismr: melt rate field in m/y (no time dependency)
+# mask: boolean array which is True in the points to be included in the calculation (such as grid.fris_mask or grid.zice_mask)
+# grid: Grid object (see io.py)
+# Optional keyword argument:
+# result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
+# Output: float containing mass loss or average melt rate
+def total_melt (ismr, mask, grid, result='massloss'):
 
     if result == 'meltrate':
         # Area-averaged melt rate
-        return sum(ismr*dA*mask)/sum(dA*mask)
+        return np.sum(ismr*grid.dA*mask)/np.sum(grid.dA*mask)
     elif result == 'massloss':
         # Total mass loss
-        return sum(ismr*dA*mask)*const.rho_ice*1e-12
+        return np.sum(ismr*grid.dA*mask)*const.rho_ice*1e-12
 
 
 
