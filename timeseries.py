@@ -1,3 +1,7 @@
+#######################################################
+# Calculation of integral timeseries
+#######################################################
+
 import numpy as np
 
 from io import read_netcdf

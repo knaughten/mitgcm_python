@@ -1,9 +1,13 @@
+#######################################################
+# Offline calculation of diagnostic variables
+#######################################################
+
 import numpy as np
 import sys
 
 import constants as const
 
-# Helper function for t_minus_tf
+# Calculate the in-situ freezing point (helper function for t_minus_tf)
 # Assumes temp, salt, z are all the same size
 def tfreeze (temp, salt, z):
 

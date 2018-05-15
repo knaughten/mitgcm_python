@@ -1,3 +1,7 @@
+#######################################################
+# Miscellaneous useful tools
+#######################################################
+
 import numpy as np
 import sys
 import constants as const
