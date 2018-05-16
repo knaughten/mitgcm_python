@@ -9,7 +9,7 @@ import sys
 
 from io import Grid, read_netcdf
 from utils import convert_ismr, mask_except_zice
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, contour_iceshelf_front
 
 # Basic lon-lat plot of any variable, with no titles or special colourmaps.
 # To do: nice colourmap
@@ -39,6 +39,7 @@ def plot_ismr (ismr, grid, fig_name=None, change_points=None):
     shade_land(ax, grid)
     # Shade data
     img = ax.pcolormesh(lon, lat, var_plot, cmap=cmap)
+    contour_iceshelf_front(ax, grid)
     plt.colorbar(img)
     # Make nice axes
     latlon_axes(ax)

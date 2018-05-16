@@ -7,6 +7,8 @@ import matplotlib.dates as dt
 import matplotlib.colors as cl
 import sys
 
+from utils import mask_except_zice
+
 
 # On a timeseries plot, label every month
 def monthly_ticks (ax):
@@ -194,14 +196,17 @@ def shade_land (ax, grid):
     land = np.ma.masked_where(np.invert(grid.land_mask), grid.land_mask)
     # Prepare quadrilateral patches
     lon, lat, land_plot = cell_boundaries(land, grid)
-    # Plot
+    # Add to plot
     ax.pcolormesh(lon, lat, land_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
 
 
 # Contour the ice shelf front in black
 def contour_iceshelf_front (ax, grid):
 
-    ax.contour(grid.lon_2d, grid.lat_2d, ma.masked_where(grid.land_mask==0, grid.zice), levels=[0], colors=('black'), linestyles='solid')
+    # Find the shallowest non-zero ice shelf draft
+    zice0 = np.amax(grid.zice[grid.zice!=0])
+    # Add to plot
+    ax.contour(grid.lon_2d, grid.lat_2d, grid.zice, levels=[zice0], colors=('black'), linestyles='solid')
     
             
         
