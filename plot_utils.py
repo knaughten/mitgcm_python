@@ -66,7 +66,9 @@ def cell_boundaries (data, grid, gtype='t'):
         return grid.lon_2d, grid.lat_2d, data[...,1:,1:]
 
 
-def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
+# Set the limits of the longitude and latitude axes, and give them nice labels.
+# The limits will be the limits of the data unless you specify particular limits (set keyword arguments xmin, xmax, ymin, ymax).
+def latlon_axes (ax, xmin=None, xmax=None, ymin=None, ymax=None):
 
     # Set limits on axes
     if [xmin, xmax, ymin, ymax].count(None) == 0:
@@ -74,7 +76,7 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
     else:
-        # Just set to the boundaries of the lon and lat axes
+        # Just set to the boundaries of the lon and lat axes        
         ax.axis('tight')
 
     # Check location of ticks
@@ -194,6 +196,12 @@ def shade_land (ax, grid):
     lon, lat, land_plot = cell_boundaries(land, grid)
     # Plot
     ax.pcolormesh(lon, lat, land_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+
+
+# Contour the ice shelf front in black
+def contour_iceshelf_front (ax, grid):
+
+    ax.contour(grid.lon_2d, grid.lat_2d, ma.masked_where(grid.land_mask==0, grid.zice), levels=[0], colors=('black'), linestyles='solid')
     
             
         

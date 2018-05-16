@@ -19,7 +19,7 @@ def quick_plot (var, grid, gtype='t', fig_name=None):
     fig, ax = plt.subplots()
     img = ax.pcolormesh(lon, lat, var_plot)
     plt.colorbar(img)
-    latlon_axes(ax, lon, lat)
+    latlon_axes(ax)
     finished_plot(fig, fig_name=fig_name)
 
 
@@ -27,9 +27,7 @@ def quick_plot (var, grid, gtype='t', fig_name=None):
 def plot_ismr (ismr, grid, fig_name=None, change_points=None):
 
     # To do:
-    # Shade land in grey
     # Contour ice shelf front
-    # Title
 
     # Prepare quadrilateral patches
     lon, lat, var_plot = cell_boundaries(ismr, grid)
@@ -43,7 +41,8 @@ def plot_ismr (ismr, grid, fig_name=None, change_points=None):
     img = ax.pcolormesh(lon, lat, var_plot, cmap=cmap)
     plt.colorbar(img)
     # Make nice axes
-    latlon_axes(ax, lon, lat)
+    latlon_axes(ax)
+    ax.set_title('Ice shelf melt rate (m/y)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
         
 
