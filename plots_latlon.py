@@ -9,7 +9,7 @@ import sys
 
 from io import Grid, read_netcdf
 from utils import convert_ismr
-from plot_utils import finished_plot, cell_boundaries, set_colours
+from plot_utils import finished_plot, cell_boundaries#, set_colours
 
 # Basic lon-lat plot of any variable, with no titles or special colourmaps.
 def quick_plot (var, grid, gtype='t', fig_name=None):
