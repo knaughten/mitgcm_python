@@ -124,5 +124,68 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
         lat_labels.append(label+suff)
     ax.set_yticklabels(lat_labels)
 
+
+# Separate function for finding vmin and vmax between several different arrays, and/or in specific region
+def 
+
+lon_min=None, lon_max=None, lat_min=None, lat_max=None, grid=None, gtype='t'
+
+    
+# Optional keyword arguments:
+# ctype: 'basic' (default) is a rainbow colour map
+#        'plusminus' is a red/blue colour map where 0 is white
+#        'ismr' is a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink
+# vmin, vmax: if defined, enforce these minimum and/or maximum values for the colour map
+# change_points: list of size 3 containing values where the 'ismr' colourmap should hit the colours yellow, orange, and red. It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
+def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
+
+    # Work out bounds
+    if vmin is not None:
+        vmin = np.amin(data)
+    if vmax is not None:
+        vmax = np.amax(data)
+
+    if ctype == 'basic':
+        pass
+    elif ctype == 'plusminus':
+        pass
+    elif ctype == 'ismr':
+        # Fancy colourmap for ice shelf melting and refreezing
+        
+        # First define the colours we'll use
+        ismr_blue = (0.26, 0.45, 0.86)
+        ismr_white = (1, 1, 1)
+        ismr_yellow = (1, 0.9, 0.4)
+        ismr_orange = (0.99, 0.59, 0.18)
+        ismr_red = (0.5, 0.0, 0.08)
+        ismr_pink = (0.96, 0.17, 0.89)
+        
+        if change_points is None:            
+            # Set change points to yield a linear transition between colours
+            change_points = 0.25*vmax*np.arange(1,3+1)
+        if len(change_points) != 3:
+            print 'Error (set_colours): wrong size for change_points list'
+            sys.exit()
+            
+        if vmin < 0:
+            # There is refreezing here; include blue for elements < 0
+            cmap_vals = np.concatenate(([vmin], [0], change_points, [vmax]))
+            cmap_colours = [ismr_blue, ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]            
+            cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
+        else:
+            # No refreezing; start at 0
+            cmap_vals = np.concatenate(([0], change_points, [vmax]))
+            cmap_colours = [ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
+            cmap_vals_norm = cmap_vals/vmax
+        cmap_vals_norm[-1] = 1
+        cmap_list = []
+        for i in range(cmap_vals.size):
+            cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
+
+        return vmin, vmax, cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
+            
+        
+        
+
     
         

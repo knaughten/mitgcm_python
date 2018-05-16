@@ -9,14 +9,13 @@ import sys
 
 from io import Grid, read_netcdf
 from utils import convert_ismr
-from plot_utils import finished_plot, cell_boundaries, latlon_axes
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours
 
 # Basic lon-lat plot of any variable, with no titles or special colourmaps.
-# To do: set limits based on lon and lat, nice lon and lat axes
+# To do: nice colourmap
 def quick_plot (var, grid, gtype='t', fig_name=None):
 
     lon, lat, var_plot = cell_boundaries(var, grid, gtype=gtype)
-
     fig, ax = plt.subplots()
     img = ax.pcolormesh(lon, lat, var_plot)
     plt.colorbar(img)
@@ -25,20 +24,20 @@ def quick_plot (var, grid, gtype='t', fig_name=None):
 
 
 # Plot ice shelf melt rate field
-'''def plot_ismr (ismr, grid, fig_name=None):
+def plot_ismr (ismr, grid, fig_name=None, change_points=None):
 
     lon, lat, var_plot = cell_boundaries(ismr, grid)
 
     fig, ax = plt.subplots()
-    cmap = set_colours(ismr, ctype='ismr')'''
-    
-    
-    
-
+    vmin, vmax, cmap = set_colours(ismr, ctype='ismr', change_points=change_points)
+    img = ax.pcolormesh(lon, lat, var_plot, vmin=vmin, vmax=vmax, cmap=cmap)
+    latlon_axes(ax, lon, lat)
+    finished_plot(fig, fig_name=fig_name)
+        
 
 # NetCDF interface for plot_ismr
-# Later, make this more general for all types of 2D plots!
-def read_plot_ismr (file_path, grid_path, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None):
+# Later, make this more general for all types of special 2D plots!
+def read_plot_ismr (file_path, grid_path, change_points=None, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None):
 
     # Make sure we'll end up with a single record in time
     if time_index is not None and not time_average:
@@ -52,7 +51,7 @@ def read_plot_ismr (file_path, grid_path, time_index=None, t_start=None, t_end=N
     ismr = mask_except_zice(ismr, grid)
 
     # Make the plot
-    plot_ismr(ismr, grid, fig_name=fig_name)
+    plot_ismr(ismr, grid, fig_name=fig_name, change_points=change_points)
     
 
     
