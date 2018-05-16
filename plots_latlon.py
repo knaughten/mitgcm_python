@@ -9,9 +9,10 @@ import sys
 
 from io import Grid, read_netcdf
 from utils import convert_ismr
-from plot_utils import finished_plot, cell_boundaries#, set_colours
+from plot_utils import finished_plot, cell_boundaries, latlon_axes
 
 # Basic lon-lat plot of any variable, with no titles or special colourmaps.
+# To do: set limits based on lon and lat, nice lon and lat axes
 def quick_plot (var, grid, gtype='t', fig_name=None):
 
     lon, lat, var_plot = cell_boundaries(var, grid, gtype=gtype)
@@ -19,6 +20,7 @@ def quick_plot (var, grid, gtype='t', fig_name=None):
     fig, ax = plt.subplots()
     img = ax.pcolormesh(lon, lat, var_plot)
     plt.colorbar(img)
+    latlon_axes(ax, lon, lat)
     finished_plot(fig, fig_name=fig_name)
 
 
@@ -35,6 +37,7 @@ def quick_plot (var, grid, gtype='t', fig_name=None):
 
 
 # NetCDF interface for plot_ismr
+# Later, make this more general for all types of 2D plots!
 def read_plot_ismr (file_path, grid_path, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None):
 
     # Make sure we'll end up with a single record in time
@@ -45,6 +48,8 @@ def read_plot_ismr (file_path, grid_path, time_index=None, t_start=None, t_end=N
     # Read grid and data
     grid = Grid(grid_path)
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
+    # Mask out land and open ocean
+    ismr = mask_except_zice(ismr, grid)
 
     # Make the plot
     plot_ismr(ismr, grid, fig_name=fig_name)

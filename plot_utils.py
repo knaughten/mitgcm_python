@@ -2,8 +2,10 @@
 # Helper functions for plotting
 #######################################################
 
+import numpy as np
 import matplotlib.dates as dt
 import matplotlib.colors as cl
+import sys
 
 
 # On a timeseries plot, label every month
@@ -64,4 +66,55 @@ def cell_boundaries (data, grid, gtype='t'):
         return grid.lon_2d, grid.lat_2d, data[...,1:,1:]
 
 
-#def set_colours (data, ctype):
+def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
+
+    # Set limits on axes
+    if [xmin, xmax, ymin, ymax].count(None) == 0:
+        # Special zooming
+        ax.xlim([xmin, xmax])
+        ax.ylim([ymin, ymax])
+    else:
+        # Just set to the boundaries of the lon and lat axes
+        ax.xlim([np.amin(lon), np.amax(lon)])
+        ax.ylim([np.amin(lat), np.amax(lat)])
+
+    # Set nice tick labels
+    lon_ticks = ax.get_xticks()
+    lon_labels = []
+    for x in lon_ticks:
+        # Decide whether it's west or east
+        if x <= 0:
+            x = -x
+            suff = r'$^{\circ}$W'
+        else:
+            suff = r'$^{\circ}$E'
+        # Decide how to format the number
+        if round(x) == x:
+            # No decimal places needed
+            label = str(int(round(x)))
+        elif round(x,1) == x:
+            # One decimal place
+            label = '{0:.1f}'.format(x)
+        else:
+            # Round to two decimal places
+            label = '{0:.2f}'.format(round(x,2))
+        lon_labels.append(label+suff)
+    ax.set_xticklabels(lon_labels)
+    # Repeat for latitude
+    lat_ticks = ax.get_yticks()
+    lat_labels = []
+    for y in lat_ticks:
+        if y <= 0:
+            y = -y
+            suff = r'$^{\circ}$S'
+        else:
+            suff = r'$^{\circ}$N'
+        if round(y) == y:
+            label = str(int(round(y)))
+        elif round(y,1) == y:
+            label = '{0:.1f}'.format(y)
+        else:
+            label = '{0:.2f}'.format(round(y,2))
+        lat_labels.append(label+suff)
+    ax.set_yticklabels(lat_labels)
+        

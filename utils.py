@@ -79,6 +79,7 @@ def apply_mask (data, mask, time_dependent=False):
 
     if len(mask.shape) != len(data.shape):
         print 'Error (apply_mask): invalid dimensions of data'
+        sys.exit()
 
     data = np.ma.masked_where(mask, data)
     return data
