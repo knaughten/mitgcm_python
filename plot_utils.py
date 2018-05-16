@@ -126,9 +126,9 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
 
 
 # Separate function for finding vmin and vmax between several different arrays, and/or in specific region
-def 
+#def 
 
-lon_min=None, lon_max=None, lat_min=None, lat_max=None, grid=None, gtype='t'
+#lon_min=None, lon_max=None, lat_min=None, lat_max=None, grid=None, gtype='t'
 
     
 # Optional keyword arguments:
