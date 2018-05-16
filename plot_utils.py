@@ -140,9 +140,9 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
     # Work out bounds
-    if vmin is not None:
+    if vmin is None:
         vmin = np.amin(data)
-    if vmax is not None:
+    if vmax is None:
         vmax = np.amax(data)
 
     if ctype == 'basic':
