@@ -12,11 +12,14 @@ from plot_utils import monthly_ticks, finished_plot
 
 
 # Plot timeseries of FRIS' basal mass balance components (melting, freezing, total) at every time index in the given file.
+
 # Arguments:
 # file_path: path to NetCDF file containing variable "SHIfwFlx"
 # grid_path: path to NetCDF grid file
+
 # Optional keyword argument:
-# fig_name: if defined, the figure will be saved to a file with the given name. Otherwise, it will be displayed on the screen.
+# fig_name: as in function finished_plot
+
 def plot_fris_massbalance (file_path, grid_path, fig_name=None):
 
     # Calculate timeseries

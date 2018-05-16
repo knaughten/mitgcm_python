@@ -3,6 +3,9 @@
 #######################################################
 
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 import matplotlib.dates as dt
 import matplotlib.colors as cl
 import sys
@@ -33,17 +36,20 @@ def finished_plot (fig, fig_name=None):
         fig.show()
 
 
-# Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and throw away one row and one column of the given data field so that every remaining point has latitude and longitude boundaries defined on 4 sides.
-# This is needed for pcolormesh so that the coordinates of the quadrilateral patches are correctly defined.
+# Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and throw away one row and one column of the given data field so that every remaining point has latitude and longitude boundaries defined on 4 sides. This is needed for pcolormesh so that the coordinates of the quadrilateral patches are correctly defined.
+
 # Arguments:
 # data: array of at least 2 dimensions, where the second last dimension is latitude (size M), and the last dimension is longitude (size N).
-# grid: Grid object (see io.py)
+# grid: Grid object
+
 # Optional keyword argument:
 # gtype: 't' (tracer grid, default), 'u' (U-grid), 'v' (V-grid), or 'psi' (psi-grid)
+
 # Output:
 # lon: longitude at the boundary of each cell (size MxN)
 # lat: latitude at the boundary of each cell (size MxN)
 # data: data within each cell (size ...x(M-1)x(N-1), note one row and one column have been removed depending on the grid type)
+
 def cell_boundaries (data, grid, gtype='t'):
 
     if gtype == 't':
@@ -129,30 +135,56 @@ def latlon_axes (ax, xmin=None, xmax=None, ymin=None, ymax=None):
     ax.set_yticklabels(lat_labels)
 
 
-# Separate function for finding vmin and vmax between several different arrays, and/or in specific region
-#def 
-
-#lon_min=None, lon_max=None, lat_min=None, lat_max=None, grid=None, gtype='t'
+# Truncate colourmap function from https://stackoverflow.com/questions/40929467/how-to-use-and-plot-only-a-part-of-a-colorbar-in-matplotlib
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
+    if n== -1:
+        n = cmap.N
+    new_cmap = cl.LinearSegmentedColormap.from_list('trunc({name},{a:.2f},{b:.2f})'.format(name=cmap.name, a=minval, b=maxval), cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
 
     
+# Create colourmaps.
+
+# Arguments:
+# data: array of data the colourmap will apply to
+
 # Optional keyword arguments:
-# ctype: 'basic' (default) is a rainbow colour map
-#        'plusminus' is a red/blue colour map where 0 is white
-#        'ismr' is a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink
-# vmin, vmax: if defined, enforce these minimum and/or maximum values for the colour map
+# ctype: 'basic' is just the 'jet' colourmap
+#        'plusminus' creates a red/blue colour map where 0 is white
+#        'ismr' creates a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink
+# vmin, vmax: if defined, enforce these minimum and/or maximum values for the colour map. vmin might get modified for 'ismr' colour map if there is no refreezing (i.e. set to 0).
 # change_points: list of size 3 containing values where the 'ismr' colourmap should hit the colours yellow, orange, and red. It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
+
+# Output:
+# vmin, vmax: min and max values for colourmap
+# cmap: colourmap to plot with
+
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
     # Work out bounds
     if vmin is None:
         vmin = np.amin(data)
+    else:
+        # Make sure it's not an integer
+        vmin = float(vmin)
     if vmax is None:
         vmax = np.amax(data)
+    else:
+        vmax = float(vmax)
 
     if ctype == 'basic':
-        pass
+        return plt.get_cmap('jet'), vmin, vmax
+
     elif ctype == 'plusminus':
-        pass
+        # Truncate the RdBu_r colourmap as needed, so that 0 is white and no unnecessary colours are shown
+        if abs(vmin) > vmax:
+            min_colour = 0
+            max_colour = 0.5*(1 - vmax/vmin)
+        else:
+            min_colour = 0.5*(1 + vmin/vmax)
+            max_colour = 1
+        return truncate_colormap(plt.get_cmap('RdBu_r'), min_colour, max_colour), vmin, vmax
+
     elif ctype == 'ismr':
         # Fancy colourmap for ice shelf melting and refreezing
         
@@ -186,19 +218,32 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         for i in range(cmap_vals.size):
             cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
 
-        return cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
+        # Make sure vmin isn't greater than 0
+        return cl.LinearSegmentedColormap.from_list('ismr', cmap_list), min(vmin,0), vmax
+
+
+# Shade the given boolean mask in grey on the plot.
+def shade_mask (ax, mask, grid):
+
+    # Properly mask all the False values, so that only True values are unmasked
+    mask_plot = np.ma.masked_where(np.invert(mask), mask)
+    # Prepare quadrilateral patches
+    lon, lat, mask_plot = cell_boundaries(mask_plot, grid)
+    # Add to plot
+    ax.pcolormesh(lon, lat, mask_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
 
 
 # Shade the land in grey
 def shade_land (ax, grid):
 
-    # Convert 0s to proper masked values, so only 1s are unmasked
-    land = np.ma.masked_where(np.invert(grid.land_mask), grid.land_mask)
-    # Prepare quadrilateral patches
-    lon, lat, land_plot = cell_boundaries(land, grid)
-    # Add to plot
-    ax.pcolormesh(lon, lat, land_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+    shade_mask(ax, grid.land_mask, grid)
 
+
+# Shade the land and ice shelves in grey
+def shade_land_zice (ax, grid):
+
+    shade_mask(ax, grid.land_mask+grid.zice_mask, grid)
+    
 
 # Contour the ice shelf front in black
 def contour_iceshelf_front (ax, grid):

@@ -6,6 +6,7 @@ import numpy as np
 import sys
 import constants as const
 
+
 # Given an array containing longitude, make sure it's in the range (-180, 180) as opposed to (0, 360).
 def fix_lon_range (lon):
 

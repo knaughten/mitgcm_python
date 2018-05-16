@@ -8,7 +8,7 @@ import sys
 
 from utils import fix_lon_range
 
-# FUNCTION read_netcdf
+
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
 
 # Arguments:
@@ -92,7 +92,6 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     return data
 
 
-# FUNCTION netcdf_time
 # Read the time axis from a NetCDF file. The default behaviour is to read and return the entire axis as Date objects, but you can also select a subset of time indices, and/or return as scalars - see optional keyword arguments.
 
 # Arguments:
@@ -100,23 +99,10 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
 # Optional keyword arguments
 # var_name: name of time axis. Default 'TIME'.
-# t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
-# t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
+# t_start, t_end: as in function read_netcdf
 # return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
 
 # Output: 1D numpy array containing the time values (either scalars or Date objects)
-
-# Examples:
-# Read the entire time axis as Date objects:
-# time = netcdf_time('sample.nc')
-# Read a time axis which is named something other than 'TIME':
-# time = netcdf_time('sample.nc', var_name='T')
-# Read only the first 12 time indices:
-# time = netcdf_time('sample.nc', t_end=12)
-# Read only the last 12 time indices:
-# time = netcdf_time('sample.nc', t_start=-12)
-# Return as scalars rather than Date objects:
-# time = netcdf_time('sample.nc', return_date=False)
 
 def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
 
@@ -152,15 +138,6 @@ def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_da
 # file_path: path to NetCDF grid file
 
 # Output: Grid object containing lots of grid variables - read comments in code to find them all.
-
-# Example:
-# grid = Grid('grid.nc')
-# A few of the grid variables:
-# grid.lon_2d
-# grid.lat_2d
-# grid.z
-# grid.dA
-# grid.hfac
 
 class Grid:
     

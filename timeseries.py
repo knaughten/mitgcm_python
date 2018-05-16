@@ -8,7 +8,6 @@ from io import read_netcdf
 from utils import convert_ismr
 from diagnostics import total_melt
 
-# FUNCTION fris_melt
 
 # Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
 
@@ -18,7 +17,7 @@ from diagnostics import total_melt
 
 # Optional keyword arguments:
 # result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
-# time_index, t_start, t_end, time_average: as in the read_netcdf function
+# time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
 
 # Output:
