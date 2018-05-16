@@ -71,15 +71,22 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
     # Set limits on axes
     if [xmin, xmax, ymin, ymax].count(None) == 0:
         # Special zooming
-        ax.xlim([xmin, xmax])
-        ax.ylim([ymin, ymax])
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
     else:
         # Just set to the boundaries of the lon and lat axes
-        ax.xlim([np.amin(lon), np.amax(lon)])
-        ax.ylim([np.amin(lat), np.amax(lat)])
+        ax.axis('tight')
+
+    # Check location of ticks
+    lon_ticks = ax.get_xticks()
+    lat_ticks = ax.get_yticks()
+    # Often there are way more longitude ticks than latitude ticks
+    if float(len(lon_ticks))/float(len(lat_ticks)) > 1.5:
+        # Remove every second one
+        lon_ticks = lon_ticks[1::2]
+        ax.set_xticks(lon_ticks)
 
     # Set nice tick labels
-    lon_ticks = ax.get_xticks()
     lon_labels = []
     for x in lon_ticks:
         # Decide whether it's west or east
@@ -101,7 +108,6 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
         lon_labels.append(label+suff)
     ax.set_xticklabels(lon_labels)
     # Repeat for latitude
-    lat_ticks = ax.get_yticks()
     lat_labels = []
     for y in lat_ticks:
         if y <= 0:
@@ -117,4 +123,6 @@ def latlon_axes (ax, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None):
             label = '{0:.2f}'.format(round(y,2))
         lat_labels.append(label+suff)
     ax.set_yticklabels(lat_labels)
+
+    
         
