@@ -56,7 +56,7 @@ def select_bottom (data):
         curr_data = data[...,k,:,:]
         index = np.nonzero(np.invert(curr_data.mask)*np.isnan(data_bottom))
         data_bottom[index] = curr_data[index]
-    data_top = np.ma.masked_where(np.isnan(data_bottom), data_bottom)
+    data_bottom = np.ma.masked_where(np.isnan(data_bottom), data_bottom)
 
     return data_bottom
 
