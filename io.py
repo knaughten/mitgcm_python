@@ -171,17 +171,17 @@ class Grid:
         # Cell centres
         self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'))
         self.lat_1d = read_netcdf(file_path, 'Y')
-        # Cell corners
-        self.lon_psi_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'))
-        self.lat_psi_1d = read_netcdf(file_path, 'Yp1')
+        # Cell corners (southwest)
+        self.lon_corners_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'))
+        self.lat_corners_1d = read_netcdf(file_path, 'Yp1')
 
         # 2D lon and lat fields on any grid
         # Cell centres
         self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'))
         self.lat_2d = read_netcdf(file_path, 'YC')
         # Cell corners
-        self.lon_psi_2d = fix_lon_range(read_netcdf(file_path, 'XG'))
-        self.lat_psi_2d = read_netcdf(file_path, 'YG')
+        self.lon_corners_2d = fix_lon_range(read_netcdf(file_path, 'XG'))
+        self.lat_corners_2d = read_netcdf(file_path, 'YG')
 
         # 2D integrands of distance
         # Across faces
