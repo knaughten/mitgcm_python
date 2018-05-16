@@ -182,7 +182,19 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         for i in range(cmap_vals.size):
             cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
 
-        return vmin, vmax, cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
+        return cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
+
+
+# Shade the land in grey
+def shade_land (ax, grid):
+
+    # Convert 0s to proper masked values, so only 1s are unmasked
+    land = np.ma.masked_where(np.invert(grid.land_mask), grid.land_mask)
+    # Prepare quadrilateral patches
+    lon, lat, land_plot = cell_boundaries(land, grid)
+    # Plot
+    ax.pcolormesh(lon, lat, land_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+    
             
         
         
