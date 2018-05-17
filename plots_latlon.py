@@ -22,18 +22,19 @@ from diagnostics import t_minus_tf
 
 # Optional keyword arguments:
 # gtype: as in function cell_boundaries
-# ctype: as in function set_colours
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
-# change_points: as in function set_colours (only matters if ctype='ismr')
+# ctype: as in function set_colours
+# vmin, vmax: as in function set_colours
 # return_fig: if True, return the figure and axis variables so that more work can be done on the plot (eg adding titles). Default False.
 # fig_name: as in function finished_plot
+# change_points: only matters if ctype='ismr'. As in function set_colours.
 
-def latlon_plot (var, grid, gtype='t', ctype='basic', include_shelf=True, change_points=None, return_fig=False, fig_name=None):
+def latlon_plot (var, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, return_fig=False, fig_name=None, change_points=None):
 
     # Prepare quadrilateral patches
     lon, lat, var_plot = cell_boundaries(var, grid, gtype=gtype)
     # Get colourmap
-    cmap, vmin, vmax = set_colours(var, ctype=ctype, change_points=change_points)
+    cmap, vmin, vmax = set_colours(var, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
 
     fig, ax = plt.subplots()
     if include_shelf:
@@ -47,7 +48,16 @@ def latlon_plot (var, grid, gtype='t', ctype='basic', include_shelf=True, change
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid)
-    plt.colorbar(img)
+    # Choose what the endpoints of the colourbar should do
+    if vmin is None and vmax is None:
+        extend='neither'
+    elif vmin is not None and vmax is None:
+        extend='min'
+    elif vmin is None and vmax is not None:
+        extend='max'
+    elif vmin is not None and vmax is not None:
+        extend='both'
+    plt.colorbar(img, extend=extend)
     latlon_axes(ax)
 
     if return_fig:
@@ -63,12 +73,13 @@ def latlon_plot (var, grid, gtype='t', ctype='basic', include_shelf=True, change
 # grid: Grid object
 
 # Optional keyword arguments:
-# fig_name: as in function finished_plot
+# vmin, vmax: as in function set_colours
 # change_points: as in function set_colours
+# fig_name: as in function finished_plot
 
-def plot_ismr (ismr, grid, fig_name=None, change_points=None):
+def plot_ismr (ismr, grid, vmin=None, vmax=None, change_points=None, fig_name=None):
 
-    fig, ax = latlon_plot(ismr, grid, ctype='ismr', change_points=change_points, return_fig=True)
+    fig, ax = latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, change_points=change_points, return_fig=True)
     ax.set_title('Ice shelf melt rate (m/y)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
@@ -80,12 +91,13 @@ def plot_ismr (ismr, grid, fig_name=None, change_points=None):
 # data: 3D (depth x lat x lon) array of temperature in degC or salinity in psu, already masked with hfac
 # grid: Grid object
 
-# Optional keyword argument:
+# Optional keyword arguments:
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_bw (var, data, grid, fig_name=None):
+def plot_bw (var, data, grid, vmin=None, vmax=None, fig_name=None):
 
-    fig, ax = latlon_plot(select_bottom(data), grid, return_fig=True)
+    fig, ax = latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, return_fig=True)
     if var == 'temp':
         ax.set_title(r'Bottom water temperature ($^{\circ}$C)', fontsize=18)
     elif var == 'salt':
@@ -100,12 +112,13 @@ def plot_bw (var, data, grid, fig_name=None):
 # data: 3D (depth x lat x lon) array of temperature in degC or salinity in psu, already masked with hfac
 # grid: Grid object
 
-# Optional keyword argument:
+# Optional keyword arguments:
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_ss (var, data, grid, fig_name=None):
+def plot_ss (var, data, grid, vmin=None, vmax=None, fig_name=None):
 
-    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, return_fig=True)
+    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, return_fig=True)
     if var == 'temp':
         ax.set_title(r'Sea surface temperature ($^{\circ}$C)', fontsize=18)
     elif var == 'salt':
@@ -122,11 +135,12 @@ def plot_ss (var, data, grid, fig_name=None):
 
 # Optional keyword arguments:
 # ctype: as in function set_colours
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_2d_noshelf (var, data, grid, ctype='basic', fig_name=None):
+def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, fig_name=None):
 
-    fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, fig_name=fig_name, return_fig=True)
+    fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, return_fig=True)
     if var == 'aice':
         ax.set_title('Sea ice concentration (fraction)', fontsize=18)
     elif var == 'hice':
@@ -144,12 +158,13 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', fig_name=None):
 # saltflx: 2D (lat x lon) array of surface salt flux in kg/m^2/s, already masked with land
 # grid: Grid object
 
-# Optional keyword argument:
+# Optional keyword arguments:
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_saltflx (saltflx, grid, fig_name=None):
+def plot_saltflx (saltflx, grid, vmin=None, vmax=None, fig_name=None):
 
-    fig, ax = latlon_plot(saltflx, grid, ctype='plusminus', fig_name=fig_name, return_fig=True)
+    fig, ax = latlon_plot(saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, fig_name=fig_name, return_fig=True)
     ax.set_title(r'Surface salt flux (kg/m$^2$/s)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
@@ -162,8 +177,9 @@ def plot_saltflx (saltflx, grid, fig_name=None):
 
 # Optional keyword arguments:
 # tf_option: 'bottom' (to plot difference from in-situ freezing point in the bottom layer, default), 'max' (to plot maximum at each point in the water column), 'min' (to plot minimum).
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
-def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
+def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, fig_name=None):
 
     if tf_option == 'bottom':
         tmtf_plot = select_bottom(tminustf)
@@ -174,7 +190,7 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
         title_end = '(minimum over depth)'
-    fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', fig_name=fig_name, return_fig=True)
+    fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, fig_name=fig_name, return_fig=True)
     ax.set_title(r'Difference from in-situ freezing point ($^{\circ}$C)' + '\n' + title_end, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
@@ -211,12 +227,13 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
 
 # Optional keyword arguments:
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
+# vmin, vmax: as in function set_colours
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
 # change_points: only matters for 'ismr'. As in function set_colours.
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 
-def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
+def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
@@ -262,27 +279,27 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 
     # Plot
     if var == 'ismr':
-        plot_ismr(ismr, grid, fig_name=fig_name, change_points=change_points)
+        plot_ismr(ismr, grid, vmin=vmin, vmax=vmax, change_points=change_points, fig_name=fig_name)
     elif var == 'bwtemp':
-        plot_bw('temp', temp, grid, fig_name=fig_name)
+        plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'bwsalt':
-        plot_bw('salt', salt, grid, fig_name=fig_name)
+        plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'sst':
-        plot_ss('temp', temp, grid, fig_name=fig_name)
+        plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'sss':
-        plot_ss('salt', salt, grid, fig_name=fig_name)
+        plot_ss('salt', salt, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'aice':
-        plot_2d_noshelf('aice', aice, grid, fig_name=fig_name)
+        plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'hice':
-        plot_2d_noshelf('hice', hice, grid, fig_name=fig_name)
+        plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'mld':
-        plot_2d_noshelf('mld', mld, grid, fig_name=fig_name)
+        plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'eta':
-        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', fig_name=fig_name)
+        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'saltflx':
-        plot_saltflx(saltflx, grid, fig_name=fig_name)
+        plot_saltflx(saltflx, grid, vmin=vmin, vmax=vmax, fig_name=fig_name)
     elif var == 'tminustf':
-        plot_tminustf(tminustf, grid, tf_option=tf_option, fig_name=fig_name)
+        plot_tminustf(tminustf, grid, vmin=vmin, vmax=vmax, tf_option=tf_option, fig_name=fig_name)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
     
