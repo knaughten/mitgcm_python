@@ -11,6 +11,7 @@ import matplotlib.colors as cl
 import sys
 
 from utils import mask_except_zice
+import constants as const
 
 
 # On a timeseries plot, label every month
@@ -75,12 +76,16 @@ def cell_boundaries (data, grid, gtype='t'):
 
 
 # Set the limits of the longitude and latitude axes, and give them nice labels.
-# The limits will be the limits of the data unless you specify particular limits (set keyword arguments xmin, xmax, ymin, ymax).
-def latlon_axes (ax, xmin=None, xmax=None, ymin=None, ymax=None):
-
+# The limits will be the limits of the data unless you want to zoom into FRIS (set zoom_fris=True) or specify particular limits (set keyword arguments xmin, xmax, ymin, ymax in degrees longitude and latitude respectively).
+def latlon_axes (ax, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None):
+    
     # Set limits on axes
+    if zoom_fris:
+        xmin = const.fris_bounds[0]
+        xmax = const.fris_bounds[1]
+        ymin = const.fris_bounds[2]
+        ymax = const.fris_bounds[3]
     if [xmin, xmax, ymin, ymax].count(None) == 0:
-        # Special zooming
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
     else:
@@ -252,6 +257,60 @@ def contour_iceshelf_front (ax, grid):
     zice0 = np.amax(grid.zice[grid.zice!=0])
     # Add to plot
     ax.contour(grid.lon_2d, grid.lat_2d, grid.zice, levels=[zice0], colors=('black'), linestyles='solid')
+
+
+# Find the minimum and maximum values of an array in the given region.
+
+# Arguments:
+# data: 2D array (lat x lon), already masked as desired
+# grid: Grid object
+
+# Optional keyword arguments:
+# zoom_fris: as in function latlon_axes
+# xmin, xmax, ymin, ymax: as in function latlon_axes
+# gtype: as in function cell_boundaries
+
+# Output:
+# vmin, vmax: min and max values of data in the given region
+
+def set_colour_bounds (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
+
+    # Choose the correct longitude and latitude arrays
+    if gtype == 't':
+        lon = grid.lon_2d
+        lat = grid.lat_2d
+    elif gtype == 'u':
+        lon = grid.lon_corners_2d
+        lat = grid.lat_2d
+    elif gtype == 'v':
+        lon = grid.lon_2d
+        lat = grid.lat_corners_2d
+    elif gtype == 'psi':
+        lon = grid.lon_corners_2d
+        lat = grid.lat_corners_2d
+
+    # Set limits on axes
+    if zoom_fris:
+        xmin = const.fris_bounds[0]
+        xmax = const.fris_bounds[1]
+        ymin = const.fris_bounds[2]
+        ymax = const.fris_bounds[3]
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lon)
+    if ymax is None:
+        ymax = np.amax(lon)
+
+    # Select the correct indices
+    loc = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+    # Find the min and max values
+    return np.amin(data[loc]), np.amax(data[loc])
+
+    
+
     
             
         

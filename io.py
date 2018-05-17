@@ -7,6 +7,7 @@ import numpy as np
 import sys
 
 from utils import fix_lon_range
+import constants as const
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
@@ -199,7 +200,7 @@ class Grid:
         self.fris_mask = np.zeros(self.zice_mask.shape, dtype='bool')
         # Identify FRIS in two parts, split along the line 45W
         # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-        regions = [[-85, -45, -84, -74.7], [-45, -29, -84, -77.85]]
+        regions = [[const.fris_bounds[0], -45, const.fris_bounds[2], const.fris_bounds[3]], [-45, const.fris_bounds[1], const.fris_bounds[2], -77.85]]
         for bounds in regions:
             # Select the ice shelf points within these bounds
             index = np.nonzero(self.zice_mask*(self.lon_2d >= bounds[0])*(self.lon_2d <= bounds[1])*(self.lat_2d >= bounds[2])*(self.lat_2d <= bounds[3]))
