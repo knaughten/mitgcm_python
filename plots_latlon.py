@@ -10,7 +10,7 @@ import numpy as np
 
 from io import Grid, read_netcdf, find_variable
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds
 from diagnostics import t_minus_tf
 
 
@@ -45,7 +45,7 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
         extend='both'
 
     # If we're zooming, we need to choose the correct colour bounds
-    if zoom_fris or [xmin, xmax, ymin, ymax].count(None) > 0:
+    if zoom_fris or any([xmin, xmax, ymin, ymax]):
         vmin_tmp, vmax_tmp = set_colour_bounds(data, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
         # Don't override manually set bounds
         if vmin is None:
@@ -53,7 +53,7 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
         if vmax is None:
             vmax = vmax_tmp
     # Get colourmap
-    cmap, vmin, vmax = set_colours(data, grid, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
+    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
 
     # Prepare quadrilateral patches
     lon, lat, data_plot = cell_boundaries(data, grid, gtype=gtype)

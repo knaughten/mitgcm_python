@@ -18,7 +18,7 @@ import constants as const
 def monthly_ticks (ax):
 
     ax.xaxis.set_major_locator(dt.MonthLocator())
-    ax.xaxis.set_major_formatter(dt.DateFormatter('%b %y'))
+    ax.xaxis.set_major_formatter(dt.DateFormatter("%b '%y"))
 
 
 # On a timeseries plot, label every year
@@ -85,12 +85,17 @@ def latlon_axes (ax, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None
         xmax = const.fris_bounds[1]
         ymin = const.fris_bounds[2]
         ymax = const.fris_bounds[3]
-    if [xmin, xmax, ymin, ymax].count(None) == 0:
-        ax.set_xlim([xmin, xmax])
-        ax.set_ylim([ymin, ymax])
-    else:
-        # Just set to the boundaries of the lon and lat axes        
-        ax.axis('tight')
+    # Start with the boundaries of the lon and lat axes
+    ax.axis('tight')
+    # Modify as needed
+    if xmin is not None:
+        ax.set_xlim(left=xmin)
+    if xmax is not None:
+        ax.set_xlim(right=xmax)
+    if ymin is not None:
+        ax.set_ylim(bottom=ymin)
+    if ymax is not None:
+        ax.set_ylim(top=ymax)
 
     # Check location of ticks
     lon_ticks = ax.get_xticks()

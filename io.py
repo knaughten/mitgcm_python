@@ -200,7 +200,7 @@ class Grid:
         self.fris_mask = np.zeros(self.zice_mask.shape, dtype='bool')
         # Identify FRIS in two parts, split along the line 45W
         # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-        regions = [[const.fris_bounds[0], -45, const.fris_bounds[2], const.fris_bounds[3]], [-45, const.fris_bounds[1], const.fris_bounds[2], -77.85]]
+        regions = [[const.fris_bounds[0], -45, const.fris_bounds[2], -74.7], [-45, const.fris_bounds[1], const.fris_bounds[2], -77.85]]
         for bounds in regions:
             # Select the ice shelf points within these bounds
             index = np.nonzero(self.zice_mask*(self.lon_2d >= bounds[0])*(self.lon_2d <= bounds[1])*(self.lat_2d >= bounds[2])*(self.lat_2d <= bounds[3]))
@@ -213,13 +213,13 @@ class Grid:
 # file_path: path to NetCDF file to read
 
 # Optional keyword arguments
-# var_name: name of time axis. Default 'TIME'.
+# var_name: name of time axis. Default 'time'.
 # t_start, t_end: as in function read_netcdf
 # return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
 
 # Output: 1D numpy array containing the time values (either scalars or Date objects)
 
-def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
+def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True):
 
     # Open the file and get the length of the record
     id = nc.Dataset(file_path, 'r')
