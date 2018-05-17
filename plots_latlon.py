@@ -33,6 +33,15 @@ def latlon_plot (var, grid, gtype='t', include_shelf=True, ctype='basic', vmin=N
 
     # Prepare quadrilateral patches
     lon, lat, var_plot = cell_boundaries(var, grid, gtype=gtype)
+    # Choose what the endpoints of the colourbar should do
+    if vmin is None and vmax is None:
+        extend='neither'
+    elif vmin is not None and vmax is None:
+        extend='min'
+    elif vmin is None and vmax is not None:
+        extend='max'
+    elif vmin is not None and vmax is not None:
+        extend='both'
     # Get colourmap
     cmap, vmin, vmax = set_colours(var, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
 
@@ -48,15 +57,6 @@ def latlon_plot (var, grid, gtype='t', include_shelf=True, ctype='basic', vmin=N
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid)
-    # Choose what the endpoints of the colourbar should do
-    if vmin is None and vmax is None:
-        extend='neither'
-    elif vmin is not None and vmax is None:
-        extend='min'
-    elif vmin is None and vmax is not None:
-        extend='max'
-    elif vmin is not None and vmax is not None:
-        extend='both'
     plt.colorbar(img, extend=extend)
     latlon_axes(ax)
 

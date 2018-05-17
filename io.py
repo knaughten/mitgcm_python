@@ -256,3 +256,76 @@ def find_variable (file_path_1, file_path_2, var_name):
         print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
         sys.exit()
 
+
+# Read an array from a binary file. This is useful for input files (eg bathymetry) and output files which don't get converted to NetCDF (eg crashes).
+
+# Arguments:
+# filename: path to binary file
+# grid: Grid object
+
+# Optional keyword arguments:
+# depth_dependent: indicates the array has a depth dimension. Default False.
+# time_dependent: indicates the array has a time dimension. Default False.
+# one_dim: indicates the array is one-dimensional. Default False.
+# shape: list of dimension lengths. Useful if it's something weird (like OBCs)
+# prec: 32 or 64, corresponding to the precision of the file. Default 32. 
+#       Here is how you work out the expected precision of MITgcm files:
+#       Input OBC files: exf_iprec_obcs (data.exf, default equal to exf_iprec)
+#       Input forcing files: exf_iprec (data.exf, default 32)
+#       All other input files: readBinaryPrec (data, default 32)
+#       Restarts/dumps: writeStatePrec (data, default 64)
+#       All other output files: writeBinaryPrec (data, default 32)
+
+# Output: array of dimension time (if time_dependent) x depth (if depth_dependent) x lat x lon. Or, a 1D array (if one_dim).
+
+def read_binary (filename, grid, depth_dependent=False, time_dependent=False, one_dim=False, shape=None, prec=32):
+
+    # Set dtype
+    if prec == 32:
+        dtype = '>f4'
+    elif prec == 64:
+        dtype = '>f8'
+    else:
+        print 'Error (read_binary): invalid precision'
+        sys.exit()
+
+    # Read data
+    data = np.fromfile(filename, dtype=dtype)
+
+    if one_dim:
+        # No need to reshape
+        return data
+    if shape is not None:
+        # Known dimensions
+        return np.reshape(data, shape)
+
+    # Work out dimensions
+    if depth_dependent:
+        if time_dependent:
+            if mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
+                print 'Error (read_binary): incorrect dimensions or precision'
+                sys.exit()
+            num_time = data.size/(grid.nx*grid.ny*grid.nz)
+            data_shape = [num_time, grid.nz, grid.ny, grid.nx]
+        else:
+            if data.size != grid.nx*grid.ny*grid.nz:
+                print 'Error (read_binary): incorrect dimensions or precision'
+                sys.exit()
+            data_shape = [grid.nz, grid.ny, grid.nx]
+    else:
+        if time_dependent:
+            if mod(data.size, grid.nx*grid.ny) != 0:
+                print 'Error (read_binary): incorrect dimensions or precision'
+                sys.exit()
+            num_time = data.size/(grid.nx*grid.ny)
+            data_shape = [num_time, grid.ny, grid.nx]
+        else:
+            if data.size != grid.nx*grid.ny:
+                print 'Error (read_binary): incorrect dimensions or precision'
+                sys.exit()
+            data_shape = [grid.ny, grid.nx]
+
+    # Reshape the data and return
+    return np.reshape(data, data_shape)
+    
+
