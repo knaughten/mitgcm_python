@@ -92,49 +92,9 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     return data
 
 
-# Read the time axis from a NetCDF file. The default behaviour is to read and return the entire axis as Date objects, but you can also select a subset of time indices, and/or return as scalars - see optional keyword arguments.
-
-# Arguments:
-# file_path: path to NetCDF file to read
-
-# Optional keyword arguments
-# var_name: name of time axis. Default 'TIME'.
-# t_start, t_end: as in function read_netcdf
-# return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
-
-# Output: 1D numpy array containing the time values (either scalars or Date objects)
-
-def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
-
-    # Open the file and get the length of the record
-    id = nc.Dataset(file_path, 'r')
-    time_id = id.variables[var_name]    
-    num_time = time_id.size
-
-    # Choose range of time values to consider
-    # If t_start and/or t_end are already set, use those bounds
-    # Otherwise, start at the first time_index and/or end at the last time_index in the file
-    if t_start is None:
-        t_start = 0
-    if t_end is None:
-        t_end = num_time
-
-    # Read the variable
-    if return_date:
-        # Return as handy Date objects
-        time = nc.num2date(time_id[t_start:t_end], units=time_id.units)
-    else:
-        # Return just as scalar values
-        time = time_id[t_start:t_end]
-    id.close()
-
-    return time
-
-
-# CLASS Grid
 # Load all the useful grid variables and store them in a Grid object.
 
-# (Initialisation) Arguments:
+# Initialisation arguments:
 # file_path: path to NetCDF grid file
 
 # Output: Grid object containing lots of grid variables - read comments in code to find them all.
@@ -245,4 +205,54 @@ class Grid:
             index = np.nonzero(self.zice_mask*(self.lon_2d >= bounds[0])*(self.lon_2d <= bounds[1])*(self.lat_2d >= bounds[2])*(self.lat_2d <= bounds[3]))
             self.fris_mask[index] = True
 
-        
+
+# Read the time axis from a NetCDF file. The default behaviour is to read and return the entire axis as Date objects, but you can also select a subset of time indices, and/or return as scalars - see optional keyword arguments.
+
+# Arguments:
+# file_path: path to NetCDF file to read
+
+# Optional keyword arguments
+# var_name: name of time axis. Default 'TIME'.
+# t_start, t_end: as in function read_netcdf
+# return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
+
+# Output: 1D numpy array containing the time values (either scalars or Date objects)
+
+def netcdf_time (file_path, var_name='TIME', t_start=None, t_end=None, return_date=True):
+
+    # Open the file and get the length of the record
+    id = nc.Dataset(file_path, 'r')
+    time_id = id.variables[var_name]    
+    num_time = time_id.size
+
+    # Choose range of time values to consider
+    # If t_start and/or t_end are already set, use those bounds
+    # Otherwise, start at the first time_index and/or end at the last time_index in the file
+    if t_start is None:
+        t_start = 0
+    if t_end is None:
+        t_end = num_time
+
+    # Read the variable
+    if return_date:
+        # Return as handy Date objects
+        time = nc.num2date(time_id[t_start:t_end], units=time_id.units)
+    else:
+        # Return just as scalar values
+        time = time_id[t_start:t_end]
+    id.close()
+
+    return time
+
+
+# Given two NetCDF files, figure out which one the given variable is in.
+def find_variable (file_path_1, file_path_2, var_name):
+
+    if var_name in nc.Dataset(file_path_1).variables:
+        return file_path_1
+    elif var_name in nc.Dataset(file_path_2).variables:
+        return file_path_2
+    else:
+        print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
+        sys.exit()
+

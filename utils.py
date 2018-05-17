@@ -4,6 +4,7 @@
 
 import numpy as np
 import sys
+
 import constants as const
 
 
@@ -114,15 +115,3 @@ def mask_except_fris (data, grid, time_dependent=False):
 def mask_3d (data, grid, time_dependent=False):
 
     return apply_mask(data, grid.hfac==0, time_dependent=time_dependent)
-
-
-# Given two NetCDF files, figure out which one the given variable is in.
-def find_variable (file_path_1, file_path_2, var_name):
-
-    if var_name in nc.Dataset(file_path_1).variables:
-        return file_path_1
-    elif var_name in nc.Dataset(file_path_2).variables:
-        return file_path_2
-    else:
-        print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
-        sys.exit()

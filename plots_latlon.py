@@ -6,10 +6,10 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys
-import netCDF4 as nc
+import numpy as np
 
-from io import Grid, read_netcdf
-from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, select_bottom, select_top, find_variable
+from io import Grid, read_netcdf, find_variable
+from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
 from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front
 from diagnostics import t_minus_tf
 
@@ -33,7 +33,7 @@ def latlon_plot (var, grid, gtype='t', ctype='basic', include_shelf=True, change
     # Prepare quadrilateral patches
     lon, lat, var_plot = cell_boundaries(var, grid, gtype=gtype)
     # Get colourmap
-    cmap, vmin, vmax = set_colours(var, ctype=ctype)
+    cmap, vmin, vmax = set_colours(var, ctype=ctype, change_points=change_points)
 
     fig, ax = plt.subplots()
     if include_shelf:
@@ -105,7 +105,7 @@ def plot_bw (var, data, grid, fig_name=None):
 
 def plot_ss (var, data, grid, fig_name=None):
 
-    fig, ax = latlon_plot(select_top(data), grid, include_shelf=False, return_fig=True)
+    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, return_fig=True)
     if var == 'temp':
         ax.set_title(r'Sea surface temperature ($^{\circ}$C)', fontsize=18)
     elif var == 'salt':
@@ -124,7 +124,7 @@ def plot_ss (var, data, grid, fig_name=None):
 # ctype: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_2d_noshelf (var, data, grid, ctype=None, fig_name=None):
+def plot_2d_noshelf (var, data, grid, ctype='basic', fig_name=None):
 
     fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, fig_name=fig_name, return_fig=True)
     if var == 'aice':
@@ -167,19 +167,19 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
 
     if tf_option == 'bottom':
         tmtf_plot = select_bottom(tminustf)
-        title_end = ' in bottom layer'
+        title_end = '(bottom layer)'
     elif tf_option == 'max':
         tmtf_plot = np.amax(tminustf, axis=0)
-        title_end = ', maximum over depth'
+        title_end = '(maximum over depth)'
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
-        title_end = ', minimum over depth'
+        title_end = '(minimum over depth)'
     fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', fig_name=fig_name, return_fig=True)
-    ax.set_title(r'Difference from in-situ freezing point ($^{\circ}$C)' + title_end, fontsize=18)
+    ax.set_title(r'Difference from in-situ freezing point ($^{\circ}$C)' + '\n' + title_end, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
 
-# NetCDF interface. Call this function with a specific variable key and information about the necessary variable file, to get a nice lat-lon plot.
+# NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
 
 # Arguments:
 # var: keyword indicating which special variable to plot. The options are:
@@ -207,7 +207,7 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
 #            'saltflx': SIempmr
 #            'tminustf': THETA and SALT
 #            If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
-# grid_path: path to NetCDF grid file
+# grid: either a Grid object, or the path to the NetCDF grid file
 
 # Optional keyword arguments:
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
@@ -216,42 +216,44 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', fig_name=None):
 # change_points: only matters for 'ismr'. As in function set_colours.
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 
-def read_plot_latlon (var, file_path, grid_path, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
+def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
         print 'Error (read_plot_latlon): either specify time_index or set time_average=True.'
         sys.exit()
 
-    # Read grid
-    grid = Grid(grid_path)
+    if not isinstance(grid, Grid):
+        # This is the path to the NetCDF grid file, not a Grid object
+        # Make a grid object from it
+        grid = Grid(grid)
 
     # Read necessary variables from NetCDF file(s), and mask appropriately
     if var == 'ismr':
         # Convert melting to m/y
         ismr = mask_except_zice(convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)), grid)
-    elif var in ['bwtemp', 'sst', 'tminustf']:
+    if var in ['bwtemp', 'sst', 'tminustf']:
         # Read temperature. Some of these variables need more than temperature and so second_file_path might be set.
         if second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, 'THETA')
         else:
             file_path_use = file_path        
         temp = mask_3d(read_netcdf(file_path_use, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var in ['bwsalt', 'sss', 'tminustf']:
+    if var in ['bwsalt', 'sss', 'tminustf']:
         if second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, 'SALT')
         else:
             file_path_use = file_path
         salt = mask_3d(read_netcdf(file_path_use, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var == 'aice':
+    if var == 'aice':
         aice = mask_land_zice(read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var == 'hice':
+    if var == 'hice':
         hice = mask_land_zice(read_netcdf(file_path, 'SIheff', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var == 'mld':
+    if var == 'mld':
         mld = mask_land_zice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var == 'eta':
+    if var == 'eta':
         eta = mask_land_zice(read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    elif var == 'saltflx':
+    if var == 'saltflx':
         saltflx = mask_land(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
 
     # Any additional calculations
