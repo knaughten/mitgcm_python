@@ -335,7 +335,7 @@ class NCfile:
         # Open the file
         self.id = nc.Dataset(filename, 'w')
 
-        # Add the necessary dimensions and coordinate variables
+        # Set up the grid
         if 't' in dimensions:
             self.id.createDimension('time', None)
         if 'z' in dimensions:
@@ -380,7 +380,7 @@ class NCfile:
     # dimensions: as in function read_binary
 
     # Optional keyword arguments:
-    # gtype: as in function cell_boundaries
+    # gtype: as in function cell_boundaries (plus 'w' for w-grid)
     # long_name: descriptor for this variable
     # units: units for this variable
     # dtype: data type of variable (default 'f8' which is float)
@@ -459,22 +459,22 @@ def crash_to_netcdf (crash_dir, grid_path):
             # Read it from binary
             temp = read_binary(crash_dir + file, grid, 'xyz')
             # Write it to NetCDF
-            ncfile.add_variable('temp', temp, 'xyz', units='C')
+            ncfile.add_variable('THETA', temp, 'xyz', units='C')
         if file.startswith('stateSaltcrash') and file.endswith('.data'):
             salt = read_binary(crash_dir + file, grid, 'xyz')
-            ncfile.add_variable('salt', salt, 'xyz', units='psu')
+            ncfile.add_variable('SALT', salt, 'xyz', units='psu')
         if file.startswith('stateUvelcrash') and file.endswith('.data'):
             u = read_binary(crash_dir + file, grid, 'xyz')
-            ncfile.add_variable('u', u, 'xyz', gtype='u', units='m/s')
+            ncfile.add_variable('UVEL', u, 'xyz', gtype='u', units='m/s')
         if file.startswith('stateVvelcrash') and file.endswith('.data'):
             v = read_binary(crash_dir + file, grid, 'xyz')
-            ncfile.add_variable('v', v, 'xyz', gtype='v', units='m/s')
+            ncfile.add_variable('VVEL', v, 'xyz', gtype='v', units='m/s')
         if file.startswith('stateWvelcrash') and file.endswith('.data'):
             w = read_binary(crash_dir + file, grid, 'xyz')
-            ncfile.add_variable('w', w, 'xyz', gtype='w', units='m/s')
+            ncfile.add_variable('WVEL', w, 'xyz', gtype='w', units='m/s')
         if file.startswith('stateEtacrash') and file.endswith('.data'):
             eta = read_binary(crash_dir + file, grid, 'xy')
-            ncfile.add_variable('eta', eta, 'xy', units='m')
+            ncfile.add_variable('ETAN', eta, 'xy', units='m')
 
     ncfile.finished()
     
