@@ -102,8 +102,10 @@ def latlon_axes (ax, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None
     lat_ticks = ax.get_yticks()
     # Often there are way more longitude ticks than latitude ticks
     if float(len(lon_ticks))/float(len(lat_ticks)) > 1.5:
+        # Automatic tick locations can disagree with limits of axes, but this doesn't change the axes limits unless you get and then set the tick locations. So make sure there are no disagreements now.
+        lon_ticks = lon_ticks[(lon_ticks >= ax.get_xlim()[0])*(lon_ticks <= ax.get_xlim()[1])]
         # Remove every second one
-        lon_ticks = lon_ticks[1::2]
+        lon_ticks = lon_ticks[1::2]        
         ax.set_xticks(lon_ticks)
 
     # Set nice tick labels
