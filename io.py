@@ -5,6 +5,7 @@
 import netCDF4 as nc
 import numpy as np
 import sys
+import os
 
 from utils import fix_lon_range
 import constants as const
@@ -371,69 +372,114 @@ class NCfile:
             self.id.variables['Xp1'][:] = grid.lon_corners_1d
 
 
-        # Create and write a variable.
-        
-        # Arguments:
-        # var_name: desired name for variable
-        # data: array of data for that variable
-        # dimensions: as in function read_binary
+    # Create and write a variable.
 
-        # Optional keyword arguments:
-        # gtype: as in function cell_boundaries
-        # long_name: descriptor for this variable
-        # units: units for this variable
-        # dtype: data type of variable (default 'f8' which is float)
-        
-        def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, dtype='f8'):
+    # Arguments:
+    # var_name: desired name for variable
+    # data: array of data for that variable
+    # dimensions: as in function read_binary
 
-            # Sort out dimensions
-            shape = []
-            if 't' in dimensions:
-                shape.append('time')
-            if 'z' in dimensions:
-                if gtype == 'w':
-                    shape.append('Zl')
-                else:
-                    shape.append('Z')
-            if 'y' in dimensions:
-                if gtype in ['v', 'psi']:
-                    shape.append('Yp1')
-                else:
-                    shape.append('Y')
-            if 'x' in dimensions:
-                if gtype in ['u', 'psi']:
-                    shape.append('Xp1')
-                else:
-                    shape.append('X')
-            shape = tuple(shape)
+    # Optional keyword arguments:
+    # gtype: as in function cell_boundaries
+    # long_name: descriptor for this variable
+    # units: units for this variable
+    # dtype: data type of variable (default 'f8' which is float)
 
-            # Initialise the variable
-            self.id.createVariable(var_name, dtype, shape)
-            if long_name is not None:
-                self.id.variables[var_name].long_name = long_name
-            if units is not None:
-                self.id.variables[var_name].units = units
+    def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, dtype='f8'):
 
-            # Fill data
-            self.id.variables[var_name][:] = data
+        # Sort out dimensions
+        shape = []
+        if 't' in dimensions:
+            shape.append('time')
+        if 'z' in dimensions:
+            if gtype == 'w':
+                shape.append('Zl')
+            else:
+                shape.append('Z')
+        if 'y' in dimensions:
+            if gtype in ['v', 'psi']:
+                shape.append('Yp1')
+            else:
+                shape.append('Y')
+        if 'x' in dimensions:
+            if gtype in ['u', 'psi']:
+                shape.append('Xp1')
+            else:
+                shape.append('X')
+        shape = tuple(shape)
 
+        # Initialise the variable
+        self.id.createVariable(var_name, dtype, shape)
+        if long_name is not None:
+            self.id.variables[var_name].long_name = long_name
+        if units is not None:
+            self.id.variables[var_name].units = units
 
-        # Special case to simplify writing the time variable.
-
-        # Argument:
-        # time: time values
-
-        # Optional keyword argument:
-        # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
-        def add_time (self, time, units=None):
-
-            self.add_variable('time', time, 't', units=units)
+        # Fill data
+        self.id.variables[var_name][:] = data
 
 
-        # Call this function when you're ready to close the file.
-        def finished (self):
+    # Special case to simplify writing the time variable.
 
-            self.id.close()
+    # Argument:
+    # time: time values
+
+    # Optional keyword argument:
+    # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
+    def add_time (self, time, units=None):
+
+        self.add_variable('time', time, 't', units=units)
+
+
+    # Call this function when you're ready to close the file.
+    def finished (self):
+
+        self.id.close()
+
+
+# When the model crashes, convert its crash-dump to a NetCDF file.
+# Arguments:
+# crash_dir: directory including all the state*crash.*.data files. The NetCDF file will be saved here too, with the name crash.nc.
+# grid_path: path to NetCDF grid file.
+def crash_to_netcdf (crash_dir, grid_path):
+
+    # Make sure crash_dir is a proper directory
+    if not crash_dir.endswith('/'):
+        crash_dir += '/'
+
+    # Read the grid
+    grid = Grid(grid_path)
+    # Initialise the NetCDF file
+    ncfile = NCfile(crash_dir+'crash.nc', grid, 'xyz')
+
+    # Find all the crash files
+    for file in os.listdir(crash_dir):
+        if file.startswith('stateThetacrash') and file.endswith('.data'):
+            # Found temperature
+            # Read it from binary
+            temp = read_binary(crash_dir + file, grid, 'xyz')
+            # Write it to NetCDF
+            ncfile.add_variable('temp', temp, 'xyz', units='C')
+        if file.startswith('stateSaltcrash') and file.endswith('.data'):
+            salt = read_binary(crash_dir + file, grid, 'xyz')
+            ncfile.add_variable('salt', salt, 'xyz', units='psu')
+        if file.startswith('stateUvelcrash') and file.endswith('.data'):
+            u = read_binary(crash_dir + file, grid, 'xyz')
+            ncfile.add_variable('u', u, 'xyz', gtype='u', units='m/s')
+        if file.startswith('stateVvelcrash') and file.endswith('.data'):
+            v = read_binary(crash_dir + file, grid, 'xyz')
+            ncfile.add_variable('v', v, 'xyz', gtype='v', units='m/s')
+        if file.startswith('stateWvelcrash') and file.endswith('.data'):
+            w = read_binary(crash_dir + file, grid, 'xyz')
+            ncfile.add_variable('w', w, 'xyz', gtype='w', units='m/s')
+        if file.startswith('stateEtacrash') and file.endswith('.data'):
+            eta = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('eta', eta, 'xy', units='m')
+
+    ncfile.finished()
+    
+
+
 
             
 
