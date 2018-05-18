@@ -93,15 +93,11 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     return data
 
 
-# Load all the useful grid variables and store them in a Grid object.
-
-# Initialisation arguments:
-# file_path: path to NetCDF grid file
-
-# Output: Grid object containing lots of grid variables - read comments in code to find them all.
-
+# Grid object containing lots of grid variables.
 class Grid:
-    
+
+    # Initialisation arguments:
+    # file_path: path to NetCDF grid file    
     def __init__ (self, file_path):
 
         # 1D lon and lat axes on regular grids
@@ -155,6 +151,8 @@ class Grid:
         self.z = read_netcdf(file_path, 'Z')
         # Depth axis at edges of z-levels
         self.z_edges = read_netcdf(file_path, 'Zp1')
+        # Depth axis at w-points
+        self.z_w = read_netcdf(file_path, 'Zl')
 
         # Vertical integrands of distance
         # Across cells
@@ -263,12 +261,9 @@ def find_variable (file_path_1, file_path_2, var_name):
 # Arguments:
 # filename: path to binary file
 # grid: Grid object
+# dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. For a 1D array of a special shape, use '1'.
 
 # Optional keyword arguments:
-# depth_dependent: indicates the array has a depth dimension. Default False.
-# time_dependent: indicates the array has a time dimension. Default False.
-# one_dim: indicates the array is one-dimensional. Default False.
-# shape: list of dimension lengths. Useful if it's something weird (like OBCs)
 # prec: 32 or 64, corresponding to the precision of the file. Default 32. 
 #       Here is how you work out the expected precision of MITgcm files:
 #       Input OBC files: exf_iprec_obcs (data.exf, default equal to exf_iprec)
@@ -277,9 +272,9 @@ def find_variable (file_path_1, file_path_2, var_name):
 #       Restarts/dumps: writeStatePrec (data, default 64)
 #       All other output files: writeBinaryPrec (data, default 32)
 
-# Output: array of dimension time (if time_dependent) x depth (if depth_dependent) x lat x lon. Or, a 1D array (if one_dim).
+# Output: array of specified dimension
 
-def read_binary (filename, grid, depth_dependent=False, time_dependent=False, one_dim=False, shape=None, prec=32):
+def read_binary (filename, grid, dimensions, prec=32):
 
     # Set dtype
     if prec == 32:
@@ -293,16 +288,13 @@ def read_binary (filename, grid, depth_dependent=False, time_dependent=False, on
     # Read data
     data = np.fromfile(filename, dtype=dtype)
 
-    if one_dim:
+    if dimensions == '1':
         # No need to reshape
         return data
-    if shape is not None:
-        # Known dimensions
-        return np.reshape(data, shape)
 
     # Work out dimensions
-    if depth_dependent:
-        if time_dependent:
+    if 'z' in dimensions:
+        if 't' in dimensions:
             if mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
@@ -314,7 +306,7 @@ def read_binary (filename, grid, depth_dependent=False, time_dependent=False, on
                 sys.exit()
             data_shape = [grid.nz, grid.ny, grid.nx]
     else:
-        if time_dependent:
+        if 't' in dimensions:
             if mod(data.size, grid.nx*grid.ny) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
@@ -328,5 +320,123 @@ def read_binary (filename, grid, depth_dependent=False, time_dependent=False, on
 
     # Reshape the data and return
     return np.reshape(data, data_shape)
-    
+
+
+# NCfile object to simplify writing of NetCDF files.
+class NCfile:
+
+    # Initialisation arguments:
+    # filename: name for desired NetCDF file
+    # grid: Grid object
+    # dimensions: as in function read_binary
+    def __init__ (self, filename, grid, dimensions):
+
+        # Open the file
+        self.id = nc.Dataset(filename, 'w')
+
+        # Add the necessary dimensions and coordinate variables
+        if 't' in dimensions:
+            self.id.createDimension('time', None)
+        if 'z' in dimensions:
+            self.id.createDimension('Z', grid.nz)
+            self.id.createVariable('Z', 'f8', ('Z'))
+            self.id.variables['Z'].long_name = 'vertical coordinate of cell center'
+            self.id.variables['Z'].units = 'm'
+            self.id.variables['Z'][:] = grid.z
+            self.id.createDimension('Zl', grid.nz)
+            self.id.createVariable('Zl', 'f8', ('Zl'))
+            self.id.variables['Zl'].long_name = 'vertical coordinate of upper cell interface'
+            self.id.variables['Zl'].units = 'm'
+        if 'y' in dimensions:
+            self.id.createDimension('Y', grid.ny)
+            self.id.createVariable('Y', 'f8', ('Y'))
+            self.id.variables['Y'].long_name = 'latitude at cell center'
+            self.id.variables['Y'].units = 'degrees_north'
+            self.id.variables['Y'][:] = grid.lat_1d
+            self.id.createDimension('Yp1', grid.ny)
+            self.id.createVariable('Yp1', 'f8', ('Yp1'))
+            self.id.variables['Yp1'].long_name = 'latitude at SW corner'
+            self.id.variables['Yp1'].units = 'degrees_north'
+            self.id.variables['Yp1'][:] = grid.lat_corners_1d
+        if 'x' in dimensions:
+            self.id.createDimension('X', grid.nx)
+            self.id.createVariable('X', 'f8', ('X'))
+            self.id.variables['X'].long_name = 'longitude at cell center'
+            self.id.variables['X'].units = 'degrees_east'
+            self.id.variables['X'][:] = grid.lon_1d
+            self.id.createDimension('Xp1', grid.nx)
+            self.id.createVariable('Xp1', 'f8', ('Xp1'))
+            self.id.variables['Xp1'].long_name = 'longitude at SW corner'
+            self.id.variables['Xp1'].units = 'degrees_east'
+            self.id.variables['Xp1'][:] = grid.lon_corners_1d
+
+
+        # Create and write a variable.
+        
+        # Arguments:
+        # var_name: desired name for variable
+        # data: array of data for that variable
+        # dimensions: as in function read_binary
+
+        # Optional keyword arguments:
+        # gtype: as in function cell_boundaries
+        # long_name: descriptor for this variable
+        # units: units for this variable
+        # dtype: data type of variable (default 'f8' which is float)
+        
+        def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, dtype='f8'):
+
+            # Sort out dimensions
+            shape = []
+            if 't' in dimensions:
+                shape.append('time')
+            if 'z' in dimensions:
+                if gtype == 'w':
+                    shape.append('Zl')
+                else:
+                    shape.append('Z')
+            if 'y' in dimensions:
+                if gtype in ['v', 'psi']:
+                    shape.append('Yp1')
+                else:
+                    shape.append('Y')
+            if 'x' in dimensions:
+                if gtype in ['u', 'psi']:
+                    shape.append('Xp1')
+                else:
+                    shape.append('X')
+            shape = tuple(shape)
+
+            # Initialise the variable
+            self.id.createVariable(var_name, dtype, shape)
+            if long_name is not None:
+                self.id.variables[var_name].long_name = long_name
+            if units is not None:
+                self.id.variables[var_name].units = units
+
+            # Fill data
+            self.id.variables[var_name][:] = data
+
+
+        # Special case to simplify writing the time variable.
+
+        # Argument:
+        # time: time values
+
+        # Optional keyword argument:
+        # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
+        def add_time (self, time, units=None):
+
+            self.add_variable('time', time, 't', units=units)
+
+
+        # Call this function when you're ready to close the file.
+        def finished (self):
+
+            self.id.close()
+
+            
+
+            
+            
 
