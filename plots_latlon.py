@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 
-from io import Grid, read_netcdf, find_variable
+from grid import Grid
+from io import read_netcdf, find_variable
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
 from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds
 from diagnostics import t_minus_tf
@@ -21,7 +22,7 @@ from diagnostics import t_minus_tf
 # grid: Grid object
 
 # Optional keyword arguments:
-# gtype: as in function cell_boundaries
+# gtype: as in function Grid.get_lon_lat
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
 # ctype: as in function set_colours
 # vmin, vmax: as in function set_colours

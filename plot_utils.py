@@ -44,7 +44,7 @@ def finished_plot (fig, fig_name=None):
 # grid: Grid object
 
 # Optional keyword argument:
-# gtype: 't' (tracer grid, default), 'u' (U-grid), 'v' (V-grid), or 'psi' (psi-grid)
+# gtype: as in function Grid.get_lon_lat
 
 # Output:
 # lon: longitude at the boundary of each cell (size MxN)
@@ -53,7 +53,7 @@ def finished_plot (fig, fig_name=None):
 
 def cell_boundaries (data, grid, gtype='t'):
 
-    if gtype == 't':
+    if gtype in ['t', 'w']:
         # Tracer grid: at centres of cells
         # Boundaries are corners of cells
         # Throw away eastern and northern edges
@@ -275,7 +275,7 @@ def contour_iceshelf_front (ax, grid):
 # Optional keyword arguments:
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
-# gtype: as in function cell_boundaries
+# gtype: as in function Grid.get_lon_lat
 
 # Output:
 # vmin, vmax: min and max values of data in the given region
@@ -283,18 +283,7 @@ def contour_iceshelf_front (ax, grid):
 def set_colour_bounds (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
 
     # Choose the correct longitude and latitude arrays
-    if gtype == 't':
-        lon = grid.lon_2d
-        lat = grid.lat_2d
-    elif gtype == 'u':
-        lon = grid.lon_corners_2d
-        lat = grid.lat_2d
-    elif gtype == 'v':
-        lon = grid.lon_2d
-        lat = grid.lat_corners_2d
-    elif gtype == 'psi':
-        lon = grid.lon_corners_2d
-        lat = grid.lat_corners_2d
+    lon, lat = grid.get_lon_lat(gtype=gtype)
 
     # Set limits on axes
     if zoom_fris:

@@ -1,3 +1,4 @@
+from grid import *
 from io import *
 from utils import *
 import constants

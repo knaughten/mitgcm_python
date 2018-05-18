@@ -87,31 +87,76 @@ def apply_mask (data, mask, time_dependent=False):
     return data
 
 
-# Mask land out of a 2D field. It can be time-dependent (i.e. 3D) with the optional keyword argument.
-def mask_land (data, grid, time_dependent=False):
+# Mask land out of a 2D field.
 
-    return apply_mask(data, grid.land_mask, time_dependent=time_dependent)
+# Arguments:
+# data: array of data to mask, assumed to be 2D unless time_dependent=True
+# grid: Grid object
 
+# Optional keyword arguments:
+# gtype: as in function get_hfac
+# time_dependent: indicates the data has a time dimension; default False
 
-# Mask land and ice shelves out of a 2D field, just leaving the open ocean. It can be time-dependent (i.e. 3D) with the optional keyword argument.
-def mask_land_zice (data, grid, time_dependent=False):
+def mask_land (data, grid, gtype='t', time_dependent=False):
 
-    return apply_mask(data, grid.land_mask+grid.zice_mask, time_dependent=time_dependent)
-
-
-# Mask land and open ocean out of a 2D field, just leaving ice shelves. It can be time-dependent (i.e. 3D) with the optional keyword argument.
-def mask_except_zice (data, grid, time_dependent=False):
-
-    return apply_mask(data, np.invert(grid.zice_mask), time_dependent=time_dependent)
+    return apply_mask(data, grid.get_land_mask(gtype=gtype), time_dependent=time_dependent)
 
 
-# Mask everything except FRIS out of a 2D field. It can be time-dependent (i.e. 3D) with the optional keyword argument.
-def mask_except_fris (data, grid, time_dependent=False):
+# Mask land and ice shelves out of a 2D field, just leaving the open ocean.
 
-    return apply_mask(data, np.invert(grid.fris_mask), time_dependent=time_dependent)
+# Arguments:
+# data: array of data to mask, assumed to be 2D unless time_dependent=True
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function get_hfac
+# time_dependent: indicates the data has a time dimension; default False
+
+def mask_land_zice (data, grid, gtype='t', time_dependent=False):
+
+    return apply_mask(data, grid.get_land_mask(gtype=gtype)+grid.get_zice_mask(gtype=gtype), time_dependent=time_dependent)
 
 
-# Apply the 3D hfac mask. It can be time-dependent (i.e. 4D) with the optional keyword argument.
-def mask_3d (data, grid, time_dependent=False):
+# Mask land and open ocean out of a 2D field, just leaving the ice shelves.
 
-    return apply_mask(data, grid.hfac==0, time_dependent=time_dependent)
+# Arguments:
+# data: array of data to mask, assumed to be 2D unless time_dependent=True
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function get_hfac
+# time_dependent: indicates the data has a time dimension; default False
+
+def mask_except_zice (data, grid, gtype='t', time_dependent=False):
+
+    return apply_mask(data, np.invert(grid.get_zice_mask(gtype=gtype)), time_dependent=time_dependent)
+
+
+# Mask everything except FRIS out of a 2D field.
+
+# Arguments:
+# data: array of data to mask, assumed to be 2D unless time_dependent=True
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function get_hfac
+# time_dependent: indicates the data has a time dimension; default False
+
+def mask_except_fris (data, grid, gtype='t', time_dependent=False):
+
+    return apply_mask(data, np.invert(grid.get_fris_mask(gtype=gtype)), time_dependent=time_dependent)
+
+
+# Apply the 3D hfac mask. Dry cells are masked out; partial cells are untouched.
+
+# Arguments:
+# data: array of data to mask, assumed to be 3D unless time_dependent=True
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function Grid.get_hfac
+# time_dependent: indicates the data has a time dimension; default False
+
+def mask_3d (data, grid, gtype='t', time_dependent=False):
+
+    return apply_mask(data, grid.get_hfac(gtype=gtype)==0, time_dependent=time_dependent)

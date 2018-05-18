@@ -1,14 +1,11 @@
 #######################################################
-# NetCDF interface, including Grid object
+# File reading and writing, both NetCDF and binary
 #######################################################
 
 import netCDF4 as nc
 import numpy as np
 import sys
 import os
-
-from utils import fix_lon_range
-import constants as const
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
@@ -92,118 +89,6 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     data = np.squeeze(data)
 
     return data
-
-
-# Grid object containing lots of grid variables.
-class Grid:
-
-    # Initialisation arguments:
-    # file_path: path to NetCDF grid file    
-    def __init__ (self, file_path):
-
-        # 1D lon and lat axes on regular grids
-        # Make sure longitude is between -180 and 180
-        # Cell centres
-        self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'))
-        self.lat_1d = read_netcdf(file_path, 'Y')
-        # Cell corners (southwest)
-        self.lon_corners_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'))
-        self.lat_corners_1d = read_netcdf(file_path, 'Yp1')
-
-        # 2D lon and lat fields on any grid
-        # Cell centres
-        self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'))
-        self.lat_2d = read_netcdf(file_path, 'YC')
-        # Cell corners
-        self.lon_corners_2d = fix_lon_range(read_netcdf(file_path, 'XG'))
-        self.lat_corners_2d = read_netcdf(file_path, 'YG')
-
-        # 2D integrands of distance
-        # Across faces
-        self.dx = read_netcdf(file_path, 'dxF')
-        self.dy = read_netcdf(file_path, 'dyF')
-        # Between centres
-        self.dx_t = read_netcdf(file_path, 'dxC')
-        self.dy_t = read_netcdf(file_path, 'dyC')
-        # Between u-points
-        self.dx_u = self.dx  # Equivalent to distance across face
-        self.dy_u = read_netcdf(file_path, 'dyU')
-        # Between v-points
-        self.dx_v = read_netcdf(file_path, 'dxV')
-        self.dy_v = self.dy  # Equivalent to distance across face
-        # Between corners
-        self.dx_psi = read_netcdf(file_path, 'dxG')
-        self.dy_psi = read_netcdf(file_path, 'dyG')
-
-        # 2D integrands of area
-        # Area of faces
-        self.dA = read_netcdf(file_path, 'rA')
-        # Centered on u-points
-        self.dA_u = read_netcdf(file_path, 'rAw')
-        # Centered on v-points
-        self.dA_v = read_netcdf(file_path, 'rAs')
-        # Centered on corners
-        self.dA_psi = read_netcdf(file_path, 'rAz')
-
-        # Vertical grid
-        # Assumes we're in the ocean so using z-levels - not sure how this
-        # would handle atmospheric pressure levels.
-        # Depth axis at centres of z-levels
-        self.z = read_netcdf(file_path, 'Z')
-        # Depth axis at edges of z-levels
-        self.z_edges = read_netcdf(file_path, 'Zp1')
-        # Depth axis at w-points
-        self.z_w = read_netcdf(file_path, 'Zl')
-
-        # Vertical integrands of distance
-        # Across cells
-        self.dz = read_netcdf(file_path, 'drF')
-        # Between centres
-        self.dz_t = read_netcdf(file_path, 'drC')
-
-        # Dimension lengths (on tracer grid)
-        self.nx = self.lon_1d.size
-        self.ny = self.lat_1d.size
-        self.nz = self.z.size
-
-        # Partial cell fractions
-        # At centres
-        self.hfac = read_netcdf(file_path, 'HFacC')
-        # At u-points
-        self.hfac_u = read_netcdf(file_path, 'HFacW')
-        # At v-points
-        self.hfac_v = read_netcdf(file_path, 'HFacS')
-        # Create land mask
-        self.land_mask = np.sum(self.hfac, axis=0) == 0
-
-        # Topography
-        # Bathymetry (bottom depth)
-        self.bathy = read_netcdf(file_path, 'R_low')
-        # Ice shelf draft (surface depth, 0 in land or open-ocean points)
-        self.zice = read_netcdf(file_path, 'Ro_surf')
-        self.zice[self.land_mask] = 0
-        hfac_sfc = self.hfac[0,:]
-        index = hfac_sfc == 1
-        self.zice[index] = 0
-        # Work out ice shelf mask
-        self.zice_mask = self.zice != 0
-        # Water column thickness
-        self.wct = read_netcdf(file_path, 'Depth')        
-
-        # Apply land mask to the topography
-        self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
-        self.zice = np.ma.masked_where(self.land_mask, self.zice)
-        self.wct = np.ma.masked_where(self.land_mask, self.wct)
-
-        # Calculate FRIS mask
-        self.fris_mask = np.zeros(self.zice_mask.shape, dtype='bool')
-        # Identify FRIS in two parts, split along the line 45W
-        # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-        regions = [[const.fris_bounds[0], -45, const.fris_bounds[2], -74.7], [-45, const.fris_bounds[1], const.fris_bounds[2], -77.85]]
-        for bounds in regions:
-            # Select the ice shelf points within these bounds
-            index = np.nonzero(self.zice_mask*(self.lon_2d >= bounds[0])*(self.lon_2d <= bounds[1])*(self.lat_2d >= bounds[2])*(self.lat_2d <= bounds[3]))
-            self.fris_mask[index] = True
 
 
 # Read the time axis from a NetCDF file. The default behaviour is to read and return the entire axis as Date objects, but you can also select a subset of time indices, and/or return as scalars - see optional keyword arguments.

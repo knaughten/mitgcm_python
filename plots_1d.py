@@ -6,7 +6,8 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from io import Grid, netcdf_time
+from grid import Grid
+from io import netcdf_time
 from timeseries import fris_melt
 from plot_utils import monthly_ticks, finished_plot
 
