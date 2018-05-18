@@ -12,6 +12,7 @@ import sys
 
 from utils import mask_except_zice
 import constants as const
+from io import netcdf_time
 
 
 # On a timeseries plot, label every month
@@ -304,6 +305,13 @@ def set_colour_bounds (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=N
     loc = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
     # Find the min and max values
     return np.amin(data[loc]), np.amax(data[loc])
+
+
+# Get the date in file_path at time_index, and return a nice string that can be added to plots.
+def parse_date (file_path, time_index):
+
+    date = netcdf_time(file_path)[time_index]
+    return date.strftime('%d %b %Y')
 
     
 

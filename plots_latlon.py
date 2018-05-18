@@ -11,7 +11,7 @@ import numpy as np
 from grid import Grid
 from io import read_netcdf, find_variable
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date
 from diagnostics import t_minus_tf
 
 
@@ -28,11 +28,12 @@ from diagnostics import t_minus_tf
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: something to write on the bottom of the plot about the date
 # return_fig: if True, return the figure and axis variables so that more work can be done on the plot (eg adding titles). Default False.
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 
-def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, return_fig=False, fig_name=None, change_points=None):
+def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, return_fig=False, fig_name=None, change_points=None):
     
     # Choose what the endpoints of the colourbar should do
     # If they're manually set, the data might go outside them
@@ -71,8 +72,13 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid)
+    # Add a colourbar
     plt.colorbar(img, extend=extend)
+    # Make nice axes
     latlon_axes(ax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    if date_string is not None:
+        # Add the date in the bottom right corner
+        plt.text(1, 0, date_string, ha='right', va='bottom', transform=ax.transAxes)
 
     if return_fig:
         return fig, ax
@@ -90,12 +96,13 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot
 # change_points: as in function set_colours
 # fig_name: as in function finished_plot
 
-def plot_ismr (ismr, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, change_points=None, fig_name=None):
+def plot_ismr (ismr, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, fig_name=None):
 
-    fig, ax = latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, return_fig=True)
+    fig, ax = latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, return_fig=True)
     ax.set_title('Ice shelf melt rate (m/y)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
@@ -111,11 +118,12 @@ def plot_ismr (ismr, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, return_fig=True)
+    fig, ax = latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'temp':
         ax.set_title(r'Bottom water temperature ($^{\circ}$C)', fontsize=18)
     elif var == 'salt':
@@ -134,11 +142,12 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, return_fig=True)
+    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'temp':
         ax.set_title(r'Sea surface temperature ($^{\circ}$C)', fontsize=18)
     elif var == 'salt':
@@ -158,11 +167,12 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, return_fig=True)
+    fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'aice':
         ax.set_title('Sea ice concentration (fraction)', fontsize=18)
     elif var == 'hice':
@@ -187,8 +197,9 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
-def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
     if tf_option == 'bottom':
         tmtf_plot = select_bottom(tminustf)
@@ -199,7 +210,7 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
         title_end = '(minimum over depth)'
-    fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name, return_fig=True)
+    fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, return_fig=True)
     ax.set_title(r'Difference from in-situ freezing point ($^{\circ}$C)' + '\n' + title_end, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
@@ -239,17 +250,22 @@ def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# date_string: as in function latlon_plot. If time_index is defined and date_string isn't, date_string will be automatically determined based on the calendar in file_path.
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
 # change_points: only matters for 'ismr'. As in function set_colours.
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 
-def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
+def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
         print 'Error (read_plot_latlon): either specify time_index or set time_average=True.'
         sys.exit()
+
+    if date_string is None and time_index is not None:
+        # Determine what to write about the date
+        date_string = parse_date(file_path, time_index)
 
     if not isinstance(grid, Grid):
         # This is the path to the NetCDF grid file, not a Grid object
@@ -290,27 +306,27 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 
     # Plot
     if var == 'ismr':
-        plot_ismr(ismr, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, fig_name=fig_name)
+        plot_ismr(ismr, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, date_string=date_string, fig_name=fig_name)
     elif var == 'bwtemp':
-        plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'bwsalt':
-        plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'sst':
-        plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'sss':
-        plot_ss('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_ss('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'aice':
-        plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'hice':
-        plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'mld':
-        plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'eta':
-        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'saltflx':
-        plot_2d_noshelf('saltflx', saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('saltflx', saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     elif var == 'tminustf':
-        plot_tminustf(tminustf, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, fig_name=fig_name)
+        plot_tminustf(tminustf, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
     
