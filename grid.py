@@ -141,11 +141,6 @@ class Grid:
         # Water column thickness
         self.wct = read_netcdf(file_path, 'Depth')        
 
-        # Apply masks to the topography
-        self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
-        self.zice = np.ma.masked_where(self.zice_mask, self.zice)
-        self.wct = np.ma.masked_where(self.land_mask, self.wct)
-
         
     # Return the longitude and latitude arrays for the given grid type.
     # 't' (default), 'u', 'v', 'psi', and 'w' are all supported.

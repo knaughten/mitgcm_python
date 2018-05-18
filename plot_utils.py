@@ -10,7 +10,7 @@ import matplotlib.dates as dt
 import matplotlib.colors as cl
 import sys
 
-from utils import mask_except_zice
+from utils import mask_land
 import constants as const
 from io import netcdf_time
 
@@ -268,10 +268,12 @@ def shade_land_zice (ax, grid):
 # Contour the ice shelf front in black
 def contour_iceshelf_front (ax, grid):
 
+    # Mask land out of ice shelf draft, so that grounding line isn't contoured
+    zice = mask_land(grid.zice, grid)
     # Find the shallowest non-zero ice shelf draft
-    zice0 = np.amax(grid.zice[grid.zice!=0])
+    zice0 = np.amax(zice[zice!=0])
     # Add to plot
-    ax.contour(grid.lon_2d, grid.lat_2d, grid.zice, levels=[zice0], colors=('black'), linestyles='solid')
+    ax.contour(grid.lon_2d, grid.lat_2d, zice, levels=[zice0], colors=('black'), linestyles='solid')
 
 
 # Find the minimum and maximum values of an array in the given region.

@@ -182,7 +182,7 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
         title = 'Free surface (m)'
     elif var == 'saltflx':
         title = r'Surface salt flux (kg/m$^2$/s)'
-    latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name)
+    latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name)
 
 
 # Plot the difference from the in-situ freezing point.
@@ -349,13 +349,13 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
         grid = Grid(grid)
 
     if var == 'bathy':
-        data = grid.bathy
+        data = abs(mask_land(grid.bathy, grid))
         title = 'Bathymetry (m)'
     elif var == 'zice':
-        data = grid.zice
+        data = abs(mask_except_zice(grid.zice, grid))
         title = 'Ice shelf draft (m)'
     elif var == 'wct':
-        data = grid.wct
+        data = abs(mask_land(grid.wct, grid))
         title = 'Water column thickness (m)'
 
     latlon_plot(data, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title, fig_name=fig_name)
