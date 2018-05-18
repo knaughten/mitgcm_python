@@ -75,10 +75,10 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     # Add a colourbar
     plt.colorbar(img, extend=extend)
     # Make nice axes
-    latlon_axes(ax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     if date_string is not None:
         # Add the date in the bottom right corner
-        plt.text(1, 0, date_string, ha='right', va='bottom', transform=ax.transAxes)
+        plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
 
     if return_fig:
         return fig, ax

@@ -78,7 +78,7 @@ def cell_boundaries (data, grid, gtype='t'):
 
 # Set the limits of the longitude and latitude axes, and give them nice labels.
 # The limits will be the limits of the data unless you want to zoom into FRIS (set zoom_fris=True) or specify particular limits (set keyword arguments xmin, xmax, ymin, ymax in degrees longitude and latitude respectively).
-def latlon_axes (ax, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None):
+def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None):
     
     # Set limits on axes
     if zoom_fris:
@@ -86,17 +86,16 @@ def latlon_axes (ax, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None
         xmax = const.fris_bounds[1]
         ymin = const.fris_bounds[2]
         ymax = const.fris_bounds[3]
-    # Start with the boundaries of the lon and lat axes
-    ax.axis('tight')
-    # Modify as needed
-    if xmin is not None:
-        ax.set_xlim(left=xmin)
-    if xmax is not None:
-        ax.set_xlim(right=xmax)
-    if ymin is not None:
-        ax.set_ylim(bottom=ymin)
-    if ymax is not None:
-        ax.set_ylim(top=ymax)
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+    ax.set_xlim([xmin, xmax])
+    ax.set_ylim([ymin, ymax])
 
     # Check location of ticks
     lon_ticks = ax.get_xticks()
