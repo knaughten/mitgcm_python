@@ -146,11 +146,11 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
     finished_plot(fig, fig_name=fig_name)
 
 
-# Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface.
+# Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface, surface salt flux.
 
 # Arguments:
-# var: 'aice', 'hice', 'mld', or 'eta'
-# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, mixed layer depth, or free surface (all m), already masked with the land and ice shelf
+# var: 'aice', 'hice', 'mld', 'eta', 'saltflx'
+# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, mixed layer depth, free surface (all m), or surface salt flux (kg/m^2/s) already masked with the land and ice shelf
 # grid: Grid object
 
 # Optional keyword arguments:
@@ -171,25 +171,8 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
         ax.set_title('Mixed layer depth (m)', fontsize=18)
     elif var == 'eta':
         ax.set_title('Free surface (m)', fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
-
-
-# Plot surface salt flux, including in the ice shelf cavities.
-
-# Arguments:
-# saltflx: 2D (lat x lon) array of surface salt flux in kg/m^2/s, already masked with land
-# grid: Grid object
-
-# Optional keyword arguments:
-# vmin, vmax: as in function set_colours
-# zoom_fris: as in function latlon_axes
-# xmin, xmax, ymin, ymax: as in function latlon_axes
-# fig_name: as in function finished_plot
-
-def plot_saltflx (saltflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
-
-    fig, ax = latlon_plot(saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name, return_fig=True)
-    ax.set_title(r'Surface salt flux (kg/m$^2$/s)', fontsize=18)
+    elif var == 'saltflx':
+        ax.set_title(r'Surface salt flux (kg/m$^2$/s)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
 
@@ -299,7 +282,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
     if var == 'eta':
         eta = mask_land_zice(read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'saltflx':
-        saltflx = mask_land(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        saltflx = mask_land_zice(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
 
     # Any additional calculations
     if var == 'tminustf':
@@ -325,7 +308,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
     elif var == 'eta':
         plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
     elif var == 'saltflx':
-        plot_saltflx(saltflx, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
+        plot_2d_noshelf('saltflx', saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
     elif var == 'tminustf':
         plot_tminustf(tminustf, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, fig_name=fig_name)
     else:

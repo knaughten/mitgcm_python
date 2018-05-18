@@ -16,15 +16,20 @@ from plot_utils import monthly_ticks, finished_plot
 
 # Arguments:
 # file_path: path to NetCDF file containing variable "SHIfwFlx"
-# grid_path: path to NetCDF grid file
+# grid: either a Grid object, or the path to NetCDF grid file
 
 # Optional keyword argument:
 # fig_name: as in function finished_plot
 
-def plot_fris_massbalance (file_path, grid_path, fig_name=None):
+def plot_fris_massbalance (file_path, grid, fig_name=None):
+
+    if not isinstance(grid, Grid):
+        # This is the path to the NetCDF grid file, not a Grid object
+        # Make a grid object from it
+        grid = Grid(grid)
 
     # Calculate timeseries
-    melt, freeze = fris_melt(file_path, Grid(grid_path), mass_balance=True)
+    melt, freeze = fris_melt(file_path, grid, mass_balance=True)
     # Read time axis
     time = netcdf_time(file_path)
 
