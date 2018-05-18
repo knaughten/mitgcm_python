@@ -77,7 +77,15 @@ def cell_boundaries (data, grid, gtype='t'):
 
 
 # Set the limits of the longitude and latitude axes, and give them nice labels.
-# The limits will be the limits of the data unless you want to zoom into FRIS (set zoom_fris=True) or specify particular limits (set keyword arguments xmin, xmax, ymin, ymax in degrees longitude and latitude respectively).
+
+# Arguments:
+# ax: Axes object
+# lon, lat: values on x and y axes
+
+# Optional keyword arguments:
+# zoom_fris: zoom into the FRIS cavity (bounds set in constants.py)
+# xmin, xmax, ymin, ymax: specific limits on longitude and latitude
+
 def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None):
     
     # Set limits on axes

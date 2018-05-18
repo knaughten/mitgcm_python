@@ -29,11 +29,12 @@ from diagnostics import t_minus_tf
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
 # date_string: something to write on the bottom of the plot about the date
+# title: a title to add to the plot
 # return_fig: if True, return the figure and axis variables so that more work can be done on the plot (eg adding titles). Default False.
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 
-def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, return_fig=False, fig_name=None, change_points=None):
+def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, return_fig=False, fig_name=None, change_points=None):
     
     # Choose what the endpoints of the colourbar should do
     # If they're manually set, the data might go outside them
@@ -79,6 +80,9 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
+    if title is not None:
+        # Add a title
+        plt.title(title, fontsize=18)
 
     if return_fig:
         return fig, ax
@@ -102,9 +106,7 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
 
 def plot_ismr (ismr, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, fig_name=None):
 
-    fig, ax = latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, return_fig=True)
-    ax.set_title('Ice shelf melt rate (m/y)', fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+    latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', fig_name=fig_name)
 
 
 # Plot bottom water temperature or salinity.
@@ -123,12 +125,11 @@ def plot_ismr (ismr, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'temp':
-        ax.set_title(r'Bottom water temperature ($^{\circ}$C)', fontsize=18)
+        title = r'Bottom water temperature ($^{\circ}$C)'
     elif var == 'salt':
-        ax.set_title('Bottom water salinity (psu)', fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+        title = 'Bottom water salinity (psu)'
+    latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name)
 
 
 # Plot surface temperature or salinity.
@@ -147,12 +148,11 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 
 def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'temp':
-        ax.set_title(r'Sea surface temperature ($^{\circ}$C)', fontsize=18)
+        title = r'Sea surface temperature ($^{\circ}$C)'
     elif var == 'salt':
-        ax.set_title('Sea surface salinity (psu)', fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+        title = 'Sea surface salinity (psu)'
+    latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name)
 
 
 # Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface, surface salt flux.
@@ -172,18 +172,17 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 
 def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
-    fig, ax = latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, return_fig=True)
     if var == 'aice':
-        ax.set_title('Sea ice concentration (fraction)', fontsize=18)
+        title = 'Sea ice concentration (fraction)'
     elif var == 'hice':
-        ax.set_title('Sea ice effective thickness (m)', fontsize=18)
+        title = 'Sea ice effective thickness (m)'
     elif var == 'mld':
-        ax.set_title('Mixed layer depth (m)', fontsize=18)
+        title = 'Mixed layer depth (m)'
     elif var == 'eta':
-        ax.set_title('Free surface (m)', fontsize=18)
+        title = 'Free surface (m)'
     elif var == 'saltflx':
-        ax.set_title(r'Surface salt flux (kg/m$^2$/s)', fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+        title = r'Surface salt flux (kg/m$^2$/s)'
+    latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, fig_name=fig_name, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name)
 
 
 # Plot the difference from the in-situ freezing point.
@@ -199,20 +198,19 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
 # xmin, xmax, ymin, ymax: as in function latlon_axes
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
-def plot_tminustf(tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
+
+def plot_tminustf (tminustf, grid, tf_option='bottom', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
     if tf_option == 'bottom':
         tmtf_plot = select_bottom(tminustf)
-        title_end = '(bottom layer)'
+        title_end = '\n(bottom layer)'
     elif tf_option == 'max':
         tmtf_plot = np.amax(tminustf, axis=0)
-        title_end = '(maximum over depth)'
+        title_end = '\n(maximum over depth)'
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
-        title_end = '(minimum over depth)'
-    fig, ax = latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, return_fig=True)
-    ax.set_title(r'Difference from in-situ freezing point ($^{\circ}$C)' + '\n' + title_end, fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+        title_end = '\n(minimum over depth)'
+    latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=r'Difference from in-situ freezing point ($^{\circ}$C)'+title_end, fig_name=fig_name)
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
@@ -329,6 +327,38 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
         plot_tminustf(tminustf, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
+
+
+# Plot topographic variables: bathymetry, ice shelf draft, water column thickness.
+
+# Arguments:
+# var: 'bathy', 'zice', 'wct'
+# grid: either a Grid object, or the path to the NetCDF grid file
+
+# Optional keyword arguments:
+# vmin, vmax: as in function set_colours
+# zoom_fris: as in function latlon_axes
+# xmin, xmax, ymin, ymax: as in function latlon_axes
+# fig_name: as in function finished_plot
+
+def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+
+    if not isinstance(grid, Grid):
+        # This is the path to the NetCDF grid file, not a Grid object
+        # Make a grid object from it
+        grid = Grid(grid)
+
+    if var == 'bathy':
+        data = grid.bathy
+        title = 'Bathymetry (m)'
+    elif var == 'zice':
+        data = grid.zice
+        title = 'Ice shelf draft (m)'
+    elif var == 'wct':
+        data = grid.wct
+        title = 'Water column thickness (m)'
+
+    latlon_plot(data, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title, fig_name=fig_name)
     
 
     

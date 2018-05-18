@@ -141,9 +141,9 @@ class Grid:
         # Water column thickness
         self.wct = read_netcdf(file_path, 'Depth')        
 
-        # Apply land mask to the topography
+        # Apply masks to the topography
         self.bathy = np.ma.masked_where(self.land_mask, self.bathy)
-        self.zice = np.ma.masked_where(self.land_mask, self.zice)
+        self.zice = np.ma.masked_where(self.zice_mask, self.zice)
         self.wct = np.ma.masked_where(self.land_mask, self.wct)
 
         
