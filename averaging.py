@@ -1,4 +1,20 @@
+#######################################################
+# All things averaging
+#######################################################
+
 import numpy as np
+
+# Vertically average the given field over all depths.
+
+# Arguments:
+# data: 3D (depth x lat x lon) or 4D (time x depth x lat x lon, needs time_dependent=True) array of data to average
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function Grid.get_lon_lat
+# time_dependent: as in function apply_mask
+
+# Output: array of dimension lat x lon (if time_dependent=False) or time x lat x lon (if time_dependent=True)
 
 def vertical_average (data, grid, gtype='t', time_dependent=False):
 

@@ -94,8 +94,8 @@ def apply_mask (data, mask, time_dependent=False):
 # grid: Grid object
 
 # Optional keyword arguments:
-# gtype: as in function get_hfac
-# time_dependent: indicates the data has a time dimension; default False
+# gtype: as in function Grid.get_hfac
+# time_dependent: as in function apply_mask
 
 def mask_land (data, grid, gtype='t', time_dependent=False):
 
@@ -109,8 +109,8 @@ def mask_land (data, grid, gtype='t', time_dependent=False):
 # grid: Grid object
 
 # Optional keyword arguments:
-# gtype: as in function get_hfac
-# time_dependent: indicates the data has a time dimension; default False
+# gtype: as in function Grid.get_hfac
+# time_dependent: as in function apply_mask
 
 def mask_land_zice (data, grid, gtype='t', time_dependent=False):
 
@@ -124,8 +124,8 @@ def mask_land_zice (data, grid, gtype='t', time_dependent=False):
 # grid: Grid object
 
 # Optional keyword arguments:
-# gtype: as in function get_hfac
-# time_dependent: indicates the data has a time dimension; default False
+# gtype: as in function Grid.get_hfac
+# time_dependent: as in function apply_mask
 
 def mask_except_zice (data, grid, gtype='t', time_dependent=False):
 
@@ -139,8 +139,8 @@ def mask_except_zice (data, grid, gtype='t', time_dependent=False):
 # grid: Grid object
 
 # Optional keyword arguments:
-# gtype: as in function get_hfac
-# time_dependent: indicates the data has a time dimension; default False
+# gtype: as in function Grid.get_hfac
+# time_dependent: as in function apply_mask
 
 def mask_except_fris (data, grid, gtype='t', time_dependent=False):
 
@@ -155,7 +155,7 @@ def mask_except_fris (data, grid, gtype='t', time_dependent=False):
 
 # Optional keyword arguments:
 # gtype: as in function Grid.get_hfac
-# time_dependent: indicates the data has a time dimension; default False
+# time_dependent: as in function apply_mask
 
 def mask_3d (data, grid, gtype='t', time_dependent=False):
 
