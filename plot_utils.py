@@ -243,26 +243,26 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
 
 # Shade the given boolean mask in grey on the plot.
-def shade_mask (ax, mask, grid):
+def shade_mask (ax, mask, grid, gtype='t'):
 
     # Properly mask all the False values, so that only True values are unmasked
     mask_plot = np.ma.masked_where(np.invert(mask), mask)
     # Prepare quadrilateral patches
-    lon, lat, mask_plot = cell_boundaries(mask_plot, grid)
+    lon, lat, mask_plot = cell_boundaries(mask_plot, grid, gtype=gtype)
     # Add to plot
     ax.pcolormesh(lon, lat, mask_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
 
 
 # Shade the land in grey
-def shade_land (ax, grid):
+def shade_land (ax, grid, gtype='t'):
 
-    shade_mask(ax, grid.land_mask, grid)
+    shade_mask(ax, grid.get_land_mask(gtype=gtype), grid, gtype=gtype)
 
 
 # Shade the land and ice shelves in grey
-def shade_land_zice (ax, grid):
+def shade_land_zice (ax, grid, gtype='t'):
 
-    shade_mask(ax, grid.land_mask+grid.zice_mask, grid)
+    shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_zice_mask(gtype=gtype), grid, gtype=gtype)
     
 
 # Contour the ice shelf front in black

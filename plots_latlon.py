@@ -64,10 +64,10 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     fig, ax = plt.subplots()
     if include_shelf:
         # Shade land in grey
-        shade_land(ax, grid)
+        shade_land(ax, grid, gtype=gtype)
     else:
         # Shade land and ice shelves in grey
-        shade_land_zice(ax, grid)
+        shade_land_zice(ax, grid, gtype=gtype)
     # Plot the data    
     img = ax.pcolormesh(lon, lat, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
     if include_shelf:

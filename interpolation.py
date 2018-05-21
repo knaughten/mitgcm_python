@@ -4,6 +4,7 @@
 
 import numpy as np
 import sys
+from scipy.spatial import KDTree
 
 from utils import mask_land, mask_land_zice, mask_3d
 
@@ -25,7 +26,7 @@ from utils import mask_land, mask_land_zice, mask_3d
 def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_shelf=False):
 
     # Figure out if the field is depth-dependent
-    if (time_dependent and len(data.shape)==4) or (not time dependent and len(data.shape)==3):
+    if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
         depth_dependent=True
     else:
         depth_dependent=False
@@ -34,27 +35,26 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
         print "Error (interp_grid): can't set mask_shelf=True for a depth-dependent field."
         sys.exit()
 
-    # Make sure the field is masked
-    if depth_dependent:
-        data = mask_3d(data, grid, gtype=gtype_in, time_dependent=time_dependent)
+    if gtype_in in ['u', 'v', 'psi', 'w']:
+        # Fill the mask with zeros (okay because no-slip boundary condition)
+        data_tmp = np.copy(data)
+        data_tmp[data.mask] = 0.0
     else:
-        if mask_shelf:
-            data = mask_land_zice(data, grid, gtype=gtype_in, time_dependent=time_dependent)
-        else:
-            data = mask_land(data, grid, gtype=gtype_in, time_dependent=time_dependent)
+        # Tracer land mask is the least restrictive, so it doesn't matter what the masked values are - they will definitely get re-masked at the end.
+        data_tmp = data
 
     # Interpolate
-    data_interp = np.ma.empty(data.shape)
+    data_interp = np.empty(data_tmp.shape)
     if gtype_in == 'u' and gtype_out == 't':
         # Midpoints in the x direction
-        data_interp[...,:-1] = 0.5*(data[...,:-1] + data[...,1:])
+        data_interp[...,:-1] = 0.5*(data_tmp[...,:-1] + data_tmp[...,1:])
         # Extend the easternmost column
-        data_interp[...,-1] = data[...,-1]
+        data_interp[...,-1] = data_tmp[...,-1]
     elif gtype_in == 'v' and gtype_out == 't':
         # Midpoints in the y direction
-        data_interp[...,:-1,:] = 0.5*(data[...,:-1,:] + data[...,1:,:])
+        data_interp[...,:-1,:] = 0.5*(data_tmp[...,:-1,:] + data_tmp[...,1:,:])
         # Extend the northernmost row
-        data_interp[...,-1,:] = data[...,-1,:]
+        data_interp[...,-1,:] = data_tmp[...,-1,:]
     else:
         print 'Error (interp_grid): interpolation from the ' + gtype_in + '-grid to the ' + gtype_out + '-grid is not yet supported'
         sys.exit()
@@ -69,6 +69,8 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
             data_interp = mask_land(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
 
     return data_interp
+
+                
     
 
     
