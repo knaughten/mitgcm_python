@@ -1,4 +1,4 @@
-from numpy import *
+import numpy as np
 
 def vertical_average (data, grid, gtype='t', time_dependent=False):
 
@@ -17,7 +17,7 @@ def vertical_average (data, grid, gtype='t', time_dependent=False):
         dz = np.tile(dz, (num_time, 1, 1, 1))
         hfac = np.tile(hfac, (num_time, 1, 1, 1))
     # Vertically average    
-    return sum(data*dz*hfac, axis=-3)/sum(dz*hfac, axis=-3)
+    return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
 
     
         
