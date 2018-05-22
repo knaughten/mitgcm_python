@@ -10,9 +10,11 @@ import matplotlib.dates as dt
 import matplotlib.colors as cl
 import sys
 
-from utils import mask_land
+from utils import mask_land, select_top, select_bottom
 import constants as const
 from io import netcdf_time
+from averaging import vertical_average
+from interpolation import interp_grid
 
 
 # On a timeseries plot, label every month
@@ -393,10 +395,10 @@ def average_blocks (data, chunk):
     # Average over blocks
     for j in range(ny_chunks):
         start_j = j*chunk
-        end_j = min((j+1)*chunk, data.size[0])
+        end_j = min((j+1)*chunk, data.shape[0])
         for i in range(nx_chunks):
             start_i = i*chunk
-            end_i = min((i+1)*chunk, data.size[1])
+            end_i = min((i+1)*chunk, data.shape[1])
             data_blocked[j,i] = np.mean(data[start_j:end_j, start_i:end_i])
 
     return data_blocked
@@ -413,13 +415,13 @@ def average_blocks (data, chunk):
 # chunk: size of block to average velocity vectors over (so plot isn't too crowded)
 # scale, headwidth, headlength: arguments to the "quiver" function, to fine-tune the appearance of the arrows
 
-def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.9, headwidth=8, headlength=9):
+def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, headlength=7):
 
     lon, lat = grid.get_lon_lat()
     lon_plot = average_blocks(lon, chunk)
     lat_plot = average_blocks(lat, chunk)
-    u_plot = average_blocks(u, chunk)
-    v_plot = average_blocks(v, chunk)
+    u_plot = average_blocks(u_vec, chunk)
+    v_plot = average_blocks(v_vec, chunk)
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
     
 

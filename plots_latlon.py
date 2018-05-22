@@ -13,8 +13,6 @@ from io import read_netcdf, find_variable
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
 from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf
-from averaging import vertical_average
-from interpolation import interp_grid
 
 
 # Basic lat-lon plot of any variable.
@@ -27,7 +25,6 @@ from interpolation import interp_grid
 # gtype: as in function Grid.get_lon_lat
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
 # ctype: as in function set_colours
-# u_vec, v_vec: components of vector to overlay
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
@@ -37,7 +34,7 @@ from interpolation import interp_grid
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 
-def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', u_vec=None, v_vec=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, return_fig=False, fig_name=None, change_points=None):
+def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, return_fig=False, fig_name=None, change_points=None):
     
     # Choose what the endpoints of the colourbar should do
     # If they're manually set, the data might go outside them
@@ -76,9 +73,6 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', u_vec
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid)
-    if u_vec is not None and v_vec is not None:
-        # Overlay circulation
-        overlay_vectors(ax, u_vec, v_vec, grid)
     # Add a colourbar
     plt.colorbar(img, extend=extend)
     # Make nice axes
@@ -241,7 +235,9 @@ def plot_tminustf (temp, salt, grid, tf_option='bottom', vmin=None, vmax=None, z
 def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
     # Do the correct vertical transformation, and interpolate to the tracer grid
-    speed, u_plot, v_plot = prepare_vel(u, v, vel_option=vel_option)
+    speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option)
+
+    include_shelf=True
     if vel_option == 'avg':
         title_beg = 'Vertically averaged '
     elif vel_option == 'sfc':
@@ -250,7 +246,27 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
         title_beg = 'Bottom '
     elif vel_option == 'ice':
         title_beg = 'Sea ice '
-    latlon_plot(speed, grid, ctype='vel', u_vec=u_plot, v_vec=v_plot, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, date_string=date_string, title=title_beg+'velocity (m/s)', fig_name=fig_name)    
+        include_shelf = False
+
+    # Make the plot but don't finish it yet
+    fig, ax = latlon_plot(speed, grid, ctype='vel', include_shelf=include_shelf, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, date_string=date_string, title=title_beg+'velocity (m/s)', return_fig=True)
+
+    # Overlay circulation
+    if zoom_fris:
+        chunk = 6
+    else:
+        chunk = 10
+    if vel_option == 'avg':
+        scale = 0.8
+    elif vel_option == 'sfc':
+        scale = 1.5
+    elif vel_option == 'bottom':
+        scale = 1
+    elif vel_option == 'ice':
+        scale = 4
+    overlay_vectors(ax, u_plot, v_plot, grid, chunk=chunk, scale=scale)
+
+    finished_plot(fig, fig_name=fig_name)
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
@@ -299,7 +315,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 # vel_option: only matters for 'vel'. As in function prepare_vel.
 
-def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom'):
+def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom', vel_option='avg'):
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
