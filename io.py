@@ -360,6 +360,18 @@ def crash_to_netcdf (crash_dir, grid_path):
         if file.startswith('stateEtacrash') and file.endswith('.data'):
             eta = read_binary(crash_dir + file, grid, 'xy')
             ncfile.add_variable('ETAN', eta, 'xy', units='m')
+        if file.startswith('stateAreacrash') and file.endswith('.data'):
+            area = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('SIarea', area, 'xy', units='fraction')
+        if file.startswith('stateHeffcrash') and file.endswith('.data'):
+            heff = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('SIheff', heff, 'xy', units='m')
+        if file.startswith('stateUicecrash') and file.endswith('.data'):
+            uice = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('SIuice', uice, 'xy', gtype='u', units='m/s')
+        if file.startswith('stateVicecrash') and file.endswith('.data'):
+            vice = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('SIvice', uice, 'xy', gtype='v', units='m/s')
 
     ncfile.finished()
     
