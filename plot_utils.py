@@ -171,6 +171,7 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
 # Optional keyword arguments:
 # ctype: 'basic' is just the 'jet' colourmap
 #        'plusminus' creates a red/blue colour map where 0 is white
+#        'vel' is the 'cool' colourmap starting at 0; good for plotting velocity
 #        'ismr' creates a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink
 # vmin, vmax: if defined, enforce these minimum and/or maximum values for the colour map. vmin might get modified for 'ismr' colour map if there is no refreezing (i.e. set to 0).
 # change_points: list of size 3 containing values where the 'ismr' colourmap should hit the colours yellow, orange, and red. It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
@@ -204,6 +205,10 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
             min_colour = 0.5*(1 + vmin/vmax)
             max_colour = 1
         return truncate_colormap(plt.get_cmap('RdBu_r'), min_colour, max_colour), vmin, vmax
+
+    elif ctype == 'vel':
+        # Make sure it starts at 0
+        return plt.get_cmap('cool'), 0, vmax
 
     elif ctype == 'ismr':
         # Fancy colourmap for ice shelf melting and refreezing
@@ -322,6 +327,106 @@ def parse_date (file_path, time_index):
     date = netcdf_time(file_path)[time_index]
     return date.strftime('%d %b %Y')
 
+
+# Given 3D arrays of u and v on their original grids, do a vertical transformation (vertically average, select top layer, or select bottom layer) and interpolate to the tracer grid. Return the speed as well as both vector components.
+
+# Arguments:
+# u, v: 3D (depth x lat x lon) arrays of u and v, on the u-grid and v-grid respectively, already masked with hfac
+# grid: Grid option
+
+# Optional keyword argument:
+# vel_option: 'vel' (vertically average, default), 'sfc' (select the top layer), 'bottom' (select the bottom layer), or 'ice' (sea ice velocity so no vertical transformation is needed)
+
+def prepare_vel (u, v, grid, vel_option='avg'):
+
+    # Get the correct 2D velocity field
+    if vel_option == 'avg':
+        u_2d = vertical_average(u, grid, gtype='u')
+        v_2d = vertical_average(v, grid, gtype='v')
+    elif vel_option == 'sfc':
+        u_2d = select_top(u)
+        v_2d = select_top(v)
+    elif vel_option == 'bottom':
+        u_2d = select_bottom(u)
+        v_2d = select_top(v)
+    elif vel_option == 'ice':
+        u_2d = u
+        v_2d = v
+
+    # Interpolate to the tracer grid
+    if vel_option == 'ice':
+        # This is sea ice velocity so we need to mask the ice shelves
+        mask_shelf = True
+    else:
+        mask_shelf = False
+    u_interp = interp_grid(u_2d, grid, 'u', 't', mask_shelf=mask_shelf)
+    v_interp = interp_grid(v_2d, grid, 'v', 't', mask_shelf=mask_shelf)
+
+    # Calculate speed
+    speed = np.sqrt(u_interp**2 + v_interp**2)
+
+    return speed, u_interp, v_interp
+
+
+# Average a 2D array into blocks of size chunk x chunk. This is good for plotting vectors so the plot isn't too crowded.
+
+# Arguments:
+# data: 2D array, either masked or unmasked
+# chunk: integer representing the side length of each chunk to average. It doesn't have to evenly divide the array; the last row and column of chunks will just be smaller if necessary.
+
+# Output: 2D array of smaller dimension (ceiling of original dimensions divided by chunk). If "data" has masked values, any blocks which are completely masked will also be masked in the output array.
+
+def average_blocks (data, chunk):
+
+    # Check if there is a mask
+    if np.ma.is_masked(data):
+        mask = True
+    else:
+        mask = False
+
+    # Figure out dimensions of output array
+    ny_chunks, nx_chunks = np.ceil(np.array(data.shape)/float(chunk)).astype(int)    
+    data_blocked = np.zeros([ny_chunks, nx_chunks])
+    if mask:
+        data_blocked = np.ma.MaskedArray(data_blocked)
+
+    # Average over blocks
+    for j in range(ny_chunks):
+        start_j = j*chunk
+        end_j = min((j+1)*chunk, data.size[0])
+        for i in range(nx_chunks):
+            start_i = i*chunk
+            end_i = min((i+1)*chunk, data.size[1])
+            data_blocked[j,i] = np.mean(data[start_j:end_j, start_i:end_i])
+
+    return data_blocked
+        
+
+# Overlay vectors (typically velocity).
+
+# Arguments:
+# ax: Axes object
+# u_vec, v_vec: 2D velocity components to overlay, already interpolated to the tracer grid
+# grid: Grid object
+
+# Optional keyword arguments:
+# chunk: size of block to average velocity vectors over (so plot isn't too crowded)
+# scale, headwidth, headlength: arguments to the "quiver" function, to fine-tune the appearance of the arrows
+
+def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.9, headwidth=8, headlength=9):
+
+    lon, lat = grid.get_lon_lat()
+    lon_plot = average_blocks(lon, chunk)
+    lat_plot = average_blocks(lat, chunk)
+    u_plot = average_blocks(u, chunk)
+    v_plot = average_blocks(v, chunk)
+    ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
+    
+
+    
+    
+
+    
     
 
     
