@@ -29,22 +29,39 @@ def plot_everything (file_path, grid_path, fig_dir):
 
     # Timeseries
     plot_fris_massbalance(file_path, grid, fig_name=fig_dir+'fris_massloss.png')
-    
-    # Lat-lon plots
+
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
     for var in var_names:
-        read_plot_latlon(var, file_path, grid, time_index=-1, fig_name=fig_dir+var+'.png')
+        # Customise bounds and zooming
+        vmin = None
+        vmax = None
+        zoom_fris = False
+        if var == 'bwsalt':
+            vmin = 34.3
+        if var == 'eta':
+            vmin = -2.5
+        if var == 'hice':
+            vmax = 4
+        if var == 'saltflx':
+            vmin = -0.001
+            vmax = 0.001
+        if var == 'tminustf':
+            vmax = 1.5
+            zoom_fris=True
+        # Plot
+        read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'.png')
+        # Make additional plots if needed
         if var in ['ismr', 'vel']:
             # Make another plot zoomed into FRIS
-            read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png')
         if var == 'tminustf':
             # Call the other options for vertical transformations
-            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='max', fig_name=fig_dir+var+'_max.png')
-            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='min', fig_name=fig_dir+var+'_min.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='min', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_min.png')
         if var == 'vel':
             # Call the other options for vertical transformations            
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', fig_name=fig_dir+var+'_sfc.png')
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', fig_name=fig_dir+var+'_bottom.png')    
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png')    
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
