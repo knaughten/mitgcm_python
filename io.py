@@ -7,8 +7,6 @@ import numpy as np
 import sys
 import os
 
-from grid import Grid
-
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
 
@@ -329,6 +327,8 @@ class NCfile:
 # crash_dir: directory including all the state*crash.*.data files. The NetCDF file will be saved here too, with the name crash.nc.
 # grid_path: path to NetCDF grid file.
 def crash_to_netcdf (crash_dir, grid_path):
+
+    from grid import Grid
 
     # Make sure crash_dir is a proper directory
     if not crash_dir.endswith('/'):
