@@ -43,8 +43,8 @@ def plot_everything (file_path, grid_path, fig_dir):
             read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='min', fig_name=fig_dir+var+'_min.png')
         if var == 'vel':
             # Call the other options for vertical transformations            
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', fig_name=fig_dir+vel+'_sfc.png')
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', fig_name=fig_dir+vel+'_bottom.png')    
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', fig_name=fig_dir+var+'_sfc.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', fig_name=fig_dir+var+'_bottom.png')    
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
