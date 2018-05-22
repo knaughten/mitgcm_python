@@ -6,12 +6,53 @@ import os
 
 from grid import Grid
 from io import NCfile, read_binary
+from plots_1d import plot_fris_massbalance
+from plots_latlon import read_plot_latlon
+
+
+# Make a bunch of plots when the simulation is done.
+# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, and a timeseries of FRIS mass loss.
+
+# Arguments:
+# file_path: path to output NetCDF file for this simulation chunk (assumed to be all in one file a la scripts/convert_netcdf.py)
+# grid_path: path to NetCDF grid file
+# fig_dir: path to directory to save figures in
+
+def plot_everything (file_path, grid_path, fig_dir):
+
+    # Make sure fig_dir is a proper directory
+    if not fig_dir.endswith('/'):
+        fig_dir += '/'
+
+    # Build the grid
+    grid = Grid(grid_path)
+
+    # Timeseries
+    plot_fris_massbalance(file_path, grid, fig_name=fig_dir+'fris_massloss.png')
+    
+    # Lat-lon plots
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
+    for var in var_names:
+        read_plot_latlon(var, file_path, grid, time_index=-1, fig_name=fig_dir+var+'.png')
+        if var in ['ismr', 'vel']:
+            # Make another plot zoomed into FRIS
+            read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png')
+        if var == 'tminustf':
+            # Call the other options for vertical transformations
+            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='max', fig_name=fig_dir+var+'_max.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='min', fig_name=fig_dir+var+'_min.png')
+        if var == 'vel':
+            # Call the other options for vertical transformations            
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', fig_name=fig_dir+vel+'_sfc.png')
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', fig_name=fig_dir+vel+'_bottom.png')    
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
+
 # Arguments:
 # crash_dir: directory including all the state*crash.*.data files. The NetCDF file will be saved here too, with the name crash.nc.
 # grid_path: path to NetCDF grid file.
+
 def crash_to_netcdf (crash_dir, grid_path):
 
     # Make sure crash_dir is a proper directory
