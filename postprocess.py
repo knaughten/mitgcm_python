@@ -5,7 +5,7 @@
 import os
 
 from grid import Grid
-from io import NCfile
+from io import NCfile, read_binary
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
