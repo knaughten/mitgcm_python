@@ -373,7 +373,7 @@ def crash_to_netcdf (crash_dir, grid_path):
             ncfile.add_variable('SIuice', uice, 'xy', gtype='u', units='m/s')
         if file.startswith('stateVicecrash') and file.endswith('.data'):
             vice = read_binary(crash_dir + file, grid, 'xy')
-            ncfile.add_variable('SIvice', uice, 'xy', gtype='v', units='m/s')
+            ncfile.add_variable('SIvice', vice, 'xy', gtype='v', units='m/s')
 
     ncfile.finished()
     
