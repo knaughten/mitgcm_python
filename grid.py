@@ -1,8 +1,10 @@
 #######################################################
 # Everything to do with the grid
+# This relies on a NetCDF grid file. To create it, run MITgcm just long enough to produce one grid.t*.nc file for each tile, and then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution).
 #######################################################
 
 import numpy as np
+import sys
 
 from io import read_netcdf
 from utils import fix_lon_range
@@ -112,27 +114,27 @@ class Grid:
         # Partial cell fractions
         # At centres
         self.hfac = read_netcdf(file_path, 'HFacC')
-        # At u-points
-        self.hfac_u = read_netcdf(file_path, 'HFacW')
-        # At v-points
-        self.hfac_v = read_netcdf(file_path, 'HFacS')
+        # On western edges
+        self.hfac_w = read_netcdf(file_path, 'HFacW')
+        # On southern edges
+        self.hfac_s = read_netcdf(file_path, 'HFacS')
 
         # Create masks on the t, u, and v grids
         # We can't do the psi grid because there is no hfac there
         # Land masks
         self.land_mask = build_land_mask(self.hfac)
-        self.land_mask_u = build_land_mask(self.hfac_u)
-        self.land_mask_v = build_land_mask(self.hfac_v)
+        self.land_mask_u = build_land_mask(self.hfac_w)
+        self.land_mask_v = build_land_mask(self.hfac_s)
         # Ice shelf masks
         self.zice_mask = build_zice_mask(self.hfac)
-        self.zice_mask_u = build_zice_mask(self.hfac_u)
-        self.zice_mask_v = build_zice_mask(self.hfac_v)
+        self.zice_mask_u = build_zice_mask(self.hfac_w)
+        self.zice_mask_v = build_zice_mask(self.hfac_s)
         # FRIS masks
         self.fris_mask = build_fris_mask(self.zice_mask, self.lon_2d, self.lat_2d)
         self.fris_mask_u = build_fris_mask(self.zice_mask_u, self.lon_corners_2d, self.lat_2d)
         self.fris_mask_v = build_fris_mask(self.zice_mask_v, self.lon_2d, self.lat_corners_2d)
 
-        # Topography
+        # Topography (as seen by the model after adjustment for eg hfacMin - not necessarily equal to what is specified by the user)
         # Bathymetry (bottom depth)
         self.bathy = read_netcdf(file_path, 'R_low')
         # Ice shelf draft (surface depth, enforce 0 in land or open-ocean points)
@@ -144,18 +146,34 @@ class Grid:
         
     # Return the longitude and latitude arrays for the given grid type.
     # 't' (default), 'u', 'v', 'psi', and 'w' are all supported.
-    def get_lon_lat (self, gtype='t'):
+    # Default returns the 2D meshed arrays; can set dim=1 to get 1D axes.
+    def get_lon_lat (self, gtype='t', dim=2):
+
+        if dim == 1:
+            lon = self.lon_1d
+            lon_corners = self.lon_corners_1d
+            lat = self.lat_1d
+            lat_corners = self.lat_corners_1d
+        elif dim == 2:
+            lon = self.lon_2d
+            lon_corners = self.lon_corners_2d
+            lat = self.lat_2d
+            lat_corners = self.lat_corners_2d
+        else:
+            print 'Error (get_lon_lat): dim must be 1 or 2'
+            sys.exit()
 
         if gtype in ['t', 'w']:
-            return self.lon_2d, self.lat_2d
+            return lon, lat
         elif gtype == 'u':
-            return self.lon_corners_2d, self.lat_2d
+            return lon_corners, lat
         elif gtype == 'v':
-            return self.lon_2d, self.lat_corners_2d
+            return lon, lat_corners
         elif gtype == 'psi':
-            return self.lon_corners_2d, self_lat_corners_2d
+            return lon_corners, lat_corners
         else:
             print 'Error (get_lon_lat): invalid gtype ' + gtype
+            sys.exit()
 
 
     # Return the hfac array for the given grid type.
@@ -165,11 +183,12 @@ class Grid:
         if gtype == 't':
             return self.hfac
         elif gtype == 'u':
-            return self.hfac_u
+            return self.hfac_w
         elif gtype == 'v':
-            return self.hfac_v
+            return self.hfac_s
         else:
             print 'Error (get_hfac): no hfac exists for the ' + gtype + ' grid'
+            sys.exit()
 
 
     # Return the land mask for the given grid type.
@@ -183,6 +202,7 @@ class Grid:
             return self.land_mask_v
         else:
             print 'Error (get_land_mask): no mask exists for the ' + gtype + ' grid'
+            sys.exit()
 
             
     # Return the ice shelf mask for the given grid type.
@@ -196,6 +216,7 @@ class Grid:
             return self.zice_mask_v
         else:
             print 'Error (get_zice_mask): no mask exists for the ' + gtype + ' grid'
+            sys.exit()
 
 
     # Return the FRIS mask for the given grid type.
@@ -209,3 +230,4 @@ class Grid:
             return self.fris_mask_v
         else:
             print 'Error (get_fris_mask): no mask exists for the ' + gtype + ' grid'
+            sys.exit()

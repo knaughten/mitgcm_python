@@ -423,14 +423,150 @@ def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, h
     u_plot = average_blocks(u_vec, chunk)
     v_plot = average_blocks(v_vec, chunk)
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
-    
 
-    
-    
 
-    
-    
+def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
 
+    if gtype not in ['t', 'u', 'v', 'psi']:
+        print 'Error (slice_cell_boundaries): the ' + gtype + '-grid is not supported for slices'
+
+    # Figure out direction of slice
+    if lon0 is not None and lat0 is None:
+        h_axis = 'lat'
+    elif lat0 is not None and lon0 is None:
+        h_axis = 'lon'
+    else:
+        print 'Error (slice_cell_boundaries): must specify exactly one of lon0, lat0'
+        sys.exit()
+
+    # Find nearest neighbour to lon0 and slice the data here
+    lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
+    if h_axis == 'lat':
+        i0 = np.argmin(abs(lon-lon0))
+        data_slice = data[:,:,i0]
+        # Save the real location of the slice
+        loc0 = lon[i0]
+    elif h_axis == 'lon':
+        j0 = np.argmin(abs(lat-lat0))
+        data_slice = data[:,j0,:]
+        loc0 = lat[j0]
+
+    # Get horizontal boundaries, as well as hfac and surface depth (grid.zice) at these boundaries
+    # Also throw away one row of data so all points are bounded
+    if h_axis == 'lat':
+        nh = grid.ny
+        if gtype in ['t', 'u']:
+            # Centered in y
+            # Boundaries are southern edges of cells in y
+            h_bdry = grid.lat_corners_1d
+            hfac = grid.hfac_s[:,:,i0]
+            # Ice shelf draft at these edges is the minimum of the tracer points on either side
+            zice = np.zeros(grid.ny)
+            zice[1:] = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
+            zice[0] = grid.zice[0,i0]
+            # Throw away northernmost row of data
+            data_slice = data_slice[:-1,:]
+        elif gtype in ['v', 'psi']:
+            # Edges in y
+            # Boundaries are centres of cells in y
+            h_bdry = grid.lat_1d
+            hfac = grid.hfac[:,:,i0]
+            zice = grid.zice[:,i0]
+            # Throw away southernmost row of data
+            data_slice = data_slice[1:,:]
+    elif h_axis == 'lon':
+        nh = grid.nx
+        if gtype in ['t', 'v']:
+            # Centered in x
+            # Boundaries are western edges of cells in x
+            h_bdry = grid.lon_corners_1d
+            hfac = grid.hfac_w[:,j0,:]
+            zice = np.zeros(grid.nx)
+            zice[1:] = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
+            zice[0] = grid.zice[j0,0]
+            # Throw away easternmost row of data
+            data_slice = data_slice[:,:-1]
+        elif gtype in ['u', 'psi']:
+            # Edges in x
+            # Boundaries are centres of cells in x
+            h_bdry = grid.lon_1d
+            hfac = grid.hfac[:,j0,:]
+            zice = grid.zice[j0,:]
+            # Throw away westernmost row of data
+            data_slice = data_slice[:,1:]
+    # Tile the horizontal boundaries and ice shelf draft to be the right dimension
+    h_bdry = np.tile(h_bdry, (grid.nz+1, 1))   # At vertical boundaries
+    zice = np.tile(zice, (grid.nz, 1))   # At vertical centres
+
+    # Get a bunch of information about the vertical grid, all stored in arrays with dimension (grid.nz+1) x (nh). This helps with vectorisation later.
+    # Depth of vertical layer above
+    lev_above = np.tile(np.expand_dims(grid.z_edges[:-1], 1), (1, nh))
+    # Depth of vertical layer below
+    lev_below = np.tile(np.expand_dims(grid.z_edges[1:], 1), (1, nh))
+    # Vertical thickness
+    dz = np.tile(np.expand_dims(grid.dz, 1), (1, nh))
+    # hfac one row above (zeros for air)
+    hfac_above = np.zeros(hfac.shape)
+    hfac_above[1:,:] = hfac[:-1,:]
+    # hfac one row below (zeros for seafloor)
+    hfac_below = np.zeros(hfac.shape)
+    hfac_below[:-1,:] = hfac[1:,:]
+
+    # Now find the true upper and lower boundaries, taking partial cells into account.
+    depth_above = np.zeros(lev_above.shape)
+    depth_below = np.zeros(lev_below.shape)
+    # Initialise to NaN for error checking later
+    depth_above[:] = np.nan
+    depth_below[:] = np.nan
+    # Fully dry or fully wet cells are easy
+    index = np.nonzero((hfac==0) + (hfac==1))
+    depth_above[index] = lev_above[index]
+    depth_below[index] = lev_below[index]
+    # Partial cells with ice shelves but no seafloor: wet portion is at the bottom
+    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below>0))
+    depth_above[index] = lev_above[index] - dz[index]*hfac[index]
+    depth_below[index] = lev_below[index]
+    # Partial cells with seafloor but no ice shelves: wet portion is at the top
+    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above>0)*(hfac_below==0))
+    depth_above[index] = lev_above[index]
+    depth_below[index] = lev_below[index] + dz[index]*hfac[index]
+    # Partial cells with both ice shelves and seafloor - now we need to use the surface depth as seen by the model, to properly position the wet portion of the cell.
+    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below==0))
+    depth_above[index] = zice[index]
+    depth_below[index] = depth_above[index] - dz[index]*hfac[index]
+
+    # Error checking
+    if any(depth_above > lev_above) or any(depth_below < lev_below):
+        print 'Error (slice_cell_boundaries): something went wrong in calculation of partial cells'
+        sys.exit()
+    if any(isnan(depth_above)) or any(isnan(depth_below)):
+        print 'Error (slice_cell_boundaries): some boundaries were not set'
+        sys.exit()
+
+    # Now we need to merge depth_above and depth_below, because depth_above for one cell is equal to depth_below for the cell above, and vice versa. Also, fully dry cells don't yet have their boundaries altered by adjacent partial cells.
+    # Figure out the other option for depth_above based on depth_below
+    depth_above_2 = np.zeros(depth_above.shape)
+    depth_above_2[1:,:] = depth_below[:-1,:]
+    depth_above_2[0,:] = depth_above[0,:]  # No other option for surface
+    # The true depth_above (taking into account partial cells) is always deeper
+    depth_above_final = np.minimum(depth_above, depth_above_2)
+    # Similarly for depth_below: the true value is always shallower
+    depth_below_2 = np.zeros(depth_below.shape)
+    depth_below_2[:-1,:] = depth_above[1:,:]
+    depth_below_2[-1,:] = depth_below[-1,:]
+    depth_below_final = np.maxmimum(depth_below, depth_below_2)
+    # Error checking: make two options for the merged array and make sure they agree
+    v_bdry_1 = np.zeros((grid.nz+1, nh))
+    v_bdry_1[:-1,:] = depth_above
+    v_bdry_1[-1,:] = depth_below[-1,:]
+    v_bdry_2 = np.zeros((grid.nz+1, nh))
+    v_bdry_2[1:,:] = depth_below
+    v_bdry_2[0,:] = depth_above[0,:]
+    if np.amax(abs(v_bdry_1-v_bdry_2)) > 0:
+        print 'Error (slice_cell_boundaries): problem with merging depth_above and depth_below'
+        sys.exit()
+
+    return loc0, h_bdry, v_bdry_1, data_slice
     
             
         
