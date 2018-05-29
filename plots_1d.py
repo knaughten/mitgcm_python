@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from grid import Grid
 from io import netcdf_time
 from timeseries import fris_melt
-from plot_utils import monthly_ticks, finished_plot
+from plot_utils import monthly_ticks, yearly_ticks, finished_plot
 
 
 # Plot timeseries of FRIS' basal mass balance components (melting, freezing, total) at every time index in the given file.
@@ -40,7 +40,7 @@ def plot_fris_massbalance (file_path, grid, fig_name=None):
     ax.plot_date(time, melt+freeze, '-', color='black', linewidth=1.5, label='Total')
     ax.axhline(color='black')
     ax.grid(True)
-    monthly_ticks(ax)
+    yearly_ticks(ax)
     plt.title('Basal mass balance of FRIS', fontsize=18)
     plt.ylabel('Gt/y', fontsize=16)
     ax.legend()

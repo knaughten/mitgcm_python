@@ -36,6 +36,9 @@ def plot_everything (file_path, grid_path, fig_dir):
         vmin = None
         vmax = None
         zoom_fris = False
+        fig_name = fig_dir + var + '.png'
+        if var == 'bwtemp':
+            vmax = 1
         if var == 'bwsalt':
             vmin = 34.3
         if var == 'eta':
@@ -47,9 +50,10 @@ def plot_everything (file_path, grid_path, fig_dir):
             vmax = 0.001
         if var == 'tminustf':
             vmax = 1.5
-            zoom_fris=True
+            zoom_fris = True
+            fig_name = fig_dir + var + '_min.png'
         # Plot
-        read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'.png')
+        read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name)
         # Make additional plots if needed
         if var in ['ismr', 'vel']:
             # Make another plot zoomed into FRIS
@@ -57,7 +61,6 @@ def plot_everything (file_path, grid_path, fig_dir):
         if var == 'tminustf':
             # Call the other options for vertical transformations
             read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png')
-            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='min', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_min.png')
         if var == 'vel':
             # Call the other options for vertical transformations            
             read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png')

@@ -194,14 +194,14 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
 # grid: Grid object
 
 # Optional keyword arguments:
-# tf_option: 'bottom' (to plot difference from in-situ freezing point in the bottom layer, default), 'max' (to plot maximum at each point in the water column), 'min' (to plot minimum).
+# tf_option: 'bottom' (to plot difference from in-situ freezing point in the bottom layer), 'max' (to plot maximum at each point in the water column), 'min' (to plot minimum, default).
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def plot_tminustf (temp, salt, grid, tf_option='bottom', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
+def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None):
 
     # Calculate difference from freezing point
     tminustf = t_minus_tf(temp, salt, grid)
@@ -315,7 +315,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 # vel_option: only matters for 'vel'. As in function prepare_vel.
 
-def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='bottom', vel_option='avg'):
+def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg'):
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
