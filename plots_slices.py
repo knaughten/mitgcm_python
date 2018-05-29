@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from plot_utils import slice_patches, plot_slice_patches
+from plot_utils import slice_patches, plot_slice_patches, finished_plot
 
 
 # Bells and whistles to add later:
@@ -17,6 +17,7 @@ from plot_utils import slice_patches, plot_slice_patches
 # Title
 # Return figure
 # Nice axes
+# NetCDF interface for temp, salt, u, v
 def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, fig_name=None):
 
     # Build the patches and get the bounds
