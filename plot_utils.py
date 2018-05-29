@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as dt
 import matplotlib.colors as cl
 from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 import sys
 
 from utils import mask_land, select_top, select_bottom
@@ -430,8 +431,27 @@ def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, h
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
 
 
+# Create rectangular patches for a zonal or meridional slice, that can be used to create a plot showing partial cells correctly. Also returns the spatial bounds of unmasked data, and the min and max values. These are useful because automatic axes limits and colour mapping is not supported by general patch plots.
 
-def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):    
+# Arguments:
+# data: 3D (depth x lat x lon) array of variable to plot
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function Grid.get_lon_lat. w-grid is not supported.
+# lon0, lat0: longitude or latitude to slice along. Exactly one must be specified.
+# hmin, hmax: bounds on longitude (if lat0 is set) or latitude (if lon0 is set) over which to calculate min and max values.
+# zmin, zmax: bounds on depth (negative, in metres) over which to calculate min and max values.
+
+# Output:
+# patches: 1D array of Polygon patches that can be used to plot with
+# values: 1D array of data values corresponding to the patches
+# loc0: true lon0 or lat0 that was sliced along, using the nearest neighbour
+# hmin, hmax: horizontal bounds on unmasked data (within the original spatial bounds, if specified)
+# zmin, zmax: vertical bounds on unmasked data (within the original spatial bounds, if specified)
+# vmin, vmax: min and max values in the slice (within the original spatial bounds, if specified)
+
+def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None):    
 
     if gtype not in ['t', 'u', 'v', 'psi']:
         print 'Error (slice_patches): the ' + gtype + '-grid is not supported for slices'
@@ -559,8 +579,29 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     index = below == 0
     below[index] = lev_below[index]
 
+    # If spatial bounds aren't given, choose dummy ones
+    if hmin is None:
+        hmin = np.amin(left)
+    if hmax is None:
+        hmax = np.amax(right)
+    if zmin is None:
+        zmin = np.amin(below)
+    if zmax is None:
+        zmax = np.amax(above)
+    # Select all the unmasked entries between these bounds
+    index = np.nonzero((left >= hmin)*(right <= hmax)*(below >= zmin)*(above <= zmax)*(np.invert(data_slice.mask)))
+    # Find the spatial bounds on unmasked data
+    hmin = np.amin(left[index])
+    hmax = np.amax(right[index])
+    zmin = np.amin(below[index])
+    zmax = np.amax(above[index])
+    # Find the min and max values
+    vmin = np.amin(data_slice[index])
+    vmax = np.amax(data_slice[index])    
+
     # Now make the rectangular patches, using flattened arrays
-    num_pts = data_slice.size
+    values = data_slice.ravel()
+    num_pts = values.size
     # Set up coordinates, tracing around outside of patches
     coord = np.zeros([num_pts, 4, 2])
     # Top left corner
@@ -579,8 +620,35 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     patches = []    
     for i in range(num_pts):
         patches.append(Polygon(coord[i,:], True, linewidth=0.))
-    
-    return loc0, patches, data_slice.ravel()
+
+    return patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax
+
+
+# Add Polygon patches to a zonal or meridional slice plot.
+
+# Arguments:
+# ax: Axes object
+# patches: 1D array of Polygon patches to plot (returned from function slice_patches)
+# values: 1D array of data values corresponding to the patches (returned from function slice_patches)
+# hmin, hmax: horizontal bounds on plot
+# zmin, zmax: vertical bounds on plot (negative, in metres)
+# vmin, vmax: bounds on colour scale
+
+# Optional keyword argument:
+# cmap: colour map to use (default 'jet')
+
+# Output: image returned by PatchCollection, which can be used to make a colourbar later
+
+def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax, cmap='jet'):
+
+    img = PatchCollection(patches, cmap=cmap)
+    img.set_array(values)
+    img.set_clim(vmin=vmin, vmax=vmax)
+    img.set_edgecolor('face')
+    ax.add_collection(img)
+    ax.set_xlim([hmin, hmax])
+    ax.set_ylim([zmin, zmax])    
+    return img
 
 
 # Set things up for complicated multi-panelled plots. Initialise a figure window of the correct size and set the locations of panels and colourbar(s). The exact output depends on the single argument, which is a string containing the key for the type of plot you want. Read the comments to choose one.
