@@ -468,7 +468,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
             data_slice = data_slice[:,:-1]
             # Get hfac and zice at centres
             hfac = grid.hfac[:,:-1,i0]
-            zice = grid.zice[:,:-1,i0]
+            zice = grid.zice[:-1,i0]
         elif gtype in ['v', 'psi']:
             # Edges in y
             # Boundaries are centres of cells in y
@@ -488,7 +488,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
             data_slice = data_slice[:,:-1]
             # Get hfac and zice at centres
             hfac = grid.hfac[:,j0,:-1]
-            zice = grid.zice[:,j0,:-1]
+            zice = grid.zice[j0,:-1]
         elif gtype in ['u', 'psi']:
             # Edges in x
             # Boundaries are centres of cells in x
@@ -504,7 +504,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     # Now set up a bunch of information about the grid, all stored in arrays with the same dimension as data_slice. This helps with vectorisation later.        
     # Left and right boundaries (lat or lon)
     left = np.tile(h_bdry[:-1], (grid.nz, 1))
-    right = np.tile(h_bdry[1:], (grid,nz, 1))
+    right = np.tile(h_bdry[1:], (grid.nz, 1))
     # Ice shelf draft
     zice = np.tile(zice, (grid.nz, 1))    
     # Depth of vertical layer above
@@ -522,8 +522,8 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
 
     # Now find the true upper and lower boundaries, taking partial cells into account.
     # Start with zeros everywhere and deal with partial cells first.
-    depth_above = np.zeros(shape)
-    depth_below = np.zeros(shape)
+    depth_above = np.zeros(data_slice.shape)
+    depth_below = np.zeros(data_slice.shape)
     # Partial cells with ice shelves but no seafloor: wet portion is at the bottom
     index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below>0))
     depth_above[index] = lev_below[index] + dz[index]*hfac[index]
@@ -536,7 +536,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     depth_below[index] = depth_above[index] - dz[index]*hfac[index]
     # Now we need to merge depth_above and depth_below, because depth_above for one cell is equal to depth_below for the cell above, and vice versa.
     # Figure out the other option for depth_above based on depth_below
-    depth_above_2 = np.zeros(shape)
+    depth_above_2 = np.zeros(data_slice.shape)
     depth_above_2[1:,:] = depth_below[:-1,:]
     depth_above_2[0,:] = depth_above[0,:]  # No other option for surface
     # Should never be nonzero in the same place
@@ -549,7 +549,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     index = above == 0
     above[index] = lev_above[index]
     # Similarly for depth_below
-    depth_below_2 = np.zeros(shape)
+    depth_below_2 = np.zeros(data_slice.shape)
     depth_below_2[:-1,:] = depth_above[1:,:]
     depth_below_2[-1,:] = depth_below[-1,:]
     if np.any(depth_below*depth_below_2 != 0):
@@ -578,7 +578,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):
     # We have to make one patch at a time
     patches = []    
     for i in range(num_pts):
-        patches.append(Polygon(coord, True, linewidth=0.))
+        patches.append(Polygon(coord[i,:], True, linewidth=0.))
     
     return loc0, patches, data_slice.ravel()
 
