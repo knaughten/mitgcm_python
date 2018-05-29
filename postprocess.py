@@ -5,13 +5,14 @@
 import os
 
 from grid import Grid
-from io import NCfile, read_binary
+from io import NCfile, read_binary, netcdf_time
 from plots_1d import plot_fris_massbalance
 from plots_latlon import read_plot_latlon
+from plots_multi import plot_aice_minmax
 
 
 # Make a bunch of plots when the simulation is done.
-# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, and a timeseries of FRIS mass loss.
+# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, a timeseries of FRIS mass loss, and sea ice min and max at each year.
 
 # Arguments:
 # file_path: path to output NetCDF file for this simulation chunk (assumed to be all in one file a la scripts/convert_netcdf.py)
@@ -30,6 +31,7 @@ def plot_everything (file_path, grid_path, fig_dir):
     # Timeseries
     plot_fris_massbalance(file_path, grid, fig_name=fig_dir+'fris_massloss.png')
 
+    # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
     for var in var_names:
         # Customise bounds and zooming
@@ -55,8 +57,11 @@ def plot_everything (file_path, grid_path, fig_dir):
         # Plot
         read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name)
         # Make additional plots if needed
-        if var in ['ismr', 'vel']:
+        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt']:
             # Make another plot zoomed into FRIS
+            # First adjust bounds
+            if var == 'bwtemp':
+                vmax = -1.5
             read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png')
         if var == 'tminustf':
             # Call the other options for vertical transformations
@@ -64,7 +69,17 @@ def plot_everything (file_path, grid_path, fig_dir):
         if var == 'vel':
             # Call the other options for vertical transformations            
             read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png')
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png')    
+            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png')
+        if var in ['eta', 'hice', 'mld']:
+            # Make another plot with unbounded colour bar
+            read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png')
+
+    # Sea ice min and max
+    time = netcdf_time(file_path)
+    first_year = time[0].year
+    last_year = time[-1].year
+    for year in range(first_year, last_year+1):
+        plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.

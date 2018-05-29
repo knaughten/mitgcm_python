@@ -174,8 +174,8 @@ def mask_3d (data, grid, gtype='t', time_dependent=False):
 def select_year (time, year):
 
     t_start = -1
-    for t in time:
-        if t.year == year:
+    for t in range(time.size):
+        if time[t].year == year:
             t_start = t
             break
     if t_start == -1:
@@ -183,7 +183,7 @@ def select_year (time, year):
         sys.exit()
     t_end = time.size
     for t in range(t_start+1, time.size):
-        if t.year == year+1:
+        if time[t].year == year+1:
             t_end = t
             break
     return t_start, t_end

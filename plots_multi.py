@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 
 from grid import Grid
 from io import read_netcdf, netcdf_time
-from utils import select_year, find_aice_min_max
-from plot_utils import set_panels, parse_date
+from utils import select_year, find_aice_min_max, mask_land_zice
+from plot_utils import set_panels, parse_date, cell_boundaries, shade_land_zice, latlon_axes, finished_plot
 
+# 1x2 lat-lon plot showing sea ice area at the timesteps of minimum and maximum area in the given year.
 def plot_aice_minmax (file_path, grid, year, fig_name=None):
 
     if not isinstance(grid, Grid):
@@ -19,7 +20,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None):
         grid = Grid(grid)
 
     # Read sea ice area and the corresponding dates
-    aice = read_netcdf(file_path, 'SIarea')
+    aice = mask_land_zice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)
     time = netcdf_time(file_path)
     # Find the range of dates we care about
     t_start, t_end = select_year(time, year)
@@ -40,11 +41,14 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None):
         shade_land_zice(ax, grid)
         img = ax.pcolormesh(lon, lat, aice_plot, vmin=0, vmax=1)
         latlon_axes(ax, lon, lat)
-        plt.title(parse_date(time_minmax[t]), fontsize=18)
+        if t == 1:
+            # Don't need latitude labels a second time
+            ax.set_yticklabels([])
+        plt.title(parse_date(date=time_minmax[t]), fontsize=18)
     # Colourbar
-    plt.colorbar(img, cax=cbaxes)
+    plt.colorbar(img, cax=cbaxes, orientation='horizontal')
     # Main title above
-    plt.title('Sea ice area, ' + str(year)+ ' min and max', fontsize=20)
+    plt.suptitle('Min and max sea ice area', fontsize=22)
     finished_plot(fig, fig_name=fig_name)
     
     

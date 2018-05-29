@@ -596,10 +596,10 @@ def set_panels (key):
 
     if key == '1x2C1':
         # Two side-by-side plots with one colourbar below
-        fig = plt.figure(figsize=(7,4))
+        fig = plt.figure(figsize=(12,6))
         gs = plt.GridSpec(1,2)
-        gs.update(left=0.1, right=0.9, bottom=0.3, top=0.8, wspace=0.05)
-        cbaxes = fig.add_axes([0.3, 0.05, 0.4, 0.05])
+        gs.update(left=0.05, right=0.95, bottom=0.15, top=0.85, wspace=0.05)
+        cbaxes = fig.add_axes([0.3, 0.05, 0.4, 0.04])
         return fig, gs, cbaxes
     
             
