@@ -8,6 +8,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as dt
 import matplotlib.colors as cl
+from matplotlib.patches import Polygon
 import sys
 
 from utils import mask_land, select_top, select_bottom
@@ -430,12 +431,10 @@ def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, h
 
 
 
-
-# THIS DOESN'T WORK because it's partial cells, not shaved cells, so corners might not line up. Can't use pcolormesh at all. Have to use patches like in FESOM. How can I best vectorise this?!
-def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
+def slice_patches (data, grid, gtype='t', lon0=None, lat0=None):    
 
     if gtype not in ['t', 'u', 'v', 'psi']:
-        print 'Error (slice_cell_boundaries): the ' + gtype + '-grid is not supported for slices'
+        print 'Error (slice_patches): the ' + gtype + '-grid is not supported for slices'
 
     # Figure out direction of slice
     if lon0 is not None and lat0 is None:
@@ -458,73 +457,56 @@ def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
         data_slice = data[:,j0,:]
         loc0 = lat[j0]
 
-    # Get horizontal boundaries, as well as hfac and surface depth (grid.zice) at these boundaries
+    # Get horizontal boundaries, as well as hfac and surface depth (grid.zice)
     # Also throw away one row of data so all points are bounded
     if h_axis == 'lat':
-        nh = grid.ny
         if gtype in ['t', 'u']:
             # Centered in y
-            # Boundaries are southern edges of cells in y
+            # Boundaries are southern edges of cells in y            
             h_bdry = grid.lat_corners_1d
-            hfac = grid.hfac_s[:,:,i0]
-            # Ice shelf draft at these edges is the minimum of the tracer points on either side
-            zice = np.zeros(grid.ny)
-            zice[1:] = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
-            zice[0] = grid.zice[0,i0]
             # Throw away northernmost row of data
             data_slice = data_slice[:,:-1]
+            # Get hfac and zice at centres
+            hfac = grid.hfac[:,:-1,i0]
+            zice = grid.zice[:,:-1,i0]
         elif gtype in ['v', 'psi']:
             # Edges in y
             # Boundaries are centres of cells in y
             h_bdry = grid.lat_1d
-            hfac = grid.hfac[:,:,i0]
-            zice = grid.zice[:,i0]
             # Throw away southernmost row of data
             data_slice = data_slice[:,1:]
+            # Get hfac at edges
+            hfac = grid.hfac_s[:,1:,i0]
+            # Ice shelf draft at these edges is the minimum of the tracer points on either side
+            zice = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
     elif h_axis == 'lon':
-        nh = grid.nx
         if gtype in ['t', 'v']:
             # Centered in x
             # Boundaries are western edges of cells in x
             h_bdry = grid.lon_corners_1d
-            hfac = grid.hfac_w[:,j0,:]
-            zice = np.zeros(grid.nx)
-            zice[1:] = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
-            zice[0] = grid.zice[j0,0]
             # Throw away easternmost row of data
             data_slice = data_slice[:,:-1]
+            # Get hfac and zice at centres
+            hfac = grid.hfac[:,j0,:-1]
+            zice = grid.zice[:,j0,:-1]
         elif gtype in ['u', 'psi']:
             # Edges in x
             # Boundaries are centres of cells in x
             h_bdry = grid.lon_1d
-            hfac = grid.hfac[:,j0,:]
-            zice = grid.zice[j0,:]
             # Throw away westernmost row of data
             data_slice = data_slice[:,1:]
-    # Tile the horizontal boundaries and ice shelf draft to be the right dimension
-    h_bdry = np.tile(h_bdry, (grid.nz+1, 1))   # At vertical boundaries
-    zice = np.tile(zice, (grid.nz, 1))   # At vertical centres
+            # Get hfac at edges
+            hfac = grid.hfac_w[:,j0,1:]
+            # Ice shelf draft at these edges is the minimum of the tracer points on either side
+            zice = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
+    nh = data_slice.shape[1]
 
-    # Testing it naively with loops
-    v_bdry = np.tile(np.expand_dims(grid.z_edges,1), (1,nh))
-    for k in range(grid.nz):
-        for h in range(nh):
-            if hfac[k,h] > 0 and hfac[k,h] < 1:
-                if k==0 or hfac[k-1,h]==0:
-                    shelf=True
-                if k==grid.nz-1 or hfac[k+1,h]==0:
-                    bathy=True
-                if shelf and not bathy:
-                    v_bdry[k,h] = grid.z_edges[k+1] + grid.dz[k]*hfac[k,h]
-                if bathy and not shelf:
-                    v_bdry[k+1,h] = grid.z_edges[k] - grid.dz[k]*hfac[k,h]
-                if shelf and bathy:
-                    v_bdry[k,h] = zice[k,h]
-                    v_bdry[k+1,h] = v_bdry[k,h] - grid.dz[k]*hfac[k,h]
-
-
-    # Get a bunch of information about the vertical grid, all stored in arrays with dimension grid.nz x nh. This helps with vectorisation later.
-    shape = [grid.nz, nh]
+    # Now set up a bunch of information about the grid, all stored in arrays with the same dimension as data_slice. This helps with vectorisation later.        
+    # Left and right boundaries (lat or lon)
+    left = np.tile(h_bdry[:-1], (grid.nz, 1))
+    right = np.tile(h_bdry[1:], (grid,nz, 1))
+    # Ice shelf draft
+    zice = np.tile(zice, (grid.nz, 1))    
     # Depth of vertical layer above
     lev_above = np.tile(np.expand_dims(grid.z_edges[:-1], 1), (1, nh))
     # Depth of vertical layer below
@@ -532,10 +514,10 @@ def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
     # Vertical thickness
     dz = np.tile(np.expand_dims(grid.dz, 1), (1, nh))
     # hfac one row above (zeros for air)
-    hfac_above = np.zeros(shape)
+    hfac_above = np.zeros(data_slice.shape)
     hfac_above[1:,:] = hfac[:-1,:]
     # hfac one row below (zeros for seafloor)
-    hfac_below = np.zeros(shape)
+    hfac_below = np.zeros(data_slice.shape)
     hfac_below[:-1,:] = hfac[1:,:]
 
     # Now find the true upper and lower boundaries, taking partial cells into account.
@@ -562,10 +544,10 @@ def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
         print 'Error (slice_cell_boundaries): something went wrong in calculation of partial cells'
         sys.exit()
     # Add them together to capture all the nonzero values
-    depth_above_final = depth_above + depth_above_2
+    above = depth_above + depth_above_2
     # Anything still zero is just the regular z levels
-    index = depth_above_final == 0
-    depth_above_final[index] = lev_above[index]
+    index = above == 0
+    above[index] = lev_above[index]
     # Similarly for depth_below
     depth_below_2 = np.zeros(shape)
     depth_below_2[:-1,:] = depth_above[1:,:]
@@ -573,22 +555,32 @@ def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
     if np.any(depth_below*depth_below_2 != 0):
         print 'Error (slice_cell_boundaries): something went wrong in calculation of partial cells'
         sys.exit()
-    depth_below_final = depth_below + depth_below_2
-    index = depth_below_final == 0
-    depth_below_final[index] = lev_below[index]
-    # The two arrays should now be equal in the interior. Merge them again so we get the top and bottom boundaries.
-    # Error checking: make two options for the merged array and make sure they agree
-    v_bdry_1 = np.zeros((grid.nz+1, nh))
-    v_bdry_1[:-1,:] = depth_above_final
-    v_bdry_1[-1,:] = depth_below_final[-1,:]
-    v_bdry_2 = np.zeros((grid.nz+1, nh))
-    v_bdry_2[1:,:] = depth_below_final
-    v_bdry_2[0,:] = depth_above_final[0,:]
-    if np.amax(abs(v_bdry_1-v_bdry_2)) > 0:
-        print 'Error (slice_cell_boundaries): problem with merging depth_above and depth_below'
-        sys.exit()
+    below = depth_below + depth_below_2
+    index = below == 0
+    below[index] = lev_below[index]
 
-    return loc0, h_bdry, v_bdry_1, data_slice
+    # Now make the rectangular patches, using flattened arrays
+    num_pts = data_slice.size
+    # Set up coordinates, tracing around outside of patches
+    coord = np.zeros([num_pts, 4, 2])
+    # Top left corner
+    coord[:,0,0] = left.ravel()
+    coord[:,0,1] = above.ravel()
+    # Top right corner
+    coord[:,1,0] = right.ravel()
+    coord[:,1,1] = above.ravel()
+    # Bottom right corner
+    coord[:,2,0] = right.ravel()
+    coord[:,2,1] = below.ravel()
+    # Bottom left corner
+    coord[:,3,0] = left.ravel()
+    coord[:,3,1] = below.ravel()
+    # We have to make one patch at a time
+    patches = []    
+    for i in range(num_pts):
+        patches.append(Polygon(coord, True, linewidth=0.))
+    
+    return loc0, patches, data_slice.ravel()
 
 
 # Set things up for complicated multi-panelled plots. Initialise a figure window of the correct size and set the locations of panels and colourbar(s). The exact output depends on the single argument, which is a string containing the key for the type of plot you want. Read the comments to choose one.

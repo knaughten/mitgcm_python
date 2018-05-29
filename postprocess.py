@@ -70,7 +70,7 @@ def plot_everything (file_path, grid_path, fig_dir):
             # Call the other options for vertical transformations            
             read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png')
             read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png')
-        if var in ['eta', 'hice', 'mld']:
+        if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
             read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png')
 
