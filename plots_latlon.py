@@ -9,9 +9,9 @@ import sys
 import numpy as np
 
 from grid import Grid
-from io import read_netcdf, find_variable
-from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors
+from io import read_netcdf, find_variable, netcdf_time
+from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, find_aice_min_max
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors, set_panels
 from diagnostics import t_minus_tf
 
 
@@ -443,6 +443,46 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
         title = 'Water column thickness (m)'
 
     latlon_plot(data, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title, fig_name=fig_name)
-    
+
+
+# 1x2 lat-lon plot showing sea ice area at the timesteps of minimum and maximum area in the given year.
+def plot_aice_minmax (file_path, grid, year, fig_name=None):
+
+    if not isinstance(grid, Grid):
+        # This is the path to the NetCDF grid file, not a Grid object
+        # Make a grid object from it
+        grid = Grid(grid)
+
+    # Read sea ice area and the corresponding dates
+    aice = mask_land_zice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)
+    time = netcdf_time(file_path)
+    # Find the range of dates we care about
+    t_start, t_end = select_year(time, year)
+    # Trim the arrays to these dates
+    aice = aice[t_start:t_end,:]
+    time = time[t_start:t_end]
+    # Find the indices of min and max sea ice area
+    t_min, t_max = find_aice_min_max(aice, grid)
+    # Wrap up in lists for easy iteration
+    aice_minmax = [aice[t_min,:], aice[t_max,:]]
+    time_minmax = [time[t_min], time[t_max]]
+
+    # Plot
+    fig, gs, cbaxes = set_panels('1x2C1')
+    for t in range(2):
+        lon, lat, aice_plot = cell_boundaries(aice_minmax[t], grid)
+        ax = plt.subplot(gs[0,t])
+        shade_land_zice(ax, grid)
+        img = ax.pcolormesh(lon, lat, aice_plot, vmin=0, vmax=1)
+        latlon_axes(ax, lon, lat)
+        if t == 1:
+            # Don't need latitude labels a second time
+            ax.set_yticklabels([])
+        plt.title(parse_date(date=time_minmax[t]), fontsize=18)
+    # Colourbar
+    plt.colorbar(img, cax=cbaxes, orientation='horizontal')
+    # Main title above
+    plt.suptitle('Min and max sea ice area', fontsize=22)
+    finished_plot(fig, fig_name=fig_name)
 
     

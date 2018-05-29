@@ -10,4 +10,4 @@ from plots_latlon import *
 from averaging import *
 from interpolation import *
 from postprocess import *
-from plots_multi import *
+from plots_slices import *
