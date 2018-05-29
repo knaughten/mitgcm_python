@@ -323,10 +323,14 @@ def set_colour_bounds (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=N
     return np.amin(data[loc]), np.amax(data[loc])
 
 
-# Get the date in file_path at time_index, and return a nice string that can be added to plots.
-def parse_date (file_path, time_index):
+# Given a date, return a nice string that can be added to plots.
+# Option 1: set keyword argument "date" with a Datetime object.
+# Option 2: set keyword arguments "file_path" and "time_index" to read the date from a NetCDF file.
+def parse_date (file_path=None, time_index=None, date=None):
 
-    date = netcdf_time(file_path)[time_index]
+    # Create the Datetime object if needed
+    if date is None:
+        date = netcdf_time(file_path)[time_index]
     return date.strftime('%d %b %Y')
 
 
@@ -425,6 +429,9 @@ def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, h
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
 
 
+
+
+# THIS DOESN'T WORK because it's partial cells, not shaved cells, so corners might not line up. Can't use pcolormesh at all. Have to use patches like in FESOM. How can I best vectorise this?!
 def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
 
     if gtype not in ['t', 'u', 'v', 'psi']:
@@ -582,6 +589,18 @@ def slice_cell_boundaries (data, grid, gtype='t', lon0=None, lat0=None):
         sys.exit()
 
     return loc0, h_bdry, v_bdry_1, data_slice
+
+
+# Set things up for complicated multi-panelled plots. Initialise a figure window of the correct size and set the locations of panels and colourbar(s). The exact output depends on the single argument, which is a string containing the key for the type of plot you want. Read the comments to choose one.
+def set_panels (key):
+
+    if key == '1x2C1':
+        # Two side-by-side plots with one colourbar below
+        fig = plt.figure(figsize=(7,4))
+        gs = plt.GridSpec(1,2)
+        gs.update(left=0.1, right=0.9, bottom=0.3, top=0.8, wspace=0.05)
+        cbaxes = fig.add_axes([0.3, 0.05, 0.4, 0.05])
+        return fig, gs, cbaxes
     
             
         

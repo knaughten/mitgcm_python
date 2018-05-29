@@ -6,6 +6,7 @@ import numpy as np
 import sys
 
 import constants as const
+from diagnostics import total_aice
 
 
 # Given an array containing longitude, make sure it's in the range (-180, 180) as opposed to (0, 360).
@@ -160,3 +161,46 @@ def mask_except_fris (data, grid, gtype='t', time_dependent=False):
 def mask_3d (data, grid, gtype='t', time_dependent=False):
 
     return apply_mask(data, grid.get_hfac(gtype=gtype)==0, time_dependent=time_dependent)
+
+
+# Find the indices bounding the given year in the given time array. This script doesn't check that the entire year is within the array! Partial years are supported.
+
+# Arguments:
+# time: array of Datetime objects (can be created by the function netcdf_time)
+# year: integer containing the year we care about
+
+# Output: two integers containing the first index of year in time, and the first index of the next year (i.e. the last index of the year plus one, following python convention).
+
+def select_year (time, year):
+
+    t_start = -1
+    for t in time:
+        if t.year == year:
+            t_start = t
+            break
+    if t_start == -1:
+        print 'Error (trim_year): this array contains no instances of the year ' + str(year)
+        sys.exit()
+    t_end = time.size
+    for t in range(t_start+1, time.size):
+        if t.year == year+1:
+            t_end = t
+            break
+    return t_start, t_end
+
+
+# Find the time indices of minimum and maximum sea ice area.
+
+# Arguments:
+# aice: 3D (time x lat x lon) array of sea ice area at each time index
+# grid: Grid object
+
+# Output: two integers containing the time indices (0-indexed) of minimum and maximum sea ice area, respectively
+
+def find_aice_min_max (aice, grid):
+
+    num_time = aice.shape[0]
+    aice_int = np.zeros(num_time)
+    for t in range(num_time):
+        aice_int[t] = total_aice(aice[t,:], grid)
+    return np.argmin(aice_int), np.argmax(aice_int)

@@ -71,4 +71,17 @@ def total_melt (ismr, mask, grid, result='massloss'):
         return np.sum(ismr*grid.dA*mask)*const.rho_ice*1e-12
 
 
+# Calculate the total sea ice area.
+
+# Arguments:
+# aice: 2D (lat x lon) array of sea ice area
+# grid: Grid object
+
+# Output: float containing total sea ice area in million km^2
+
+def total_aice (aice, grid):
+
+    return np.sum(aice*grid.dA)*1e-12
+
+
 

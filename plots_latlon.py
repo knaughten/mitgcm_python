@@ -324,7 +324,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 
     if date_string is None and time_index is not None:
         # Determine what to write about the date
-        date_string = parse_date(file_path, time_index)
+        date_string = parse_date(file_path=file_path, time_index=time_index)
 
     if not isinstance(grid, Grid):
         # This is the path to the NetCDF grid file, not a Grid object
