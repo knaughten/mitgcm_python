@@ -10,18 +10,24 @@ from plot_utils import slice_patches, plot_slice_patches, finished_plot
 
 
 # Bells and whistles to add later:
-# Alternate colourmaps
-# Set vmin and vmax
 # Set spatial bounds
-# Date string
+# Set vmin and max
 # Title
-# Return figure
 # Nice axes
+# Date string
+# Alternate colourmaps
+# Velocity interface
 # NetCDF interface for temp, salt, u, v
+# Return figure
+# Comments!!!
 def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, fig_name=None):
 
     # Build the patches and get the bounds
     patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0)
+
+    # Bit of padding on the left and bottom to show mask
+    hmin -= 0.015*(hmax-hmin)
+    zmin -= 0.015*(zmax-zmin)
 
     # Plot
     fig, ax = plt.subplots()
