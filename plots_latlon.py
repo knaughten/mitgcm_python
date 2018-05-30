@@ -11,7 +11,7 @@ import numpy as np
 from grid import Grid
 from io import read_netcdf, find_variable, netcdf_time
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, find_aice_min_max
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors, set_panels
+from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors, set_panels, get_extend
 from diagnostics import t_minus_tf
 
 
@@ -37,15 +37,7 @@ from diagnostics import t_minus_tf
 def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, return_fig=False, fig_name=None, change_points=None):
     
     # Choose what the endpoints of the colourbar should do
-    # If they're manually set, the data might go outside them
-    if vmin is None and vmax is None:
-        extend='neither'
-    elif vmin is not None and vmax is None:
-        extend='min'
-    elif vmin is None and vmax is not None:
-        extend='max'
-    elif vmin is not None and vmax is not None:
-        extend='both'
+    extend = get_extend(vmin=vmin, vmax=vmax)
 
     # If we're zooming, we need to choose the correct colour bounds
     if zoom_fris or any([xmin, xmax, ymin, ymax]):

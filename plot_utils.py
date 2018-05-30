@@ -80,6 +80,45 @@ def cell_boundaries (data, grid, gtype='t'):
         return grid.lon_2d, grid.lat_2d, data[...,1:,1:]
 
 
+# Called by lat_label and lon_label.
+def latlon_label (x, suff_minus, suff_plus, max_decimals):
+
+    # Figure out if it's south/west or north/east
+    if x < 0:
+        x = -x
+        suff = suff_minus
+    else:
+        suff = suff_plus
+
+    # Round to the correct number of decimals, with no unnecessary trailing 0s
+    for d in range(max_decimals+1):
+        if round(x,d) == x or d == max_decimals:
+            fmt = '{0:.'+str(d)+'f}'
+            label = fmt.format(round(x,d))
+            break
+
+    return label + suff
+
+
+# Nicely format a longitude label.
+
+# Arguments:
+# x: longitude value
+# max_decimals: maximum number of decimals to have in the string
+
+# Output: string containing a nice label
+
+def lon_label (x, max_decimals):
+
+    return latlon_label(x, r'$^{\circ}$W', r'$^{\circ}$E', max_decimals)
+
+
+# Like lon_label, but for latitude.
+def lat_label (x, max_decimals):
+
+    return latlon_label(x, r'$^{\circ}$S', r'$^{\circ}$N', max_decimals)
+
+
 # Set the limits of the longitude and latitude axes, and give them nice labels.
 
 # Arguments:
@@ -123,39 +162,12 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
     # Set nice tick labels
     lon_labels = []
     for x in lon_ticks:
-        # Decide whether it's west or east
-        if x <= 0:
-            x = -x
-            suff = r'$^{\circ}$W'
-        else:
-            suff = r'$^{\circ}$E'
-        # Decide how to format the number
-        if round(x) == x:
-            # No decimal places needed
-            label = str(int(round(x)))
-        elif round(x,1) == x:
-            # One decimal place
-            label = '{0:.1f}'.format(x)
-        else:
-            # Round to two decimal places
-            label = '{0:.2f}'.format(round(x,2))
-        lon_labels.append(label+suff)
+        lon_labels.append(lon_label(x,2))
     ax.set_xticklabels(lon_labels)
     # Repeat for latitude
     lat_labels = []
     for y in lat_ticks:
-        if y <= 0:
-            y = -y
-            suff = r'$^{\circ}$S'
-        else:
-            suff = r'$^{\circ}$N'
-        if round(y) == y:
-            label = str(int(round(y)))
-        elif round(y,1) == y:
-            label = '{0:.1f}'.format(y)
-        else:
-            label = '{0:.2f}'.format(round(y,2))
-        lat_labels.append(label+suff)
+        lat_labels.append(lat_label(y,2))
     ax.set_yticklabels(lat_labels)
 
 
@@ -165,6 +177,54 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
         n = cmap.N
     new_cmap = cl.LinearSegmentedColormap.from_list('trunc({name},{a:.2f},{b:.2f})'.format(name=cmap.name, a=minval, b=maxval), cmap(np.linspace(minval, maxval, n)))
     return new_cmap
+
+
+# Truncate the RdBu_r colourmap as needed, so that 0 is white and no unnecessary colours are shown.
+def plusminus_cmap (vmin, vmax):
+    
+    if abs(vmin) > vmax:
+        min_colour = 0
+        max_colour = 0.5*(1 - vmax/vmin)
+    else:
+        min_colour = 0.5*(1 + vmin/vmax)
+        max_colour = 1
+    return truncate_colormap(plt.get_cmap('RdBu_r'), min_colour, max_colour)
+
+
+# Make a fancy colourmap for ice shelf melting and refreezing.
+def ismr_cmap (vmin, vmax, change_points=None):
+
+    # First define the colours we'll use
+    ismr_blue = (0.26, 0.45, 0.86)
+    ismr_white = (1, 1, 1)
+    ismr_yellow = (1, 0.9, 0.4)
+    ismr_orange = (0.99, 0.59, 0.18)
+    ismr_red = (0.5, 0.0, 0.08)
+    ismr_pink = (0.96, 0.17, 0.89)
+
+    if change_points is None:            
+        # Set change points to yield a linear transition between colours
+        change_points = 0.25*vmax*np.arange(1,3+1)
+    if len(change_points) != 3:
+        print 'Error (ismr_cmap): wrong size for change_points list'
+        sys.exit()
+
+    if vmin < 0:
+        # There is refreezing here; include blue for elements < 0
+        cmap_vals = np.concatenate(([vmin], [0], change_points, [vmax]))
+        cmap_colours = [ismr_blue, ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]            
+        cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
+    else:
+        # No refreezing; start at 0
+        cmap_vals = np.concatenate(([0], change_points, [vmax]))
+        cmap_colours = [ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
+        cmap_vals_norm = cmap_vals/vmax
+    cmap_vals_norm[-1] = 1
+    cmap_list = []
+    for i in range(cmap_vals.size):
+        cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
+
+    return cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
 
     
 # Create colourmaps.
@@ -201,54 +261,15 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         return plt.get_cmap('jet'), vmin, vmax
 
     elif ctype == 'plusminus':
-        # Truncate the RdBu_r colourmap as needed, so that 0 is white and no unnecessary colours are shown
-        if abs(vmin) > vmax:
-            min_colour = 0
-            max_colour = 0.5*(1 - vmax/vmin)
-        else:
-            min_colour = 0.5*(1 + vmin/vmax)
-            max_colour = 1
-        return truncate_colormap(plt.get_cmap('RdBu_r'), min_colour, max_colour), vmin, vmax
+        return plusminus_cmap(vmin, vmax), vmin, vmax
 
     elif ctype == 'vel':
         # Make sure it starts at 0
         return plt.get_cmap('cool'), 0, vmax
 
     elif ctype == 'ismr':
-        # Fancy colourmap for ice shelf melting and refreezing
-        
-        # First define the colours we'll use
-        ismr_blue = (0.26, 0.45, 0.86)
-        ismr_white = (1, 1, 1)
-        ismr_yellow = (1, 0.9, 0.4)
-        ismr_orange = (0.99, 0.59, 0.18)
-        ismr_red = (0.5, 0.0, 0.08)
-        ismr_pink = (0.96, 0.17, 0.89)
-        
-        if change_points is None:            
-            # Set change points to yield a linear transition between colours
-            change_points = 0.25*vmax*np.arange(1,3+1)
-        if len(change_points) != 3:
-            print 'Error (set_colours): wrong size for change_points list'
-            sys.exit()
-            
-        if vmin < 0:
-            # There is refreezing here; include blue for elements < 0
-            cmap_vals = np.concatenate(([vmin], [0], change_points, [vmax]))
-            cmap_colours = [ismr_blue, ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]            
-            cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
-        else:
-            # No refreezing; start at 0
-            cmap_vals = np.concatenate(([0], change_points, [vmax]))
-            cmap_colours = [ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
-            cmap_vals_norm = cmap_vals/vmax
-        cmap_vals_norm[-1] = 1
-        cmap_list = []
-        for i in range(cmap_vals.size):
-            cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
-
-        # Make sure vmin isn't greater than 0
-        return cl.LinearSegmentedColormap.from_list('ismr', cmap_list), min(vmin,0), vmax
+        # Make sure vmin isn't larger than 0
+        return ismr_cmap(vmin, vmax, change_points=change_points), min(vmin,0), vmax        
 
 
 # Shade the given boolean mask in grey on the plot.
@@ -661,6 +682,54 @@ def set_panels (key):
         gs.update(left=0.05, right=0.95, bottom=0.15, top=0.85, wspace=0.05)
         cbaxes = fig.add_axes([0.3, 0.05, 0.4, 0.04])
         return fig, gs, cbaxes
+
+
+# Give the axes on a slice plot nice labels.
+
+# Argument:
+# ax: Axes object
+
+# Optional keyword argument:
+# h_axis: 'lat' or 'lon', indicating what the horizontal axis is
+
+def slice_axes (ax, h_axis='lat'):
+
+    # Set horizontal tick labels
+    h_ticks = ax.get_xticks()   
+    h_labels = []
+    for x in h_ticks:
+        if h_axis == 'lat':
+            h_labels.append(lat_label(x,2))
+        elif h_axis == 'lon':
+            h_label.append(lon_label(x,2))
+    ax.set_xticklabels(h_labels)
+
+    # Set vertical tick labels
+    z_ticks = ax.get_yticks()
+    z_labels = []
+    for z in z_ticks:
+        # Will probably never have decimal places, so just format as a positive integer
+        z_labels.append(str(int(round(-z))))
+    ax.set_yticklabels(z_labels)
+    ax.set_ylabel('Depth (m)', fontsize=14)
+
+
+# Choose what the endpoints of the colourbar should do. If they're manually set, they should extend. The output can be passed to plt.colorbar with the keyword argument 'extend'.
+def get_extend (vmin=None, vmax=None):
+
+    if vmin is None and vmax is None:
+        return 'neither'
+    elif vmin is not None and vmax is None:
+        return 'min'
+    elif vmin is None and vmax is not None:
+        return 'max'
+    elif vmin is not None and vmax is not None:
+        return 'both'
+
+
+
+        
+    
     
             
         
