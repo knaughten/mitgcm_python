@@ -10,7 +10,7 @@ import sys
 from grid import Grid
 from io import read_netcdf, find_variable
 from utils import mask_3d
-from plot_utils import slice_patches, plot_slice_patches, finished_plot, slice_axes, plusminus_cmap, lon_label, lat_label, parse_date
+from plot_utils import slice_patches, plot_slice_patches, finished_plot, slice_axes, plusminus_cmap, lon_label, lat_label, parse_date, get_extend
 from diagnostics import t_minus_tf
 
 
