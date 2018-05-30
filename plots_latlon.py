@@ -403,6 +403,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
         plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
+        sys.exit()
 
 
 # Plot topographic variables: bathymetry, ice shelf draft, water column thickness.
