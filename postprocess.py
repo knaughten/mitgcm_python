@@ -7,29 +7,43 @@ import os
 from grid import Grid
 from io import NCfile, read_binary, netcdf_time
 from plots_1d import plot_fris_massbalance
-from plots_latlon import read_plot_latlon
-from plots_multi import plot_aice_minmax
+from plots_latlon import read_plot_latlon, plot_aice_minmax
 
 
 # Make a bunch of plots when the simulation is done.
-# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, a timeseries of FRIS mass loss, and sea ice min and max at each year.
+# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, a timeseries of FRIS mass loss throughout the entire simulation, and sea ice min and max at each year within the last segment.
 
 # Arguments:
-# file_path: path to output NetCDF file for this simulation chunk (assumed to be all in one file a la scripts/convert_netcdf.py)
+# output_dir: path to directory containing output NetCDF files (assumed to be in one file per segment a la scripts/convert_netcdf.py)
 # grid_path: path to NetCDF grid file
+
+# Optional keyword arguments:
 # fig_dir: path to directory to save figures in
+# file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 
-def plot_everything (file_path, grid_path, fig_dir):
+def plot_everything (output_dir, grid_path, fig_dir='.', file_path=None):
 
-    # Make sure fig_dir is a proper directory
+    # Make sure proper directories
+    if not output_dir.endswith('/'):
+        output_dir += '/'
     if not fig_dir.endswith('/'):
         fig_dir += '/'
+    # Build the list of output files in this directory (use them all for timeseries)
+    output_files = []
+    for file in os.listdir(output_dir):
+        if file.startswith('output') and file.endswith('.nc'):
+            output_files.append(output_dir+file)
+    # Make sure in chronological order
+    output_files.sort()
+    if file_path is None:
+        # Select the last file for single-timestep analysis
+        file_path = output_files[-1]        
 
     # Build the grid
     grid = Grid(grid_path)
 
     # Timeseries
-    plot_fris_massbalance(file_path, grid, fig_name=fig_dir+'fris_massloss.png')
+    plot_fris_massbalance(output_files, grid, fig_name=fig_dir+'fris_massloss.png')
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']

@@ -461,7 +461,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None):
     time_minmax = [time[t_min], time[t_max]]
 
     # Plot
-    fig, gs, cbaxes = set_panels('1x2C1')
+    fig, gs, cax = set_panels('1x2C1')
     for t in range(2):
         lon, lat, aice_plot = cell_boundaries(aice_minmax[t], grid)
         ax = plt.subplot(gs[0,t])
@@ -473,7 +473,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None):
             ax.set_yticklabels([])
         plt.title(parse_date(date=time_minmax[t]), fontsize=18)
     # Colourbar
-    plt.colorbar(img, cax=cbaxes, orientation='horizontal')
+    plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title above
     plt.suptitle('Min and max sea ice area', fontsize=22)
     finished_plot(fig, fig_name=fig_name)

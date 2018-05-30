@@ -452,30 +452,10 @@ def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, h
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
 
 
-# Create rectangular patches for a zonal or meridional slice, that can be used to create a plot showing partial cells correctly. Also returns the spatial bounds of unmasked data, and the min and max values. These are useful because automatic axes limits and colour mapping is not supported by general patch plots.
-
-# Arguments:
-# data: 3D (depth x lat x lon) array of variable to plot
-# grid: Grid object
-
-# Optional keyword arguments:
-# gtype: as in function Grid.get_lon_lat. w-grid is not supported.
-# lon0, lat0: longitude or latitude to slice along. Exactly one must be specified.
-# hmin, hmax: bounds on longitude (if lat0 is set) or latitude (if lon0 is set) over which to calculate min and max values.
-# zmin, zmax: bounds on depth (negative, in metres) over which to calculate min and max values.
-
-# Output:
-# patches: 1D array of Polygon patches that can be used to plot with
-# values: 1D array of data values corresponding to the patches
-# loc0: true lon0 or lat0 that was sliced along, using the nearest neighbour
-# hmin, hmax: horizontal bounds on unmasked data (within the original spatial bounds, if specified)
-# zmin, zmax: vertical bounds on unmasked data (within the original spatial bounds, if specified)
-# vmin, vmax: min and max values in the slice (within the original spatial bounds, if specified)
-
-def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None):    
+def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_vars=False):
 
     if gtype not in ['t', 'u', 'v', 'psi']:
-        print 'Error (slice_patches): the ' + gtype + '-grid is not supported for slices'
+        print 'Error (get_slice_values): the ' + gtype + '-grid is not supported for slices'
 
     # Figure out direction of slice
     if lon0 is not None and lat0 is None:
@@ -483,7 +463,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     elif lat0 is not None and lon0 is None:
         h_axis = 'lon'
     else:
-        print 'Error (slice_cell_boundaries): must specify exactly one of lon0, lat0'
+        print 'Error (get_slice_values): must specify exactly one of lon0, lat0'
         sys.exit()
 
     # Find nearest neighbour to lon0 and slice the data here
@@ -491,58 +471,72 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     if h_axis == 'lat':
         i0 = np.argmin(abs(lon-lon0))
         data_slice = data[:,:,i0]
-        # Save the real location of the slice
-        loc0 = lon[i0]
+        if return_grid_vars:
+            # Save the real location of the slice
+            loc0 = lon[i0]
     elif h_axis == 'lon':
         j0 = np.argmin(abs(lat-lat0))
         data_slice = data[:,j0,:]
-        loc0 = lat[j0]
+        if return_grid_vars:
+            loc0 = lat[j0]
 
     # Get horizontal boundaries, as well as hfac and surface depth (grid.zice)
     # Also throw away one row of data so all points are bounded
     if h_axis == 'lat':
         if gtype in ['t', 'u']:
             # Centered in y
-            # Boundaries are southern edges of cells in y            
-            h_bdry = grid.lat_corners_1d
             # Throw away northernmost row of data
             data_slice = data_slice[:,:-1]
-            # Get hfac and zice at centres
-            hfac = grid.hfac[:,:-1,i0]
-            zice = grid.zice[:-1,i0]
+                if return_grid_vars:
+                # Boundaries are southern edges of cells in y            
+                h_bdry = grid.lat_corners_1d            
+                # Get hfac and zice at centres
+                hfac = grid.hfac[:,:-1,i0]
+                zice = grid.zice[:-1,i0]
         elif gtype in ['v', 'psi']:
             # Edges in y
-            # Boundaries are centres of cells in y
-            h_bdry = grid.lat_1d
             # Throw away southernmost row of data
             data_slice = data_slice[:,1:]
-            # Get hfac at edges
-            hfac = grid.hfac_s[:,1:,i0]
-            # Ice shelf draft at these edges is the minimum of the tracer points on either side
-            zice = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
+            if return_grid_vars:
+                # Boundaries are centres of cells in y
+                h_bdry = grid.lat_1d
+                # Get hfac at edges
+                hfac = grid.hfac_s[:,1:,i0]
+                # Ice shelf draft at these edges is the minimum of the tracer points on either side
+                zice = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
     elif h_axis == 'lon':
         if gtype in ['t', 'v']:
             # Centered in x
-            # Boundaries are western edges of cells in x
-            h_bdry = grid.lon_corners_1d
             # Throw away easternmost row of data
             data_slice = data_slice[:,:-1]
-            # Get hfac and zice at centres
-            hfac = grid.hfac[:,j0,:-1]
-            zice = grid.zice[j0,:-1]
+            if return_grid_vars:
+                # Boundaries are western edges of cells in x
+                h_bdry = grid.lon_corners_1d
+                # Get hfac and zice at centres
+                hfac = grid.hfac[:,j0,:-1]
+                zice = grid.zice[j0,:-1]
         elif gtype in ['u', 'psi']:
             # Edges in x
-            # Boundaries are centres of cells in x
-            h_bdry = grid.lon_1d
             # Throw away westernmost row of data
             data_slice = data_slice[:,1:]
-            # Get hfac at edges
-            hfac = grid.hfac_w[:,j0,1:]
-            # Ice shelf draft at these edges is the minimum of the tracer points on either side
-            zice = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
-    nh = data_slice.shape[1]
+            if return_grid_vars:
+                # Boundaries are centres of cells in x
+                h_bdry = grid.lon_1d
+                # Get hfac at edges
+                hfac = grid.hfac_w[:,j0,1:]
+                # Ice shelf draft at these edges is the minimum of the tracer points on either side
+                zice = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
 
-    # Now set up a bunch of information about the grid, all stored in arrays with the same dimension as data_slice. This helps with vectorisation later.        
+    if return_grid_vars:
+        return data_slice, h_bdry, hfac, zice, loc0
+    else:
+        return data_slice
+
+
+def get_slice_boundaries (data_slice, grid, h_bdry, hfac, zice):
+
+    # Set up a bunch of information about the grid, all stored in arrays with the same dimension as data_slice. This helps with vectorisation later.
+    nh = data_slice.shape[1]
     # Left and right boundaries (lat or lon)
     left = np.tile(h_bdry[:-1], (grid.nz, 1))
     right = np.tile(h_bdry[1:], (grid.nz, 1))
@@ -575,6 +569,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below==0))
     depth_above[index] = zice[index]
     depth_below[index] = depth_above[index] - dz[index]*hfac[index]
+    
     # Now we need to merge depth_above and depth_below, because depth_above for one cell is equal to depth_below for the cell above, and vice versa.
     # Figure out the other option for depth_above based on depth_below
     depth_above_2 = np.zeros(data_slice.shape)
@@ -582,7 +577,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     depth_above_2[0,:] = depth_above[0,:]  # No other option for surface
     # Should never be nonzero in the same place
     if np.any(depth_above*depth_above_2 != 0):
-        print 'Error (slice_cell_boundaries): something went wrong in calculation of partial cells'
+        print 'Error (get_slice_boundaries): something went wrong in calculation of partial cells'
         sys.exit()
     # Add them together to capture all the nonzero values
     above = depth_above + depth_above_2
@@ -594,11 +589,16 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     depth_below_2[:-1,:] = depth_above[1:,:]
     depth_below_2[-1,:] = depth_below[-1,:]
     if np.any(depth_below*depth_below_2 != 0):
-        print 'Error (slice_cell_boundaries): something went wrong in calculation of partial cells'
+        print 'Error (get_slice_boundaries): something went wrong in calculation of partial cells'
         sys.exit()
     below = depth_below + depth_below_2
     index = below == 0
     below[index] = lev_below[index]
+
+    return left, right, below, above
+
+
+def get_slice_minmax (data_slice, left, right, below, above, hmin=None, hmax=None, zmin=None, zmax=None, return_spatial=False):
 
     # If spatial bounds aren't given, choose dummy ones
     if hmin is None:
@@ -611,18 +611,24 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
         zmax = np.amax(above)
     # Select all the unmasked entries between these bounds
     index = np.nonzero((left >= hmin)*(right <= hmax)*(below >= zmin)*(above <= zmax)*(np.invert(data_slice.mask)))
-    # Find the spatial bounds on unmasked data
-    hmin = np.amin(left[index])
-    hmax = np.amax(right[index])
-    zmin = np.amin(below[index])
-    zmax = np.amax(above[index])
     # Find the min and max values
     vmin = np.amin(data_slice[index])
-    vmax = np.amax(data_slice[index])    
+    vmax = np.amax(data_slice[index])
+    if return_spatial:
+        # Find the spatial bounds on unmasked data
+        hmin = np.amin(left[index])
+        hmax = np.amax(right[index])
+        zmin = np.amin(below[index])
+        zmax = np.amax(above[index])
+        return hmin, hmax, zmin, zmax, vmin, vmax
+    else:
+        return vmin, vmax
+
+
+def get_slice_patches (data_slice, left, right, below, above):
 
     # Now make the rectangular patches, using flattened arrays
-    values = data_slice.ravel()
-    num_pts = values.size
+    num_pts = data_slice.size
     # Set up coordinates, tracing around outside of patches
     coord = np.zeros([num_pts, 4, 2])
     # Top left corner
@@ -642,7 +648,47 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     for i in range(num_pts):
         patches.append(Polygon(coord[i,:], True, linewidth=0.))
 
-    return patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax
+    return patches
+
+    
+# Create rectangular patches for a zonal or meridional slice, that can be used to create a plot showing partial cells correctly. Also returns the spatial bounds of unmasked data, and the min and max values. These are useful because automatic axes limits and colour mapping is not supported by general patch plots.
+
+# Arguments:
+# data: 3D (depth x lat x lon) array of variable to plot
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function Grid.get_lon_lat. w-grid is not supported.
+# lon0, lat0: longitude or latitude to slice along. Exactly one must be specified.
+# hmin, hmax: bounds on longitude (if lat0 is set) or latitude (if lon0 is set) over which to calculate min and max values.
+# zmin, zmax: bounds on depth (negative, in metres) over which to calculate min and max values.
+
+# Output:
+# patches: 1D array of Polygon patches that can be used to plot with
+# values: 1D array of data values corresponding to the patches
+# loc0: true lon0 or lat0 that was sliced along, using the nearest neighbour
+# hmin, hmax: horizontal bounds on unmasked data (within the original spatial bounds, if specified)
+# zmin, zmax: vertical bounds on unmasked data (within the original spatial bounds, if specified)
+# vmin, vmax: min and max values in the slice (within the original spatial bounds, if specified)
+
+def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, return_bdry=False):
+
+    data_slice, h_bdry, hfac, zice, loc0 = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, return_grid_vars=True)
+    left, right, below, above = get_slice_boundaries(data_slice, grid, h_bdry, hfac, zice)
+    hmin, hmax, zmin, zmax, vmin, vmax = get_slice_minmax(data_slice, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=True)
+    patches = get_slice_patches(data_slice, left, right, below, above)
+
+    if return_bdry:
+        return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above
+    else:
+        return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax
+
+
+def slice_values (data, grid, left, right, below, above, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None):
+
+    data_slice = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0)
+    vmin, vmax = get_slice_minmax(data_slice, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
+    return data_slice.ravel(), vmin, vmax
 
 
 # Add Polygon patches to a zonal or meridional slice plot.
@@ -680,8 +726,16 @@ def set_panels (key):
         fig = plt.figure(figsize=(12,6))
         gs = plt.GridSpec(1,2)
         gs.update(left=0.05, right=0.95, bottom=0.15, top=0.85, wspace=0.05)
-        cbaxes = fig.add_axes([0.3, 0.05, 0.4, 0.04])
-        return fig, gs, cbaxes
+        cax = fig.add_axes([0.3, 0.05, 0.4, 0.04])
+        return fig, gs, cax
+    elif key == '1x2C2':
+        # Two side-by-side plots with a colourbar on each side
+        fig = plt.figure(figsize=(14,6))
+        gs = plt.GridSpec(1,2)
+        gs.update(left=0.1, right=0.9, bottom=0.05, top=0.85, wspace=0.05)
+        cax1 = fig.add_axes([0.05, 0.3, 0.05, 0.4])
+        cax2 = fig.add_axes([0.95, 0.3, 0.05, 0.4])
+        return fig, gs, cax1, cax2        
 
 
 # Give the axes on a slice plot nice labels.
