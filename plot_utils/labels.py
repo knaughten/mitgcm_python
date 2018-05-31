@@ -3,8 +3,10 @@
 #######################################################
 
 import matplotlib.dates as dt
+import numpy as np
 
 from ..io import netcdf_time
+from ..constants import fris_bounds
 
 
 # On a timeseries plot with axes ax, label every month (monthly_ticks) or every year (yearly_ticks)
@@ -107,7 +109,7 @@ def slice_axes (ax, h_axis='lat'):
         if h_axis == 'lat':
             h_labels.append(lat_label(x,2))
         elif h_axis == 'lon':
-            h_label.append(lon_label(x,2))
+            h_labels.append(lon_label(x,2))
     ax.set_xticklabels(h_labels)
 
     # Set vertical tick labels

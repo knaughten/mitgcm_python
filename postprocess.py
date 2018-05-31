@@ -8,10 +8,11 @@ from grid import Grid
 from io import NCfile, read_binary, netcdf_time
 from plot_1d import plot_fris_massbalance
 from plot_latlon import read_plot_latlon, plot_aice_minmax
+from plot_slices import read_plot_ts_slice
 
 
 # Make a bunch of plots when the simulation is done.
-# This will keep evolving over time! For now it is all the 2D lat-lon plots at the last time index, a timeseries of FRIS mass loss throughout the entire simulation, and sea ice min and max at each year within the last segment.
+# This will keep evolving over time!
 
 # Arguments:
 # output_dir: path to directory containing output NetCDF files (assumed to be in one file per segment a la scripts/convert_netcdf.py)
@@ -21,7 +22,7 @@ from plot_latlon import read_plot_latlon, plot_aice_minmax
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 
-def plot_everything (output_dir, grid_path, fig_dir='.', file_path=None):
+def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir='.', file_path=None):
 
     # Make sure proper directories
     if not output_dir.endswith('/'):
@@ -94,6 +95,11 @@ def plot_everything (output_dir, grid_path, fig_dir='.', file_path=None):
     last_year = time[-1].year
     for year in range(first_year, last_year+1):
         plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
+
+    # Slice plots
+    read_plot_ts_slice(file_path, grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png')
+    read_plot_ts_slice(file_path, grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png')
+    read_plot_ts_slice(file_path, grid, lon0=-10, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png')
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.

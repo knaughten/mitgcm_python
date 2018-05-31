@@ -46,13 +46,13 @@ def plot_fris_massbalance (file_path, grid, fig_name=None):
     time = netcdf_time(first_file)
     if isinstance(file_path, list):
         # More files to read
-        for file in file_paths[1:]:
+        for file in file_path[1:]:
             melt_tmp, freeze_tmp = fris_melt(file, grid, mass_balance=True)
             time_tmp = netcdf_time(file)
             # Concatenate the arrays
-            melt = np.concatenate(melt, melt_tmp)
-            freeze = np.concatenate(freeze, freeze_tmp)
-            time = np.concatenate(time, time_tmp)    
+            melt = np.concatenate((melt, melt_tmp))
+            freeze = np.concatenate((freeze, freeze_tmp))
+            time = np.concatenate((time, time_tmp))
 
     # Plot
     fig, ax = plt.subplots()
