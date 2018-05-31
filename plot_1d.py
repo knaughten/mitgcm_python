@@ -97,13 +97,13 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
         print 'Error (plot_timeseries_max): file_path must be a string or a list'
         sys.exit()
     # Calculate timeseries on the first file
-    values = timeseries_max(first_file, var_name, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    values = timeseries_max(first_file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     # Read time axis
     time = netcdf_time(first_file)
     if isinstance(file_path, list):
         # More files to read
         for file in file_path[1:]:
-            values_tmp = timeseries_max(file, var_name, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+            values_tmp = timeseries_max(file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             time_tmp = netcdf_time(file)
             # Concatenate the arrays
             values = np.concatenate((values, values_tmp))
@@ -111,7 +111,7 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
 
     # Plot
     fig, ax = plt.subplots()
-    ax.plot_date(time, values, linewidth=1.5)
+    ax.plot_date(time, values, '-', linewidth=1.5)
     ax.grid(True)
     yearly_ticks(ax)
     plt.title(title, fontsize=18)
@@ -128,4 +128,4 @@ def plot_hice_corner (file_path, grid, fig_name=None):
 # Maximum mixed layer depth in the open Eastern Weddell
 def plot_mld_ewed (file_path, grid, fig_name=None):
 
-    plot_timeseries_max(file_path, 'MXLDEPTH', grid, xmin=-30, ymin=-69, title='Maximum mixed layer depth in problematic polynya region', units='m', fig_name=fig_name)
+    plot_timeseries_max(file_path, 'MXLDEPTH', grid, xmin=-30, ymin=-69, title='Maximum mixed layer depth in Eastern Weddell', units='m', fig_name=fig_name)
