@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 import sys
 
-from ..constants import fris_bounds
-
 
 # Set up colourmaps of type ctype. Options for ctype are:
 # 'basic': just the 'jet' colourmap
@@ -18,12 +16,12 @@ from ..constants import fris_bounds
 # 'vel': the 'cool' colourmap starting at 0; good for plotting velocity
 # 'ismr': a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink.
 # Other keyword arguments:
-# vmin, vmax: min and max values to enforce for the colourmap. Sometimes they will be modified (to make sure 'vel' starts at 0, and 'ismr' includes 0). If you don't specify them, they will be determined based on the entire array of data. If your plot is zooming into this array, you should use get_colour_bounds (lower down) to determine the correct bounds in the plotted region.
+# vmin, vmax: min and max values to enforce for the colourmap. Sometimes they will be modified (to make sure 'vel' starts at 0, and 'ismr' includes 0). If you don't specify them, they will be determined based on the entire array of data. If your plot is zooming into this array, you should use get_colour_bounds (../utils.py) to determine the correct bounds in the plotted region.
 # change_points: only matters for 'ismr'. List of size 3 containing values where the 'ismr' colourmap should hit the colours yellow, orange, and red. It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
 
 # truncate_colourmap, plusminus_cmap, and ismr_cmap are helper functions; set_colours is the API. It returns a colourmap and the minimum and maximum values.
 
-def truncate_colourmap(cmap, minval=0.0, maxval=1.0, n=-1):
+def truncate_colourmap (cmap, minval=0.0, maxval=1.0, n=-1):
     
     # From https://stackoverflow.com/questions/40929467/how-to-use-and-plot-only-a-part-of-a-colorbar-in-matplotlib    
     if n== -1:
@@ -106,34 +104,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         # Make sure vmin isn't larger than 0
         return ismr_cmap(vmin, vmax, change_points=change_points), min(vmin,0), vmax        
 
-
-# Find the minimum and maximum values of an array in the given region.
-def get_colour_bounds (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
-
-    # Choose the correct longitude and latitude arrays
-    lon, lat = grid.get_lon_lat(gtype=gtype)
-
-    # Set limits on axes
-    if zoom_fris:
-        xmin = fris_bounds[0]
-        xmax = fris_bounds[1]
-        ymin = fris_bounds[2]
-        ymax = fris_bounds[3]
-    if xmin is None:
-        xmin = np.amin(lon)
-    if xmax is None:
-        xmax = np.amax(lon)
-    if ymin is None:
-        ymin = np.amin(lon)
-    if ymax is None:
-        ymax = np.amax(lon)
-
-    # Select the correct indices
-    loc = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-    # Find the min and max values
-    return np.amin(data[loc]), np.amax(data[loc])
-
-
+    
 # Choose what the endpoints of the colourbar should do. If they're manually set, they should extend. The output can be passed to plt.colorbar with the keyword argument 'extend'.
 def get_extend (vmin=None, vmax=None):
 

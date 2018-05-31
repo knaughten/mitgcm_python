@@ -45,6 +45,8 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
 
     # Timeseries
     plot_fris_massbalance(output_files, grid, fig_name=fig_dir+'fris_massloss.png')
+    plot_hice_corner(output_files, grid, fig_name=fig_dir+'max_hice_corner.png')
+    plot_mld_ewed(output_files, grid, fig_name=fig_dir+'max_mld_ewed.png')
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']

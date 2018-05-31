@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year
+from constants import rho_fw, sec_per_year, fris_bounds
 from diagnostics import total_aice
 
 
@@ -204,5 +204,32 @@ def find_aice_min_max (aice, grid):
     for t in range(num_time):
         aice_int[t] = total_aice(aice[t,:], grid)
     return np.argmin(aice_int), np.argmax(aice_int)
+
+
+# Find the minimum and maximum values of a 2D (lat x lon) array in the given region.
+def var_min_max (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
+
+    # Choose the correct longitude and latitude arrays
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+
+    # Set limits on axes
+    if zoom_fris:
+        xmin = fris_bounds[0]
+        xmax = fris_bounds[1]
+        ymin = fris_bounds[2]
+        ymax = fris_bounds[3]
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lon)
+    if ymax is None:
+        ymax = np.amax(lon)
+
+    # Select the correct indices
+    loc = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+    # Find the min and max values
+    return np.amin(data[loc]), np.amax(data[loc])
 
 
