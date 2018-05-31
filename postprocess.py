@@ -6,8 +6,8 @@ import os
 
 from grid import Grid
 from io import NCfile, read_binary, netcdf_time
-from plots_1d import plot_fris_massbalance
-from plots_latlon import read_plot_latlon, plot_aice_minmax
+from plot_1d import plot_fris_massbalance
+from plot_latlon import read_plot_latlon, plot_aice_minmax
 
 
 # Make a bunch of plots when the simulation is done.

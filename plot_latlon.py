@@ -11,7 +11,10 @@ import numpy as np
 from grid import Grid
 from io import read_netcdf, find_variable, netcdf_time
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, find_aice_min_max
-from plot_utils import finished_plot, cell_boundaries, latlon_axes, set_colours, shade_land, shade_land_zice, contour_iceshelf_front, set_colour_bounds, parse_date, prepare_vel, overlay_vectors, set_panels, get_extend
+from plot_utils.windows import set_panels, finished_plot
+from plot_utils.labels import latlon_axes, parse_date
+from plot_utils.colours import set_colours, get_colour_bounds, get_extend
+from plot_utils.latlon import cell_boundaries, shade_land, shade_land_zice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf
 
 
@@ -41,7 +44,7 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
 
     # If we're zooming, we need to choose the correct colour bounds
     if zoom_fris or any([xmin, xmax, ymin, ymax]):
-        vmin_tmp, vmax_tmp = set_colour_bounds(data, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
+        vmin_tmp, vmax_tmp = get_colour_bounds(data, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
         # Don't override manually set bounds
         if vmin is None:
             vmin = vmin_tmp

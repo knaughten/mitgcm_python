@@ -11,7 +11,8 @@ import sys
 from grid import Grid
 from io import netcdf_time
 from timeseries import fris_melt
-from plot_utils import monthly_ticks, yearly_ticks, finished_plot
+from plot_utils.labels import monthly_ticks, yearly_ticks
+from plot_utils.windows import finished_plot
 
 
 # Plot timeseries of FRIS' basal mass balance components (melting, freezing, total) at every time index in the given file.

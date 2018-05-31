@@ -8,7 +8,7 @@ import sys
 
 from io import read_netcdf
 from utils import fix_lon_range
-import constants as const
+from constants import fris_bounds
 
 
 # Given a 3D hfac array on any grid, create the land mask.
@@ -31,7 +31,7 @@ def build_fris_mask (zice_mask, lon, lat):
     fris_mask = np.zeros(zice_mask.shape, dtype='bool')
     # Identify FRIS in two parts, split along the line 45W
     # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-    regions = [[const.fris_bounds[0], -45, const.fris_bounds[2], -74.7], [-45, const.fris_bounds[1], const.fris_bounds[2], -77.85]]
+    regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
     for bounds in regions:
         # Select the ice shelf points within these bounds
         index = np.nonzero(zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3]))

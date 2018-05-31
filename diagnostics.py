@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-import constants as const
+from constants import rho_ice
 
 
 # Calculate the in-situ freezing point (helper function for t_minus_tf)
@@ -68,7 +68,7 @@ def total_melt (ismr, mask, grid, result='massloss'):
         return np.sum(ismr*grid.dA*mask)/np.sum(grid.dA*mask)
     elif result == 'massloss':
         # Total mass loss
-        return np.sum(ismr*grid.dA*mask)*const.rho_ice*1e-12
+        return np.sum(ismr*grid.dA*mask)*rho_ice*1e-12
 
 
 # Calculate the total sea ice area.

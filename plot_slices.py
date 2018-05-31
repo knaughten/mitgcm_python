@@ -10,7 +10,10 @@ import sys
 from grid import Grid
 from io import read_netcdf, find_variable
 from utils import mask_3d
-from plot_utils import slice_patches, plot_slice_patches, finished_plot, slice_axes, plusminus_cmap, lon_label, lat_label, parse_date, get_extend, slice_values, set_panels
+from plot_utils.windows import set_panels, finished_plot
+from plot_utils.labels import slice_axes, lon_label, lat_label, parse_date
+from plot_utils.colours import set_colours, get_extend
+from plot_utils.slices import slice_patches, slice_values, plot_slice_patches
 from diagnostics import t_minus_tf
 
 
@@ -43,13 +46,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
     if vmax is None:
         vmax = vmax_tmp
     # Set colour map
-    if ctype == 'basic':
-        cmap = 'jet'
-    elif ctype == 'plusminus':
-        cmap = plusminus_cmap(vmin, vmax)
-    else:
-        print 'Error (slice_plot): invalid ctype=' + ctype
-        sys.exit()
+    cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
 
     # Figure out orientation and format slice location
     if lon0 is not None:
@@ -164,7 +161,7 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
     # Build the temperature patches and get the bounds
     patches, temp_values, loc0, hmin, hmax, zmin, zmax, tmin_tmp, tmax_tmp, left, right, below, above = slice_patches(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True)
     # Get the salinity values on the same patches, and their colour bounds
-    salt_values, smin_tmp, smax_tmp = slice_values(salt, grid, left, right, below, above, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
+    salt_values, smin_tmp, smax_tmp = slice_values(salt, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0)
 
     # Update any colour bounds which aren't already set
     if tmin is None:

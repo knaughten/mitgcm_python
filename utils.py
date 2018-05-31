@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-import constants as const
+from constants import rho_fw, sec_per_year
 from diagnostics import total_aice
 
 
@@ -23,7 +23,7 @@ def fix_lon_range (lon):
 # Convert freshwater flux into the ice shelf (diagnostic SHIfwFlx) (kg/m^2/s, positive means freezing) to ice shelf melt rate (m/y, positive means melting).
 def convert_ismr (shifwflx):
 
-    return -shifwflx/const.rho_fw*const.sec_per_year
+    return -shifwflx/rho_fw*sec_per_year
 
 
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
@@ -204,3 +204,5 @@ def find_aice_min_max (aice, grid):
     for t in range(num_time):
         aice_int[t] = total_aice(aice[t,:], grid)
     return np.argmin(aice_int), np.argmax(aice_int)
+
+
