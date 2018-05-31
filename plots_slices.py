@@ -34,19 +34,9 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
-    # Decide if we should pad the spatial bounds to show a bit of the mask
-    if hmin is None:
-        pad_left = True
-    if zmin is None:
-        pad_right = True
 
     # Build the patches and get the bounds
-    patches, values, loc0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
-    # Pad bounds if needed
-    if pad_left:
-        hmin -= 0.015*(hmax-hmin)
-    if pad_right:
-        hmax -= 0.015*(hmax-hmin)        
+    patches, values, loc0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)  
     # Update any colour bounds which aren't already set
     if vmin is None:
         vmin = vmin_tmp
@@ -171,22 +161,11 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
 
     # Choose what the endpoints of the colourbars should do
     extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
-    # Decide if we should pad the spatial bounds to show a bit of the mask
-    if hmin is None:
-        pad_left = True
-    if zmin is None:
-        pad_right = True
-
     # Build the temperature patches and get the bounds
     patches, temp_values, loc0, hmin, hmax, zmin, zmax, tmin_tmp, tmax_tmp, left, right, below, above = slice_patches(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True)
     # Get the salinity values on the same patches, and their colour bounds
     salt_values, smin_tmp, smax_tmp = slice_values(salt, grid, left, right, below, above, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
 
-    # Pad bounds if needed
-    if pad_left:
-        hmin -= 0.015*(hmax-hmin)
-    if pad_right:
-        hmax -= 0.015*(hmax-hmin)
     # Update any colour bounds which aren't already set
     if tmin is None:
         tmin = tmin_tmp
@@ -205,28 +184,35 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
         h_axis = 'lon'
         loc_string = lat_label(loc0, 3)
 
-    # Plot
+    # Set panels
     fig, gs, cax_t, cax_s = set_panels('1x2C2')
     # Wrap some things up in lists for easier iteration
     values = [temp_values, salt_values]
     vmin = [tmin, smin]
     vmax = [tmax, smax]
     cax = [cax_t, cax_s]
-    title = [r'Temperature ($^{\circ}$)', 'Salinity (psu)']
+    title = [r'Temperature ($^{\circ}$C)', 'Salinity (psu)']
     for i in range(2):
-        ax = plt.subplot(gs[0,t])
-        img = plot_slice_patches(ax, patches, values[t], hmin, hmax, zmin, zmax, vmin[t], vmax[t])
+        ax = plt.subplot(gs[0,i])
+        # Plot patches
+        img = plot_slice_patches(ax, patches, values[i], hmin, hmax, zmin, zmax, vmin[i], vmax[i])
+        # Nice axes
         slice_axes(ax, h_axis=h_axis)
-        if t == 1:
+        if i == 1:
             # Don't need depth labels a second time
             ax.set_yticklabels([])
-        plt.colorbar(img, cax=cax[t], extend=extend[t])
-        plt.title(title[t], fontsize=18)
-    # Location above
-    plt.suptitle(loc_string, fontsize=22)
+            ax.set_ylabel('')
+        # Add a colourbar and hide every second label so they're not squished
+        cbar = plt.colorbar(img, cax=cax[i], extend=extend[i], orientation='horizontal')
+        for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+            label.set_visible(False)
+        # Variable title
+        plt.title(title[i], fontsize=18)
     if date_string is not None:
-        # Add the date in the bottom right corner
-        plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
+        # Add date to main title
+        loc_string += ', ' + date_string
+    # Main title
+    plt.suptitle(loc_string, fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
 

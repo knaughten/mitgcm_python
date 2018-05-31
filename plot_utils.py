@@ -487,7 +487,7 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
             # Centered in y
             # Throw away northernmost row of data
             data_slice = data_slice[:,:-1]
-                if return_grid_vars:
+            if return_grid_vars:
                 # Boundaries are southern edges of cells in y            
                 h_bdry = grid.lat_corners_1d            
                 # Get hfac and zice at centres
@@ -600,14 +600,18 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac, zice):
 
 def get_slice_minmax (data_slice, left, right, below, above, hmin=None, hmax=None, zmin=None, zmax=None, return_spatial=False):
 
-    # If spatial bounds aren't given, choose dummy ones
-    if hmin is None:
+    # Figure out if we'll need to determine spatial bounds, and if so, set temporary ones
+    calc_hmin = hmin is None
+    if calc_hmin:
         hmin = np.amin(left)
-    if hmax is None:
+    calc_hmax = hmax is None
+    if calc_hmax:
         hmax = np.amax(right)
-    if zmin is None:
+    calc_zmin = zmin is None
+    if calc_zmin:
         zmin = np.amin(below)
-    if zmax is None:
+    calc_zmax = zmax is None
+    if calc_zmax:
         zmax = np.amax(above)
     # Select all the unmasked entries between these bounds
     index = np.nonzero((left >= hmin)*(right <= hmax)*(below >= zmin)*(above <= zmax)*(np.invert(data_slice.mask)))
@@ -615,11 +619,20 @@ def get_slice_minmax (data_slice, left, right, below, above, hmin=None, hmax=Non
     vmin = np.amin(data_slice[index])
     vmax = np.amax(data_slice[index])
     if return_spatial:
-        # Find the spatial bounds on unmasked data
-        hmin = np.amin(left[index])
-        hmax = np.amax(right[index])
-        zmin = np.amin(below[index])
-        zmax = np.amax(above[index])
+        # Find any unset spatial bounds on unmasked data
+        if calc_hmin:
+            hmin = np.amin(left[index])
+        if calc_hmax:
+            hmax = np.amax(right[index])
+        if calc_zmin:
+            zmin = np.amin(below[index])
+        if calc_zmax:
+            zmax = np.amax(above[index])
+        # Pad the left and/or bottom with a bit of the mask
+        if calc_hmin:
+            hmin -= 0.015*(hmax-hmin)
+        if calc_zmin:
+            zmin -= 0.015*(zmax-zmin)
         return hmin, hmax, zmin, zmax, vmin, vmax
     else:
         return vmin, vmax
@@ -729,12 +742,12 @@ def set_panels (key):
         cax = fig.add_axes([0.3, 0.05, 0.4, 0.04])
         return fig, gs, cax
     elif key == '1x2C2':
-        # Two side-by-side plots with a colourbar on each side
-        fig = plt.figure(figsize=(14,6))
+        # Two side-by-side plots with two colourbars below
+        fig = plt.figure(figsize=(12,6))
         gs = plt.GridSpec(1,2)
-        gs.update(left=0.1, right=0.9, bottom=0.05, top=0.85, wspace=0.05)
-        cax1 = fig.add_axes([0.05, 0.3, 0.05, 0.4])
-        cax2 = fig.add_axes([0.95, 0.3, 0.05, 0.4])
+        gs.update(left=0.07, right=0.97, bottom=0.15, top=0.85, wspace=0.05)
+        cax1 = fig.add_axes([0.12, 0.05, 0.325, 0.04])
+        cax2 = fig.add_axes([0.595, 0.05, 0.325, 0.04])
         return fig, gs, cax1, cax2        
 
 
