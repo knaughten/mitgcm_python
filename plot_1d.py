@@ -21,10 +21,11 @@ from plot_utils.windows import finished_plot
 # file_path: path to NetCDF file containing variable "SHIfwFlx", or a list of such files to concatenate
 # grid: either a Grid object, or the path to NetCDF grid file
 
-# Optional keyword argument:
+# Optional keyword arguments:
 # fig_name: as in function finished_plot
+# monthly: as in function netcdf_time
 
-def plot_fris_massbalance (file_path, grid, fig_name=None):
+def plot_fris_massbalance (file_path, grid, fig_name=None, monthly=True):
 
     if not isinstance(grid, Grid):
         # This is the path to the NetCDF grid file, not a Grid object
@@ -43,12 +44,12 @@ def plot_fris_massbalance (file_path, grid, fig_name=None):
     # Calculate timeseries on the first file
     melt, freeze = fris_melt(first_file, grid, mass_balance=True)
     # Read time axis
-    time = netcdf_time(first_file)
+    time = netcdf_time(first_file, monthly=monthly)
     if isinstance(file_path, list):
         # More files to read
         for file in file_path[1:]:
             melt_tmp, freeze_tmp = fris_melt(file, grid, mass_balance=True)
-            time_tmp = netcdf_time(file)
+            time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             melt = np.concatenate((melt, melt_tmp))
             freeze = np.concatenate((freeze, freeze_tmp))
@@ -79,8 +80,9 @@ def plot_fris_massbalance (file_path, grid, fig_name=None):
 # title: title to add to the plot
 # units: units for the y-axis
 # fig_name: as in function finished_plot
+# monthly: as in function netcdf_time
 
-def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None):
+def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
 
     if not isinstance(grid, Grid):
         # This is the path to the NetCDF grid file, not a Grid object
@@ -99,12 +101,12 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
     # Calculate timeseries on the first file
     values = timeseries_max(first_file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     # Read time axis
-    time = netcdf_time(first_file)
+    time = netcdf_time(first_file, monthly=monthly)
     if isinstance(file_path, list):
         # More files to read
         for file in file_path[1:]:
             values_tmp = timeseries_max(file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-            time_tmp = netcdf_time(file)
+            time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             values = np.concatenate((values, values_tmp))
             time = np.concatenate((time, time_tmp))

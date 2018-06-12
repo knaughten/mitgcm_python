@@ -100,10 +100,11 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 # var_name: name of time axis. Default 'time'.
 # t_start, t_end: as in function read_netcdf
 # return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
+# monthly: indicates that the output is monthly averaged, so everything will be stamped with the first day of the next month. If True, the function will subtract one day from each timestamp, so at least the month and year are correct.
 
 # Output: 1D numpy array containing the time values (either scalars or Date objects)
 
-def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True):
+def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True, monthly=True):
 
     # Open the file and get the length of the record
     id = nc.Dataset(file_path, 'r')
@@ -126,6 +127,11 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
         # Return just as scalar values
         time = time_id[t_start:t_end]
     id.close()
+
+    if monthly:
+        # Back up one day so at least the year and month are correct
+        for t in range(time.size):
+            time[t] = time[t] - datetime.timedelta(days=1)
 
     return time
 

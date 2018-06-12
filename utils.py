@@ -4,6 +4,7 @@
 
 import numpy as np
 import sys
+import datetime
 
 from constants import rho_fw, sec_per_year, fris_bounds
 from diagnostics import total_aice

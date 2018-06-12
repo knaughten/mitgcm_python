@@ -21,8 +21,9 @@ from plot_slices import read_plot_ts_slice
 # Optional keyword arguments:
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
+# monthly: as in function netcdf_time
 
-def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir='.', file_path=None):
+def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir='.', file_path=None, monthly=True):
 
     # Make sure proper directories
     if not output_dir.endswith('/'):
@@ -92,7 +93,7 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
             read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png')
 
     # Sea ice min and max
-    time = netcdf_time(file_path)
+    time = netcdf_time(file_path, monthly=monthly)
     first_year = time[0].year
     last_year = time[-1].year
     for year in range(first_year, last_year+1):
