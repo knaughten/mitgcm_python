@@ -92,12 +92,12 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
             # Make another plot with unbounded colour bar
             read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png')
 
-    # Sea ice min and max
+    '''# Sea ice min and max
     time = netcdf_time(file_path, monthly=monthly)
     first_year = time[0].year
     last_year = time[-1].year
     for year in range(first_year, last_year+1):
-        plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
+        plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')'''
 
     # Slice plots
     read_plot_ts_slice(file_path, grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png')
