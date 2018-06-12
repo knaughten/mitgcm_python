@@ -156,5 +156,14 @@ def crash_to_netcdf (crash_dir, grid_path):
         if file.startswith('stateVicecrash') and file.endswith('.data'):
             vice = read_binary(crash_dir + file, grid, 'xy')
             ncfile.add_variable('SIvice', vice, 'xy', gtype='v', units='m/s')
+        if file.startswith('stateQnetcrash') and file.endswith('.data'):
+            qnet = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('Qnet', qnet, 'xy', units='W/m^2')
+        if file.startswith('stateMxlcrash') and file.endswith('.data'):
+            mld = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('MXLDEPTH', mld, 'xy', units='m')
+        if file.startswith('stateEmpmrcrash') and file.endswith('.data'):
+            empmr = read_binary(crash_dir + file, grid, 'xy')
+            ncfile.add_variable('Empmr', empmr, 'xy', units='kg/m^2/s')
 
     ncfile.finished()
