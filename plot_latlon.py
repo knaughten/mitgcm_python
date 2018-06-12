@@ -442,7 +442,7 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
 
 
 # 1x2 lat-lon plot showing sea ice area at the timesteps of minimum and maximum area in the given year.
-def plot_aice_minmax (file_path, grid, year, fig_name=None):
+def plot_aice_minmax (file_path, grid, year, fig_name=None, monthly=True):
 
     if not isinstance(grid, Grid):
         # This is the path to the NetCDF grid file, not a Grid object
@@ -451,7 +451,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None):
 
     # Read sea ice area and the corresponding dates
     aice = mask_land_zice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)
-    time = netcdf_time(file_path)
+    time = netcdf_time(file_path, monthly=monthly)
     # Find the range of dates we care about
     t_start, t_end = select_year(time, year)
     # Trim the arrays to these dates

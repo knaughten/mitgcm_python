@@ -127,19 +127,15 @@ def slice_axes (ax, h_axis='lat'):
 # Given a date, return a nice string that can be added to plots.
 # Option 1: set keyword argument "date" with a Datetime object.
 # Option 2: set keyword arguments "file_path" and "time_index" to read the date from a NetCDF file.
-# The keyword argument "monthly" indicates that the output is monthly averaged, and everything will be stamped with the first day of the next month.
+# The keyword argument "monthly" indicates that the output is monthly averaged.
 def parse_date (date=None, file_path=None, time_index=None, monthly=True):
 
     # Create the Datetime object if needed
     if date is None:
-        date = netcdf_time(file_path)[time_index]
+        date = netcdf_time(file_path, monthly=monthly)[time_index]
     if monthly:
-        if date.day != 1:
-            print "Error (parse_date): this doesn't appear to be monthly output. Set the keyword argument monthly=False."
-            sys.exit()
-        # Back up one day, so we're in the previous month
-        new_date = date - datetime.timedelta(days=1)
+        # Return month and year
         return new_date.strftime('%b %Y')
     else:
-        # Just go with the timestamp that's here, even though it's not representative of the averaging period
+        # Just go with the day that's in the timestamp, even though it's not representative of the averaging period
         return date.strftime('%d %b %Y')
