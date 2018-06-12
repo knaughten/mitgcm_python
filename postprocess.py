@@ -14,11 +14,9 @@ from plot_slices import read_plot_ts_slice
 # Make a bunch of plots when the simulation is done.
 # This will keep evolving over time!
 
-# Arguments:
+# Optional keyword arguments:
 # output_dir: path to directory containing output NetCDF files (assumed to be in one file per segment a la scripts/convert_netcdf.py)
 # grid_path: path to NetCDF grid file
-
-# Optional keyword arguments:
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
@@ -103,6 +101,36 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
     read_plot_ts_slice(file_path, grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png')
     read_plot_ts_slice(file_path, grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png')
     read_plot_ts_slice(file_path, grid, lon0=-10, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png')
+
+
+# Plot the sea ice annual min and max for each year of the simulation. First you have to concatenate the sea ice area into a single file, such as:
+# ncrcat -v SIarea output_*.nc aice_tot.nc
+
+# Arguments:
+# file_path: path to concatenated NetCDF file with sea ice area for the entire simulation
+
+# Optional keyword arguments:
+# grid_path: path to NetCDF grid file
+# fig_dir: path to directory to save figures in
+# monthly: as in function netcdf_time
+
+def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.', monthly=True):
+
+    if not fig_dir.endswith('/'):
+        fig_dir += '/'
+
+    grid = Grid(grid_path)
+
+    time = netcdf_time(file_path, monthly=monthly)
+    first_year = time[0].year
+    if time[0].month > 2:
+        first_year += 1
+    last_year = time[-1].year
+    if time[-1].month < 8:
+        last_year -= 1
+    for year in range(first_year, last_year+1):
+        plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
+    
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
