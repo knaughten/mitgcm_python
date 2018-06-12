@@ -3,7 +3,6 @@
 #######################################################
 
 import matplotlib.dates as dt
-import datetime
 import numpy as np
 import sys
 

@@ -6,6 +6,7 @@ import netCDF4 as nc
 import numpy as np
 import sys
 import os
+import datetime
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
