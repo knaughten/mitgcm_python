@@ -1,5 +1,5 @@
 #######################################################
-# Everything to do with the grid
+# Everything to do with reading the grid
 # This relies on a NetCDF grid file. To create it, run MITgcm just long enough to produce one grid.t*.nc file for each tile, and then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution).
 #######################################################
 

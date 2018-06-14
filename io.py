@@ -215,6 +215,27 @@ def read_binary (filename, grid, dimensions, prec=32):
     return np.reshape(data, data_shape)
 
 
+# Write an array ("data"), of any dimension, to a binary file ("file_path"). Default is 32-bit (prec=32) but can also do 64-bit (prec=64).
+def write_binary (data, file_path, prec=32):
+
+    # Set dtype
+    if prec == 32:
+        dtype = '>f4'
+    elif prec == 64:
+        dtype = '>f8'
+    else:
+        print 'Error (write_binary): invalid precision'
+        sys.exit()
+
+    # Make sure data is in the right precision
+    data = data.astype(dtype)
+
+    # Write to file
+    id = open(file_path, 'w')
+    data.tofile(id)
+    id.close()
+
+
 # NCfile object to simplify writing of NetCDF files.
 class NCfile:
 
