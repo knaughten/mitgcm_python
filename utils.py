@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year, fris_bounds
+from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
 from diagnostics import total_aice
 
 
@@ -241,5 +241,38 @@ def factors (n):
         if n % i == 0:
             factors.append(i)
     return factors
+
+
+# Convert longitude and latitude to polar stereographic projection used by BEDMAP2. Adapted from polarstereo_fwd.m in the MITgcm Matlab toolbox.
+def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
+
+    # Deep copies of arrays in case they are reused
+    lon = np.copy(lon)
+    lat = np.copy(lat)
+
+    if lat_c < 0:
+        # Southern hemisphere
+        pm = -1
+    else:
+        # Northern hemisphere
+        pm = 1
+
+    # Prepare input
+    lon = lon*pm*deg2rad
+    lat = lat*pm*deg2rad
+    lat_c = lat_c*pm*deg2rad
+    lon0 = lon0*pm*deg2rad
+
+    # Calculations
+    t = np.tan(np.pi/4 - lat/2)/((1 - e*np.sin(lat))/(1 + e*np.sin(lat)))**(e/2)
+    t_c = np.tan(np.pi/4 - lat_c/2)/((1 - e*np.sin(lat_c))/(1 + e*np.sin(lat_c)))**(e/2)
+    m_c = np.cos(lat_c)/np.sqrt(1 - (e*np.sin(lat_c))**2)
+    rho = a*m_c*t/t_c
+    x = pm*rho*np.sin(lon - lon0)
+    y = -pm*rho*np.cos(lon - lon0)
+
+    return x, y
+
+    
 
 
