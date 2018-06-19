@@ -188,7 +188,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     ncfile.add_variable('imask', imask_interp)
     ncfile.finished()
 
-    print 'The results have been written into ' + ncout
+    print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever manual edits you would like (removing subglacial lakes, blocking out the annoying little islands near the peninsula, removing everything west of the peninsula...)'
     print 'Then run write_topo_files to generate the input topography files for the model.'
     
