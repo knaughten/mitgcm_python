@@ -3,10 +3,12 @@
 #######################################################
 
 import numpy as np
+import sys
 
 from constants import deg2rad
 from io import write_binary
-from utils import factors
+from utils import factors, polar_stereo
+from interpolation import extend_into_mask, interp_topo
 
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
@@ -64,3 +66,75 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     print 'Ny = ' + str(Ny) + ' which has the factors ' + str(factors_y)
     print 'If you are happy with this, choose your tile size based on the factors and update code/SIZE.h.'
     print 'Otherwise, tweak the boundaries and try again.'
+
+    return lon, lat
+
+
+def interp_bedmap (lon, lat, topo_dir, bathy_out, draft_out, seb_updates=True):
+
+    # BEDMAP2 file names
+    if seb_updates:
+        bed_file = 'bedmap2_bed_seb.flt'
+    else:
+        bed_file = 'bedmap2_bed.flt'
+    surface_file='bedmap2_surface.flt'
+    thickness_file='bedmap2_thickness.flt'
+    mask_file='bedmap2_icemask_grounded_and_shelves.flt'
+
+    # BEDMAP2 grid parameters
+    bedmap_dim = 6667    # Dimension
+    bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
+    bedmap_res = 1000    # Resolution (m)
+    missing_val = -9999    # Missing value for bathymetry north of 60S
+
+    if np.amax(lat) > -60:
+        print 'Error (interp_topo): BEDMAP2 has northern boundary 60S. You will need to edit the code to either merge in GEBCO, switch to RTopo, or something else.'
+        sys.exit()
+
+    # Set up BEDMAP grid (polar stereographic)
+    x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
+    y = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
+
+    print 'Reading data'
+    # Have to flip it vertically so lon0=0 in polar stereographic projection
+    # Otherwise, lon0=180 which makes x_interp and y_interp strictly decreasing when we call polar_stereo later, and the interpolation chokes
+    bathy = np.flipud(np.fromfile(topo_dir+bed_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    surf = np.flipud(np.fromfile(topo_dir+surface_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    thick = np.flipud(np.fromfile(topo_dir+thickness_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    mask = np.flipud(np.fromfile(topo_dir+mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+
+    print 'Extending bathymetry into mask'
+    # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts near 60S.
+    bathy = extend_into_mask(bathy, missing_val=missing_val)
+
+    print 'Calculating ice shelf draft'
+    # Calculate ice shelf draft from ice surface and ice thickness
+    draft = surf - thick
+
+    print 'Calculating ocean and ice masks'
+    # Mask: -9999 is open ocean, 0 is grounded ice, 1 is ice shelf
+    # Make an ocean mask and an ice mask. Ice shelves are in both.
+    omask = (mask!=0).astype(float)
+    imask = (mask!=-9999).astype(float)
+
+    # Convert lon and lat to polar stereographic coordinates
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    x_interp, y_interp = polar_stereo(lon_2d, lat_2d)
+
+    # Interpolate fields
+    print 'Interpolating bathymetry'
+    bathy_interp = interp_topo(x, y, bathy, x_interp, y_interp)
+    print 'Interpolating ice shelf draft'
+    draft_interp = interp_topo(x, y, draft, x_interp, y_interp)
+    print 'Interpolating ocean mask'
+    omask_interp = interp_topo(x, y, omask, x_interp, y_interp)
+    print 'Interpolating ice mask'
+    imask_interp = interp_topo(x, y, imask, x_interp, y_interp)        
+
+    
+    # Threshold for interpolated mask
+    # Update topo and shelf based on mask
+    # Deal with artifacts: subglacial lakes? Single cells?
+    # Write to files
+
+    

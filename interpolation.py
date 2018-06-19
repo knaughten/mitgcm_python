@@ -4,7 +4,7 @@
 
 import numpy as np
 import sys
-from scipy.spatial import KDTree
+from scipy.interpolate import RectBivariateSpline
 
 from utils import mask_land, mask_land_zice, mask_3d
 
@@ -70,6 +70,84 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
 
     return data_interp
 
+
+# Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.
+# If "data" is a regular array with specific missing values, set missing_val (default -9999). If "data" is a MaskedArray, set masked=True instead.
+# num_iters indicates the number of times the data is extended into the mask (default 5).
+def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
+
+    if missing_val != -9999 and masked:
+        print "Error (extend_into_mask): can't set a missing value for a masked array"
+        sys.exit()
+
+    if masked:
+        # MaskedArrays will mess up the extending
+        # Unmask the array and fill the mask with missing values
+        data_unmasked = data.data
+        data_unmasked[data.mask] = missing_val
+        data = data_unmasked
+
+    for iter in range(num_iters):
+        print '...iteration ' + str(iter+1) + ' of ' + str(num_iters)
+        # Find the value to the left, right, down, up of every point
+        # Just copy the boundaries
+        data_l = np.empty(data.shape)
+        data_l[:,1:] = data[:,:-1]
+        data_l[:,0] = data[:,0]
+        data_r = np.empty(data.shape)
+        data_r[:,:-1] = data[:,1:]
+        data_r[:,-1] = data[:,-1]
+        data_d = np.empty(data.shape)
+        data_d[1:,:] = data[:-1,:]
+        data_d[0,:] = data[0,:]
+        data_u = np.empty(data.shape)
+        data_u[:-1,:] = data[1:,:]
+        data_u[-1,:] = data[-1,:]
+        # Arrays of 1s and 0s indicating whether these neighbours are non-missing
+        valid_l = (data_l != missing_val).astype(float)
+        valid_r = (data_r != missing_val).astype(float)
+        valid_d = (data_d != missing_val).astype(float)
+        valid_u = (data_u != missing_val).astype(float)
+        # Number of valid neighbours of each point
+        num_valid_neighbours = valid_l + valid_r + valid_d + valid_u
+        # Choose the points that can be filled
+        index = np.nonzero((data == missing_val)*(num_valid_neighbours > 0))
+        # Set them to the average of their non-missing neighbours
+        data[index] = (data_l[index]*valid_l[index] + data_r[index]*valid_r[index] + data_d[index]*valid_d[index] + data_u[index]*valid_u[index])/num_valid_neighbours[index]
+
+    if masked:
+        # Remask the MaskedArray
+        data = ma.masked_where(data==missing_val, data)
+
+    return data
+
+
+
+def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
+
+    # x_interp and y_interp are the edges of the grid cells, so the number of cells is 1 less
+    num_j = y_interp.shape[0] -1
+    num_i = x_interp.shape[1] - 1
+    data_interp = np.empty([num_j, num_i])
+
+    print 'Creating interpolant'
+    interpolant = RectBivariateSpline(y, x, data)
+
+    # Loop over grid cells (can't find a vectorised way to do this without overflowing memory)
+    for j in range(num_j):
+        print '...latitude index ' + str(j+1) + ' of ' + str(num_j)
+        for i in range(num_i):
+            # Make a finer grid within this grid cell (regular in x and y)
+            # Edges of the sub-cells
+            x_edges = np.linspace(x_interp[j,i], x_interp[j,i+1], num=n_subgrid+1)
+            y_edges = np.linspace(y_interp[j,i], y_interp[j+1,i], num=n_subgrid+1)
+            # Centres of the sub-cells
+            x_vals = 0.5*(x_edges[1:] + x_edges[:-1])
+            y_vals = 0.5*(y_edges[1:] + y_edges[:-1])
+            # Interpolate to the finer grid, then average over those points to estimate the mean value of the original field over the entire grid cell
+            data_interp[j,i] = np.mean(interpolant(y_vals, x_vals))
+
+    return data_interp
                 
     
 
