@@ -65,7 +65,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     factors_y = factors(Ny)
     print '\nNx = ' + str(Nx) + ' which has the factors ' + str(factors_x)
     print 'Ny = ' + str(Ny) + ' which has the factors ' + str(factors_y)
-    print 'If you are happy with this, choose your tile size based on the factors and update code/SIZE.h.'
+    print 'If you are happy with this, proceed with interp_bedmap2. At some point, choose your tile size based on the factors and update code/SIZE.h.'
     print 'Otherwise, tweak the boundaries and try again.'
 
     return lon, lat
