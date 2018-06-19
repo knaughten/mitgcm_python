@@ -351,6 +351,45 @@ class NCfile:
 
 
 
+# Basic version of NCfile for a simple lat-lon file on any regular grid (eg intermediate domain generation steps, see make_domain.py).
+class NCfile_basiclatlon:
+
+    # Initialisation arguments:
+    # filename: name for desired NetCDF file
+    # lon, lat: 1D longitude and latitude arrays
+    def __init__ (self, filename, lon, lat):
+
+        self.id = nc.Dataset(filename, 'w')
+        self.id.createDimension('lat', lat.size)
+        self.id.createVariable('lat', 'f8', ('lat'))
+        self.id.variables['lat'].long_name = 'latitude at cell centre'
+        self.id.variables['lat'].units = 'degrees_north'
+        self.id.variables['lat'][:] = lat
+        self.id.createDimension('lon', lon.size)
+        self.id.createVariable('lon', 'f8', ('lon'))
+        self.id.variables['lon'].long_name = 'longitude at cell centre'
+        self.id.variables['lon'].units = 'degrees_east'
+        self.id.variables['lon'][:] = lon
+
+        
+    # Create and write a lat-lon variable.
+    def add_variable (self, var_name, data, long_name=None, units=None, dtype='f8'):
+
+        self.id.createVariable(var_name, dtype, ('lat', 'lon'))
+        if long_name is not None:
+            self.id.variables[var_name].long_name = long_name
+        if units is not None:
+            self.id.variables[var_name].units = units
+        self.id.variables[var_name][:] = data
+
+        
+    # Call this function when you're ready to close the file.
+    def finished (self):
+
+        self.id.close()
+
+
+
     
 
 

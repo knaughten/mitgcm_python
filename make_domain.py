@@ -6,9 +6,9 @@ import numpy as np
 import sys
 
 from constants import deg2rad
-from io import write_binary
+from io import write_binary, NCfile_basiclatlon
 from utils import factors, polar_stereo
-from interpolation import extend_into_mask, interp_topo
+from interpolation import extend_into_mask, interp_topo, remove_isolated_cells
 from plot_latlon import plot_tmp_domain
 
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
@@ -105,7 +105,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     thick = np.flipud(np.fromfile(topo_dir+thickness_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
     mask = np.flipud(np.fromfile(topo_dir+mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
 
-    print 'Extending bathymetry into mask'
+    print 'Extending bathymetry slightly past 60S'
     # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts near 60S.
     bathy = extend_into_mask(bathy, missing_val=missing_val)
 
@@ -171,13 +171,27 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     shelf_mask_interp = remove_isolated_cells(shelf_mask_interp)
     index = np.nonzero((omask_interp==1)*(shelf_mask_interp==0))
     draft_interp[index] = 0
-    imask_interp[index] = 0    
+    imask_interp[index] = 0
 
-    # Plot temporary results
+    print 'Plotting'
     plot_tmp_domain(lon_2d, lat_2d, bathy_interp, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp, title='Ice shelf draft (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')
     plot_tmp_domain(lon_2d, lat_2d, omask_interp, title='Ocean mask')
     plot_tmp_domain(lon_2d, lat_2d, imask_interp, title='Ice mask')
+
+    # Write to NetCDF file (at cell centres not edges!)
+    ncfile = NCfile_basiclatlon(nc_out, 0.5*(lon[1:] + lon[:-1]), 0.5*(lat[1:] + lat[:-1]))
+    ncfile.add_variable('bathy', bathy_interp, units='m')
+    ncfile.add_variable('draft', draft_interp, units='m')
+    ncfile.add_variable('omask', omask_interp)
+    ncfile.add_variable('imask', imask_interp)
+    ncfile.finished()
+
+    print 'The results have been written into ' + ncout
+    print 'Take a look at this file and make whatever manual edits you would like (removing subglacial lakes, blocking out the annoying little islands near the peninsula, removing everything west of the peninsula...)'
+    print 'Then run write_topo_files to generate the input topography files for the model.'
+    
+    
 
     
