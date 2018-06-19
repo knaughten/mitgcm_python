@@ -71,6 +71,33 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
     return data_interp
 
 
+# Helper function for extend_into_mask and remove_isolated_cells
+def neighbours_masks (data, missing_val=-9999):
+
+    # Find the value to the left, right, down, up of every point
+    # Just copy the boundaries
+    data_l = np.empty(data.shape)
+    data_l[:,1:] = data[:,:-1]
+    data_l[:,0] = data[:,0]
+    data_r = np.empty(data.shape)
+    data_r[:,:-1] = data[:,1:]
+    data_r[:,-1] = data[:,-1]
+    data_d = np.empty(data.shape)
+    data_d[1:,:] = data[:-1,:]
+    data_d[0,:] = data[0,:]
+    data_u = np.empty(data.shape)
+    data_u[:-1,:] = data[1:,:]
+    data_u[-1,:] = data[-1,:]
+    # Arrays of 1s and 0s indicating whether these neighbours are non-missing
+    valid_l = (data_l != missing_val).astype(float)
+    valid_r = (data_r != missing_val).astype(float)
+    valid_d = (data_d != missing_val).astype(float)
+    valid_u = (data_u != missing_val).astype(float)
+    # Number of valid neighbours of each point
+    num_valid_neighbours = valid_l + valid_r + valid_d + valid_u
+    return data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours    
+
+
 # Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.
 # If "data" is a regular array with specific missing values, set missing_val (default -9999). If "data" is a MaskedArray, set masked=True instead.
 # num_iters indicates the number of times the data is extended into the mask (default 5).
@@ -88,28 +115,8 @@ def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
         data = data_unmasked
 
     for iter in range(num_iters):
-        print '...iteration ' + str(iter+1) + ' of ' + str(num_iters)
-        # Find the value to the left, right, down, up of every point
-        # Just copy the boundaries
-        data_l = np.empty(data.shape)
-        data_l[:,1:] = data[:,:-1]
-        data_l[:,0] = data[:,0]
-        data_r = np.empty(data.shape)
-        data_r[:,:-1] = data[:,1:]
-        data_r[:,-1] = data[:,-1]
-        data_d = np.empty(data.shape)
-        data_d[1:,:] = data[:-1,:]
-        data_d[0,:] = data[0,:]
-        data_u = np.empty(data.shape)
-        data_u[:-1,:] = data[1:,:]
-        data_u[-1,:] = data[-1,:]
-        # Arrays of 1s and 0s indicating whether these neighbours are non-missing
-        valid_l = (data_l != missing_val).astype(float)
-        valid_r = (data_r != missing_val).astype(float)
-        valid_d = (data_d != missing_val).astype(float)
-        valid_u = (data_u != missing_val).astype(float)
-        # Number of valid neighbours of each point
-        num_valid_neighbours = valid_l + valid_r + valid_d + valid_u
+        # Find the 4 neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
+        data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours = neighbours_masks(data, missing_val=missing_val)
         # Choose the points that can be filled
         index = np.nonzero((data == missing_val)*(num_valid_neighbours > 0))
         # Set them to the average of their non-missing neighbours
@@ -122,6 +129,17 @@ def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
     return data
 
 
+# Interpolate a topography field "data" (eg bathymetry, ice shelf draft, mask) to grid cells. We want the area-averaged value over each grid cell. So it's not enough to just interpolate to a point (because the source data might be much higher resolution than the new grid) or to average all points within the cell (because the source data might be lower or comparable resolution). Instead, interpolate to a finer grid within each grid cell (default 10x10) and then average over these points.
+
+# Arguments:
+# x, y: 1D arrays with x and y coordinates of source data (polar stereographic for BEDMAP2, but it doesn't actually matter)
+# data: 2D array of source data
+# x_interp, y_interp: 2D arrays with x and y coordinates of the EDGES of grid cells - the output array will be 1 smaller in each dimension
+
+# Optional keyword argument:
+# n_subgrid: dimension of finer grid within each grid cell (default 10, i.e. 10 x 10 points per grid cell)
+
+# Output: data on centres of new grid
 
 def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
 
@@ -130,12 +148,11 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
     num_i = x_interp.shape[1] - 1
     data_interp = np.empty([num_j, num_i])
 
-    print 'Creating interpolant'
+    # RectBivariateSpline needs (y,x) not (x,y) - this can really mess you up when BEDMAP2 is square!!
     interpolant = RectBivariateSpline(y, x, data)
 
     # Loop over grid cells (can't find a vectorised way to do this without overflowing memory)
     for j in range(num_j):
-        print '...latitude index ' + str(j+1) + ' of ' + str(num_j)
         for i in range(num_i):
             # Make a finer grid within this grid cell (regular in x and y)
             # Edges of the sub-cells
@@ -148,6 +165,18 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
             data_interp[j,i] = np.mean(interpolant(y_vals, x_vals))
 
     return data_interp
+
+
+# Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
+def remove_isolated_cells (data, mask_val=0):
+
+    num_valid_neighbours = neighbours_masks(data, missing_val=mask_val)[-1]
+    num_isolated = np.count_nonzero((data!=mask_val)*(num_valid_neighbours==0))
+    print '...' + str(num_isolated) + ' isolated cells'
+    if num_isolated > 0:
+        index = np.nonzero((data!=mask_val)*(num_valid_neighbours==0))
+        data[index] = mask_val
+    return data
                 
     
 

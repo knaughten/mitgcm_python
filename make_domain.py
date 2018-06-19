@@ -9,6 +9,7 @@ from constants import deg2rad
 from io import write_binary
 from utils import factors, polar_stereo
 from interpolation import extend_into_mask, interp_topo
+from plot_latlon import plot_tmp_domain
 
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
@@ -70,7 +71,8 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     return lon, lat
 
 
-def interp_bedmap (lon, lat, topo_dir, bathy_out, draft_out, seb_updates=True):
+# Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
+def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
     # BEDMAP2 file names
     if seb_updates:
@@ -129,12 +131,53 @@ def interp_bedmap (lon, lat, topo_dir, bathy_out, draft_out, seb_updates=True):
     print 'Interpolating ocean mask'
     omask_interp = interp_topo(x, y, omask, x_interp, y_interp)
     print 'Interpolating ice mask'
-    imask_interp = interp_topo(x, y, imask, x_interp, y_interp)        
+    imask_interp = interp_topo(x, y, imask, x_interp, y_interp)
 
+    print 'Processing masks'
+    # Deal with values interpolated between 0 and 1
+    omask_interp[omask_interp < 0.5] = 0
+    omask_interp[omask_interp >= 0.5] = 1
+    imask_interp[imask_interp < 0.5] = 0
+    imask_interp[imask_interp >= 0.5] = 1
+    # Zero out bathymetry and ice shelf draft on land    
+    bathy_interp[omask_interp==0] = 0
+    draft_interp[omask_interp==0] = 0
+    # Zero out ice shelf draft in the open ocean
+    draft_interp[imask_interp==0] = 0
     
-    # Threshold for interpolated mask
-    # Update topo and shelf based on mask
-    # Deal with artifacts: subglacial lakes? Single cells?
-    # Write to files
+    # Update masks due to interpolation changing their boundaries
+    # Anything with positive bathymetry should be land
+    index = bathy_interp > 0
+    omask_interp[index] = 0
+    bathy_interp[index] = 0
+    draft_interp[index] = 0    
+    # Anything with negative or zero water column thickness should be land
+    index = draft_interp - bathy_interp <= 0
+    omask_interp[index] = 0
+    bathy_interp[index] = 0
+    draft_interp[index] = 0
+    # Any ocean points with zero ice shelf draft should not be in the ice mask
+    index = np.nonzero((omask_interp==1)*(draft_interp==0))
+    imask_interp[index] = 0
+
+    print 'Removing isolated ocean cells'
+    omask_interp = remove_isolated_cells(omask_interp)
+    bathy_interp[omask_interp==0] = 0
+    draft_interp[omask_interp==0] = 0
+    print 'Removing isolated ice shelf cells'
+    # First make a mask that is just ice shelves (no grounded ice)
+    shelf_mask_interp = np.copy(imask_interp)
+    shelf_mask_interp[omask_interp==0] = 0
+    shelf_mask_interp = remove_isolated_cells(shelf_mask_interp)
+    index = np.nonzero((omask_interp==1)*(shelf_mask_interp==0))
+    draft_interp[index] = 0
+    imask_interp[index] = 0    
+
+    # Plot temporary results
+    plot_tmp_domain(lon_2d, lat_2d, bathy_interp, title='Bathymetry (m)')
+    plot_tmp_domain(lon_2d, lat_2d, draft_interp, title='Ice shelf draft (m)')
+    plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')
+    plot_tmp_domain(lon_2d, lat_2d, omask_interp, title='Ocean mask')
+    plot_tmp_domain(lon_2d, lat_2d, imask_interp, title='Ice mask')
 
     

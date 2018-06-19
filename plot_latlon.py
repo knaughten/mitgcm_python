@@ -481,4 +481,20 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None, monthly=True):
     plt.suptitle('Min and max sea ice area', fontsize=22)
     finished_plot(fig, fig_name=fig_name)
 
+
+# Basic plot for a domain in progress (see make_domain.py).
+# x, y: tile edges (either lat-lon or polar stereographic)
+# data: field to plot, at centres of tiles
+# title: optional string to put on title
+def plot_tmp_domain (x, y, data, title=None):
+
+    fig, ax = plt.subplots()
+    img = ax.pcolormesh(x, y, data)
+    ax.axis('tight')
+    plt.colorbar(img)
+    if title is not None:
+        plt.title(title, fontsize=18)
+    fig.show()
+    
+
     
