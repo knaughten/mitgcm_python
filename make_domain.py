@@ -4,6 +4,7 @@
 
 import numpy as np
 import sys
+import netCDF4 as nc
 
 from constants import deg2rad
 from io import write_binary, NCfile_basiclatlon
@@ -14,7 +15,11 @@ from plot_latlon import plot_tmp_domain
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
     # Number of iterations for latitude convergence
-    num_lat_iter = 10    
+    num_lat_iter = 10
+
+    if xmin > xmax:
+        print "Error (latlon_points): looks like your domain crosses 180E. The code can't deal with this yet, you're going to have to write a patch. Sorry."
+        sys.exit()
 
     # Build longitude values
     lon = np.arange(xmin, xmax+res, res)
@@ -79,9 +84,11 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
         bed_file = 'bedmap2_bed_seb.flt'
     else:
         bed_file = 'bedmap2_bed.flt'
-    surface_file='bedmap2_surface.flt'
-    thickness_file='bedmap2_thickness.flt'
-    mask_file='bedmap2_icemask_grounded_and_shelves.flt'
+    surface_file = 'bedmap2_surface.flt'
+    thickness_file = 'bedmap2_thickness.flt'
+    mask_file = 'bedmap2_icemask_grounded_and_shelves.flt'
+    # GEBCO file name
+    gebco_file = 'GEBCO_2014_2D.nc'
 
     # BEDMAP2 grid parameters
     bedmap_dim = 6667    # Dimension
@@ -89,9 +96,18 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     bedmap_res = 1000    # Resolution (m)
     missing_val = -9999    # Missing value for bathymetry north of 60S
 
-    if np.amax(lat) > -60:
-        print 'Error (interp_topo): BEDMAP2 has northern boundary 60S. You will need to edit the code to either merge in GEBCO, switch to RTopo, or something else.'
+    if np.amin(lat) > -60:
+        print "Error (interp_topo): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
         sys.exit()
+    if np.amax(lat) > -60:
+        use_gebco = True
+        # Find the first index north of 60S
+        j_split = np.nonzero(lat >= -60)[0][0]
+        # Split grid into a BEDMAP2 section and a GEBCO section
+        lat_b = lat[:j_split]
+        lat_g = lat[j_split:]
+    else:
+        lat_b = lat
 
     # Set up BEDMAP grid (polar stereographic)
     x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
@@ -105,9 +121,10 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     thick = np.flipud(np.fromfile(topo_dir+thickness_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
     mask = np.flipud(np.fromfile(topo_dir+mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
 
-    print 'Extending bathymetry slightly past 60S'
-    # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts near 60S.
-    bathy = extend_into_mask(bathy, missing_val=missing_val)
+    if np.amax(lat_b) > -61:
+        print 'Extending bathymetry slightly past 60S'
+        # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts near 60S.
+        bathy = extend_into_mask(bathy, missing_val=missing_val)
 
     print 'Calculating ice shelf draft'
     # Calculate ice shelf draft from ice surface and ice thickness
@@ -120,7 +137,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     imask = (mask!=-9999).astype(float)
 
     # Convert lon and lat to polar stereographic coordinates
-    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    lon_2d, lat_2d = np.meshgrid(lon, lat_b)
     x_interp, y_interp = polar_stereo(lon_2d, lat_2d)
 
     # Interpolate fields
@@ -132,6 +149,48 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     omask_interp = interp_topo(x, y, omask, x_interp, y_interp)
     print 'Interpolating ice mask'
     imask_interp = interp_topo(x, y, imask, x_interp, y_interp)
+
+    if use_gebco:
+        print 'Filling in section north of 60S with GEBCO data'
+
+        print 'Reading data'
+        id = nc.Dataset(topo_dir+gebco_file, 'r')
+        lat_gebco_grid = id.variables['lat'][:]
+        lon_gebco_grid = id.variables['lon'][:]
+        # Figure out which indices we actually care about - buffer zone of 5 cells so the splines can do their magic
+        j_start = np.nonzero(lat_gebco_grid >= lat_g[0])[0][0] - 1 - 5
+        j_end = np.nonzero(lat_gebco_grid >= lat_g[-1])[0][0] + 5
+        i_start = np.nonzero(lat_gebco_grid >= lon[0])[0][0] - 1 - 5
+        i_end = np.nonzero(lat_gebco_grid >= lon[-1])[0][0] + 5
+        # Read GEBCO bathymetry just from this section
+        bathy_gebco = id.variables['elevation'][j_start:j_end, i_start:i_end]
+        # Trim the grid too
+        lat_gebco_grid = lat_gebco_grid[j_start:j_end]
+        lon_gebco_grid = lon_gebco_grid[j_start:j_end]
+
+        print 'Interpolating bathymetry'
+        lon_2d, lat_2d = np.meshgrid(lon, lat_g)
+        bathy_gebco_interp = interp_topo(lon_gebco_grid, lat_gebco_grid, bathy_gebco, lon_2d, lat_2d)
+
+        print 'Combining BEDMAP2 and GEBCO sections'
+        # Deep copy the BEDMAP2 section of each field
+        bathy_bedmap_interp = np.copy(bathy_interp)
+        draft_bedmap_interp = np.copy(draft_interp)
+        omask_bedmap_interp = np.copy(omask_interp)
+        imask_bedmap_interp = np.copy(imask_interp)
+        # Now combine them
+        bathy_interp = np.empty([lat.size, lon.size])
+        bathy_interp[:j_split,:] = bathy_bedmap_interp
+        bathy_interp[j_split:,:] = bathy_gebco_interp
+        # Ice shelf draft will be 0 in GEBCO region
+        draft_interp = np.zeros([lat.size, lon.size])
+        draft_interp[:j_split,:] = draft_bedmap_interp
+        # Set ocean mask to 1 in GEBCO region; any land points will be updated later based on bathymetry > 0
+        omask_interp = np.ones([lat.size, lon.size])
+        omask_interp[:j_split,:] = omask_bedmap_interp
+        # Ice mask will be 0 in GEBCO region
+        imask_interp = np.zeros([lat.size, lon.size])
+        imask_interp[:j_split,:] = imask_bedmap_interp
 
     print 'Processing masks'
     # Deal with values interpolated between 0 and 1
@@ -172,8 +231,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     index = np.nonzero((omask_interp==1)*(shelf_mask_interp==0))
     draft_interp[index] = 0
     imask_interp[index] = 0
-
+        
     print 'Plotting'
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
     plot_tmp_domain(lon_2d, lat_2d, bathy_interp, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp, title='Ice shelf draft (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')

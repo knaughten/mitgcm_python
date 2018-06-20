@@ -132,7 +132,7 @@ def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
 # Interpolate a topography field "data" (eg bathymetry, ice shelf draft, mask) to grid cells. We want the area-averaged value over each grid cell. So it's not enough to just interpolate to a point (because the source data might be much higher resolution than the new grid) or to average all points within the cell (because the source data might be lower or comparable resolution). Instead, interpolate to a finer grid within each grid cell (default 10x10) and then average over these points.
 
 # Arguments:
-# x, y: 1D arrays with x and y coordinates of source data (polar stereographic for BEDMAP2, but it doesn't actually matter)
+# x, y: 1D arrays with x and y coordinates of source data (polar stereographic for BEDMAP2, lon and lat for GEBCO)
 # data: 2D array of source data
 # x_interp, y_interp: 2D arrays with x and y coordinates of the EDGES of grid cells - the output array will be 1 smaller in each dimension
 
