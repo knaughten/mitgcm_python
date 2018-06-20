@@ -103,9 +103,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
         use_gebco = True
         # Find the first index north of 60S
         j_split = np.nonzero(lat >= -60)[0][0]
-        # Split grid into a BEDMAP2 section and a GEBCO section
+        # Split grid into a BEDMAP2 section and a GEBCO section (remembering lat is edges, not centres, so lat[j_split-1] is in both sections)
         lat_b = lat[:j_split]
-        lat_g = lat[j_split:]
+        lat_g = lat[j_split-1:]
     else:
         lat_b = lat
 
@@ -123,7 +123,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
     if np.amax(lat_b) > -61:
         print 'Extending bathymetry slightly past 60S'
-        # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts near 60S.
+        # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts in the splines near 60S.
         bathy = extend_into_mask(bathy, missing_val=missing_val)
 
     print 'Calculating ice shelf draft'
@@ -157,16 +157,17 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
         id = nc.Dataset(topo_dir+gebco_file, 'r')
         lat_gebco_grid = id.variables['lat'][:]
         lon_gebco_grid = id.variables['lon'][:]
-        # Figure out which indices we actually care about - buffer zone of 5 cells so the splines can do their magic
-        j_start = np.nonzero(lat_gebco_grid >= lat_g[0])[0][0] - 1 - 5
-        j_end = np.nonzero(lat_gebco_grid >= lat_g[-1])[0][0] + 5
-        i_start = np.nonzero(lat_gebco_grid >= lon[0])[0][0] - 1 - 5
-        i_end = np.nonzero(lat_gebco_grid >= lon[-1])[0][0] + 5
+        # Figure out which indices we actually care about - buffer zone of 5 cells so the splines have room to breathe
+        j_start = max(np.nonzero(lat_gebco_grid >= lat_g[0])[0][0] - 1 - 5, 0)
+        j_end = min(np.nonzero(lat_gebco_grid >= lat_g[-1])[0][0] + 5, lat_gebco_grid.size-1)
+        i_start = max(np.nonzero(lon_gebco_grid >= lon[0])[0][0] - 1 - 5, 0)
+        i_end = min(np.nonzero(lon_gebco_grid >= lon[-1])[0][0] + 5, lon_gebco_grid.size-1)
         # Read GEBCO bathymetry just from this section
         bathy_gebco = id.variables['elevation'][j_start:j_end, i_start:i_end]
+        id.close()
         # Trim the grid too
         lat_gebco_grid = lat_gebco_grid[j_start:j_end]
-        lon_gebco_grid = lon_gebco_grid[j_start:j_end]
+        lon_gebco_grid = lon_gebco_grid[i_start:i_end]
 
         print 'Interpolating bathymetry'
         lon_2d, lat_2d = np.meshgrid(lon, lat_g)
@@ -178,19 +179,19 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
         draft_bedmap_interp = np.copy(draft_interp)
         omask_bedmap_interp = np.copy(omask_interp)
         imask_bedmap_interp = np.copy(imask_interp)
-        # Now combine them
-        bathy_interp = np.empty([lat.size, lon.size])
-        bathy_interp[:j_split,:] = bathy_bedmap_interp
-        bathy_interp[j_split:,:] = bathy_gebco_interp
+        # Now combine them (remember we interpolated to the centres of grid cells, but lat and lon arrays define the edges, so minus 1 in each dimension)
+        bathy_interp = np.empty([lat.size-1, lon.size-1])
+        bathy_interp[:j_split-1,:] = bathy_bedmap_interp
+        bathy_interp[j_split-1:,:] = bathy_gebco_interp
         # Ice shelf draft will be 0 in GEBCO region
-        draft_interp = np.zeros([lat.size, lon.size])
-        draft_interp[:j_split,:] = draft_bedmap_interp
+        draft_interp = np.zeros([lat.size-1, lon.size-1])
+        draft_interp[:j_split-1,:] = draft_bedmap_interp
         # Set ocean mask to 1 in GEBCO region; any land points will be updated later based on bathymetry > 0
-        omask_interp = np.ones([lat.size, lon.size])
-        omask_interp[:j_split,:] = omask_bedmap_interp
+        omask_interp = np.ones([lat.size-1, lon.size-1])
+        omask_interp[:j_split-1,:] = omask_bedmap_interp
         # Ice mask will be 0 in GEBCO region
-        imask_interp = np.zeros([lat.size, lon.size])
-        imask_interp[:j_split,:] = imask_bedmap_interp
+        imask_interp = np.zeros([lat.size-1, lon.size-1])
+        imask_interp[:j_split-1,:] = imask_bedmap_interp
 
     print 'Processing masks'
     # Deal with values interpolated between 0 and 1
