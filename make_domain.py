@@ -107,6 +107,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
         lat_b = lat[:j_split]
         lat_g = lat[j_split-1:]
     else:
+        use_gebco = False
         lat_b = lat
 
     # Set up BEDMAP grid (polar stereographic)
@@ -234,7 +235,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     imask_interp[index] = 0
         
     print 'Plotting'
-    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    if use_gebco:
+        # Remesh the grid, using the full latitude array
+        lon_2d, lat_2d = np.meshgrid(lon, lat)
     plot_tmp_domain(lon_2d, lat_2d, bathy_interp, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp, title='Ice shelf draft (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')
