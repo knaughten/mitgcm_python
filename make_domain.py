@@ -222,6 +222,15 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     # (This will remove grounded ice)
     index = draft_interp == 0
     imask_interp[index] = 0
+
+    print 'Removing isolated ocean cells'
+    omask_interp = remove_isolated_cells(omask_interp)
+    bathy_interp[omask_interp==0] = 0
+    draft_interp[omask_interp==0] = 0
+    imask_interp[omask_interp==0] = 0
+    print 'Removing isolated ice shelf cells'
+    imask_interp = remove_isolated_cells(imask_interp)
+    draft_interp[imask_interp==0] = 0
         
     print 'Plotting'
     if use_gebco:
@@ -247,7 +256,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
 
 
-def edit_mask_WSB (nc_in, nc_out):
+def edit_mask (nc_in, nc_out, key='WSB'):
 
     # Make a copy of nc_in to the filename nc_out, so we can edit that one in place
     shutil.copyfile(nc_in, nc_out)
@@ -259,6 +268,35 @@ def edit_mask_WSB (nc_in, nc_out):
     draft = id.variables['draft'][:]
     omask = id.variables['omask'][:]
     imask = id.variables['imask'][:]
+    # Make 2D lon and lat arrays
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+
+    # Edit the ocean mask based on the domain type
+    if key == 'WSB':
+        # Big Weddell Sea domain
+        # Block out everything west of the peninsula, and extend the peninsula north to 61S
+        # First, close a big box
+        omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
+        # Now close everything north of a piecewise line defined by these points
+        points = [[-66, -67], [-62, -65], [-60, -64.5], [-52, -61]]
+        for i in range(len(points)-1):
+            omask = mask_above_line(omask, lon_2d, lat_2d, points[i], points[i+1])
+        # Now close a couple of little channels near the peninsula, with a few more boxes defined by [xmin, xmax, ymin, ymax]
+        boxes = [[-59, -58, -64.3, -63.6], [-58.5, -57, -63.8, -63.4], [-57, -56.3, -63.4, -63]]
+        for box in boxes:
+            omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
+
+    # Make the other fields consistent with this new mask
+    index = omask == 0
+    bathy[index] = 0
+    draft[index] = 0
+    imask[index] = 0
+    # Update the NetCDF file
+    id.variables['bathy'][:] = bathy
+    id.variables['draft'][:] = draft
+    id.variables['omask'][:] = omask
+    id.variables['imask'][:] = imask
+    id.close()
 
     
 

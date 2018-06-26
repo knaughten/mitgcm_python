@@ -180,8 +180,17 @@ def remove_isolated_cells (data, mask_val=0):
 
 
 # Given an array representing a mask (as above) and 2D arrays of longitude and latitude, mask out the points between the given lat/lon bounds.
-def mask_box (data, lon, lat, xmin, xmax, ymin, ymax, mask_val=0):
+def mask_box (data, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
 
+    # Set any bounds which aren't already set
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
     index = np.nonzero((lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax))
     data[index] = mask_val
     return data
