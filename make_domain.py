@@ -251,7 +251,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     ncfile.finished()
 
     print 'The results have been written into ' + nc_out
-    print 'Take a look at this file and make whatever manual edits you would like (eg removing everything west of the peninsula)'
+    print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
     print 'Then run write_topo_files to generate the input topography files for the model.'
 
 
