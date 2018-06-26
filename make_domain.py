@@ -221,7 +221,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     index = np.nonzero((omask_interp==1)*(draft_interp==0))
     imask_interp[index] = 0
 
-    print 'Removing isolated ocean cells'
+    '''print 'Removing isolated ocean cells'
     omask_interp = remove_isolated_cells(omask_interp)
     bathy_interp[omask_interp==0] = 0
     draft_interp[omask_interp==0] = 0
@@ -232,7 +232,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     shelf_mask_interp = remove_isolated_cells(shelf_mask_interp)
     index = np.nonzero((omask_interp==1)*(shelf_mask_interp==0))
     draft_interp[index] = 0
-    imask_interp[index] = 0
+    imask_interp[index] = 0'''
         
     print 'Plotting'
     if use_gebco:
