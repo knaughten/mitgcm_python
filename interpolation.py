@@ -199,11 +199,13 @@ def mask_box (data, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_v
 # Mask out the points above or below the line segment bounded by the given points.
 def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
 
-    limit = (p_end[1] - p_start[1])/(p_end[0] - p_start[0])*(lon - p_start[0]) + p_start[1]
+    limit = (p_end[1] - p_start[1])/float(p_end[0] - p_start[0])*(lon - p_start[0]) + p_start[1]
+    west_bound = min(p_start[0], p_end[0])
+    east_bound = max(p_start[0], p_end[0])
     if direction == 'above':
-        index = np.nonzero((lat >= limit)*(lon >= p_start[0])*(lon <= p_end[0]))
+        index = np.nonzero((lat >= limit)*(lon >= west_bound)*(lon <= east_bound))
     elif direction == 'below':
-        index = np.nonzero((lat <= limit)*(lon >= p_start[0])*(lon <= p_end[0]))
+        index = np.nonzero((lat <= limit)*(lon >= west_bound)*(lon <= east_bound))
     else:
         print 'Error (mask_line): invalid direction ' + direction
         sys.exit()
@@ -211,13 +213,13 @@ def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
     return data
 
 
-# Interface to mask_line: mask points above line segment
+# Interface to mask_line: mask points above line segment (to the north)
 def mask_above_line (data, lon, lat, p_start, p_end, mask_val=0):
 
     return mask_line(data, lon, lat, p_start, p_end, 'above', mask_val=mask_val)
 
 
-# Interface to mask_line: mask points below line segment
+# Interface to mask_line: mask points below line segment (to the south)
 def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
 
     return mask_line(data, lon, lat, p_start, p_end, 'below', mask_val=mask_val)
