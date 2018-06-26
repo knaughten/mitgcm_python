@@ -8,7 +8,7 @@ import netCDF4 as nc
 import shutil
 
 from constants import deg2rad
-from io import write_binary, NCfile_basiclatlon
+from io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo
 from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line
 from plot_latlon import plot_tmp_domain
@@ -98,7 +98,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     missing_val = -9999    # Missing value for bathymetry north of 60S
 
     if np.amin(lat) > -60:
-        print "Error (interp_topo): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
+        print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
         sys.exit()
     if np.amax(lat) > -60:
         use_gebco = True
@@ -255,6 +255,14 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     print 'Then run write_topo_files to generate the input topography files for the model.'
 
 
+# Edit the land mask as desired, to block out sections of a domain. For example, Weddell Sea domains might like to make everything west of the peninsula into land.
+
+# Arguments:
+# nc_in: path to the temporary NetCDF grid file created by interp_bedmap
+# nc_out: desired path to the new NetCDF grid file with edits
+
+# Optional keyword argument:
+# key: string (default 'WSB') indicating which domain this is. You can make your own and do custom edits.
 
 def edit_mask (nc_in, nc_out, key='WSB'):
 
@@ -298,6 +306,14 @@ def edit_mask (nc_in, nc_out, key='WSB'):
     id.variables['imask'][:] = imask
     id.close()
 
+
+# Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
+def write_topo_files (nc_grid, bathy_file, draft_file):
+
+    bathy = read_netcdf(nc_grid, 'bathy')
+    draft = read_netcdf(nc_grid, 'draft')
+    write_binary(bathy, bathy_file, prec=64)
+    write_binary(draft, draft_file, prec=64)
     
 
     
