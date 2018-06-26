@@ -177,6 +177,41 @@ def remove_isolated_cells (data, mask_val=0):
         index = np.nonzero((data!=mask_val)*(num_valid_neighbours==0))
         data[index] = mask_val
     return data
+
+
+# Given an array representing a mask (as above) and 2D arrays of longitude and latitude, mask out the points between the given lat/lon bounds.
+def mask_box (data, lon, lat, xmin, xmax, ymin, ymax, mask_val=0):
+
+    index = np.nonzero((lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax))
+    data[index] = mask_val
+    return data
+
+
+# Mask out the points above or below the line segment bounded by the given points.
+def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
+
+    limit = (p_end[1] - p_start[1])/(p_end[0] - p_start[0])*(lon - p_start[0]) + p_start[1]
+    if direction == 'above':
+        index = np.nonzero((lat >= limit)*(lon >= p_start[0])*(lon <= p_end[0]))
+    elif direction == 'below':
+        index = np.nonzero((lat <= limit)*(lon >= p_start[0])*(lon <= p_end[0]))
+    else:
+        print 'Error (mask_line): invalid direction ' + direction
+        sys.exit()
+    data[index] = mask_val
+    return data
+
+
+# Interface to mask_line: mask points above line segment
+def mask_above_line (data, lon, lat, p_start, p_end, mask_val=0):
+
+    return mask_line(data, lon, lat, p_start, p_end, 'above', mask_val=mask_val)
+
+
+# Interface to mask_line: mask points below line segment
+def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
+
+    return mask_line(data, lon, lat, p_start, p_end, 'below', mask_val=mask_val)
                 
     
 

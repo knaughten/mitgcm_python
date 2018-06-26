@@ -5,11 +5,12 @@
 import numpy as np
 import sys
 import netCDF4 as nc
+import shutil
 
 from constants import deg2rad
 from io import write_binary, NCfile_basiclatlon
 from utils import factors, polar_stereo
-from interpolation import extend_into_mask, interp_topo, remove_isolated_cells
+from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line
 from plot_latlon import plot_tmp_domain
 
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
@@ -217,22 +218,10 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     omask_interp[index] = 0
     bathy_interp[index] = 0
     draft_interp[index] = 0
-    # Any ocean points with zero ice shelf draft should not be in the ice mask
-    index = np.nonzero((omask_interp==1)*(draft_interp==0))
+    # Any points with zero ice shelf draft should not be in the ice mask
+    # (This will remove grounded ice)
+    index = draft_interp == 0
     imask_interp[index] = 0
-
-    '''print 'Removing isolated ocean cells'
-    omask_interp = remove_isolated_cells(omask_interp)
-    bathy_interp[omask_interp==0] = 0
-    draft_interp[omask_interp==0] = 0
-    print 'Removing isolated ice shelf cells'
-    # First make a mask that is just ice shelves (no grounded ice)
-    shelf_mask_interp = np.copy(imask_interp)
-    shelf_mask_interp[omask_interp==0] = 0
-    shelf_mask_interp = remove_isolated_cells(shelf_mask_interp)
-    index = np.nonzero((omask_interp==1)*(shelf_mask_interp==0))
-    draft_interp[index] = 0
-    imask_interp[index] = 0'''
         
     print 'Plotting'
     if use_gebco:
@@ -253,8 +242,27 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     ncfile.finished()
 
     print 'The results have been written into ' + nc_out
-    print 'Take a look at this file and make whatever manual edits you would like (removing subglacial lakes, blocking out the annoying little islands near the peninsula, removing everything west of the peninsula...)'
+    print 'Take a look at this file and make whatever manual edits you would like (eg removing everything west of the peninsula)'
     print 'Then run write_topo_files to generate the input topography files for the model.'
+
+
+
+def edit_mask_WSB (nc_in, nc_out):
+
+    # Make a copy of nc_in to the filename nc_out, so we can edit that one in place
+    shutil.copyfile(nc_in, nc_out)
+    # Read all the variables
+    id = nc.Dataset(nc_out, 'a')
+    lon = id.variables['lon'][:]
+    lat = id.variables['lat'][:]
+    bathy = id.variables['bathy'][:]
+    draft = id.variables['draft'][:]
+    omask = id.variables['omask'][:]
+    imask = id.variables['imask'][:]
+
+    
+
+    
     
     
 
