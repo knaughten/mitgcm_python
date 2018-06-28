@@ -399,11 +399,15 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # Calculate the hFac of the partial cell below the draft
     hfac_below_draft = (draft - level_below_draft)/dz_at_draft
     # Now, modify the draft based on hFac constraints.
+    # Make sure the partial cell below the draft is at least hFacMin
     index = hfac_below_draft < hFacMin
     model_draft[index] = hFacMin*dz_at_draft[index] + level_below_draft[index]
-    index = (dz_at_draft[index] < hFacMinDr)*(hfac_below_draft < 0.5)
+    # If the vertical layer the draft is in is shallower than hFacMinDr, this cell must either be fully open or fully closed
+    # If the partial cell below the draft is less than half open, fully close the cell (draft at the bottom edge)
+    index = (dz_at_draft < hFacMinDr)*(hfac_below_draft < 0.5)
     model_draft[index] = level_below_draft[index]
-    index = (dz_at_draft[index] < hFacMinDr)*(hfac_below_draft >= 0.5)
+    # If the partial cell below the draft is at least half open, fully open the cell (draft at the top edge)
+    index = (dz_at_draft < hFacMinDr)*(hfac_below_draft >= 0.5)
     model_draft[index] = level_below_draft[index] + dz_at_draft[index]
     # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
     level_below_draft, dz_at_draft, dz_below_draft = draft_level_vars(model_draft, dz, z_edges)
