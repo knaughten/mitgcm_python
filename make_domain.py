@@ -463,10 +463,10 @@ def write_topo_files (nc_grid, bathy_file, draft_file):
 
 
 # Helper function to check that neighbouring ocean cells have at least 2 open faces in the given direction.
-def check_one_direction (grid, open_cells, open_cells_beside, loc_string, problem):
+def check_one_direction (open_cells, open_cells_beside, loc_string, problem):
 
     open_face = open_cells.astype(int)*open_cells_beside.astype(int)
-    num_pinched = np.count_nonzero(np.invert(grid.land_mask)*(np.sum(open_face, axis=0)<2))
+    num_pinched = np.count_nonzero((np.sum(open_cells, axis=0) != 0)*(np.sum(open_cells_beside, axis=0) != 0)*(np.sum(open_face, axis=0)<2))
     if num_pinched > 0:
         problem = True
         print 'Problem!! There are ' + str(num_pinched) + ' locations with less than 2 open faces on the ' + loc_string + ' side.'
@@ -491,7 +491,7 @@ def check_final_grid (grid_path):
     open_cells_neighbours = [open_cells_w, open_cells_e, open_cells_s, open_cells_n]
     loc_strings = ['western', 'eastern', 'southern', 'northern']
     for i in range(len(loc_strings)):
-        problem = check_one_direction(grid, open_cells, open_cells_neighbours[i], loc_strings[i], problem)
+        problem = check_one_direction(open_cells, open_cells_neighbours[i], loc_strings[i], problem)
 
     if problem:
         print 'Something went wrong with the digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
