@@ -419,19 +419,17 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     bathy_limit -= dz_below_draft*hfac_limit
     # Get bathy_limit at each point's 4 neighbours
     bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n = neighbours(bathy_limit)[:4]
-
     # Make a copy of the original bathymetry for comparison later
     bathy_orig = np.copy(bathy)
+    
     print 'Digging based on local ice shelf draft'
     bathy = dig_one_direction(bathy, bathy_limit)
-    print 'Digging based on ice shelf draft to west'
-    bathy = dig_one_direction(bathy, bathy_limit_w)
-    print 'Digging based on ice shelf draft to east'
-    bathy = dig_one_direction(bathy, bathy_limit_e)
-    print 'Digging based on ice shelf draft to south'
-    bathy = dig_one_direction(bathy, bathy_limit_s)
-    print 'Digging based on ice shelf draft to north'
-    bathy = dig_one_direction(bathy, bathy_limit_n)
+    bathy_limit_neighbours = [bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n]
+    loc_strings = ['west', 'east', 'south', 'north']
+    for i in range(len(loc_strings)):
+        print 'Digging based on ice shelf draft to ' + loc_strings[i]
+        bathy = dig_one_direction(bathy, bathy_limit_neighbours[i])
+    
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
@@ -464,8 +462,39 @@ def write_topo_files (nc_grid, bathy_file, draft_file):
     print 'Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.'
 
 
+# Helper function to check that neighbouring ocean cells have at least 2 open faces in the given direction.
+def check_one_direction (grid, open_cells, open_cells_beside, loc_string, problem):
+
+    open_face = open_cells.astype(int)*open_cells_beside.astype(int)
+    num_pinched = np.count_nonzero(np.invert(grid.land_mask)*(np.sum(open_face, axis=0)<2))
+    if num_pinched > 0:
+        problem = True
+        print 'Problem!! There are ' + str(num_pinched) + ' locations with less than 2 open faces on the ' + loc_string + ' side.'
+    return problem
+        
+
+# Given a NetCDF grid file produced by MITgcm (and glued together from all the per-processor files), make sure that the digging worked and that the 2 open cell rule holds.
 def check_final_grid (grid_path):
 
     grid = Grid(grid_path)
+    problem = False
+
+    # Check that every water column has at least 2 open cells (partial cells count)
     open_cells = np.ceil(grid.hfac)
-    #np.count_nonzero(
+    num_pinched = np.count_nonzero(np.sum(open_cells, axis=0)==1)
+    if num_pinched > 0:
+        problem = True
+        print 'Problem!! There are ' + str(num_pinched) + ' locations with only one open cell in the water column.'
+
+    # Check that neighbouring ocean cells have at least 2 open faces between
+    open_cells_w, open_cells_e, open_cells_s, open_cells_n = neighbours(open_cells)[:4]
+    open_cells_neighbours = [open_cells_w, open_cells_e, open_cells_s, open_cells_n]
+    loc_strings = ['western', 'eastern', 'southern', 'northern']
+    for i in range(len(loc_strings)):
+        problem = check_one_direction(grid, open_cells, open_cells_neighbours[i], loc_strings[i], problem)
+
+    if problem:
+        print 'Something went wrong with the digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
+    else:
+        print 'Everything looks good!'
+        
