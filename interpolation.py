@@ -71,23 +71,23 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
     return data_interp
 
 
-# Helper function for extend_into_mask and remove_isolated_cells
-def neighbours_masks (data, missing_val=-9999):
+# Finds the value of the given array to the left, right, up, down of every points, as well as which neighoburs are non-missing, and how many neighbours are non-missing.
+def neighbours (data, missing_val=-9999):
 
     # Find the value to the left, right, down, up of every point
     # Just copy the boundaries
     data_l = np.empty(data.shape)
-    data_l[:,1:] = data[:,:-1]
-    data_l[:,0] = data[:,0]
+    data_l[...,1:] = data[...,:-1]
+    data_l[...,0] = data[...,0]
     data_r = np.empty(data.shape)
-    data_r[:,:-1] = data[:,1:]
-    data_r[:,-1] = data[:,-1]
+    data_r[...,:-1] = data[...,1:]
+    data_r[...,-1] = data[...,-1]
     data_d = np.empty(data.shape)
-    data_d[1:,:] = data[:-1,:]
-    data_d[0,:] = data[0,:]
+    data_d[...,1:,:] = data[...,:-1,:]
+    data_d[...,0,:] = data[...,0,:]
     data_u = np.empty(data.shape)
-    data_u[:-1,:] = data[1:,:]
-    data_u[-1,:] = data[-1,:]
+    data_u[...,:-1,:] = data[...,1:,:]
+    data_u[...,-1,:] = data[...,-1,:]
     # Arrays of 1s and 0s indicating whether these neighbours are non-missing
     valid_l = (data_l != missing_val).astype(float)
     valid_r = (data_r != missing_val).astype(float)
@@ -116,9 +116,9 @@ def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
 
     for iter in range(num_iters):
         # Find the 4 neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
-        data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours = neighbours_masks(data, missing_val=missing_val)
+        data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours = neighbours(data, missing_val=missing_val)
         # Choose the points that can be filled
-        index = np.nonzero((data == missing_val)*(num_valid_neighbours > 0))
+        index = (data == missing_val)*(num_valid_neighbours > 0)
         # Set them to the average of their non-missing neighbours
         data[index] = (data_l[index]*valid_l[index] + data_r[index]*valid_r[index] + data_d[index]*valid_d[index] + data_u[index]*valid_u[index])/num_valid_neighbours[index]
 
@@ -170,12 +170,10 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
 # Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
 def remove_isolated_cells (data, mask_val=0):
 
-    num_valid_neighbours = neighbours_masks(data, missing_val=mask_val)[-1]
-    num_isolated = np.count_nonzero((data!=mask_val)*(num_valid_neighbours==0))
-    print '...' + str(num_isolated) + ' isolated cells'
-    if num_isolated > 0:
-        index = np.nonzero((data!=mask_val)*(num_valid_neighbours==0))
-        data[index] = mask_val
+    num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
+    index = (data!=mask_val)*(num_valid_neighbours==0)
+    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
+    data[index] = mask_val
     return data
 
 
@@ -191,7 +189,7 @@ def mask_box (data, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_v
         ymin = np.amin(lat)
     if ymax is None:
         ymax = np.amax(lat)
-    index = np.nonzero((lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax))
+    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
     data[index] = mask_val
     return data
 
@@ -203,9 +201,9 @@ def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
     west_bound = min(p_start[0], p_end[0])
     east_bound = max(p_start[0], p_end[0])
     if direction == 'above':
-        index = np.nonzero((lat >= limit)*(lon >= west_bound)*(lon <= east_bound))
+        index = (lat >= limit)*(lon >= west_bound)*(lon <= east_bound)
     elif direction == 'below':
-        index = np.nonzero((lat <= limit)*(lon >= west_bound)*(lon <= east_bound))
+        index = (lat <= limit)*(lon >= west_bound)*(lon <= east_bound)
     else:
         print 'Error (mask_line): invalid direction ' + direction
         sys.exit()

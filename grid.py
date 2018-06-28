@@ -34,7 +34,7 @@ def build_fris_mask (zice_mask, lon, lat):
     regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
     for bounds in regions:
         # Select the ice shelf points within these bounds
-        index = np.nonzero(zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3]))
+        index = zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
         fris_mask[index] = True
     return fris_mask
 

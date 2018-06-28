@@ -6,12 +6,14 @@ import numpy as np
 import sys
 import netCDF4 as nc
 import shutil
+import os
 
 from constants import deg2rad
-from io import write_binary, NCfile_basiclatlon, read_netcdf
+from io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
 from utils import factors, polar_stereo
-from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line
+from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line, neighbours
 from plot_latlon import plot_tmp_domain
+from grid import Grid
 
 def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
@@ -252,13 +254,37 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
     print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
-    print 'Then run write_topo_files to generate the input topography files for the model.'
+    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + "m), and run remove_grid_problems"
+
+
+# Helper function to read variables from a temporary NetCDF grid file
+def read_nc_grid (nc_file):
+
+    lon = read_netcdf(nc_file, 'lon')
+    lat = read_netcdf(nc_file, 'lat')
+    bathy = read_netcdf(nc_file, 'bathy')
+    draft = read_netcdf(nc_file, 'draft')
+    omask = read_netcdf(nc_file, 'omask')
+    imask = read_netcdf(nc_file, 'imask')
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    return lon_2d, lat_2d, bathy, draft, omask, imask
+
+
+# Helper function to update variables in a temporary NetCDF grid file
+def update_nc_grid (nc_file, bathy, draft, omask, imask):
+
+    id = nc.Dataset(nc_file, 'a')
+    id.variables['bathy'][:] = bathy
+    id.variables['draft'][:] = draft
+    id.variables['omask'][:] = omask
+    id.variables['imask'][:] = imask
+    id.close()    
 
 
 # Edit the land mask as desired, to block out sections of a domain. For example, Weddell Sea domains might like to make everything west of the peninsula into land.
 
 # Arguments:
-# nc_in: path to the temporary NetCDF grid file created by interp_bedmap
+# nc_in: path to the temporary NetCDF grid file created by interp_bedmap2
 # nc_out: desired path to the new NetCDF grid file with edits
 
 # Optional keyword argument:
@@ -266,18 +292,8 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
 def edit_mask (nc_in, nc_out, key='WSB'):
 
-    # Make a copy of nc_in to the filename nc_out, so we can edit that one in place
-    shutil.copyfile(nc_in, nc_out)
     # Read all the variables
-    id = nc.Dataset(nc_out, 'a')
-    lon = id.variables['lon'][:]
-    lat = id.variables['lat'][:]
-    bathy = id.variables['bathy'][:]
-    draft = id.variables['draft'][:]
-    omask = id.variables['omask'][:]
-    imask = id.variables['imask'][:]
-    # Make 2D lon and lat arrays
-    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
 
     # Edit the ocean mask based on the domain type
     if key == 'WSB':
@@ -299,14 +315,144 @@ def edit_mask (nc_in, nc_out, key='WSB'):
     bathy[index] = 0
     draft[index] = 0
     imask[index] = 0
-    # Update the NetCDF file
-    id.variables['bathy'][:] = bathy
-    id.variables['draft'][:] = draft
-    id.variables['omask'][:] = omask
-    id.variables['imask'][:] = imask
-    id.close()
+
+    # Copy the NetCDF file to a new name
+    shutil.copyfile(nc_in, nc_out)
+    # Update the variables
+    update_nc_grid(nc_out, bathy, draft, omask, imask)
+
+    
+# Helper function to read vertical layer thicknesses from an ASCII file, and compute the edges of the z-levels. Returns dz and z_edges.
+def vertical_layers (dz_file):
+
+    dz = []
+    f = open(dz_file, 'r')
+    for line in f:
+        dz.append(float(line))
+    f.close()
+    z_edges = -1*np.cumsum(np.array([0] + dz))
+    dz = np.array(dz)
+    return dz, z_edges
 
 
+# Helper function to calculate a few variables about z-levels based on the given ice shelf draft:
+# (1) Depth of the first z-level below the draft (if the draft is exactly at a z-level, it will still go down to the next one)
+# (2) Thickness of the z-layer the draft is in (i.e. difference between (1) and the level above that)
+# (3) Thickness of the z-level below that
+def draft_level_vars (draft, dz, z_edges):
+
+    # Prepare to calculate the 3 variables
+    level_below_draft = np.zeros(draft.shape)    
+    dz_at_draft = np.zeros(draft.shape)
+    dz_below_draft = np.zeros(draft.shape)
+    # Flag to catch undefined variables after the loop
+    flag = np.zeros(draft.shape)
+    # Loop over vertical levels
+    for k in range(dz.size-1):
+        # Find ice shelf drafts within this vertical layer (not counting the bottom edge)
+        index = (draft <= z_edges[k])*(draft > z_edges[k+1])
+        level_below_draft[index] = z_edges[k+1]
+        dz_at_draft[index] = dz[k]
+        dz_below_draft[index] = dz[k+1]
+        flag[index] = 1
+    if (flag==0).any():
+        print 'Error (draft_level_vars): some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
+        sys.exit()
+    return level_below_draft, dz_at_draft, dz_below_draft
+
+
+# Helper function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
+def dig_one_direction (bathy, bathy_limit):
+
+    index = (bathy != 0)*(bathy > bathy_limit)
+    print '...' + str(np.count_nonzero(index)) + ' cells to dig'
+    bathy[index] = bathy_limit[index]
+    return bathy    
+
+
+# Deal with two problems which can result from ice shelves and z-levels:
+# (1) Subglacial lakes can form beneath the ice shelves, whereby two cells which should have connected water columns (based on the masks we interpolated from BEDMAP2) are disconnected, i.e. the ice shelf draft at one cell is deeper than the bathymetry at a neighbouring cell. Fix this by deepening the bathymetry where needed, so there are a minimum of 2 (at least partially) open faces between the neighbouring cells, ensuring that both tracers and velocities are connected. This preserves the BEDMAP2 grounding line locations, even if the bathymetry is somewhat compromised. We call it "digging".
+# (2) Very thin ice shelf drafts (less than half the depth of the surface layer) will violate the hFacMin constraints and be removed by MITgcm. However, older versions of MITgcm have a bug whereby some parts of the code don't remove the ice shelf draft at these points, and they are simultaneously treated as ice shelf and sea ice points. Fix this by removing all such points. We call it "zapping".
+
+# Arguments:
+# nc_in: NetCDF temporary grid file (created by edit_mask if you used that function, otherwise created by interp_bedmap2)
+# nc_out: desired path to the new NetCDF grid file with edits
+# dz_file: path to an ASCII (plain text) file containing your desired vertical layer thicknesses, one per line, positive, in metres
+
+# Optional keyword arguments:
+# hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
+
+def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
+
+    # Read all the variables
+    lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
+    # Generate the vertical grid
+    dz, z_edges = vertical_layers(dz_file)
+    if z_edges[-1] > np.amin(bathy):
+        print 'Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'
+        sys.exit()
+
+    # Find the actual draft as the model will see it (based on hFac constraints)
+    model_draft = np.copy(draft)
+    # Get some intermediate variables
+    level_below_draft, dz_at_draft = draft_level_vars(draft, dz, z_edges)[:2]
+    # Calculate the hFac of the partial cell below the draft
+    hfac_below_draft = (draft - level_below_draft)/dz_at_draft
+    # Now, modify the draft based on hFac constraints.
+    index = hfac_below_draft < hFacMin
+    model_draft[index] = hFacMin*dz_at_draft[index] + level_below_draft[index]
+    index = (dz_at_draft[index] < hFacMinDr)*(hfac_below_draft < 0.5)
+    model_draft[index] = level_below_draft[index]
+    index = (dz_at_draft[index] < hFacMinDr)*(hfac_below_draft >= 0.5)
+    model_draft[index] = level_below_draft[index] + dz_at_draft[index]
+    # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
+    level_below_draft, dz_at_draft, dz_below_draft = draft_level_vars(model_draft, dz, z_edges)
+    
+    # Figure out the shallowest acceptable depth of each point and its neighbours, based on the ice shelf draft. We want 2 (at least partially) open cells.
+    # The first (possibly partial) open cell is between the draft and the z-level below it.
+    bathy_limit = level_below_draft
+    # Now dig into the level below that by the minimum amount (based on hFac constraints).
+    second_dig = dz_below_draft*hFacMin
+    index = dz_below_draft < hFacMinDr
+    second_dig[index] = dz_below_draft[index]
+    bathy_limit -= second_dig
+    # Get bathy_limit at each point's 4 neighbours
+    bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n = neighbours(bathy_limit)[:4]
+
+    # Make a copy of the original bathymetry for comparison later
+    bathy_orig = np.copy(bathy)
+    print 'Digging based on local ice shelf draft'
+    bathy = dig_one_direction(bathy, bathy_limit)
+    print 'Digging based on ice shelf draft to west'
+    bathy = dig_one_direction(bathy, bathy_limit_w)
+    print 'Digging based on ice shelf draft to east'
+    bathy = dig_one_direction(bathy, bathy_limit_e)
+    print 'Digging based on ice shelf draft to south'
+    bathy = dig_one_direction(bathy, bathy_limit_s)
+    print 'Digging based on ice shelf draft to north'
+    bathy = dig_one_direction(bathy, bathy_limit_n)
+    # Plot how the results have changed
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
+
+    if hFacMinDr >= dz[0]:
+        print 'Zapping ice shelf drafts which are too shallow'
+        # Find any points which are less than half the depth of the surface layer
+        index = (draft != 0)*(abs(draft) < 0.5*dz[0])
+        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
+        draft[index] = 0
+        imask[index] = 0
+        # Plot how the results have changed
+        plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, index.astype(int)), title='Ice shelf points which were zapped')
+
+    # Copy the NetCDF file to a new name
+    shutil.copyfile(nc_in, nc_out)
+    # Update the variables
+    update_nc_grid(nc_out, bathy, draft, omask, imask)
+
+    print "The updated grid has been written into " + nc_out + ". Take a look and make sure everything looks okay. If you're happy, run write_topo_files to generate the binary files for MITgcm input."
+
+    
 # Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
 def write_topo_files (nc_grid, bathy_file, draft_file):
 
@@ -314,10 +460,4 @@ def write_topo_files (nc_grid, bathy_file, draft_file):
     draft = read_netcdf(nc_grid, 'draft')
     write_binary(bathy, bathy_file, prec=64)
     write_binary(draft, draft_file, prec=64)
-    
-
-    
-    
-    
-
-    
+    print 'Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.'
