@@ -6,7 +6,7 @@
 import numpy as np
 import sys
 
-from io import read_netcdf
+from file_io import read_netcdf
 from utils import fix_lon_range
 from constants import fris_bounds
 

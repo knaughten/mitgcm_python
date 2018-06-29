@@ -9,7 +9,7 @@ import shutil
 import os
 
 from constants import deg2rad
-from io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
+from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
 from utils import factors, polar_stereo
 from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line, neighbours
 from plot_latlon import plot_tmp_domain
@@ -465,7 +465,9 @@ def write_topo_files (nc_grid, bathy_file, draft_file):
 # Helper function to check that neighbouring ocean cells have at least 2 open faces in the given direction.
 def check_one_direction (open_cells, open_cells_beside, loc_string, problem):
 
+    # Open faces are equivalent to adjacent open cells
     open_face = open_cells.astype(int)*open_cells_beside.astype(int)
+    # Check pairs of points which are both non-land (at least 1 open cell in the water column), to make sure they all have at least 2 open faces between them
     num_pinched = np.count_nonzero((np.sum(open_cells, axis=0) != 0)*(np.sum(open_cells_beside, axis=0) != 0)*(np.sum(open_face, axis=0)<2))
     if num_pinched > 0:
         problem = True

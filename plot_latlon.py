@@ -9,7 +9,7 @@ import sys
 import numpy as np
 
 from grid import Grid
-from io import read_netcdf, find_variable, netcdf_time
+from file_io import read_netcdf, find_variable, netcdf_time
 from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, find_aice_min_max, var_min_max
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, parse_date

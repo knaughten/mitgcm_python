@@ -1,6 +1,6 @@
 # Import commonly used functions for the interpreter
 from grid import Grid
-from io import read_netcdf
+from file_io import read_netcdf
 from plot_1d import *
 from plot_latlon import *
 from plot_slices import *

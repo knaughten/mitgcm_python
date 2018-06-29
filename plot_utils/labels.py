@@ -6,7 +6,7 @@ import matplotlib.dates as dt
 import numpy as np
 import sys
 
-from ..io import netcdf_time
+from ..file_io import netcdf_time
 from ..constants import fris_bounds
 
 

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import sys
 
 from grid import Grid
-from io import read_netcdf, find_variable
+from file_io import read_netcdf, find_variable
 from utils import mask_3d
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, parse_date

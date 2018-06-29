@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from io import read_netcdf
+from file_io import read_netcdf
 from utils import convert_ismr, var_min_max
 from diagnostics import total_melt, total_aice
 

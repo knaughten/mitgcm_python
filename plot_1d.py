@@ -9,7 +9,7 @@ import numpy as np
 import sys
 
 from grid import Grid
-from io import netcdf_time
+from file_io import netcdf_time
 from timeseries import fris_melt, timeseries_max
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot

@@ -5,7 +5,7 @@
 import os
 
 from grid import Grid
-from io import NCfile, read_binary, netcdf_time
+from file_io import NCfile, read_binary, netcdf_time
 from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed
 from plot_latlon import read_plot_latlon, plot_aice_minmax
 from plot_slices import read_plot_ts_slice
