@@ -21,7 +21,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     num_lat_iter = 10
 
     if xmin > xmax:
-        print "Error (latlon_points): looks like your domain crosses 180E. The code can't deal with this yet, you're going to have to write a patch. Sorry."
+        print "Error (latlon_points): looks like your domain crosses 180E. Try again with your longitude in the range (0, 360) instead of (-180, 180)."
         sys.exit()
 
     # Build longitude values
