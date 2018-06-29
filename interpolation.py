@@ -155,10 +155,23 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
     for j in range(num_j):
         for i in range(num_i):
             # Make a finer grid within this grid cell (regular in x and y)
-            # Edges of the sub-cells
-            x_edges = np.linspace(x_interp[j,i], x_interp[j,i+1], num=n_subgrid+1)
-            y_edges = np.linspace(y_interp[j,i], y_interp[j+1,i], num=n_subgrid+1)
-            # Centres of the sub-cells
+            # First identify the boundaries so that x and y are strictly increasing
+            if x_interp[j,i] < x_interp[j,i+1]:
+                x_start = x_interp[j,i]
+                x_end = x_interp[j,i+1]
+            else:
+                x_start = x_interp[j,i+1]
+                x_end = x_interp[j,i]
+            if y_interp[j,i] < y_interp[j+1,i]:
+                y_start = y_interp[j,i]
+                y_end = y_interp[j+1,i]
+            else:
+                y_start = y_interp[j+1,i]
+                y_end = y_interp[j,i]
+            # Define edges of the sub-cells
+            x_edges = np.linspace(x_start, x_end, num=n_subgrid+1)
+            y_edges = np.linspace(y_start, y_end, num=n_subgrid+1)
+            # Calculate centres of the sub-cells
             x_vals = 0.5*(x_edges[1:] + x_edges[:-1])
             y_vals = 0.5*(y_edges[1:] + y_edges[:-1])
             # Interpolate to the finer grid, then average over those points to estimate the mean value of the original field over the entire grid cell

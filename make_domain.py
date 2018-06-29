@@ -453,12 +453,12 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
 
     
 # Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
-def write_topo_files (nc_grid, bathy_file, draft_file):
+def write_topo_files (nc_grid, bathy_file, draft_file, prec=64):
 
     bathy = read_netcdf(nc_grid, 'bathy')
     draft = read_netcdf(nc_grid, 'draft')
-    write_binary(bathy, bathy_file, prec=64)
-    write_binary(draft, draft_file, prec=64)
+    write_binary(bathy, bathy_file, prec=prec)
+    write_binary(draft, draft_file, prec=prec)
     print 'Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.'
 
 
