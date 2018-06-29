@@ -234,6 +234,23 @@ def mask_above_line (data, lon, lat, p_start, p_end, mask_val=0):
 def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
 
     return mask_line(data, lon, lat, p_start, p_end, 'below', mask_val=mask_val)
+
+
+# Like mask_box, but only mask out ice shelf points within the given box.
+def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
+
+    # Set any bounds which aren't already set
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(imask == 1)
+    omask[index] = mask_val
+    return omask
                 
     
 

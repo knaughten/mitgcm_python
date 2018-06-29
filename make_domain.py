@@ -11,7 +11,7 @@ import os
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
 from utils import factors, polar_stereo
-from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line, neighbours
+from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line, neighbours, mask_iceshelf_box
 from plot_latlon import plot_tmp_domain
 from grid import Grid
 
@@ -254,7 +254,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
 
     print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
-    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + "m), and run remove_grid_problems"
+    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"
 
 
 # Helper function to read variables from a temporary NetCDF grid file
@@ -309,6 +309,8 @@ def edit_mask (nc_in, nc_out, key='WSB'):
         boxes = [[-59, -58, -64.3, -63.6], [-58.5, -57, -63.8, -63.4], [-57, -56.3, -63.4, -63]]
         for box in boxes:
             omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
+        # Finally, turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
 
     # Make the other fields consistent with this new mask
     index = omask == 0
