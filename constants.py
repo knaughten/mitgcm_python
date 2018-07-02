@@ -15,3 +15,7 @@ deg2rad = np.pi/180.0
 # Bounds on FRIS (a few bits of Eastern Weddell ice shelves are included too - use Grid.fris_mask to get just FRIS. These bounds are for plotting.)
 # lon_min, lon_max, lat_min, lat_max
 fris_bounds = [-85, -29, -84, -74]
+# Dimensions of SOSE grid
+sose_nx = 2160
+sose_ny = 320
+sose_nz = 42

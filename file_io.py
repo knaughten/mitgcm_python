@@ -186,7 +186,13 @@ def read_binary (filename, grid, dimensions, prec=32):
         return data
 
     # Work out dimensions
-    if 'z' in dimensions:
+    # Special case just with 'z' (for some grid variables)
+    if dimensions == 'z':
+        if data.size != grid.nz:
+            print 'Error (read_binary): incorrect dimensions or precision'
+            sys.exit()
+        data_shape = [grid.nz]    
+    elif 'z' in dimensions:
         if 't' in dimensions:
             if mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'

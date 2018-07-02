@@ -7,36 +7,8 @@ import numpy as np
 import sys
 
 from file_io import read_netcdf
-from utils import fix_lon_range
+from utils import fix_lon_range, real_dir
 from constants import fris_bounds
-
-
-# Given a 3D hfac array on any grid, create the land mask.
-def build_land_mask (hfac):
-
-    return np.sum(hfac, axis=0)==0
-
-
-# Given a 3D hfac array on any grid, create the ice shelf mask.
-def build_zice_mask (hfac):
-
-    return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]==0)
-
-
-# Create a mask just containing FRIS ice shelf points.
-# Arguments:
-# zice_mask, lon, lat: 2D arrays of the ice shelf mask, longitude, and latitude on any grid
-def build_fris_mask (zice_mask, lon, lat):
-
-    fris_mask = np.zeros(zice_mask.shape, dtype='bool')
-    # Identify FRIS in two parts, split along the line 45W
-    # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-    regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
-    for bounds in regions:
-        # Select the ice shelf points within these bounds
-        index = zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
-        fris_mask[index] = True
-    return fris_mask
 
 
 # Grid object containing lots of grid variables.
@@ -122,17 +94,17 @@ class Grid:
         # Create masks on the t, u, and v grids
         # We can't do the psi grid because there is no hfac there
         # Land masks
-        self.land_mask = build_land_mask(self.hfac)
-        self.land_mask_u = build_land_mask(self.hfac_w)
-        self.land_mask_v = build_land_mask(self.hfac_s)
+        self.land_mask = self.build_land_mask(self.hfac)
+        self.land_mask_u = self.build_land_mask(self.hfac_w)
+        self.land_mask_v = self.build_land_mask(self.hfac_s)
         # Ice shelf masks
-        self.zice_mask = build_zice_mask(self.hfac)
-        self.zice_mask_u = build_zice_mask(self.hfac_w)
-        self.zice_mask_v = build_zice_mask(self.hfac_s)
+        self.zice_mask = self.build_zice_mask(self.hfac)
+        self.zice_mask_u = self.build_zice_mask(self.hfac_w)
+        self.zice_mask_v = self.build_zice_mask(self.hfac_s)
         # FRIS masks
-        self.fris_mask = build_fris_mask(self.zice_mask, self.lon_2d, self.lat_2d)
-        self.fris_mask_u = build_fris_mask(self.zice_mask_u, self.lon_corners_2d, self.lat_2d)
-        self.fris_mask_v = build_fris_mask(self.zice_mask_v, self.lon_2d, self.lat_corners_2d)
+        self.fris_mask = self.build_fris_mask(self.zice_mask, self.lon_2d, self.lat_2d)
+        self.fris_mask_u = self.build_fris_mask(self.zice_mask_u, self.lon_corners_2d, self.lat_2d)
+        self.fris_mask_v = self.build_fris_mask(self.zice_mask_v, self.lon_2d, self.lat_corners_2d)
 
         # Topography (as seen by the model after adjustment for eg hfacMin - not necessarily equal to what is specified by the user)
         # Bathymetry (bottom depth)
@@ -141,7 +113,35 @@ class Grid:
         self.zice = read_netcdf(file_path, 'Ro_surf')
         self.zice[np.invert(self.zice_mask)] = 0
         # Water column thickness
-        self.wct = read_netcdf(file_path, 'Depth')        
+        self.wct = read_netcdf(file_path, 'Depth')
+
+        
+    # Given a 3D hfac array on any grid, create the land mask.
+    def build_land_mask (self, hfac):
+
+        return np.sum(hfac, axis=0)==0
+
+
+    # Given a 3D hfac array on any grid, create the ice shelf mask.
+    def build_zice_mask (self, hfac):
+
+        return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]==0)
+
+
+    # Create a mask just containing FRIS ice shelf points.
+    # Arguments:
+    # zice_mask, lon, lat: 2D arrays of the ice shelf mask, longitude, and latitude on any grid
+    def build_fris_mask (self, zice_mask, lon, lat):
+
+        fris_mask = np.zeros(zice_mask.shape, dtype='bool')
+        # Identify FRIS in two parts, split along the line 45W
+        # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
+        regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
+        for bounds in regions:
+            # Select the ice shelf points within these bounds
+            index = zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
+            fris_mask[index] = True
+        return fris_mask
 
         
     # Return the longitude and latitude arrays for the given grid type.
@@ -231,3 +231,35 @@ class Grid:
         else:
             print 'Error (get_fris_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
+
+            
+
+# BinaryGrid object to read a grid from binary MDS files
+# It won't have all the same variables as a normal Grid object, but it will have the essential ones
+# Inherits all sub-functions from Grid
+class BinaryGrid(Grid):
+
+    # Input arguments: path to directory containing all the grid files, and dimensions of grid in the x, y, z directions
+    def __init__ (self, grid_dir, nx, ny, nz, prec=32):
+
+        grid_dir = real_dir(grid_dir)
+
+        # First set the grid dimensions so this object can be used by read_binary
+        self.nx = nx
+        self.ny = ny
+        self.nz = nz
+
+        # Now read the fields
+        self.lon_2d = fix_lon_range(read_binary(grid_dir+'XC.data', self, 'xy', prec=prec))
+        self.lat_2d = read_binary(grid_dir+'YC.data', self, 'xy', prec=prec)
+        self.lon_corners_2d = fix_lon_range(read_binary(grid_dir+'XG.data', self, 'xy', prec=prec))
+        self.lat_corners_2d = read_binary(grid_dir+'YG.data', self, 'xy', prec=prec)
+        self.z = read_binary(grid_dir+'RC.data', self, 'z', prec=prec)
+        self.hfac = read_binary(grid+dir+'hFacC.data', self, 'xyz', prec=prec)
+        self.hfac_w = read_binary(grid+dir+'hFacW.data', self, 'xyz', prec=prec)
+        self.hfac_s = read_binary(grid+dir+'hFacS.data', self, 'xyz', prec=prec)
+
+        # Build land masks
+        self.land_mask = self.build_land_mask(self.hfac)
+        self.land_mask_u = self.build_land_mask(self.hfac_w)
+        self.land_mask_v = self.build_land_mask(self.hfac_s)

@@ -20,6 +20,15 @@ def fix_lon_range (lon):
     return lon
 
 
+# Given an array containing longitude, make sure it's in the range (0, 360) as opposed to (-180, 180).
+def revert_lon_range (lon):
+
+    index = lon < 0
+    lon[index] = lon[index] + 360
+    
+    return lon
+
+
 # Convert freshwater flux into the ice shelf (diagnostic SHIfwFlx) (kg/m^2/s, positive means freezing) to ice shelf melt rate (m/y, positive means melting).
 def convert_ismr (shifwflx):
 
@@ -272,6 +281,14 @@ def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     y = -pm*rho*np.cos(lon - lon0)
 
     return x, y
+
+
+# Given a path to a directory, make sure it ends with /
+def real_dir (dir_path):
+
+    if not dir_path.endswith('/'):
+        dir_path += '/'
+    return dir_path
 
     
 

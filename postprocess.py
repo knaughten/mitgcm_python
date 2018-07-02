@@ -9,6 +9,7 @@ from file_io import NCfile, read_binary, netcdf_time
 from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed
 from plot_latlon import read_plot_latlon, plot_aice_minmax
 from plot_slices import read_plot_ts_slice
+from utils import real_dir
 
 
 # Make a bunch of plots when the simulation is done.
@@ -24,10 +25,9 @@ from plot_slices import read_plot_ts_slice
 def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir='.', file_path=None, monthly=True):
 
     # Make sure proper directories
-    if not output_dir.endswith('/'):
-        output_dir += '/'
-    if not fig_dir.endswith('/'):
-        fig_dir += '/'
+    output_dir = real_dir(output_dir)
+    fig_dir = real_dir(fig_dir)
+    
     # Build the list of output files in this directory (use them all for timeseries)
     output_files = []
     for file in os.listdir(output_dir):
@@ -109,8 +109,7 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
 
 def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.', monthly=True):
 
-    if not fig_dir.endswith('/'):
-        fig_dir += '/'
+    fig_dir = real_dir(fig_dir)
 
     grid = Grid(grid_path)
 
@@ -135,8 +134,7 @@ def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.
 def crash_to_netcdf (crash_dir, grid_path):
 
     # Make sure crash_dir is a proper directory
-    if not crash_dir.endswith('/'):
-        crash_dir += '/'
+    crash_dir = real_dir(crash_dir)
 
     # Read the grid
     grid = Grid(grid_path)

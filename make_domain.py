@@ -323,7 +323,7 @@ def edit_mask (nc_in, nc_out, key='WSB'):
     # Update the variables
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
-    print "Fields updated successfully. The deepest bathymetry is now " + str(abs(np.amin(bathy))) + "m)."
+    print "Fields updated successfully. The deepest bathymetry is now " + str(abs(np.amin(bathy))) + " m."
 
     
 # Helper function to read vertical layer thicknesses from an ASCII file, and compute the edges of the z-levels. Returns dz and z_edges.
