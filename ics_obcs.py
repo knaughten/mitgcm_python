@@ -6,7 +6,7 @@ from grid import Grid, BinaryGrid
 from utils import real_dir
 from constants import sose_nx, sose_ny, sose_nz
 from file_io import read_binary, write_binary
-
+import numpy as np
 
 def make_sose_climatology (in_file, out_file, dimensions):
 
