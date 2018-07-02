@@ -389,7 +389,7 @@ class NCfile_basiclatlon:
         
     # Create and write a lat-lon variable.
     def add_variable (self, var_name, data, long_name=None, units=None, dtype='f8'):
-
+        
         self.id.createVariable(var_name, dtype, ('lat', 'lon'))
         if long_name is not None:
             self.id.variables[var_name].long_name = long_name

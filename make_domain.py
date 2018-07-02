@@ -10,8 +10,8 @@ import os
 
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
-from utils import factors, polar_stereo
-from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, mask_box, mask_above_line, neighbours, mask_iceshelf_box
+from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box
+from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, neighbours
 from plot_latlon import plot_tmp_domain
 from grid import Grid
 
@@ -128,7 +128,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     if np.amax(lat_b) > -61:
         print 'Extending bathymetry slightly past 60S'
         # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts in the splines near 60S.
-        bathy = extend_into_mask(bathy, missing_val=missing_val)
+        bathy = extend_into_mask(bathy, missing_val=missing_val, num_iters=5)
 
     print 'Calculating ice shelf draft'
     # Calculate ice shelf draft from ice surface and ice thickness

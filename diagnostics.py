@@ -6,6 +6,7 @@ import numpy as np
 import sys
 
 from constants import rho_ice
+from utils import z_to_xyz
 
 
 # Calculate the in-situ freezing point (helper function for t_minus_tf)
@@ -38,13 +39,12 @@ def tfreeze (temp, salt, z):
 def t_minus_tf (temp, salt, grid, time_dependent=False):
 
     # Tile the z coordinates to be the same size as temp and salt
+    # First assume 3D arrays
+    z = z_to_xyz(grid.z, z)
     if time_dependent:
         # 4D arrays
         num_time = temp.shape[0]
-        z = np.tile(np.expand_dims(np.expand_dims(grid.z,1),2), (num_time, 1, grid.ny, grid.nx))
-    else:
-        # 3D arrays
-        z = np.tile(np.expand_dims(np.expand_dims(grid.z,1),2), (1, grid.ny, grid.nx))
+        z = np.tile(z, (num_time, 1, 1, 1))        
 
     return temp - tfreeze(temp, salt, z)
 

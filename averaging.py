@@ -3,6 +3,7 @@
 #######################################################
 
 import numpy as np
+from utils import z_to_xyz
 
 # Vertically average the given field over all depths.
 
@@ -24,7 +25,7 @@ def vertical_average (data, grid, gtype='t', time_dependent=False):
     else:
         dz = grid.dz
     # Make it 3D
-    dz = np.tile(np.expand_dims(np.expand_dims(dz,1),2), (1, grid.ny, grid.nx))
+    dz = z_to_xyz(dz, grid)
     # Get the correct hFac
     hfac = grid.get_hfac(gtype=gtype)
     if time_dependent:

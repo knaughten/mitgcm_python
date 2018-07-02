@@ -4,9 +4,9 @@
 
 import numpy as np
 import sys
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
 
-from utils import mask_land, mask_land_zice, mask_3d
+from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 
 
 # Interpolate from one grid type to another. Currently only u-grid to t-grid and v-grid to t-grid are supported.
@@ -71,37 +71,53 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
     return data_interp
 
 
-# Finds the value of the given array to the left, right, up, down of every points, as well as which neighoburs are non-missing, and how many neighbours are non-missing.
+# Finds the value of the given array to the west, east, south, north of every point, as well as which neighbours are non-missing, and how many neighbours are non-missing.
 def neighbours (data, missing_val=-9999):
 
-    # Find the value to the left, right, down, up of every point
+    # Find the value to the west, east, south, north of every point
     # Just copy the boundaries
-    data_l = np.empty(data.shape)
-    data_l[...,1:] = data[...,:-1]
-    data_l[...,0] = data[...,0]
-    data_r = np.empty(data.shape)
-    data_r[...,:-1] = data[...,1:]
-    data_r[...,-1] = data[...,-1]
-    data_d = np.empty(data.shape)
-    data_d[...,1:,:] = data[...,:-1,:]
-    data_d[...,0,:] = data[...,0,:]
-    data_u = np.empty(data.shape)
-    data_u[...,:-1,:] = data[...,1:,:]
-    data_u[...,-1,:] = data[...,-1,:]
+    data_w = np.empty(data.shape)
+    data_w[...,1:] = data[...,:-1]
+    data_w[...,0] = data[...,0]
+    data_e = np.empty(data.shape)
+    data_e[...,:-1] = data[...,1:]
+    data_e[...,-1] = data[...,-1]
+    data_s = np.empty(data.shape)
+    data_s[...,1:,:] = data[...,:-1,:]
+    data_s[...,0,:] = data[...,0,:]
+    data_n = np.empty(data.shape)
+    data_n[...,:-1,:] = data[...,1:,:]
+    data_n[...,-1,:] = data[...,-1,:]     
     # Arrays of 1s and 0s indicating whether these neighbours are non-missing
-    valid_l = (data_l != missing_val).astype(float)
-    valid_r = (data_r != missing_val).astype(float)
+    valid_w = (data_w != missing_val).astype(float)
+    valid_e = (data_e != missing_val).astype(float)
+    valid_s = (data_s != missing_val).astype(float)
+    valid_n = (data_n != missing_val).astype(float)
+    # Number of valid neighbours of each point
+    num_valid_neighbours = valid_w + valid_e + valid_s + valid_n
+
+    return data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours
+
+
+# Like the neighbours function, but in the vertical dimension: neighbours above and below.
+def neighbours_z (data, missing_val=-9999):
+
+    data_d = np.empty(data.shape)
+    data_d[...,1:,:,:] = data[...,:-1,:,:]
+    data_d[...,0,:,:] = data[...,0,:,:]
+    data_u = np.empty(data.shape)
+    data_u[...,:-1,:,:] = data[...,1:,:,:]
+    data_u[...,-1,:,:] = data[...,-1,:,:]
     valid_d = (data_d != missing_val).astype(float)
     valid_u = (data_u != missing_val).astype(float)
-    # Number of valid neighbours of each point
-    num_valid_neighbours = valid_l + valid_r + valid_d + valid_u
-    return data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours    
+    num_valid_neighbours_z = valid_d + valid_u
+    return data_d, data_u, valid_d, valid_u, num_valid_neighbours_z
 
-
+    
 # Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.
 # If "data" is a regular array with specific missing values, set missing_val (default -9999). If "data" is a MaskedArray, set masked=True instead.
-# num_iters indicates the number of times the data is extended into the mask (default 5).
-def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
+# Setting use_3d=True indicates this is a 3D array, and where there are no valid neighbours on the 2D plane, neighbours above and below should be used.
+def extend_into_mask (data, missing_val=-9999, masked=False, use_3d=False, num_iters=1):
 
     if missing_val != -9999 and masked:
         print "Error (extend_into_mask): can't set a missing value for a masked array"
@@ -115,12 +131,18 @@ def extend_into_mask (data, missing_val=-9999, masked=False, num_iters=5):
         data = data_unmasked
 
     for iter in range(num_iters):
-        # Find the 4 neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
-        data_l, data_r, data_d, data_u, valid_l, valid_r, valid_d, valid_u, num_valid_neighbours = neighbours(data, missing_val=missing_val)
+        # Find the neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
+        data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(data, missing_val=missing_val)
         # Choose the points that can be filled
         index = (data == missing_val)*(num_valid_neighbours > 0)
         # Set them to the average of their non-missing neighbours
-        data[index] = (data_l[index]*valid_l[index] + data_r[index]*valid_r[index] + data_d[index]*valid_d[index] + data_u[index]*valid_u[index])/num_valid_neighbours[index]
+        data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index] + data_s[index]*valid_s[index] + data_n[index]*valid_n[index])/num_valid_neighbours[index]
+        if use_3d:
+            # Consider vertical neighbours too
+            data_d, data_u, valid_d, valid_u, num_valid_neighbours_z = neighbours_z(data, missing_val=missing_val)
+            # Find the points that haven't already been filled based on 2D neighbours, but could be filled now
+            index = (data == missing_val)*(num_valid_neighbours == 0)*(num_valid_neighbours_z > 0)
+            data[index] = (data_u[index]*valid_u[index] + data_d[index]*valid_d[index])/num_valid_neighbours_z[index]
 
     if masked:
         # Remask the MaskedArray
@@ -180,78 +202,52 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
     return data_interp
 
 
-# Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
-def remove_isolated_cells (data, mask_val=0):
+# Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
+def interp_reg_3d (grid, source_grid, source_data, gtype='t', fill_value=-9999):
 
-    num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
-    index = (data!=mask_val)*(num_valid_neighbours==0)
-    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
-    data[index] = mask_val
-    return data
+    # Get the correct lat and lon on the source grid
+    source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
+    # Build an interpolant
+    interpolant = RegularGridInterpolator((-source_grid.z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
 
-
-# Given an array representing a mask (as above) and 2D arrays of longitude and latitude, mask out the points between the given lat/lon bounds.
-def mask_box (data, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
-
-    # Set any bounds which aren't already set
-    if xmin is None:
-        xmin = np.amin(lon)
-    if xmax is None:
-        xmax = np.amax(lon)
-    if ymin is None:
-        ymin = np.amin(lat)
-    if ymax is None:
-        ymax = np.amax(lat)
-    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-    data[index] = mask_val
-    return data
+    # Get the correct lat and lon on the target grid
+    lon_2d, lat_2d = grid.get_lon_lat(gtype=gtype)
+    # Make axes 3D
+    lon_3d = xy_to_xyz(lon_2d, grid)
+    lat_3d = xy_to_xyz(lat_2d, grid)
+    z_3d = z_to_xyz(grid.z, grid)
+    # Interpolate
+    data_interp = interpolant((-z_3d, lat_3d, lon_3d))
+    
+    return data_interp
 
 
-# Mask out the points above or below the line segment bounded by the given points.
-def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
+# Figure out which points on the target grid can be safely interpolated based on the source grid's hFac. Points which are 1 in the result are fully within the ocean mask of the source grid. Points which are 0 are either in the land mask, too near the coast, or outside the bounds of the target grid.
+def interp_reg_3d_mask (grid, source_grid, gtype='t'):
 
-    limit = (p_end[1] - p_start[1])/float(p_end[0] - p_start[0])*(lon - p_start[0]) + p_start[1]
-    west_bound = min(p_start[0], p_end[0])
-    east_bound = max(p_start[0], p_end[0])
-    if direction == 'above':
-        index = (lat >= limit)*(lon >= west_bound)*(lon <= east_bound)
-    elif direction == 'below':
-        index = (lat <= limit)*(lon >= west_bound)*(lon <= east_bound)
-    else:
-        print 'Error (mask_line): invalid direction ' + direction
-        sys.exit()
-    data[index] = mask_val
-    return data
+    return np.floor(interp_reg_3d(grid, source_grid, np.ceil(source_grid.get_hfac(gtype=gtype)), fill_value=0))
 
 
-# Interface to mask_line: mask points above line segment (to the north)
-def mask_above_line (data, lon, lat, p_start, p_end, mask_val=0):
+# Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid, and extrapolate to fill missing values.
+def interp_fill_reg_3d (grid, source_grid, source_data, interp_mask, gtype='t', fill_value=-9999):
 
-    return mask_line(data, lon, lat, p_start, p_end, 'above', mask_val=mask_val)
+    print '...interpolating'
+    data_interp = interp_reg_3d(grid, source_grid, source_data, gtype=gtype, fill_value=fill_value)
+    # Make sure suspicious points are set to missing
+    data_interp[interp_mask==0] = fill_value
+    # Get the land mask on the target grid
+    hfac = grid.get_hfac(gtype=gtype)
 
+    print '...filling missing values'
+    while np.count_nonzero((data_interp == fill_value)*(hfac != 0)) > 0:
+        print '......' + str(np.count_nonzero((data_interp == fill_value)*(hfac != 0))) + ' points to fill'
+        data_interp = extend_into_mask(data_interp, missing_val=fill_value, use_3d=True)
 
-# Interface to mask_line: mask points below line segment (to the south)
-def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
+    # Fill land mask with zeros
+    data_interp[hfac==0] = 0
 
-    return mask_line(data, lon, lat, p_start, p_end, 'below', mask_val=mask_val)
-
-
-# Like mask_box, but only mask out ice shelf points within the given box.
-def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
-
-    # Set any bounds which aren't already set
-    if xmin is None:
-        xmin = np.amin(lon)
-    if xmax is None:
-        xmax = np.amax(lon)
-    if ymin is None:
-        ymin = np.amin(lat)
-    if ymax is None:
-        ymax = np.amax(lat)
-    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(imask == 1)
-    omask[index] = mask_val
-    return omask
-                
+    return data_interp
+    
     
 
     

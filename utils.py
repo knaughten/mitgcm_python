@@ -31,15 +31,6 @@ def fix_lon_range (lon, max_lon=180):
     return lon
 
 
-# Given an array containing longitude, make sure it's in the range (0, 360) as opposed to (-180, 180).
-def revert_lon_range (lon):
-
-    index = lon < 0
-    lon[index] = lon[index] + 360
-    
-    return lon
-
-
 # Convert freshwater flux into the ice shelf (diagnostic SHIfwFlx) (kg/m^2/s, positive means freezing) to ice shelf melt rate (m/y, positive means melting).
 def convert_ismr (shifwflx):
 
@@ -300,6 +291,91 @@ def real_dir (dir_path):
     if not dir_path.endswith('/'):
         dir_path += '/'
     return dir_path
+
+
+# Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
+def remove_isolated_cells (data, mask_val=0):
+
+    num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
+    index = (data!=mask_val)*(num_valid_neighbours==0)
+    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
+    data[index] = mask_val
+    return data
+
+
+# Given an array representing a mask (as above) and 2D arrays of longitude and latitude, mask out the points between the given lat/lon bounds.
+def mask_box (data, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
+
+    # Set any bounds which aren't already set
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+    data[index] = mask_val
+    return data
+
+
+# Mask out the points above or below the line segment bounded by the given points.
+def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
+
+    limit = (p_end[1] - p_start[1])/float(p_end[0] - p_start[0])*(lon - p_start[0]) + p_start[1]
+    west_bound = min(p_start[0], p_end[0])
+    east_bound = max(p_start[0], p_end[0])
+    if direction == 'above':
+        index = (lat >= limit)*(lon >= west_bound)*(lon <= east_bound)
+    elif direction == 'below':
+        index = (lat <= limit)*(lon >= west_bound)*(lon <= east_bound)
+    else:
+        print 'Error (mask_line): invalid direction ' + direction
+        sys.exit()
+    data[index] = mask_val
+    return data
+
+
+# Interface to mask_line: mask points above line segment (to the north)
+def mask_above_line (data, lon, lat, p_start, p_end, mask_val=0):
+
+    return mask_line(data, lon, lat, p_start, p_end, 'above', mask_val=mask_val)
+
+
+# Interface to mask_line: mask points below line segment (to the south)
+def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
+
+    return mask_line(data, lon, lat, p_start, p_end, 'below', mask_val=mask_val)
+
+
+# Like mask_box, but only mask out ice shelf points within the given box.
+def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
+
+    # Set any bounds which aren't already set
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+    index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(imask == 1)
+    omask[index] = mask_val
+    return omask
+
+
+# Tile a 2D (lat x lon) array in depth so it is 3D (depth x lat x lon).
+def xy_to_xyz (data, grid):
+
+    return np.tile(data, (grid.nz, 1, 1))
+
+
+# Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
+def z_to_xyz (data, grid):
+
+    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, grid.ny, grid.nx))
 
     
 
