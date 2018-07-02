@@ -14,7 +14,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
     data = read_binary(in_file, sose_dim, dimensions)
     climatology = np.zeros(data.shape[1:])
     for month in range(12):
-        climatology[month,:] = np.mean(data[month::12], axis=0)
+        climatology[month,:] = np.mean(data[month::12,:], axis=0)
     write_binary(climatology, out_file)
 
 
