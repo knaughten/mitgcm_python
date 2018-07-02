@@ -255,9 +255,9 @@ class BinaryGrid(Grid):
         self.lon_corners_2d = fix_lon_range(read_binary(grid_dir+'XG.data', self, 'xy', prec=prec))
         self.lat_corners_2d = read_binary(grid_dir+'YG.data', self, 'xy', prec=prec)
         self.z = read_binary(grid_dir+'RC.data', self, 'z', prec=prec)
-        self.hfac = read_binary(grid+dir+'hFacC.data', self, 'xyz', prec=prec)
-        self.hfac_w = read_binary(grid+dir+'hFacW.data', self, 'xyz', prec=prec)
-        self.hfac_s = read_binary(grid+dir+'hFacS.data', self, 'xyz', prec=prec)
+        self.hfac = read_binary(grid_dir+'hFacC.data', self, 'xyz', prec=prec)
+        self.hfac_w = read_binary(grid_dir+'hFacW.data', self, 'xyz', prec=prec)
+        self.hfac_s = read_binary(grid_dir+'hFacS.data', self, 'xyz', prec=prec)
 
         # Build land masks
         self.land_mask = self.build_land_mask(self.hfac)
