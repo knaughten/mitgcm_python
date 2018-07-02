@@ -153,7 +153,7 @@ def find_variable (file_path_1, file_path_2, var_name):
 
 # Arguments:
 # filename: path to binary file
-# grid: Grid object
+# grid: Grid object OR list of length 3 containing [nx, ny, nz] grid dimensions
 # dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. For a 1D array of a special shape, use '1'.
 
 # Optional keyword arguments:
@@ -168,6 +168,15 @@ def find_variable (file_path_1, file_path_2, var_name):
 # Output: array of specified dimension
 
 def read_binary (filename, grid, dimensions, prec=32):
+
+    if isinstance(grid, list):
+        nx = grid[0]
+        ny = grid[1]
+        nz = grid[2]
+    else:
+        nx = grid.nx
+        ny = grid.ny
+        nz = grid.nz
 
     # Set dtype
     if prec == 32:
@@ -188,34 +197,34 @@ def read_binary (filename, grid, dimensions, prec=32):
     # Work out dimensions
     # Special case just with 'z' (for some grid variables)
     if dimensions == 'z':
-        if data.size != grid.nz:
+        if data.size != nz:
             print 'Error (read_binary): incorrect dimensions or precision'
             sys.exit()
-        data_shape = [grid.nz]    
+        data_shape = [nz]    
     elif 'z' in dimensions:
         if 't' in dimensions:
-            if np.mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
+            if np.mod(data.size, nx*ny*nz) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
-            num_time = data.size/(grid.nx*grid.ny*grid.nz)
-            data_shape = [num_time, grid.nz, grid.ny, grid.nx]
+            num_time = data.size/(nx*ny*nz)
+            data_shape = [num_time, nz, ny, nx]
         else:
-            if data.size != grid.nx*grid.ny*grid.nz:
+            if data.size != nx*ny*nz:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
-            data_shape = [grid.nz, grid.ny, grid.nx]
+            data_shape = [nz, ny, nx]
     else:
         if 't' in dimensions:
-            if np.mod(data.size, grid.nx*grid.ny) != 0:
+            if np.mod(data.size, nx*ny) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
-            num_time = data.size/(grid.nx*grid.ny)
-            data_shape = [num_time, grid.ny, grid.nx]
+            num_time = data.size/(nx*ny)
+            data_shape = [num_time, ny, nx]
         else:
-            if data.size != grid.nx*grid.ny:
+            if data.size != nx*ny:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
-            data_shape = [grid.ny, grid.nx]
+            data_shape = [ny, nx]
 
     # Reshape the data and return
     return np.reshape(data, data_shape)

@@ -9,13 +9,24 @@ from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
 from diagnostics import total_aice
 
 
-# Given an array containing longitude, make sure it's in the range (-180, 180) as opposed to (0, 360).
-def fix_lon_range (lon):
+# Given an array containing longitude, make sure it's either in the range (-180, 180) (if max_lon=180) or (0, 360) (if max_lon=360).
+def fix_lon_range (lon, max_lon=180):
 
-    index = lon > 180
-    lon[index] = lon[index] - 360
-    index = lon < -180
-    lon[index] = lon[index] + 360
+    if max_lon == 180:
+        # Range (-180, 180)
+        index = lon > 180
+        lon[index] = lon[index] - 360
+        index = lon < -180
+        lon[index] = lon[index] + 360
+    elif max_lon == 360:
+        # Range (0, 360)
+        index = lon < 0
+        lon[index] = lon[index] + 360
+        index = lon > 360
+        lon[index] = lon[index] - 360
+    else:
+        print 'Error (fix_lon_range): max_lon must be either 180 or 360'
+        sys.exit()
 
     return lon
 

@@ -16,23 +16,23 @@ class Grid:
 
     # Initialisation arguments:
     # file_path: path to NetCDF grid file    
-    def __init__ (self, file_path):
+    def __init__ (self, file_path, max_lon=180):
 
         # 1D lon and lat axes on regular grids
         # Make sure longitude is between -180 and 180
         # Cell centres
-        self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'))
+        self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'), max_lon=max_lon)
         self.lat_1d = read_netcdf(file_path, 'Y')
         # Cell corners (southwest)
-        self.lon_corners_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'))
+        self.lon_corners_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'), max_lon=max_lon)
         self.lat_corners_1d = read_netcdf(file_path, 'Yp1')
 
         # 2D lon and lat fields on any grid
         # Cell centres
-        self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'))
+        self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'), max_lon=max_lon)
         self.lat_2d = read_netcdf(file_path, 'YC')
         # Cell corners
-        self.lon_corners_2d = fix_lon_range(read_netcdf(file_path, 'XG'))
+        self.lon_corners_2d = fix_lon_range(read_netcdf(file_path, 'XG'), max_lon=max_lon)
         self.lat_corners_2d = read_netcdf(file_path, 'YG')
 
         # 2D integrands of distance
@@ -240,7 +240,7 @@ class Grid:
 class BinaryGrid(Grid):
 
     # Input arguments: path to directory containing all the grid files, and dimensions of grid in the x, y, z directions
-    def __init__ (self, grid_dir, nx, ny, nz, prec=32):
+    def __init__ (self, grid_dir, nx, ny, nz, prec=32, max_lon=180):
 
         grid_dir = real_dir(grid_dir)
 
@@ -250,9 +250,9 @@ class BinaryGrid(Grid):
         self.nz = nz
 
         # Now read the fields
-        self.lon_2d = fix_lon_range(read_binary(grid_dir+'XC.data', self, 'xy', prec=prec))
+        self.lon_2d = fix_lon_range(read_binary(grid_dir+'XC.data', self, 'xy', prec=prec), max_lon=max_lon)
         self.lat_2d = read_binary(grid_dir+'YC.data', self, 'xy', prec=prec)
-        self.lon_corners_2d = fix_lon_range(read_binary(grid_dir+'XG.data', self, 'xy', prec=prec))
+        self.lon_corners_2d = fix_lon_range(read_binary(grid_dir+'XG.data', self, 'xy', prec=prec), max_lon=max_lon)
         self.lat_corners_2d = read_binary(grid_dir+'YG.data', self, 'xy', prec=prec)
         self.z = read_binary(grid_dir+'RC.data', self, 'z', prec=prec)
         self.hfac = read_binary(grid_dir+'hFacC.data', self, 'xyz', prec=prec)
@@ -263,3 +263,9 @@ class BinaryGrid(Grid):
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
         self.land_mask_v = self.build_land_mask(self.hfac_s)
+
+        # Make 1D lat and lon options - only use these if the grid is regular!
+        self.lon_1d = self.lon_2d[0,:]
+        self.lat_1d = self.lat_2d[:,0]
+        self.lon_corners_1d = self.lon_corners_2d[0,:]
+        self.lat_corners_1d = self.lat_corners_2d[:,0]
