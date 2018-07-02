@@ -231,7 +231,7 @@ class Grid:
         else:
             print 'Error (get_fris_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
-
+            
             
 
 # BinaryGrid object to read a grid from binary MDS files

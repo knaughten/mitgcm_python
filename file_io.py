@@ -194,7 +194,7 @@ def read_binary (filename, grid, dimensions, prec=32):
         data_shape = [grid.nz]    
     elif 'z' in dimensions:
         if 't' in dimensions:
-            if mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
+            if np.mod(data.size, grid.nx*grid.ny*grid.nz) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
             num_time = data.size/(grid.nx*grid.ny*grid.nz)
@@ -206,7 +206,7 @@ def read_binary (filename, grid, dimensions, prec=32):
             data_shape = [grid.nz, grid.ny, grid.nx]
     else:
         if 't' in dimensions:
-            if mod(data.size, grid.nx*grid.ny) != 0:
+            if np.mod(data.size, grid.nx*grid.ny) != 0:
                 print 'Error (read_binary): incorrect dimensions or precision'
                 sys.exit()
             num_time = data.size/(grid.nx*grid.ny)
