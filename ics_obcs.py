@@ -4,7 +4,6 @@
 
 from grid import Grid, BinaryGrid
 from utils import revert_lon_range, real_dir
-from file_io import read_binary
 from constants import sose_nx, sose_ny, sose_nz
 
 def sose_ics (grid_file, sose_dir, temp_out, salt_out, aice_out, hice_out, nc_out, split_lon=180):
