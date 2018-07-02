@@ -84,4 +84,24 @@ def total_aice (aice, grid):
     return np.sum(aice*grid.dA)*1e-12
 
 
+# Find the time indices of minimum and maximum sea ice area.
+
+# Arguments:
+# aice: 3D (time x lat x lon) array of sea ice area at each time index
+# grid: Grid object
+
+# Output: two integers containing the time indices (0-indexed) of minimum and maximum sea ice area, respectively
+
+def find_aice_min_max (aice, grid):
+
+    num_time = aice.shape[0]
+    aice_int = np.zeros(num_time)
+    for t in range(num_time):
+        aice_int[t] = total_aice(aice[t,:], grid)
+    return np.argmin(aice_int), np.argmax(aice_int)
+
+
+
+
+
 

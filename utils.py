@@ -6,7 +6,6 @@ import numpy as np
 import sys
 
 from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
-from diagnostics import total_aice
 
 
 # Given an array containing longitude, make sure it's either in the range (-180, 180) (if max_lon=180) or (0, 360) (if max_lon=360).
@@ -200,23 +199,6 @@ def select_year (time, year):
     return t_start, t_end
 
 
-# Find the time indices of minimum and maximum sea ice area.
-
-# Arguments:
-# aice: 3D (time x lat x lon) array of sea ice area at each time index
-# grid: Grid object
-
-# Output: two integers containing the time indices (0-indexed) of minimum and maximum sea ice area, respectively
-
-def find_aice_min_max (aice, grid):
-
-    num_time = aice.shape[0]
-    aice_int = np.zeros(num_time)
-    for t in range(num_time):
-        aice_int[t] = total_aice(aice[t,:], grid)
-    return np.argmin(aice_int), np.argmax(aice_int)
-
-
 # Find the minimum and maximum values of a 2D (lat x lon) array in the given region.
 def var_min_max (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
 
@@ -291,16 +273,6 @@ def real_dir (dir_path):
     if not dir_path.endswith('/'):
         dir_path += '/'
     return dir_path
-
-
-# Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
-def remove_isolated_cells (data, mask_val=0):
-
-    num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
-    index = (data!=mask_val)*(num_valid_neighbours==0)
-    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
-    data[index] = mask_val
-    return data
 
 
 # Given an array representing a mask (as above) and 2D arrays of longitude and latitude, mask out the points between the given lat/lon bounds.

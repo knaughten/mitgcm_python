@@ -202,6 +202,16 @@ def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
     return data_interp
 
 
+# Given an array representing a mask (e.g. ocean mask where 1 is ocean, 0 is land), identify any isolated cells (i.e. 1 cell of ocean with land on 4 sides) and remove them (i.e. recategorise them as land).
+def remove_isolated_cells (data, mask_val=0):
+
+    num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
+    index = (data!=mask_val)*(num_valid_neighbours==0)
+    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
+    data[index] = mask_val
+    return data
+
+
 # Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
 def interp_reg_3d (grid, source_grid, source_data, gtype='t', fill_value=-9999):
 
@@ -222,10 +232,18 @@ def interp_reg_3d (grid, source_grid, source_data, gtype='t', fill_value=-9999):
     return data_interp
 
 
-# Figure out which points on the target grid can be safely interpolated based on the source grid's hFac. Points which are 1 in the result are fully within the ocean mask of the source grid. Points which are 0 are either in the land mask, too near the coast, or outside the bounds of the target grid.
+# Figure out which points on the target grid can be safely interpolated based on the source grid's hFac. Points which are 1 in the result are fully within the ocean mask of the source grid. Points which are 0 are either in the land mask, too near the coast, or outside the bounds of the source grid. Also set land and ice shelf points in the target grid to 0.
 def interp_reg_3d_mask (grid, source_grid, gtype='t'):
 
-    return np.floor(interp_reg_3d(grid, source_grid, np.ceil(source_grid.get_hfac(gtype=gtype)), fill_value=0))
+    # Find cells which are at least partially open in the source and target grids
+    source_open = np.ceil(source_grid.get_hfac(gtype=gtype))
+    target_open = np.ceil(grid.get_hfac(gtype=gtype))
+    # Find cells in the target grid which can be interpolated entirely based on open cells in the source grid
+    source_open_interp = np.floor(interp_reg_3d(grid, source_grid, source_open, fill_value=0))
+    # Find non-iceshelf cells in the target grid and make this 2D mask 3D
+    target_not_zice = xy_to_xyz(np.invert(grid.get_zice_mask(gtype=gtype)), grid)
+
+    return source_open_interp*target_open*target_not_zice
 
 
 # Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid, and extrapolate to fill missing values.
@@ -237,11 +255,19 @@ def interp_fill_reg_3d (grid, source_grid, source_data, interp_mask, gtype='t', 
     data_interp[interp_mask==0] = fill_value
     # Get the land mask on the target grid
     hfac = grid.get_hfac(gtype=gtype)
+    # Make sure masked points on the target grid are set to missing too
+    data_interp[hfac==0] = fill_value    
 
     print '...filling missing values'
-    while np.count_nonzero((data_interp == fill_value)*(hfac != 0)) > 0:
-        print '......' + str(np.count_nonzero((data_interp == fill_value)*(hfac != 0))) + ' points to fill'
+    num_missing = np.count_nonzero((data_interp == fill_value)*(hfac != 0))
+    while num_missing > 0:
+        print '......' + str(num_missing) + ' points to fill'
         data_interp = extend_into_mask(data_interp, missing_val=fill_value, use_3d=True)
+        num_missing_old = num_missing
+        num_missing = np.count_nonzero((data_interp == fill_value)*(hfac != 0))
+        if num_missing == num_missing_old:
+            print 'Error (interp_fill_reg_3d): some missing values cannot be filled'
+            sys.exit()
 
     # Fill land mask with zeros
     data_interp[hfac==0] = 0

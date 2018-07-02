@@ -10,12 +10,12 @@ import numpy as np
 
 from grid import Grid
 from file_io import read_netcdf, find_variable, netcdf_time
-from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, find_aice_min_max, var_min_max
+from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, var_min_max
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_zice, contour_iceshelf_front, prepare_vel, overlay_vectors
-from diagnostics import t_minus_tf
+from diagnostics import t_minus_tf, find_aice_min_max
 
 
 # Basic lat-lon plot of any variable.

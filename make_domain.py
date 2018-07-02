@@ -11,7 +11,7 @@ import os
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box
-from interpolation import extend_into_mask, interp_topo, remove_isolated_cells, neighbours
+from interpolation import extend_into_mask, interp_topo, neighbours, remove_isolated_cells 
 from plot_latlon import plot_tmp_domain
 from grid import Grid
 

@@ -27,7 +27,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
     write_binary(climatology, out_file)
 
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split_lon=180):
+def sose_ics (grid_file, sose_dir, output_dir, nc_out=None):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -41,10 +41,12 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split_lon=180):
     # End of filenames for output
     outfile_tail = '_SOSE.ini'
 
-    # Make the grids, with longitude from 0 to 360
+    print 'Building grids'
+    # Longitude from 0 to 360 so SOSE axes are strictly ascending
     grid = Grid(grid_file, max_lon=360)
     sose_grid = BinaryGrid(sose_dir+'grid/', sose_nx, sose_ny, sose_nz, max_lon=360)
-    # Figure out which points on the model grid can't be reliably interpolated from SOSE output (as they are outside the bounds, within the land mask, or too near the coast)
+    print 'Interpolating mask'
+    # Figure out which points on the model grid can't be reliably interpolated from SOSE output (as they are outside the bounds, within the land/ice-shelf mask, or too near the coast)
     interp_mask = interp_reg_3d_mask(grid, sose_grid)
 
     # Set up a NetCDF file so the user can check the results
@@ -54,12 +56,14 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split_lon=180):
     # Process 3D fields
     for n in range(len(fields_3d)):
         print 'Processing ' + fields_3d[n]
-        print '...reading ' + fields_3d[n]+infile_tail
+        in_file = sose_dir + fields_3d[n] + infile_tail
+        out_file = output_dir + fields_2d[n] + outfile_tail
+        print '...reading ' + in_file
         # Just keep the January climatology
-        sose_data = read_binary(sose_dir+fields_3d[n]+infile_tail, sose_grid, 'xyzt')[0,:]
+        sose_data = read_binary(in_file, sose_grid, 'xyzt')[0,:]
         data_interp = interp_fill_reg_3d(grid, sose_grid, sose_data, interp_mask)
-        print '...writing ' + fields_3d[n]+outfile_tail
-        write_binary(data_interp, output_dir+fields_3d[n]+outfile_tail)
+        print '...writing ' + out_file
+        write_binary(data_interp, out_file)
         if nc_out is not None:
             print '...adding to ' + nc_out
             ncfile.add_variable(fields_3d[n], data_interp, 'xyz')
