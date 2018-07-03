@@ -4,7 +4,7 @@
 
 from grid import Grid, BinaryGrid
 from utils import real_dir
-from constants import sose_nx, sose_ny, sose_nz
+from constants import sose_nx, sose_ny, sose_nz, sose_res
 from file_io import read_binary, write_binary, NCfile
 from interpolation import interp_reg_3d_mask, interp_fill_reg_3d
 
@@ -27,7 +27,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
     write_binary(climatology, out_file)
 
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None):
+def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -41,11 +41,29 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None):
     # End of filenames for output
     outfile_tail = '_SOSE.ini'
 
+    sose_dims = [sose_nx, sose_ny, sose_nz]
+
     print 'Building grids'
-    # Longitude from 0 to 360 so SOSE axes are strictly ascending
-    grid = Grid(grid_file, max_lon=360)
-    sose_grid = BinaryGrid(sose_dir+'grid/', sose_nx, sose_ny, sose_nz, max_lon=360)
-    print 'Interpolating mask'
+    if split == 180:
+        grid = Grid(grid_file)
+        if grid.lon_1d[0] > grid.lon_1d[-1]:
+            print 'Error (sose_ics): Looks like your domain crosses 180E. Run this again with split=0.'
+            sys.exit()
+    elif split == 0:
+        grid = Grid(grid_file, max_lon=360)
+        if grid.lon_1d[0] > grid.lon_1d[-1]:
+            print 'Error (sose_ics): Looks like your domain crosses 0E. Run this again with split=180.'
+            sys.exit()
+    else:
+        print 'Error (sose_ics): split must be 180 or 0'
+        sys.exit()
+            
+
+    
+
+
+    
+    '''print 'Interpolating mask'
     # Figure out which points on the model grid can't be reliably interpolated from SOSE output (as they are outside the bounds, within the land/ice-shelf mask, or too near the coast)
     interp_mask = interp_reg_3d_mask(grid, sose_grid)
 
@@ -69,4 +87,4 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None):
             ncfile.add_variable(fields_3d[n], data_interp, 'xyz')
 
     if nc_out is not None:
-        ncfile.finished()
+        ncfile.finished()'''

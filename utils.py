@@ -13,7 +13,7 @@ def fix_lon_range (lon, max_lon=180):
 
     if max_lon == 180:
         # Range (-180, 180)
-        index = lon > 180
+        index = lon >= 180
         lon[index] = lon[index] - 360
         index = lon < -180
         lon[index] = lon[index] + 360
@@ -21,7 +21,7 @@ def fix_lon_range (lon, max_lon=180):
         # Range (0, 360)
         index = lon < 0
         lon[index] = lon[index] + 360
-        index = lon > 360
+        index = lon >= 360
         lon[index] = lon[index] - 360
     else:
         print 'Error (fix_lon_range): max_lon must be either 180 or 360'
@@ -349,6 +349,11 @@ def z_to_xyz (data, grid):
 
     return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, grid.ny, grid.nx))
 
+
+# Split and rearrange the given array along the given index in the longitude axis (last axis). This is useful when converting from longitude ranges (0, 360) to (-180, 180) if the longitude array needs to be strictly increasing for later interpolation.
+def split_longitude (array, split):
+
+    return np.concatenate((array[...,split:], array[...,:split]), axis=-1)
     
 
 

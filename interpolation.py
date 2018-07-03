@@ -212,6 +212,22 @@ def remove_isolated_cells (data, mask_val=0):
     return data
 
 
+# If the name changes, update note in grid.py
+def fill_data ():
+    pass
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
 def interp_reg_3d (grid, source_grid, source_data, gtype='t', fill_value=-9999):
 

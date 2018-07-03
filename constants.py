@@ -19,3 +19,5 @@ fris_bounds = [-85, -29, -84, -74]
 sose_nx = 2160
 sose_ny = 320
 sose_nz = 42
+# Resolution of SOSE grid in degrees
+sose_res = 1/6.
