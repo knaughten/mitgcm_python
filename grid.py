@@ -237,6 +237,7 @@ class Grid:
 # To speed up interpolation, trim and/or extend the SOSE grid to agree with the bounds of model_grid (Grid object for the model which you'll be interpolating SOSE data to).
 # Depending on the longitude range within the model grid, it might also be necessary to rearrange the SOSE grid so it splits at 180E=180W (split=180, default, implying longitude ranges from -180 to 180 and max_lon=180 when creating model_grid) instead of its native split at 0E (split=0, implying longitude ranges from 0 to 360 and max_lon=360 when creating model_grid).
 # The rule of thumb is, if your model grid includes 0E, split at 180E, and vice versa. A circumpolar model should be fine either way as long as it doesn't have any points in the SOSE periodic boundary gap (in which case you'll have to write a patch). 
+# MOST IMPORTANTLY, if you are reading a SOSE binary file, don't use read_binary from file_io. Use the class function read_field (defined below) which will repeat the trimming/extending/splitting/rearranging correctly.
 class SOSEGrid:
 
     def __init__ (self, grid_dir, model_grid, split=180):
@@ -449,9 +450,9 @@ class SOSEGrid:
 
         # Trim
         if 'z' in dimensions:
-            data[..., k0_after:k1_after, j0_after:j1_after, i0_after:i1_after] = data_orig[..., k0_before:k1_before, j0_before:j1_before, i0_before:i1_before]
+            data[..., self.k0_after:self.k1_after, self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.k0_before:self.k1_before, self.j0_before:self.j1_before, self.i0_before:self.i1_before]
         else:
-            data[..., j0_after:j1_after, i0_after:i1_after] = data_orig[..., j0_before:j1_before, i0_before:i1_before]
+            data[..., self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.j0_before:self.j1_before, self.i0_before:self.i1_before]
 
         return data
             
