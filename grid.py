@@ -458,7 +458,12 @@ class SOSEGrid:
             
 
     # Return the longitude and latitude arrays for the given grid type.
-    def get_lon_lat (self, gtype='t'):
+    def get_lon_lat (self, gtype='t', dim=1):
+
+        # We need to have dim as a keyword argument so this agrees with the Grid class function, but there is no option for dim=2
+        if dim != 1:
+            print 'Error (get_lon_lat): must have dim=1 for SOSE grid'
+            sys.exit()
 
         if gtype in ['t', 'w']:
             return lon, lat

@@ -212,6 +212,36 @@ def remove_isolated_cells (data, mask_val=0):
     return data
 
 
+# Interpolate a field on a regular MITgcm grid, to another regular MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
+# source_grid and target_grid can be either Grid or SOSEGrid objects.
+# Set dim=3 for 3D fields (xyz), dim=2 for 2D fields (xy).
+def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_value=-9999):
+
+    # Get the correct lat and lon on the source grid
+    source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
+    # Build an interpolant
+    if dim == 2:
+        interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+    elif dim == 3:
+        interpolant = RegularGridInterpolator((-source_grid.z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+    else:
+        print 'Error (interp_reg): dim must be 2 or 3'
+        sys.exit()
+
+    # Get the correct lat and lon on the target grid
+    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
+    if dim == 2:
+        # Make 1D axes 2D
+        lon_2d, lat_2d = np.meshgrid(target_lon, target_lat)
+        # Interpolate
+        data_interp = interpolant((lat_2d, lon_2d))
+    elif dim == 3:
+        z_3d, lat_3d, lon_3d = np.meshgrid(target_grid.z, target_lon, target_lat, indexing='ij')
+        data_interp = interpolant((-z_3d, lat_3d, lon_3d))
+    
+    return data_interp
+
+
 # If the name changes, update note in grid.py
 def fill_data ():
     pass
@@ -228,24 +258,7 @@ def fill_data ():
 
 
 
-# Interpolate a 3D field on a regular MITgcm grid, to another MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
-def interp_reg_3d (grid, source_grid, source_data, gtype='t', fill_value=-9999):
 
-    # Get the correct lat and lon on the source grid
-    source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
-    # Build an interpolant
-    interpolant = RegularGridInterpolator((-source_grid.z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
-
-    # Get the correct lat and lon on the target grid
-    lon_2d, lat_2d = grid.get_lon_lat(gtype=gtype)
-    # Make axes 3D
-    lon_3d = xy_to_xyz(lon_2d, grid)
-    lat_3d = xy_to_xyz(lat_2d, grid)
-    z_3d = z_to_xyz(grid.z, grid)
-    # Interpolate
-    data_interp = interpolant((-z_3d, lat_3d, lon_3d))
-    
-    return data_interp
 
 
 # Figure out which points on the target grid can be safely interpolated based on the source grid's hFac. Points which are 1 in the result are fully within the ocean mask of the source grid. Points which are 0 are either in the land mask, too near the coast, or outside the bounds of the source grid. Also set land and ice shelf points in the target grid to 0.
