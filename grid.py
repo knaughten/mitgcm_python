@@ -466,13 +466,13 @@ class SOSEGrid:
             sys.exit()
 
         if gtype in ['t', 'w']:
-            return lon, lat
+            return self.lon, self.lat
         elif gtype == 'u':
-            return lon_corners, lat
+            return self.lon_corners, self.lat
         elif gtype == 'v':
-            return lon, lat_corners
+            return self.lon, self.lat_corners
         elif gtype == 'psi':
-            return lon_corners, lat_corners
+            return self.lon_corners, self.lat_corners
         else:
             print 'Error (get_lon_lat): invalid gtype ' + gtype
             sys.exit()

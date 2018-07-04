@@ -5,6 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz
 from file_io import read_binary, write_binary, NCfile
+from interpolation import interp_reg
 
 import numpy as np
 
