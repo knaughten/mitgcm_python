@@ -250,7 +250,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
     ncfile.add_variable('draft', draft_interp, units='m')
     ncfile.add_variable('omask', omask_interp)
     ncfile.add_variable('imask', imask_interp)
-    ncfile.finished()
+    ncfile.close()
 
     print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'

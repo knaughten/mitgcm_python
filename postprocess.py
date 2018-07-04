@@ -186,4 +186,4 @@ def crash_to_netcdf (crash_dir, grid_path):
             empmr = read_binary(crash_dir + file, grid, 'xy')
             ncfile.add_variable('Empmr', empmr, 'xy', units='kg/m^2/s')
 
-    ncfile.finished()
+    ncfile.close()

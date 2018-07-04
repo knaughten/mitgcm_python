@@ -364,7 +364,7 @@ class NCfile:
 
 
     # Call this function when you're ready to close the file.
-    def finished (self):
+    def close (self):
 
         self.id.close()
 
@@ -403,7 +403,7 @@ class NCfile_basiclatlon:
 
         
     # Call this function when you're ready to close the file.
-    def finished (self):
+    def close (self):
 
         self.id.close()
 

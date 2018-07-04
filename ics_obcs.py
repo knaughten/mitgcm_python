@@ -32,10 +32,10 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
 
-    # 3D fields to interpolate
-    fields_3d = ['THETA', 'SALT']
-    # 2D fields to interpolate
-    fields_2d = ['SIarea', 'SIheff']
+    # Fields to interpolate
+    fields = ['THETA', 'SALT', 'SIarea', 'SIheff']
+    # Flag for 2D or 3D
+    dim = [3, 3, 2, 2]
     # End of filenames for input
     infile_tail = '_climatology.data'
     # End of filenames for output
@@ -69,7 +69,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     # (2) Closed cells according to model, interpolated to SOSE grid
     # Only consider a cell to be open if all the points used to interpolate it are open. But, there are some oscillatory interpolation errors which prevent some of these cells from being exactly 1. So set a threshold of 0.99 instead.
     # Use a fill_value of 1 so that the boundaries of the domain are still considered ocean cells (since sose_grid is slightly larger than model_grid). Boundaries which should be closed will get masked in the next step.
-    model_open = interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), dim=3, fill_value=1)
+    model_open = interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1)
     model_mask = model_open < 0.99
     # (3) Points near the coast (which SOSE tends to say are around 0C, even if this makes no sense). Extend the surface model_mask by coast_iters cells, and tile to be 3D. This will also remove all ice shelf cavities.
     coast_mask = xy_to_xyz(extend_into_mask(model_mask[0,:], missing_val=0, num_iters=coast_iters), sose_grid)
@@ -88,25 +88,36 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     if nc_out is not None:
         ncfile = NCfile(nc_out, model_grid, 'xyz')
 
-    # Process 3D fields
-    for n in range(len(fields_3d)):
-        print 'Processing ' + fields_3d[n]
-        in_file = sose_dir + fields_3d[n] + infile_tail
-        out_file = output_dir + fields_2d[n] + outfile_tail
+    # Process fields
+    for n in range(len(fields)):
+        print 'Processing ' + fields[n]
+        in_file = sose_dir + fields[n] + infile_tail
+        out_file = output_dir + fields[n] + outfile_tail
         print '...reading ' + in_file
         # Just keep the January climatology
-        sose_data = sose_grid.read_field(in_file, 'xyzt')[0,:]
-        print '...extrapolating into cavities'
-        sose_data = discard_and_fill(sose_data, discard, fill)
+        if dim[n] == 3:
+            sose_data = sose_grid.read_field(in_file, 'xyzt')[0,:]
+        else:
+            sose_data = sose_grid.read_field(in_file, 'xyt')[0,:]
+        # Temperature and salinity should have some values discarded, and extrapolated into cavities. There's no need to do this for the 2D sea ice variables.
+        if dim[n] == 3:
+            print '...extrapolating into cavities'
+            sose_data = discard_and_fill(sose_data, discard, fill)
         print '...interpolating to model grid'
-        data_interp = interp_reg(sose_grid, model_grid, sose_data)
+        data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         # Fill the land mask with zeros
-        data_interp[model_grid.hfac==0] = 0
+        if dim[n] == 3:
+            data_interp[model_grid.hfac==0] = 0
+        else:
+            data_interp[model_grid.hfac[0,:]==0] = 0
         print '...writing ' + out_file
         write_binary(data_interp, out_file)
         if nc_out is not None:
             print '...adding to ' + nc_out
-            ncfile.add_variable(fields_3d[n], data_interp, 'xyz')
+            if dim[n] == 3:
+                ncfile.add_variable(fields[n], data_interp, 'xyz')
+            else:
+                ncfile.add_variable(fields[n], data_interp, 'xy')
 
     if nc_out is not None:
-        ncfile.finished()
+        ncfile.close()
