@@ -27,6 +27,17 @@ def make_sose_climatology (in_file, out_file, dimensions):
     write_binary(climatology, out_file)
 
 
+# Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Temperature and salinity will be extrapolated into ice shelf cavities and coastal regions where SOSE is prone to artifacts.
+
+# Arguments:
+# grid_file: NetCDF grid file for your MITgcm configuration
+# sose_dir: directory containing SOSE monthly climatologies and grid/ subdirectory (available on Scihub at /data/oceans_input/raw_input_data/SOSE_monthly_climatology)
+# output_dir: directory to save the binary MITgcm initial conditions files (binary)
+
+# Optional keyword arguments:
+# nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
+# split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
+
 def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
 
     sose_dir = real_dir(sose_dir)

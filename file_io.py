@@ -169,7 +169,7 @@ def find_variable (file_path_1, file_path_2, var_name):
 
 def read_binary (filename, grid, dimensions, prec=32):
 
-    if dimensions not in ['xy', 'xyz', 'xyt', 'xyzt', 'z']:
+    if dimensions not in ['xy', 'xyz', 'xyt', 'xyzt', 'z', '1']:
         print 'Error (read_binary): invalid dimension code ' + dimensions
         sys.exit()
 
