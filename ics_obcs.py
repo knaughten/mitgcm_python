@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg
+from interpolation import interp_reg, extend_into_mask
 
 import numpy as np
 
@@ -39,6 +39,9 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     infile_tail = '_climatology.data'
     # End of filenames for output
     outfile_tail = '_SOSE.ini'
+
+    # Number of iterations to remove coastal points from SOSE
+    coast_iters = 10
     
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -58,20 +61,29 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     # Now build the SOSE grid
     sose_grid = SOSEGrid(sose_dir+'grid/', model_grid, split=split)
 
+    print 'Building mask for SOSE points to discard'
     # Figure out which points we don't trust
-    # Closed cells according to SOSE
-    sose_mask = sose_grid.hfac==0
-    # Closed cells according to model, interpolated to SOSE grid
-    # Take the floor so that a cell is only considered open if all points used to interpolate it were open
-    model_mask = np.floor(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), dim=3, fill_value=0))==0
-    # Ice shelf cavity points according to model, interpolated to SOSE grid and tiled to be 3D
-    model_zice = xy_to_xyz(interp_reg(model_grid, sose_grid, model_grid.zice, dim=2, fill_value=0), sose_grid)!=0
+    # (1) Closed cells according to SOSE
+    sose_mask = sose_grid.hfac == 0
+    # (2) Closed cells according to model, interpolated to SOSE grid
+    # Only consider a cell to be open if all the points used to interpolate it are open. But, there are some oscillatory interpolation errors which prevent some of these cells from being exactly 1. So set a threshold of 0.99 instead.
+    # Use a fill_value of 1 so that the boundaries of the domain are still considered ocean cells (since sose_grid is slightly larger than model_grid). Boundaries which should be closed will get masked in the next step.
+    model_open = interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), dim=3, fill_value=1)
+    model_mask = model_open < 0.99
+    # (3) Points near the coast (which SOSE tends to say are around 0C, even if this makes no sense). Extend the surface model_mask by coast_iters cells, and tile to be 3D. This will also remove all ice shelf cavities.
+    coast_mask = xy_to_xyz(extend_into_mask(model_mask[0,:], missing_val=0, num_iters=coast_iters), sose_grid)
     # Put them all together into one mask
-    discard = sose_mask*model_mask*model_zice
+    discard = (sose_mask + model_mask + coast_mask).astype(bool)
 
-    # Remaining steps:
-    # Figure out which points we don't trust
-    # Figure out which points we need to fill
+    print 'Building mask for SOSE points to fill'
+    # Now figure out which points we need for interpolation
+    # Open cells according to model, interpolated to SOSE grid
+    # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
+    fill = np.ceil(model_open)
+    # Extend into the mask a few times to make sure there are no artifacts near the coast
+    fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
+
+
     # Loop over variables:
     #   Read the data
     #   Remove the points we don't trust
