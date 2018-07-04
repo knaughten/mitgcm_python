@@ -40,7 +40,7 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
 
     # Tile the z coordinates to be the same size as temp and salt
     # First assume 3D arrays
-    z = z_to_xyz(grid.z, z)
+    z = z_to_xyz(grid.z, grid)
     if time_dependent:
         # 4D arrays
         num_time = temp.shape[0]
