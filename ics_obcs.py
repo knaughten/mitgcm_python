@@ -6,6 +6,7 @@ from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz
 from file_io import read_binary, write_binary, NCfile
 from interpolation import interp_reg, extend_into_mask, discard_and_fill
+from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
 
@@ -85,7 +86,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
-        ncfile = NCfile(nc_out, grid, 'xyz')
+        ncfile = NCfile(nc_out, model_grid, 'xyz')
 
     # Process 3D fields
     for n in range(len(fields_3d)):
