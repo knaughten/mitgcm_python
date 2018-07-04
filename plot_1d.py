@@ -62,7 +62,8 @@ def plot_fris_massbalance (file_path, grid, fig_name=None, monthly=True):
     ax.plot_date(time, melt+freeze, '-', color='black', linewidth=1.5, label='Total')
     ax.axhline(color='black')
     ax.grid(True)
-    #yearly_ticks(ax)
+    if not monthly:
+        monthly_ticks(ax)
     plt.title('Basal mass balance of FRIS', fontsize=18)
     plt.ylabel('Gt/y', fontsize=16)
     ax.legend()
@@ -115,7 +116,8 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
     fig, ax = plt.subplots()
     ax.plot_date(time, values, '-', linewidth=1.5)
     ax.grid(True)
-    #yearly_ticks(ax)
+    if not monthly:
+        monthly_ticks(ax)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
     finished_plot(fig, fig_name=fig_name)

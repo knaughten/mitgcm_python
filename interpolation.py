@@ -245,12 +245,12 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     return data_interp
 
 
-
+# Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
 def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
 
     # First throw away the points we don't trust
     data[discard] = missing_val
-    # Now fill the values we need to
+    # Now fill the values we need to fill
     num_missing = np.count_nonzero((data==missing_val)*fill)
     while num_missing > 0:
         print '......' + str(num_missing) + ' points to fill'

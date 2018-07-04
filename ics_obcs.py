@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask
+from interpolation import interp_reg, extend_into_mask, discard_and_fill
 
 import numpy as np
 
@@ -83,21 +83,6 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
-
-    # Loop over variables:
-    #   Read the data
-    #   Remove the points we don't trust
-    #   Fill the points we need to fill
-    #   Interpolate
-    #   Write to file
-    
-
-
-    
-    '''print 'Interpolating mask'
-    # Figure out which points on the model grid can't be reliably interpolated from SOSE output (as they are outside the bounds, within the land/ice-shelf mask, or too near the coast)
-    interp_mask = interp_reg_3d_mask(grid, sose_grid)
-
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
         ncfile = NCfile(nc_out, grid, 'xyz')
@@ -109,8 +94,13 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
         out_file = output_dir + fields_2d[n] + outfile_tail
         print '...reading ' + in_file
         # Just keep the January climatology
-        sose_data = read_binary(in_file, sose_grid, 'xyzt')[0,:]
-        data_interp = interp_fill_reg_3d(grid, sose_grid, sose_data, interp_mask)
+        sose_data = sose_grid.read_field(in_file, 'xyzt')[0,:]
+        print '...extrapolating into cavities'
+        sose_data = discard_and_fill(sose_data, discard, fill)
+        print '...interpolating to model grid'
+        data_interp = interp_reg(sose_grid, model_grid, sose_data)
+        # Fill the land mask with zeros
+        data_interp[model_grid.hfac==0] = 0
         print '...writing ' + out_file
         write_binary(data_interp, out_file)
         if nc_out is not None:
@@ -118,4 +108,4 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
             ncfile.add_variable(fields_3d[n], data_interp, 'xyz')
 
     if nc_out is not None:
-        ncfile.finished()'''
+        ncfile.finished()
