@@ -98,7 +98,8 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
         if dim[n] == 3:
             sose_data = sose_grid.read_field(in_file, 'xyzt')[0,:]
         else:
-            sose_data = sose_grid.read_field(in_file, 'xyt')[0,:]
+            # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
+            sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
         # Temperature and salinity should have some values discarded, and extrapolated into cavities. There's no need to do this for the 2D sea ice variables.
         if dim[n] == 3:
             print '...extrapolating into cavities'
