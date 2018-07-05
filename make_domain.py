@@ -10,7 +10,7 @@ import os
 
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
-from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box
+from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, select_top, z_to_xyz
 from interpolation import extend_into_mask, interp_topo, neighbours, remove_isolated_cells 
 from plot_latlon import plot_tmp_domain
 from grid import Grid
@@ -81,6 +81,8 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 def interp_bedmap2 (lon, lat, topo_dir, nc_out, seb_updates=True):
+
+    topo_dir = real_dir(topo_dir)
 
     # BEDMAP2 file names
     if seb_updates:
@@ -501,4 +503,41 @@ def check_final_grid (grid_path):
         print 'Something went wrong with the digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
     else:
         print 'Everything looks good!'
-        
+
+
+def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, out_file, rhoConst=1035, prec=64):
+
+    print 'Two things to check in your "data" namelist:'
+    print "eosType='MDJWF'"
+    print 'rhoConst='+str(rhoConst)
+
+    g = 9.81  # gravity (m/s^2)
+    drho_dz = 4.78e-3  # vertical density gradient of water displaced by ice (assumed constant)
+
+    # Load the MDJWF density function
+    mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
+    if not os.path.isfile(mitgcm_utils_path+'mdjwf.py'):
+        print 'Error (calc_load_anomaly): ' + mitgcm_utils_path + ' does not contain the script mdjwf.py.'
+        sys.exit()    
+    sys.path.insert(0, mitgcm_utils_path)
+    from mdjwf import densmdjwf
+
+    # Build the grid
+    grid = Grid(grid_path)
+
+    # Calculate the initial potential density in the first layer below the ice shelves
+    # Read initial temperature and salinity, and apply 3D mask (hFacC)
+    temp_top = select_top(mask_3d(read_binary(init_t_path, grid, 'xyz', prec=prec), grid))
+    salt_top = select_top(mask_3d(read_binary(init_s_path, grid, 'xyz', prec=prec), grid))
+    rho_top = densmdjwf(salt_top, temp_top, np.zeros(temp_top.shape))
+
+    # Now find the depth of this density: halfway between the ice shelf base (as seen by the model after hFac corrections) and the layer below it
+    z_top = 0.5*(grid.zice + select_top(mask_3d(z_to_xyz(grid.z_edges[1:], grid), grid)))
+
+    # Now we can calculate the analytical solution to the integral
+    pload = g*grid.zice*(rho_top + drho_dz*(0.5*grid.zice - z_top) - rhoConst)
+
+    # Write to file
+    write_binary(pload, out_file, prec=prec)
+
+    

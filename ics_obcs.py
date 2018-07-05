@@ -38,7 +38,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
+def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -123,7 +123,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180):
         else:
             data_interp[model_grid.hfac[0,:]==0] = 0
         print '...writing ' + out_file
-        write_binary(data_interp, out_file)
+        write_binary(data_interp, out_file, prec=prec)
         if nc_out is not None:
             print '...adding to ' + nc_out
             if dim[n] == 3:
