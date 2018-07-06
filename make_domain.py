@@ -241,7 +241,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     # (This will also remove grounded ice, and ice shelves with total thickness (draft + freeboard) thinner than firn_air)
     index = draft_interp == 0
     imask_interp[index] = 0
-    index = mask_interp == 0
+    index = mass_interp == 0
     imask_interp[index] = 0
 
     print 'Removing isolated ocean cells'
