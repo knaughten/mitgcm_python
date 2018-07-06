@@ -507,9 +507,10 @@ def check_final_grid (grid_path):
 
 def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, out_file, option='constant', rhoConst=1035, prec=64):
 
-    print 'Two things to check in your "data" namelist:'
+    print 'Things to check in your "data" namelist:'
     print "eosType='MDJWF'"
     print 'rhoConst='+str(rhoConst)
+    print 'readBinaryPrec=64'
 
     g = 9.81  # gravity (m/s^2)
     if option == 'gradient':
@@ -541,8 +542,7 @@ def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, ou
 
     if option == 'gradient':
 
-        # Now find the depth of this density: halfway between the ice shelf base (as seen by the model after hFac corrections) and the layer below it
-        # We want positive depths for this calculation
+        # Find the (positive) depth of this density: halfway between the ice shelf base (as seen by the model after hFac corrections) and the layer below it
         z_top = 0.5*(draft + abs(select_top(mask_3d(z_to_xyz(grid.z_edges[1:], grid), grid))))
         z_top[z_top.mask] = 0
 

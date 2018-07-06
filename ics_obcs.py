@@ -102,9 +102,10 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
         # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
         fill = np.ceil(model_open)
     elif cavity_option == 'constant':
-        # Don't care about ice shelf cavity points
-        model_cavity = interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)
-        fill = np.ceil(model_open)*np.invert(np.ceil(model_cavity).astype(bool))
+        # Find ice shelf cavity points        
+        model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
+        # Don't care about ice shelf cavity points in the fill mask
+        fill = np.ceil(model_open)*np.invert(model_cavity)
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
@@ -128,11 +129,11 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
         if dim[n] == 3:
             print '...extrapolating into missing regions'
             sose_data = discard_and_fill(sose_data, discard, fill)
-        print '...interpolating to model grid'
-        data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         if dim[n] == 3 and cavity_option == 'constant':
             # Fill cavity points with constant values
-           data_interp[xy_to_xyz(model_grid.zice_mask, model_grid)] = constant_value[n]
+            sose_data[model_cavity] = constant_value[n]
+        print '...interpolating to model grid'
+        data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         # Fill the land mask with zeros
         if dim[n] == 3:
             data_interp[model_grid.hfac==0] = 0
