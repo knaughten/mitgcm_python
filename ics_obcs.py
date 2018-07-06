@@ -36,8 +36,10 @@ def make_sose_climatology (in_file, out_file, dimensions):
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
-# cavity_option: 'constant' (fill ice shelf
+# cavity_option: 'constant' (fill ice shelf cavities with constant_t and constant_s) or 'extrapolate' (extrapolate SOSE data all the way back into the cavities)
+# constant_t, constant_s: temperature and salinity to fill ice shelf cavities with if cavity_option='constant'
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
+# prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
 def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='constant', constant_t=-1.9, constant_s=34.4, split=180, prec=64):
 
@@ -130,7 +132,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
         data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         if dim[n] == 3 and cavity_option == 'constant':
             # Fill cavity points with constant values
-           data_interp[xy_to_xyz(model_grid.zice_mask, grid)] = constant_value[n]
+           data_interp[xy_to_xyz(model_grid.zice_mask, model_grid)] = constant_value[n]
         # Fill the land mask with zeros
         if dim[n] == 3:
             data_interp[model_grid.hfac==0] = 0
