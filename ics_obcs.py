@@ -38,7 +38,10 @@ def make_sose_climatology (in_file, out_file, dimensions):
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180, prec=64):
+def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='constant', constant_t=-1.9, constant_s=34.4, split=180, prec=64):
+
+    if cavity_option not in ['constant', 'extrapolate']:
+        print 'Error (sose_ics): invalid cavity_option ' + cavity_option
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -47,6 +50,8 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180, prec=64):
     fields = ['THETA', 'SALT', 'SIarea', 'SIheff']
     # Flag for 2D or 3D
     dim = [3, 3, 2, 2]
+    # Constant values (if cavity_option='constant')
+    constant_value = [constant_t, constant_s, 0, 0]
     # End of filenames for input
     infile_tail = '_climatology.data'
     # End of filenames for output
@@ -89,9 +94,13 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180, prec=64):
 
     print 'Building mask for SOSE points to fill'
     # Now figure out which points we need for interpolation
-    # Open cells according to model, interpolated to SOSE grid
-    # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
-    fill = np.ceil(model_open)
+    if cavity_option == 'extrapolate':
+        # Open cells according to model, interpolated to SOSE grid
+        # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
+        fill = np.ceil(model_open)
+    elif cavity_option == 'constant':
+        # Don't care about ice shelf cavity points
+        fill = np.ceil(model_open)*xy_to_xyz(np.invert(model_grid.zice_mask), model_grid)
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
@@ -113,10 +122,13 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, split=180, prec=64):
             sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
         # Temperature and salinity should have some values discarded, and extrapolated into cavities. There's no need to do this for the 2D sea ice variables.
         if dim[n] == 3:
-            print '...extrapolating into cavities'
+            print '...extrapolating into missing regions'
             sose_data = discard_and_fill(sose_data, discard, fill)
         print '...interpolating to model grid'
         data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
+        if dim[n] == 3 and cavity_option == 'constant':
+            # Fill cavity points with constant values
+           data_interp[xy_to_xyz(model_grid.zice_mask, grid)] = constant_value[n]
         # Fill the land mask with zeros
         if dim[n] == 3:
             data_interp[model_grid.hfac==0] = 0

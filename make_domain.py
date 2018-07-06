@@ -512,7 +512,7 @@ def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, ou
     print 'rhoConst='+str(rhoConst)
 
     g = 9.81  # gravity (m/s^2)
-    drho_dz = 4.78e-3  # vertical density gradient of water displaced by ice (assumed constant)
+    drho_dz = 4.78e-3  # vertical density gradient of water displaced by ice (kg/m^4, assumed constant, depths are positive)
 
     # Load the MDJWF density function
     mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
@@ -526,16 +526,21 @@ def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, ou
     grid = Grid(grid_path)
 
     # Calculate the initial potential density in the first layer below the ice shelves
-    # Read initial temperature and salinity, and apply 3D mask (hFacC)
     temp_top = select_top(mask_3d(read_binary(init_t_path, grid, 'xyz', prec=prec), grid))
     salt_top = select_top(mask_3d(read_binary(init_s_path, grid, 'xyz', prec=prec), grid))
+    # Fill the land mask with zeros
+    temp_top[temp_top.mask] = 0
+    salt_top[salt_top.mask] = 0
     rho_top = densmdjwf(salt_top, temp_top, np.zeros(temp_top.shape))
 
     # Now find the depth of this density: halfway between the ice shelf base (as seen by the model after hFac corrections) and the layer below it
-    z_top = 0.5*(grid.zice + select_top(mask_3d(z_to_xyz(grid.z_edges[1:], grid), grid)))
+    # We want positive depths for this calculation
+    draft = abs(grid.zice)
+    z_top = 0.5*(draft + abs(select_top(mask_3d(z_to_xyz(grid.z_edges[1:], grid), grid))))
+    z_top[z_top.mask] = 0
 
     # Now we can calculate the analytical solution to the integral
-    pload = g*grid.zice*(rho_top + drho_dz*(0.5*grid.zice - z_top) - rhoConst)
+    pload = g*draft*(rho_top + drho_dz*(0.5*draft - z_top) - rhoConst)
 
     # Write to file
     write_binary(pload, out_file, prec=prec)
