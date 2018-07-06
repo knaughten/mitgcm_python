@@ -6,7 +6,6 @@ import numpy as np
 import sys
 import netCDF4 as nc
 import shutil
-import os
 
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary

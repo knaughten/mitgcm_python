@@ -9,6 +9,7 @@ from interpolation import interp_reg, extend_into_mask, discard_and_fill
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
+import os
 
 
 # Calculate a monthly climatology of the given variable in SOSE, from its monthly output over the entire 6-year reanalysis.
