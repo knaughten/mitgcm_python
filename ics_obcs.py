@@ -36,6 +36,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
+# cavity_option: 'constant' (fill ice shelf
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 
 def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='constant', constant_t=-1.9, constant_s=34.4, split=180, prec=64):
@@ -101,7 +102,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
     elif cavity_option == 'constant':
         # Don't care about ice shelf cavity points
         model_cavity = interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)
-        fill = np.ceil(model_open)*np.ceil(np.invert(model_cavity))
+        fill = np.ceil(model_open)*np.invert(np.ceil(model_cavity).astype(bool))
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
