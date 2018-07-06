@@ -10,7 +10,7 @@ import os
 
 from constants import deg2rad
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
-from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, select_top, z_to_xyz
+from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d
 from interpolation import extend_into_mask, interp_topo, neighbours, remove_isolated_cells 
 from plot_latlon import plot_tmp_domain
 from grid import Grid
@@ -81,7 +81,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     return lon, lat
 
 
-# Interpolate BEDMAP2 bathymetry, ice shelf draft, ice shelf mass, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
+# Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # If you are using the Filchner updates from Sebastian, set bed_file='bedmap2_bed_seb.flt'.
 def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
 
@@ -99,10 +99,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
     bedmap_res = 1000    # Resolution (m)
     missing_val = -9999    # Missing value for bathymetry north of 60S
-
-    # Parameters for ice mass calculation
-    rho_ice = 920  # density of solid ice (kg/m^3)
-    firn_air = 14.6  # air content of firn (m)
 
     if np.amin(lat) > -60:
         print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
@@ -139,9 +135,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     # Calculate ice shelf draft from ice surface and ice thickness
     draft = surf - thick
 
-    print 'Calculating ice shelf mass'
-    mass = np.maximum(rho_ice*(thick - firn_air), 0)
-
     print 'Calculating ocean and ice masks'
     # Mask: -9999 is open ocean, 0 is grounded ice, 1 is ice shelf
     # Make an ocean mask and an ice mask. Ice shelves are in both.
@@ -157,8 +150,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     bathy_interp = interp_topo(x, y, bathy, x_interp, y_interp)
     print 'Interpolating ice shelf draft'
     draft_interp = interp_topo(x, y, draft, x_interp, y_interp)
-    print 'Interpolating ice shelf mass'
-    mass_interp = interp_topo(x, y, mass, x_interp, y_interp)
     print 'Interpolating ocean mask'
     omask_interp = interp_topo(x, y, omask, x_interp, y_interp)
     print 'Interpolating ice mask'
@@ -191,18 +182,15 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
         # Deep copy the BEDMAP2 section of each field
         bathy_bedmap_interp = np.copy(bathy_interp)
         draft_bedmap_interp = np.copy(draft_interp)
-        mass_bedmap_interp = np.copy(mass_interp)
         omask_bedmap_interp = np.copy(omask_interp)
         imask_bedmap_interp = np.copy(imask_interp)
         # Now combine them (remember we interpolated to the centres of grid cells, but lat and lon arrays define the edges, so minus 1 in each dimension)
         bathy_interp = np.empty([lat.size-1, lon.size-1])
         bathy_interp[:j_split-1,:] = bathy_bedmap_interp
         bathy_interp[j_split-1:,:] = bathy_gebco_interp
-        # Ice shelf draft and mass will be 0 in GEBCO region
+        # Ice shelf draft will be 0 in GEBCO region
         draft_interp = np.zeros([lat.size-1, lon.size-1])
         draft_interp[:j_split-1,:] = draft_bedmap_interp
-        mass_interp = np.zeros([lat.size-1, lon.size-1])
-        mass_interp[:j_split-1,:] = mass_bedmap_interp
         # Set ocean mask to 1 in GEBCO region; any land points will be updated later based on bathymetry > 0
         omask_interp = np.ones([lat.size-1, lon.size-1])
         omask_interp[:j_split-1,:] = omask_bedmap_interp
@@ -216,13 +204,11 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     omask_interp[omask_interp >= 0.5] = 1
     imask_interp[imask_interp < 0.5] = 0
     imask_interp[imask_interp >= 0.5] = 1
-    # Zero out bathymetry and ice shelf draft and mass on land    
+    # Zero out bathymetry and ice shelf draft on land    
     bathy_interp[omask_interp==0] = 0
     draft_interp[omask_interp==0] = 0
-    mass_interp[omask_interp==0] = 0
-    # Zero out ice shelf draft and mass in the open ocean
+    # Zero out ice shelf draft in the open ocean
     draft_interp[imask_interp==0] = 0
-    mass_interp[imask_interp==0] = 0
     
     # Update masks due to interpolation changing their boundaries
     # Anything with positive bathymetry should be land
@@ -230,30 +216,24 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     omask_interp[index] = 0
     bathy_interp[index] = 0
     draft_interp[index] = 0
-    mass_interp[index] = 0
     # Anything with negative or zero water column thickness should be land
     index = draft_interp - bathy_interp <= 0
     omask_interp[index] = 0
     bathy_interp[index] = 0
     draft_interp[index] = 0
-    mass_interp[index] = 0
-    # Any points with zero ice shelf draft or mass should not be in the ice mask
+    # Any points with zero ice shelf draft should not be in the ice mask
     # (This will also remove grounded ice, and ice shelves with total thickness (draft + freeboard) thinner than firn_air)
     index = draft_interp == 0
-    imask_interp[index] = 0
-    index = mass_interp == 0
     imask_interp[index] = 0
 
     print 'Removing isolated ocean cells'
     omask_interp = remove_isolated_cells(omask_interp)
     bathy_interp[omask_interp==0] = 0
     draft_interp[omask_interp==0] = 0
-    mass_interp[omask_interp==0] = 0
     imask_interp[omask_interp==0] = 0
     print 'Removing isolated ice shelf cells'
     imask_interp = remove_isolated_cells(imask_interp)
     draft_interp[imask_interp==0] = 0
-    mass_interp[imask_interp==0] = 0
         
     print 'Plotting'
     if use_gebco:
@@ -261,7 +241,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
         lon_2d, lat_2d = np.meshgrid(lon, lat)
     plot_tmp_domain(lon_2d, lat_2d, bathy_interp, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp, title='Ice shelf draft (m)')
-    plot_tmp_domain(lon_2d, lat_2d, mass_interp, title='Ice shelf mass (kg/m^2)')
     plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')
     plot_tmp_domain(lon_2d, lat_2d, omask_interp, title='Ocean mask')
     plot_tmp_domain(lon_2d, lat_2d, imask_interp, title='Ice mask')
@@ -270,7 +249,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     ncfile = NCfile_basiclatlon(nc_out, 0.5*(lon[1:] + lon[:-1]), 0.5*(lat[1:] + lat[:-1]))
     ncfile.add_variable('bathy', bathy_interp, units='m')
     ncfile.add_variable('draft', draft_interp, units='m')
-    ncfile.add_variable('mass', mass_interp, units='kg/m^2')
     ncfile.add_variable('omask', omask_interp)
     ncfile.add_variable('imask', imask_interp)
     ncfile.close()
@@ -287,20 +265,18 @@ def read_nc_grid (nc_file):
     lat = read_netcdf(nc_file, 'lat')
     bathy = read_netcdf(nc_file, 'bathy')
     draft = read_netcdf(nc_file, 'draft')
-    mass = read_netcdf(nc_file, 'mass')
     omask = read_netcdf(nc_file, 'omask')
     imask = read_netcdf(nc_file, 'imask')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
-    return lon_2d, lat_2d, bathy, draft, mass, omask, imask
+    return lon_2d, lat_2d, bathy, draft, omask, imask
 
 
 # Helper function to update variables in a temporary NetCDF grid file
-def update_nc_grid (nc_file, bathy, draft, mass, omask, imask):
+def update_nc_grid (nc_file, bathy, draft, omask, imask):
 
     id = nc.Dataset(nc_file, 'a')
     id.variables['bathy'][:] = bathy
     id.variables['draft'][:] = draft
-    id.variables['mass'][:] = mass
     id.variables['omask'][:] = omask
     id.variables['imask'][:] = imask
     id.close()    
@@ -318,7 +294,7 @@ def update_nc_grid (nc_file, bathy, draft, mass, omask, imask):
 def edit_mask (nc_in, nc_out, key='WSB'):
 
     # Read all the variables
-    lon_2d, lat_2d, bathy, draft, mass, omask, imask = read_nc_grid(nc_in)
+    lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
 
     # Edit the ocean mask based on the domain type
     if key == 'WSB':
@@ -341,13 +317,12 @@ def edit_mask (nc_in, nc_out, key='WSB'):
     index = omask == 0
     bathy[index] = 0
     draft[index] = 0
-    mass[index] = 0
     imask[index] = 0
 
     # Copy the NetCDF file to a new name
     shutil.copyfile(nc_in, nc_out)
     # Update the variables
-    update_nc_grid(nc_out, bathy, draft, mass, omask, imask)
+    update_nc_grid(nc_out, bathy, draft, omask, imask)
 
     print "Fields updated successfully. The deepest bathymetry is now " + str(abs(np.amin(bathy))) + " m."
 
@@ -415,7 +390,7 @@ def dig_one_direction (bathy, bathy_limit):
 def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
 
     # Read all the variables
-    lon_2d, lat_2d, bathy, draft, mass, omask, imask = read_nc_grid(nc_in)
+    lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
     # Generate the vertical grid
     dz, z_edges = vertical_layers(dz_file)
     if z_edges[-1] > np.amin(bathy):
@@ -468,7 +443,6 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
         index = (draft != 0)*(abs(draft) < 0.5*dz[0])
         print '...' + str(np.count_nonzero(index)) + ' cells to zap'
         draft[index] = 0
-        mass[index] = 0
         imask[index] = 0
         # Plot how the results have changed
         plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, index.astype(int)), title='Ice shelf points which were zapped')
@@ -476,20 +450,18 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # Copy the NetCDF file to a new name
     shutil.copyfile(nc_in, nc_out)
     # Update the variables
-    update_nc_grid(nc_out, bathy, draft, mass, omask, imask)
+    update_nc_grid(nc_out, bathy, draft, omask, imask)
 
     print "The updated grid has been written into " + nc_out + ". Take a look and make sure everything looks okay. If you're happy, run write_topo_files to generate the binary files for MITgcm input."
 
     
-# Write the bathymetry, ice shelf draft, and ice shelf mass fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
-def write_topo_files (nc_grid, bathy_file, draft_file, mass_file, prec=64):
+# Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
+def write_topo_files (nc_grid, bathy_file, draft_file, prec=64):
 
     bathy = read_netcdf(nc_grid, 'bathy')
     draft = read_netcdf(nc_grid, 'draft')
-    mass = read_netcdf(nc_grid, 'mass')
     write_binary(bathy, bathy_file, prec=prec)
     write_binary(draft, draft_file, prec=prec)
-    write_binary(mass, mass_file, prec=prec)
     print 'Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.'
 
 

@@ -3,7 +3,7 @@
 ###########################################################
 
 from grid import Grid, SOSEGrid
-from utils import real_dir, xy_to_xyz
+from utils import real_dir, xy_to_xyz, select_top, z_to_xyz
 from file_io import read_binary, write_binary, NCfile
 from interpolation import interp_reg, extend_into_mask, discard_and_fill
 from constants import sose_nx, sose_ny, sose_nz
@@ -27,7 +27,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
     write_binary(climatology, out_file)
 
 
-# Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Temperature and salinity will be extrapolated into ice shelf cavities and coastal regions where SOSE is prone to artifacts.
+# Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Temperature and salinity will be extrapolated into coastal regions where SOSE is prone to artifacts. Ice shelf cavities will be filled with constant temperature and salinity.
 
 # Arguments:
 # grid_file: NetCDF grid file for your MITgcm configuration
@@ -36,15 +36,11 @@ def make_sose_climatology (in_file, out_file, dimensions):
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
-# cavity_option: 'constant' (fill ice shelf cavities with constant_t and constant_s) or 'extrapolate' (extrapolate SOSE data all the way back into the cavities)
-# constant_t, constant_s: temperature and salinity to fill ice shelf cavities with if cavity_option='constant'
+# constant_t, constant_s: temperature and salinity to fill ice shelf cavities with (default -1.9 C and 34.4 psu)
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='constant', constant_t=-1.9, constant_s=34.4, split=180, prec=64):
-
-    if cavity_option not in ['constant', 'extrapolate']:
-        print 'Error (sose_ics): invalid cavity_option ' + cavity_option
+def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -53,7 +49,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
     fields = ['THETA', 'SALT', 'SIarea', 'SIheff']
     # Flag for 2D or 3D
     dim = [3, 3, 2, 2]
-    # Constant values (if cavity_option='constant')
+    # Constant values for ice shelf cavities
     constant_value = [constant_t, constant_s, 0, 0]
     # End of filenames for input
     infile_tail = '_climatology.data'
@@ -96,16 +92,12 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
     discard = (sose_mask + model_mask + coast_mask).astype(bool)
 
     print 'Building mask for SOSE points to fill'
-    # Now figure out which points we need for interpolation
-    if cavity_option == 'extrapolate':
-        # Open cells according to model, interpolated to SOSE grid
-        # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
-        fill = np.ceil(model_open)
-    elif cavity_option == 'constant':
-        # Find ice shelf cavity points        
-        model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
-        # Don't care about ice shelf cavity points in the fill mask
-        fill = np.ceil(model_open)*np.invert(model_cavity)
+    # Figure out which points we need for interpolation
+    # Find ice shelf cavity points according to model, interpolated to SOSE grid
+    model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
+    # Find open, non-cavity cells
+    # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
+    fill = np.ceil(model_open)*np.invert(model_cavity)
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
@@ -129,7 +121,6 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
         if dim[n] == 3:
             print '...extrapolating into missing regions'
             sose_data = discard_and_fill(sose_data, discard, fill)
-        if dim[n] == 3 and cavity_option == 'constant':
             # Fill cavity points with constant values
             sose_data[model_cavity] = constant_value[n]
         print '...interpolating to model grid'
@@ -150,3 +141,36 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
 
     if nc_out is not None:
         ncfile.close()
+
+
+        
+def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
+
+    print 'Things to check in your "data" namelist:'
+    print "eosType='MDJWF'"
+    print 'rhoConst='+str(rhoConst)
+    print 'readBinaryPrec=' + prec
+
+    g = 9.81  # gravity (m/s^2)
+
+    # Build the grid
+    grid = Grid(grid_path)
+    draft = abs(grid.zice)
+
+    # Load the MDJWF density function
+    mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
+    if not os.path.isfile(mitgcm_utils_path+'mdjwf.py'):
+        print 'Error (calc_load_anomaly): ' + mitgcm_utils_path + ' does not contain the script mdjwf.py.'
+        sys.exit()    
+    sys.path.insert(0, mitgcm_utils_path)
+    from mdjwf import densmdjwf
+
+    # Calculate the (potential) density of the given T and S
+    rho_cavity = densmdjwf(constant_s, constant_t, 0)
+    # Analytical solution to the density integral
+    pload = g*draft*(rho_cavity - rhoConst)
+
+    # Write to file
+    write_binary(pload, out_file, prec=prec)
+
+    
