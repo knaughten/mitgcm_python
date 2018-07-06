@@ -140,7 +140,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     draft = surf - thick
 
     print 'Calculating ice shelf mass'
-    mass = max(rho_ice*(thick - firn_air), 0)
+    mass = np.maximum(rho_ice*(thick - firn_air), 0)
 
     print 'Calculating ocean and ice masks'
     # Mask: -9999 is open ocean, 0 is grounded ice, 1 is ice shelf
