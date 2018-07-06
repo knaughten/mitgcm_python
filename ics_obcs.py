@@ -100,7 +100,8 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, cavity_option='const
         fill = np.ceil(model_open)
     elif cavity_option == 'constant':
         # Don't care about ice shelf cavity points
-        fill = np.ceil(model_open)*xy_to_xyz(np.invert(model_grid.zice_mask), model_grid)
+        model_cavity = interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)
+        fill = np.ceil(model_open)*np.ceil(np.invert(model_cavity))
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
