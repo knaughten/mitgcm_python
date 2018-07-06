@@ -230,7 +230,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     omask_interp[index] = 0
     bathy_interp[index] = 0
     draft_interp[index] = 0
-    massk_interp[index] = 0
+    mass_interp[index] = 0
     # Anything with negative or zero water column thickness should be land
     index = draft_interp - bathy_interp <= 0
     omask_interp[index] = 0
