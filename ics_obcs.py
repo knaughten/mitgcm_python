@@ -149,7 +149,7 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     print 'Things to check in your "data" namelist:'
     print "eosType='MDJWF'"
     print 'rhoConst='+str(rhoConst)
-    print 'readBinaryPrec=' + prec
+    print 'readBinaryPrec=' + str(prec)
 
     g = 9.81  # gravity (m/s^2)
 
