@@ -145,7 +145,18 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         ncfile.close()
 
 
-        
+# Calculate the initial pressure loading anomaly of the ice shelf. Assume that the water displaced by the ice shelf has the same temperature and salinity as the constant values we filled the ice shelf cavities with in sose_ics.
+
+# Arguments:
+# grid_path: path to NetCDF grid file
+# mitgcm_code_path: path to your copy of the MITgcm source code repository. This is needed so we can access the official function for MDJWF density calculation.
+# out_file: path to desired output file
+
+# Optional keyword arguments:
+# constant_t, constant_s: as in function sose_ics
+# rhoConst: reference density as in MITgcm's "data" namelist
+# prec: as in function sose_ics
+
 def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
 
     print 'Things to check in your "data" namelist:'
@@ -155,10 +166,6 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
 
     g = 9.81  # gravity (m/s^2)
 
-    # Build the grid
-    grid = Grid(grid_path)
-    draft = abs(grid.zice)
-
     # Load the MDJWF density function
     mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
     if not os.path.isfile(mitgcm_utils_path+'mdjwf.py'):
@@ -167,10 +174,13 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     sys.path.insert(0, mitgcm_utils_path)
     from mdjwf import densmdjwf
 
-    # Calculate the (potential) density of the given T and S
+    # Build the grid
+    grid = Grid(grid_path)
+
+    # Calculate the (potential) density of the given T and S.
     rho_cavity = densmdjwf(constant_s, constant_t, 0)
     # Analytical solution to the density integral
-    pload = g*draft*(rho_cavity - rhoConst)
+    pload = g*abs(grid.zice)*(rho_cavity - rhoConst)
 
     # Write to file
     write_binary(pload, out_file, prec=prec)
