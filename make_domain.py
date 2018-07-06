@@ -537,7 +537,9 @@ def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, ou
         salt_top = select_top(mask_3d(read_binary(init_s_path, grid, 'xyz', prec=prec), grid))
         # Fill the land mask with zeros
         temp_top[temp_top.mask] = 0
+        temp_top = temp_top.data
         salt_top[salt_top.mask] = 0
+        salt_top = salt_top.data
         rho_top = densmdjwf(salt_top, temp_top, np.zeros(temp_top.shape))
 
     if option == 'gradient':
@@ -545,6 +547,7 @@ def calc_load_anomaly (grid_path, init_t_path, init_s_path, mitgcm_code_path, ou
         # Find the (positive) depth of this density: halfway between the ice shelf base (as seen by the model after hFac corrections) and the layer below it
         z_top = 0.5*(draft + abs(select_top(mask_3d(z_to_xyz(grid.z_edges[1:], grid), grid))))
         z_top[z_top.mask] = 0
+        z_top = z_top.data
 
     # Now we can calculate the analytical solution to the integral
     if option == 'constant':
