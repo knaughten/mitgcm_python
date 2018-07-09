@@ -3,9 +3,9 @@
 ###########################################################
 
 from grid import Grid, SOSEGrid
-from utils import real_dir, xy_to_xyz, select_top, z_to_xyz
+from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -165,6 +165,7 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     print 'readBinaryPrec=' + str(prec)
 
     g = 9.81  # gravity (m/s^2)
+    errorTol = 1e-7  # convergence criteria
 
     # Load the MDJWF density function
     mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
@@ -177,10 +178,49 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     # Build the grid
     grid = Grid(grid_path)
 
-    # Calculate the (potential) density of the given T and S.
-    rho_cavity = densmdjwf(constant_s, constant_t, 0)
-    # Analytical solution to the density integral
-    pload = g*abs(grid.zice)*(rho_cavity - rhoConst)
+    # Get vertical integrands considering z at both centres and edges of layers
+    dz_merged = np.zeros(2*grid.nz)
+    dz_merged[::2] = abs(grid.z - grid.z_edges[:-1])  # dz of top half of each cell
+    dz_merged[1::2] = abs(grid.z_edges[1:] - grid.z)  # dz of bottom half of each cell
+    dz_merged = z_to_xyz(dz_merged, grid)  # Tiled to be 3D
+    # Initial guess for pressure (dbar) at centres of cells
+    press = z_to_xyz(abs(grid.z)*g*rhoConst*1e-4, grid)
+    # Tile T and S to be 3D
+    temp = np.zeros([grid.nz, grid.ny, grid.nx]) + constant_t
+    salt = np.zeros([grid.nz, grid.ny, grid.nx]) + constant_s
+
+    # Iteratively calculate pressure load anomaly until it converges
+    press_old = np.zeros(press.shape)  # Dummy initial value for pressure from last iteration
+    while rms(press, press_old) > errorTol:
+        print 'RMS error = ' + str(rms(press, press_old))
+        # Save old pressure
+        press_old = np.copy(press)
+        # Calculate density anomaly at centres of cells
+        drho_c = densmdjwf(salt, temp, press) - rhoConst
+        # Use this for both centres and edges of cells
+        drho = np.zeros(dz_merged.shape)
+        drho[:,:,::2] = drho_c
+        drho[:,:,1::2] = drho_c
+        # Integrate pressure load anomaly (Pa)
+        pload_3d = np.cumsum(drho*g*dz_merged, axis=0)
+        # Update estimate of pressure
+        press = (abs(grid.z)*g*rhoConst + pload_3d[1::2])*1e-4
+    print 'Converged'
+
+    # Now extract pload at the ice shelf base
+    # We only need pload at edges now
+    pload_3d = pload_3d[::2]
+    # For each xy point, calculate three variables:
+    # (1) pload at the base of the last fully dry ice shelf cell
+    # (2) pload at the base of the cell beneath that
+    # (3) hFacC for that cell
+    # To calculate (1) we have to shift pload_3d_edges upward by 1 cell
+    pload_3d_above = neighbours_z(pload_3d)[1]
+    pload_above = select_top(pload_3d_above, masked=False, grid=grid)
+    pload_below = select_top(pload_3d, masked=False, grid=grid)
+    hfac_below = select_top(grid.hfac, masked=False, grid=grid)
+    # Now we can interpolate to the ice base
+    pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
 
     # Write to file
     write_binary(pload, out_file, prec=prec)

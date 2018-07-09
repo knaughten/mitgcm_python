@@ -99,19 +99,19 @@ def neighbours (data, missing_val=-9999):
     return data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours
 
 
-# Like the neighbours function, but in the vertical dimension: neighbours above and below.
+# Like the neighbours function, but in the vertical dimension: neighbours above and below
 def neighbours_z (data, missing_val=-9999):
 
-    data_d = np.empty(data.shape)
-    data_d[...,1:,:,:] = data[...,:-1,:,:]
-    data_d[...,0,:,:] = data[...,0,:,:]
     data_u = np.empty(data.shape)
-    data_u[...,:-1,:,:] = data[...,1:,:,:]
-    data_u[...,-1,:,:] = data[...,-1,:,:]
-    valid_d = (data_d != missing_val).astype(float)
+    data_u[...,1:,:,:] = data[...,:-1,:,:]
+    data_u[...,0,:,:] = data[...,0,:,:]
+    data_d = np.empty(data.shape)
+    data_d[...,:-1,:,:] = data[...,1:,:,:]
+    data_d[...,-1,:,:] = data[...,-1,:,:]
     valid_u = (data_u != missing_val).astype(float)
-    num_valid_neighbours_z = valid_d + valid_u
-    return data_d, data_u, valid_d, valid_u, num_valid_neighbours_z
+    valid_d = (data_d != missing_val).astype(float)
+    num_valid_neighbours_z = valid_u + valid_d
+    return data_u, data_d, valid_u, valid_d, num_valid_neighbours_z
 
     
 # Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.

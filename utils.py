@@ -37,8 +37,17 @@ def convert_ismr (shifwflx):
 
 
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
-# The only assumptions about the input array are that 1) it is masked with hfac (see mask_3d below), 2) the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
-def select_top (data):
+# If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d).
+# The only assumption about the input array dimensions is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
+def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False):
+
+    if not masked:
+        if grid is None:
+            print 'Error (select_top): need to supply grid if masked=False'
+            sys.exit()
+        data_masked = mask_3d(np.copy(data), grid, gtype=gtype, time_dependent=time_dependent)
+    else:
+        data_masked = data            
 
     # Figure out the dimensions of the data when the vertical dimension is removed
     collapsed_shape = data.shape[:-3] + data.shape[-2:]
@@ -54,6 +63,11 @@ def select_top (data):
         data_top[index] = curr_data[index]
     # Anything still NaN is land; mask it out
     data_top = np.ma.masked_where(np.isnan(data_top), data_top)
+
+    if not masked:
+        # Fill the mask with zeros
+        data_top[data_top.mask] = 0
+        data_top = data_top.data
 
     return data_top
 
@@ -354,6 +368,12 @@ def z_to_xyz (data, grid):
 def split_longitude (array, split):
 
     return np.concatenate((array[...,split:], array[...,:split]), axis=-1)
+
+
+# Return the root mean squared difference between the two arrays (assumed to be the same size), summed over all entries.
+def rms (array1, array2):
+
+    return np.sqrt(np.sum((array1 - array2)**2))
     
 
 
