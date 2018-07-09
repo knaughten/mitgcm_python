@@ -3,9 +3,9 @@
 ###########################################################
 
 from grid import Grid, SOSEGrid
-from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top
-from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z
+from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
+from file_io import read_binary, write_binary, NCfile, interp_helper
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_bdry
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -77,7 +77,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         print 'Error (sose_ics): split must be 180 or 0'
         sys.exit()
     # Now build the SOSE grid
-    sose_grid = SOSEGrid(sose_dir+'grid/', model_grid, split=split)
+    sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
 
     print 'Building mask for SOSE points to discard'
     # Figure out which points we don't trust
@@ -223,5 +223,146 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
 
     # Write to file
     write_binary(pload, out_file, prec=prec)
+
+
+def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
+
+    sose_dir = real_dir(sose_dir)
+    output_dir = real_dir(output_dir)
+
+    # Fields to interpolate
+    fields = ['THETA', 'SALT', 'U', 'V', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']
+    # Flag for 2D or 3D
+    dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
+    # Flag for grid type
+    gtype = ['t', 't', 'u', 'v', 't', 't', 't', 'u', 'v']
+    # End of filenames for input
+    infile_tail = '_climatology.data'
+    # End of filenames for output
+    outfile_tail = '_SOSE.ini'
+
+    print 'Building MITgcm grid'
+    model_grid = Grid(grid_file)
+    # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
+    if location == 'S':
+        lat0 = model_grid.lat_1d[0]
+        lat0_e = model_grid.lat_corners_1d[0]
+    elif location == 'N':
+        lat0 = model_grid.lat_1d[-1]
+        lat0_e = 2*model_grid.lat_corners_1d[-1] - model_grid.lat_corners_1d[-2]
+    else:
+        # Make sure longitude is in the range (0, 360) first to agree with SOSE
+        lon = fix_lon_range(model_grid.lon_1d, max_lon=360)
+        lon_corners = fix_lon_range(model_grid.lon_corners_1d, max_lon=360)
+        if location == 'W':
+            lon0 = lon[0]
+            lon0_e = lon_corners[0]
+        elif location == 'E':
+            lon0 = lon[-1]
+            lon0_e = 2*lon_corners[-1] - lon_corners[-2]
+        else:
+            print 'Error (sose_obcs): invalid location ' + str(location)
+            sys.exit()
+
+    print 'Building SOSE grid'
+    sose_grid = SOSEGrid(sose_dir+'grid/')
+    # Find interpolation coefficients to the boundary latitude or longitude
+    if location in ['N', 'S']:
+        # Cell centre
+        j1, j2, c1, c2 = interp_helper(sose_grid.lat, lat0)
+        # Cell edge
+        j1_e, j2_e, c1_e, c2_e = interp_helper(sose_grid.lat_corners, lat0_e)
+    else:
+        # Pass lon=True to consider the possibility of boundary near 0E
+        i1, i2, c1, c2 = interp_helper(sose_grid.lon, lon0, lon=True)
+        i1_e, i2_e, c1_e, c2_e = interp_helper(sose_grid.lon_corners, lon0_e, lon=True)
+
+    # Set up a NetCDF file so the user can check the results
+    if nc_out is not None:
+        ncfile = NCfile(nc_out, model_grid, 'xyzt')
+        ncfile.add_time(np.arange(12)+1, units='months')
+
+    # Process fields
+    for n in range(len(fields)):
+        
+        print 'Processing ' + fields[n]
+        in_file = sose_dir + fields[n] + infile_tail
+        out_file = output_dir + fields[n] + outfile_tail
+        # Read the monthly climatology at all points
+        if dim[n] == 3:
+            sose_data = sose_grid.read_field(in_file, 'xyzt')
+        else:
+            sose_data = sose_grid.read_field(in_file, 'xyt')
+
+        # Mask the SOSE data
+        sose_hfac = sose_grid.get_hfac(gtype=gtype[n])
+        if dim == 3:
+            sose_hfac = np.tile(sose_hfac, (12, 1, 1, 1))
+        else:
+            sose_hfac = np.tile(sose_hfac[0,:], (12, 1, 1))
+        sose_data = np.ma.masked_where(sose_hfac==0, sose_data)
+        
+        # Choose the correct grid
+        sose_lon, sose_lat = sose_grid.get_lon_lat(gtype=gtype[n])
+        model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        # Interpolate to the correct grid and choose the correct horizontal axis
+        if location in ['N', 'S']:
+            if gtype[n] == 'v':
+                sose_data = c1_e*sose_data[...,j1_e,:] + c2_e*sose_data[...,j2_e,:]
+            else:
+                sose_data = c1*sose_data[...,j1,:] + c2*sose_data[...,j2,:]
+            sose_haxis = sose_lon
+            model_haxis = model_lon
+        else:
+            if gtype[n] == 'u':
+                sose_data = c1_e*sose_data[...,i1_e] + c2_e*sose_data[...,i2_e]
+            else:
+                sose_data = c1*sose_data[...,i1] + c2*sose_data[...,i2]
+            sose_haxis = sose_lat
+            model_haxis = model_lat
+
+        # Get the model's hFac on the boundary
+        if location == 'S':
+            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,0,:]
+        elif location == 'N':
+            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,-1,:]
+        elif location == 'W':
+            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,:,0]
+        elif location == 'E':
+            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,:,-1]
+        # For 2D variables, select just the top level
+        if dim[n] == 2:
+            model_hfac = model_hfac[0,:]
+
+        # Now interpolate each month to the model grid
+        if dim[n] == 3:
+            data_interp = np.zeros([12, model_grid.nz, model_haxis.size])
+        else:
+            data_interp = np.zeros([12, model_haxis.size])
+        for month in range(12):
+            print '...interpolating month ' + str(month+1)
+            data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+
+        print '...writing ' + out_file
+        write_binary(data_interp, out_file, prec=prec)
+        
+        if nc_out is not None:
+            print '...adding to ' + nc_out
+            # Construct the dimension code
+            if location in ['S', 'N']:
+                dimension = 'x'
+            else:
+                dimension = 'y'
+            if dim[n] == 3:
+                dimension += 'z'
+            dimension += 't'
+            ncfile.add_variable(fields[n] + '_' + location, data_interp, dimension)
+
+    if nc_out is not None:
+        ncfile.close()
+                
+                    
+    
+        
 
     

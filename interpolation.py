@@ -4,7 +4,7 @@
 
 import numpy as np
 import sys
-from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp2d, interp1d
 
 from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 
@@ -261,6 +261,35 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
             print 'Error (discard_and_fill): some missing values cannot be filled'
             sys.exit()
     return data
+
+
+def interp_bdry (source_h, source_z, source_data, target_h, target_z, target_hfac, depth_dependent=False):
+
+    if depth_dependent:
+        # Mesh the source axes
+        source_h, source_z = np.meshgrid(source_h, source_z)
+
+    # Remove masked values
+    source_h = source_h[~source_data.mask]
+    source_data = source_data[~source_data.mask]
+    if depth_dependent:
+        source_z = source_z[~source_z.mask]
+
+    # Interpolate
+    if depth_dependent:
+        interpolant = interp2d(source_h, source_z, source_data, kind='linear', bounds_error=False)
+        data_interp = interpolant(target_h, target_z)
+    else:
+        data_interp = interpolant(target_h)
+
+    # Fill the land mask with zeros
+    data_interp[target_hfac==0] = 0
+
+    return data_interp
+        
+
+        
+        
     
     
 
