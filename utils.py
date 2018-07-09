@@ -50,13 +50,13 @@ def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False):
         data_masked = data            
 
     # Figure out the dimensions of the data when the vertical dimension is removed
-    collapsed_shape = data.shape[:-3] + data.shape[-2:]
+    collapsed_shape = data_masked.shape[:-3] + data_masked.shape[-2:]
     # Array which will hold values at the top level, initialised to NaN
     data_top = np.zeros(collapsed_shape)
     data_top[:] = np.nan
     # Loop from surface to bottom
-    for k in range(data.shape[-3]):
-        curr_data = data[...,k,:,:]
+    for k in range(data_masked.shape[-3]):
+        curr_data = data_masked[...,k,:,:]
         # Find points which are unmasked at this vertical level, and which
         # haven't already been assigned a top level
         index = np.nonzero(np.invert(curr_data.mask)*np.isnan(data_top))

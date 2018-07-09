@@ -165,7 +165,7 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     print 'readBinaryPrec=' + str(prec)
 
     g = 9.81  # gravity (m/s^2)
-    errorTol = 1e-7  # convergence criteria
+    errorTol = 1e-13  # convergence criteria
 
     # Load the MDJWF density function
     mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
@@ -182,12 +182,11 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
     dz_merged = np.zeros(2*grid.nz)
     dz_merged[::2] = abs(grid.z - grid.z_edges[:-1])  # dz of top half of each cell
     dz_merged[1::2] = abs(grid.z_edges[1:] - grid.z)  # dz of bottom half of each cell
-    dz_merged = z_to_xyz(dz_merged, grid)  # Tiled to be 3D
     # Initial guess for pressure (dbar) at centres of cells
-    press = z_to_xyz(abs(grid.z)*g*rhoConst*1e-4, grid)
-    # Tile T and S to be 3D
-    temp = np.zeros([grid.nz, grid.ny, grid.nx]) + constant_t
-    salt = np.zeros([grid.nz, grid.ny, grid.nx]) + constant_s
+    press = abs(grid.z)*g*rhoConst*1e-4
+    # Get depth arrays of T and S
+    temp = np.zeros(grid.nz) + constant_t
+    salt = np.zeros(grid.nz) + constant_s
 
     # Iteratively calculate pressure load anomaly until it converges
     press_old = np.zeros(press.shape)  # Dummy initial value for pressure from last iteration
@@ -199,23 +198,23 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
         drho_c = densmdjwf(salt, temp, press) - rhoConst
         # Use this for both centres and edges of cells
         drho = np.zeros(dz_merged.shape)
-        drho[:,:,::2] = drho_c
-        drho[:,:,1::2] = drho_c
+        drho[::2] = drho_c
+        drho[1::2] = drho_c
         # Integrate pressure load anomaly (Pa)
-        pload_3d = np.cumsum(drho*g*dz_merged, axis=0)
+        pload_full = np.cumsum(drho*g*dz_merged)
         # Update estimate of pressure
-        press = (abs(grid.z)*g*rhoConst + pload_3d[1::2])*1e-4
+        press = (abs(grid.z)*g*rhoConst + pload_full[1::2])*1e-4
     print 'Converged'
 
     # Now extract pload at the ice shelf base
-    # We only need pload at edges now
-    pload_3d = pload_3d[::2]
+    # First tile pload at level edges to be 3D
+    pload_3d = z_to_xyz(pload_full[::2], grid)
     # For each xy point, calculate three variables:
     # (1) pload at the base of the last fully dry ice shelf cell
     # (2) pload at the base of the cell beneath that
     # (3) hFacC for that cell
     # To calculate (1) we have to shift pload_3d_edges upward by 1 cell
-    pload_3d_above = neighbours_z(pload_3d)[1]
+    pload_3d_above = neighbours_z(pload_3d)[0]
     pload_above = select_top(pload_3d_above, masked=False, grid=grid)
     pload_below = select_top(pload_3d, masked=False, grid=grid)
     hfac_below = select_top(grid.hfac, masked=False, grid=grid)
