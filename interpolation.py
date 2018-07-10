@@ -326,18 +326,37 @@ def interp_slice_helper (data, val0, lon=False):
     return i1, i2, c1, c2
 
 
+# Interpolate a lateral boundary field from a regular grid to another regular grid. Prior to interpolation, extend the source data into the mask so there are no artifacts caused by missing values.
+# This routine can be called for a depth-dependent field (latitude or longitude versus depth, i.e. a 3D variable which was sliced) or a depth-independent field (just dependent on latitude or longitude, i.e. a 2D variable which was sliced).
+
+# Arguments:
+# source_h: 1D array of latitude or longitude on the source grid.
+# source_z: 1D array of depth (negative) on the source grid. If depth_dependent=False, you can pass None for this argument.
+# source_data: slice of data on the source grid (dimension depth x latitude/longitude if depth_dependent=True; dimension latitude/longitude if depth_dependent=False)
+# source_hfac: slice of hFac on the source grid; just used for masking
+# target_h, target_z, target_hfac: similar for the target grid
+# IMPORTANT: Make sure that source_h, source_hfac, target_h, target_hfac are all on the correct grid (t, u, v) corresponding to the data.
+
+# Optional keyword arguments:
+# depth_dependent: boolean indicating whether the data is depth-dependent
+# missing_val: missing value to use for checking mask; just make sure it doesn't equal a value that real data might hold
+
 def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
 
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
         if abs(target_z[0]) < abs(source_z[0]):
+            # Add a row of zero depth
             source_z = np.concatenate(([0], source_z))
+            # Copy the top row of data
             source_data = np.concatenate((np.expand_dims(source_data[0,:], 0), source_data), axis=0)
-            source_hfac = np.concatenate((np.expand_dims(np.zeros(source_h.size), 0), source_hfac), axis=0)
+            source_hfac = np.concatenate((np.expand_dims(source_hfac[0,:], 0), source_hfac), axis=0)
         if abs(target_z[-1]) > abs(source_z[-1]):
+            # Add a row of sufficiently deep depth
             source_z = np.concatenate((source_z, [2*target_z[-1] - target_z[-2]]))
+            # Copy the bottom row of data
             source_data = np.concatenate((source_data, np.expand_dims(source_data[-1,:], 0)), axis=0)
-            source_hfac = np.concatenate((source_hfac, np.expand_dims(np.zeros(source_h.size), 0)), axis=0)
+            source_hfac = np.concatenate((source_hfac, np.expand_dims(source_hfac[-1,:], 0)), axis=0)
 
     # Fill the mask with missing values
     source_data[source_hfac==0] = missing_val
