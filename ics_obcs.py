@@ -220,7 +220,8 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     output_dir = real_dir(output_dir)
 
     # Fields to interpolate
-    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']
+    # Important: SIarea has to be before SIuice and SIvice so it can be used for masking
+    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']  
     # Flag for 2D or 3D
     dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
     # Flag for grid type
@@ -286,8 +287,8 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
         if fields[n] == 'SIarea':
             # We'll need this field later for SIuice and SIvice
             print 'Interpolating sea ice area to u and v grids for masking of sea ice velocity'
-            sose_aice_u = interp_grid(sose_data, sose_grid, 't', 'u', time_dependent=True, mask_shelf=True, mask_with_zeros=True, periodic=True)
-            sose_aice_v = interp_grid(sose_data, sose_grid, 't', 'v', time_dependent=True, mask_shelf=True, mask_with_zeros=True, periodic=True)
+            sose_aice_u = interp_grid(sose_data, sose_grid, 't', 'u', time_dependent=True, mask_with_zeros=True, periodic=True)
+            sose_aice_v = interp_grid(sose_data, sose_grid, 't', 'v', time_dependent=True, mask_with_zeros=True, periodic=True)
 
         # Set sea ice velocity to zero wherever sea ice area is zero
         if fields[n] in ['SIuice', 'SIvice']:
