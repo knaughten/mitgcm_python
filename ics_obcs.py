@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, fill_interp_bdry, interp_grid
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -81,7 +81,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     print 'Building mask for SOSE points to fill'
     # Figure out which points we need for interpolation
     # Find open cells according to the model, interpolated to SOSE grid
-    model_open = np.ceil(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1)).astype(bool)
+    model_open = np.ceil(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1))
     # Find ice shelf cavity points according to model, interpolated to SOSE grid
     model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
     # Select open, non-cavity cells
@@ -349,8 +349,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             data_interp = np.zeros([12, model_haxis.size])
         for month in range(12):
             print '...interpolating month ' + str(month+1)
-            data
-            data_interp[month,:] = fill_interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+            data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
 
         print '...writing ' + out_file
         write_binary(data_interp, out_file, prec=prec)

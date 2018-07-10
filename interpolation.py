@@ -283,8 +283,8 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     return data_interp
 
 
-# Given data on a 3D grid (or 2D if you set use_3d=False, or 1D if you also set use_1d=True), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
-def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True, use_1d=False):
+# Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
+def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
 
     # First throw away the points we don't trust
     data[discard] = missing_val
@@ -292,7 +292,7 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True, use_1
     num_missing = np.count_nonzero((data==missing_val)*fill)
     while num_missing > 0:
         print '......' + str(num_missing) + ' points to fill'
-        data = extend_into_mask(data, missing_val=missing_val, use_3d=use_3d, use_1d=use_1d)
+        data = extend_into_mask(data, missing_val=missing_val, use_3d=use_3d)
         num_missing_old = num_missing
         num_missing = np.count_nonzero((data==missing_val)*fill)
         if num_missing == num_missing_old:
@@ -326,20 +326,7 @@ def interp_slice_helper (data, val0, lon=False):
     return i1, i2, c1, c2
 
 
-def interp_bdry (source_h, source_z, source_data, target_h, target_z, depth_dependent=True, fill_value=-9999):
-
-    if depth_dependent:
-        interpolant = RegularGridInterpolator((-source_z, source_h), source_data, bounds_error=False, fill_value=fill_value)
-        target_h, target_z = np.meshgrid(target_h, target_z)
-        data_interp = interpolant((-target_z, target_h))
-    else:
-        interpolant = interp1d(source_h, source_data, bounds_error=False, fill_value=fill_value)
-        data_interp = interpolant(target_h)
-
-    return data_interp
-
-
-def fill_interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True):
+def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
 
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
@@ -352,19 +339,29 @@ def fill_interp_bdry (source_h, source_z, source_data, source_hfac, target_h, ta
             source_data = np.concatenate((source_data, np.expand_dims(source_data[-1,:], 0)), axis=0)
             source_hfac = np.concatenate((source_hfac, np.expand_dims(np.zeros(source_h.size), 0)), axis=0)
 
-    # Figure out which points we need for interpolation
-    # Open cells according to the target grid, interpolated to the source grid
-    model_open = np.ceil(interp_bdry(target_h, target_z, np.ceil(target_hfac), source_h, source_z, depth_dependent=depth_dependent, fill_value=1)).astype(bool)
-    # Extend into the mask a few times to make sure there are no artifacts near the coast
-    fill = extend_into_mask(model_open, missing_val=0, use_3d=False, use_1d=(not depth_dependent), num_iters=3)
-    # Remove the land mask and extrapolate into missing regions as needed
-    source_data = discard_and_fill(source_data, source_hfac==0, fill, use_3d=False, use_1d=(not depth_dependent))
-
-    # Interpolate
-    data_interp = interp_bdry(source_h, source_z, source_data, target_h, target_z, depth_dependent=depth_dependent)
+    # Fill the mask with missing values
+    source_data[source_hfac==0] = missing_val
+    # Extend into the mask a few times so interpolation doesn't mess up
+    source_data = extend_into_mask(source_data, missing_val=missing_val, num_iters=10, use_1d=(not depth_dependent))
     
+    # Interpolate
+    if depth_dependent:
+        interpolant = RegularGridInterpolator((-source_z, source_h), source_data, bounds_error=False, fill_value=missing_val)
+        target_h, target_z = np.meshgrid(target_h, target_z)
+        data_interp = interpolant((-target_z, target_h))
+    else:
+        interpolant = interp1d(source_h, source_data, bounds_error=False, fill_value=missing_val)
+        data_interp = interpolant(target_h)
+        
     # Fill the land mask with zeros
     data_interp[target_hfac==0] = 0
+    if np.count_nonzero(data_interp==missing_val) > 0:
+        print 'Error (interp_bdry): missing values remain in the interpolated data.'
+        if np.amin(target_h) < np.amin(source_h) or np.amax(target_h) > np.amax(source_h):
+            print 'Need to extend the horizontal axis for the source data.'
+        else:
+            print 'Need to increase num_iters in the call to extend_into_mask.'
+        sys.exit()
         
     return data_interp      
 
