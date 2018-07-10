@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_bdry, interp_slice_helper
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_bdry_sfc
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -293,45 +293,43 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             sose_data = sose_grid.read_field(in_file, 'xyzt')
         else:
             sose_data = sose_grid.read_field(in_file, 'xyt')
-
-        # Mask the SOSE data
-        sose_hfac = sose_grid.get_hfac(gtype=gtype[n])
-        if dim == 3:
-            sose_hfac = np.tile(sose_hfac, (12, 1, 1, 1))
-        else:
-            sose_hfac = np.tile(sose_hfac[0,:], (12, 1, 1))
-        sose_data = np.ma.masked_where(sose_hfac==0, sose_data)
         
-        # Choose the correct grid
+        # Choose the correct grid for lat, lon, hfac
         sose_lon, sose_lat = sose_grid.get_lon_lat(gtype=gtype[n])
+        sose_hfac = sose_grid.get_hfac(gtype=gtype[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        model_hfac = model_grid.get_hfac(gtype=gtype[n])
         # Interpolate to the correct grid and choose the correct horizontal axis
         if location in ['N', 'S']:
             if gtype[n] == 'v':
                 sose_data = c1_e*sose_data[...,j1_e,:] + c2_e*sose_data[...,j2_e,:]
+                # Take floor of hfac so never averaging over land
+                sose_hfac = np.floor(c1_e*sose_hfac[...,j1_e,:] + c2_e*sose_hfac[...,j2_e,:])                
             else:
                 sose_data = c1*sose_data[...,j1,:] + c2*sose_data[...,j2,:]
+                sose_hfac = np.floor(c1*sose_hfac[...,j1,:] + c2*sose_hfac[...,j2,:])
             sose_haxis = sose_lon
             model_haxis = model_lon
+            if location == 'S':
+                model_hfac = model_hfac[:,0,:]
+            else:
+                model_hfac = model_hfac[:,-1,:]
         else:
             if gtype[n] == 'u':
                 sose_data = c1_e*sose_data[...,i1_e] + c2_e*sose_data[...,i2_e]
+                sose_hfac = np.floor(c1_e*sose_hfac[...,i1_e] + c2_e*sose_hfac[...,i2_e])
             else:
                 sose_data = c1*sose_data[...,i1] + c2*sose_data[...,i2]
+                sose_hfac = np.floor(c1*sose_hfac[...,i1] + c2*sose_hfac[...,i2])
             sose_haxis = sose_lat
             model_haxis = model_lat
-
-        # Get the model's hFac on the boundary
-        if location == 'S':
-            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,0,:]
-        elif location == 'N':
-            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,-1,:]
-        elif location == 'W':
-            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,:,0]
-        elif location == 'E':
-            model_hfac = model_grid.get_hfac(gtype=gtype[n])[:,:,-1]
-        # For 2D variables, select just the top level
+            if location == 'W':
+                model_hfac = model_hfac[...,0]
+            else:
+                model_hfac = model_hfac[...,-1]
+        # For 2D variables, just need surface hfac
         if dim[n] == 2:
+            sose_hfac = sose_hfac[0,:]
             model_hfac = model_hfac[0,:]
 
         # Now interpolate each month to the model grid
@@ -341,7 +339,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             data_interp = np.zeros([12, model_haxis.size])
         for month in range(12):
             print '...interpolating month ' + str(month+1)
-            data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+            data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
 
         print '...writing ' + out_file
         write_binary(data_interp, out_file, prec=prec)

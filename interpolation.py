@@ -4,7 +4,7 @@
 
 import numpy as np
 import sys
-from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp2d, interp1d
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d
 
 from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 
@@ -72,7 +72,8 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
 
 
 # Finds the value of the given array to the west, east, south, north of every point, as well as which neighbours are non-missing, and how many neighbours are non-missing.
-def neighbours (data, missing_val=-9999):
+# Can also do 1D arrays (so just neighbours to the left and right) if you pass use_1d=True.
+def neighbours (data, missing_val=-9999, use_1d=False):
 
     # Find the value to the west, east, south, north of every point
     # Just copy the boundaries
@@ -82,20 +83,24 @@ def neighbours (data, missing_val=-9999):
     data_e = np.empty(data.shape)
     data_e[...,:-1] = data[...,1:]
     data_e[...,-1] = data[...,-1]
-    data_s = np.empty(data.shape)
-    data_s[...,1:,:] = data[...,:-1,:]
-    data_s[...,0,:] = data[...,0,:]
-    data_n = np.empty(data.shape)
-    data_n[...,:-1,:] = data[...,1:,:]
-    data_n[...,-1,:] = data[...,-1,:]     
+    if not use_1d:
+        data_s = np.empty(data.shape)
+        data_s[...,1:,:] = data[...,:-1,:]
+        data_s[...,0,:] = data[...,0,:]
+        data_n = np.empty(data.shape)
+        data_n[...,:-1,:] = data[...,1:,:]
+        data_n[...,-1,:] = data[...,-1,:]     
     # Arrays of 1s and 0s indicating whether these neighbours are non-missing
     valid_w = (data_w != missing_val).astype(float)
     valid_e = (data_e != missing_val).astype(float)
+    if use_1d:
+        # Number of valid neighoburs of each point
+        num_valid_neighbours = valid_w + valid_e
+        # Finished
+        return data_w, data_e, valid_w, valid_e, num_valid_neighbours
     valid_s = (data_s != missing_val).astype(float)
     valid_n = (data_n != missing_val).astype(float)
-    # Number of valid neighbours of each point
     num_valid_neighbours = valid_w + valid_e + valid_s + valid_n
-
     return data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours
 
 
@@ -117,10 +122,14 @@ def neighbours_z (data, missing_val=-9999):
 # Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.
 # If "data" is a regular array with specific missing values, set missing_val (default -9999). If "data" is a MaskedArray, set masked=True instead.
 # Setting use_3d=True indicates this is a 3D array, and where there are no valid neighbours on the 2D plane, neighbours above and below should be used.
-def extend_into_mask (data, missing_val=-9999, masked=False, use_3d=False, num_iters=1):
+# Setting use_1d=True indicates this is a 1D array.
+def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3d=False, num_iters=1):
 
     if missing_val != -9999 and masked:
         print "Error (extend_into_mask): can't set a missing value for a masked array"
+        sys.exit()
+    if use_1d and use_3d:
+        print "Error (extend_into_mask): can't have use_1d and use_3d at the same time"
         sys.exit()
 
     if masked:
@@ -132,11 +141,17 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_3d=False, num_i
 
     for iter in range(num_iters):
         # Find the neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
-        data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(data, missing_val=missing_val)
+        if use_1d:
+            data_w, data_e, valid_w, valid_e, num_valid_neighbours = neighbours(data, missing_val=missing_val, use_1d=True)
+        else:
+            data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(data, missing_val=missing_val)
         # Choose the points that can be filled
         index = (data == missing_val)*(num_valid_neighbours > 0)
         # Set them to the average of their non-missing neighbours
-        data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index] + data_s[index]*valid_s[index] + data_n[index]*valid_n[index])/num_valid_neighbours[index]
+        if use_1d:
+            data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index])/num_valid_neighbours[index]
+        else:
+            data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index] + data_s[index]*valid_s[index] + data_n[index]*valid_n[index])/num_valid_neighbours[index]
         if use_3d:
             # Consider vertical neighbours too
             data_d, data_u, valid_d, valid_u, num_valid_neighbours_z = neighbours_z(data, missing_val=missing_val)
@@ -288,34 +303,28 @@ def interp_slice_helper (data, val0, lon=False):
     return i1, i2, c1, c2
 
 
-def interp_bdry (source_h, source_z, source_data, target_h, target_z, target_hfac, depth_dependent=False):
+def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
 
-    if depth_dependent:
-        # Mesh the source axes
-        source_h, source_z = np.meshgrid(source_h, source_z)
-
-    # Remove masked values
-    source_h = source_h[~source_data.mask]
-    source_data = source_data[~source_data.mask]
-    if depth_dependent:
-        source_z = source_z[~source_z.mask]
-
+    # Fill the mask with missing values
+    source_data[source_hfac==0] = missing_val
+    # Extend into the mask a few times so interpolation doesn't mess up
+    source_data = extend_into_mask(source_data, missing_val=missing_val, num_iters=5, use_1d=(not depth_dependent))
+    
     # Interpolate
     if depth_dependent:
-        interpolant = interp2d(source_h, source_z, source_data, kind='linear', bounds_error=False)
-        data_interp = interpolant(target_h, target_z)
+        interpolant = RegularGridInterpolator((-source_z, source_h), source_data, bounds_error=False, fill_value=missing_val)
+        target_h, target_z = np.meshgrid(target_h, target_z)
+        data_interp = interpolant((-target_z, target_h))
     else:
+        interpolant = interp1d(source_h, source_data, bounds_error=False, fill_value=missing_val)
         data_interp = interpolant(target_h)
-
+        
     # Fill the land mask with zeros
     data_interp[target_hfac==0] = 0
-
-    return data_interp
+    if np.count_nonzero(data_interp==missing_val) > 0:
+        print 'Error (interp_bdry): missing values remain in the interpolated data. Need to extend the axes for the source data.'
+        sys.exit()
         
-
-        
-        
-    
-    
+    return data_interp      
 
     
