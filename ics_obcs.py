@@ -29,7 +29,7 @@ def make_sose_climatology (in_file, out_file, dimensions):
     write_binary(climatology, out_file)
 
 
-# Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Temperature and salinity will be extrapolated into coastal regions where SOSE is prone to artifacts. Ice shelf cavities will be filled with constant temperature and salinity.
+# Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Ice shelf cavities will be filled with constant temperature and salinity.
 
 # Arguments:
 # grid_file: NetCDF grid file for your MITgcm configuration
@@ -57,9 +57,6 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     infile_tail = '_climatology.data'
     # End of filenames for output
     outfile_tail = '_SOSE.ini'
-
-    # Number of iterations to remove coastal points from SOSE
-    coast_iters = 10
     
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -78,28 +75,17 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         sys.exit()
     # Now build the SOSE grid
     sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
-
-    print 'Building mask for SOSE points to discard'
-    # Figure out which points we don't trust
-    # (1) Closed cells according to SOSE
+    # Extract land mask
     sose_mask = sose_grid.hfac == 0
-    # (2) Closed cells according to model, interpolated to SOSE grid
-    # Only consider a cell to be open if all the points used to interpolate it are open. But, there are some oscillatory interpolation errors which prevent some of these cells from being exactly 1. So set a threshold of 0.99 instead.
-    # Use a fill_value of 1 so that the boundaries of the domain are still considered ocean cells (since sose_grid is slightly larger than model_grid). Boundaries which should be closed will get masked in the next step.
-    model_open = interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1)
-    model_mask = model_open < 0.99
-    # (3) Points near the coast (which SOSE tends to say are around 0C, even if this makes no sense). Extend the surface model_mask by coast_iters cells, and tile to be 3D. This will also remove all ice shelf cavities.
-    coast_mask = xy_to_xyz(extend_into_mask(model_mask[0,:], missing_val=0, num_iters=coast_iters), sose_grid)
-    # Put them all together into one mask
-    discard = (sose_mask + model_mask + coast_mask).astype(bool)
-
+    
     print 'Building mask for SOSE points to fill'
     # Figure out which points we need for interpolation
+    # Find open cells according to the model, interpolated to SOSE grid
+    model_open = np.ceil(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1))
     # Find ice shelf cavity points according to model, interpolated to SOSE grid
     model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
-    # Find open, non-cavity cells
-    # This time, consider a cell to be open if any of the points used to interpolate it are open (i.e. ceiling)
-    fill = np.ceil(model_open)*np.invert(model_cavity)
+    # Select open, non-cavity cells
+    fill = model_open*np.invert(model_cavity)
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
@@ -119,10 +105,10 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         else:
             # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
             sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
-        # Temperature and salinity should have some values discarded, and extrapolated into cavities. There's no need to do this for the 2D sea ice variables.
+        # Temperature and salinity should have land mask discarded, and extrapolated slightly into missing regions. There's no need to do this for the 2D sea ice variables as the land mask value of 0 is physically realistic.
         if dim[n] == 3:
             print '...extrapolating into missing regions'
-            sose_data = discard_and_fill(sose_data, discard, fill)
+            sose_data = discard_and_fill(sose_data, sose_mask, fill)
             # Fill cavity points with constant values
             sose_data[model_cavity] = constant_value[n]
         print '...interpolating to model grid'
