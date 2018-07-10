@@ -105,12 +105,15 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         else:
             # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
             sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
-        # Temperature and salinity should have land mask discarded, and extrapolated slightly into missing regions so the interpolation doesn't get messed up. There's no need to do this for the 2D sea ice variables as the land mask value of 0 is physically realistic.
+        # Discard the land mask, and extrapolate slightly into missing regions so the interpolation doesn't get messed up.
+        print '...extrapolating into missing regions'
         if dim[n] == 3:
-            print '...extrapolating into missing regions'
             sose_data = discard_and_fill(sose_data, sose_mask, fill)
             # Fill cavity points with constant values
             sose_data[model_cavity] = constant_value[n]
+        else:
+            # Just care about surface layer
+            sose_data = discard_and_fill(sose_data, sose_mask[0,:], fill[0,:])
         print '...interpolating to model grid'
         data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         # Fill the land mask with zeros
