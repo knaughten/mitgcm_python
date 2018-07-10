@@ -232,7 +232,8 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     outfile_tail = '_SOSE.OBCS_' + location
 
     print 'Building MITgcm grid'
-    model_grid = Grid(grid_file)
+    # Make sure longitude is in the range (0, 360) to match SOSE
+    model_grid = Grid(grid_file, max_lon=360)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
         lat0 = model_grid.lat_1d[0]
