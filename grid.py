@@ -265,7 +265,7 @@ class SOSEGrid(Grid):
             else:
                 print 'Error (SOSEGrid): split must be 180 or 0'
                 sys.exit()
-        else
+        else:
             # Make sure we're not splitting
             if split != 360:
                 print "Error (SOSEGrid): can't split unless model_grid is defined"
