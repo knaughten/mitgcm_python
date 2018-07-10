@@ -328,6 +328,17 @@ def interp_slice_helper (data, val0, lon=False):
 
 def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
 
+    if depth_dependent:
+        # Extend the source axes at the top and/or bottom if needed
+        if abs(target_z[0]) < abs(source_z[0]):
+            source_z = np.concatenate(([0], source_z))
+            source_data = np.concatenate((np.expand_dims(source_data[0,:], 0), source_data), axis=0)
+            source_hfac = np.concatenate((np.expand_dims(np.zeros(source_h.size), 0), source_hfac), axis=0)
+        if abs(target_z[-1]) > abs(source_z[-1]):
+            source_z = np.concatenate((source_z, [2*target_z[-1] - target_z[-2]]))
+            source_data = np.concatenate((source_data, np.expand_dims(source_data[-1,:], 0)), axis=0)
+            source_hfac = np.concatenate((source_hfac, np.expand_dims(np.zeros(source_h.size), 0)), axis=0)
+
     # Fill the mask with missing values
     source_data[source_hfac==0] = missing_val
     # Extend into the mask a few times so interpolation doesn't mess up
