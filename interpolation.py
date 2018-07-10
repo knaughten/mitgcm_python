@@ -342,7 +342,7 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     # Fill the mask with missing values
     source_data[source_hfac==0] = missing_val
     # Extend into the mask a few times so interpolation doesn't mess up
-    source_data = extend_into_mask(source_data, missing_val=missing_val, num_iters=5, use_1d=(not depth_dependent))
+    source_data = extend_into_mask(source_data, missing_val=missing_val, num_iters=10, use_1d=(not depth_dependent))
     
     # Interpolate
     if depth_dependent:
@@ -356,7 +356,11 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     # Fill the land mask with zeros
     data_interp[target_hfac==0] = 0
     if np.count_nonzero(data_interp==missing_val) > 0:
-        print 'Error (interp_bdry): missing values remain in the interpolated data. Need to extend the axes for the source data.'
+        print 'Error (interp_bdry): missing values remain in the interpolated data.'
+        if np.amin(target_h) < np.amin(source_h) or np.amax(target_h) > np.amax(source_h):
+            print 'Need to extend the horizontal axis for the source data.'
+        else:
+            print 'Need to increase num_iters in the call to extend_into_mask.'
         sys.exit()
         
     return data_interp      
