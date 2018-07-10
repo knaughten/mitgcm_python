@@ -253,7 +253,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
         elif location == 'E':
             lon0 = lon[-1]
             lon0_e = 2*lon_corners[-1] - lon_corners[-2]
-            print 'Eastern boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)
+            print 'Eastern boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)'
         else:
             print 'Error (sose_obcs): invalid location ' + str(location)
             sys.exit()
