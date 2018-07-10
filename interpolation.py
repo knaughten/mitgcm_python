@@ -9,7 +9,7 @@ from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, inte
 from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 
 
-# Interpolate from one grid type to another. Currently only u-grid to t-grid and v-grid to t-grid are supported.
+# Interpolate from one grid type to another. 
 
 # Arguments:
 # data: array of dimension (maybe time) x (maybe depth) x lat x lon
@@ -20,10 +20,12 @@ from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 # Optional keyword arguments:
 # time_dependent: as in function apply_mask
 # mask_shelf: indicates to mask the ice shelves as well as land. Only valid if "data" isn't depth-dependent.
+# mask_with_zeros: indicates to fill the mask with zeros instead of making a MaskedArray (better for interpolation)
+# periodic: indicates the grid has an east/west periodic boundary
 
 # Output: array of the same dimension as "data", interpolated to the new grid type
 
-def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_shelf=False):
+def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_shelf=False, mask_with_zeros=False, periodic=False):
 
     # Figure out if the field is depth-dependent
     if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
@@ -48,13 +50,29 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
     if gtype_in == 'u' and gtype_out == 't':
         # Midpoints in the x direction
         data_interp[...,:-1] = 0.5*(data_tmp[...,:-1] + data_tmp[...,1:])
-        # Extend the easternmost column
-        data_interp[...,-1] = data_tmp[...,-1]
+        # Extend/wrap the easternmost column
+        if periodic:
+            data_interp[...,-1] = data_interp[...,0]
+        else:
+            data_interp[...,-1] = data_tmp[...,-1]
     elif gtype_in == 'v' and gtype_out == 't':
         # Midpoints in the y direction
         data_interp[...,:-1,:] = 0.5*(data_tmp[...,:-1,:] + data_tmp[...,1:,:])
         # Extend the northernmost row
         data_interp[...,-1,:] = data_tmp[...,-1,:]
+    elif gtype_in == 't' and gtype_out == 'u':
+        # Midpoints in the x direction
+        data_interp[...,1:] = 0.5*(data_tmp[...,:-1] + data_tmp[...,1:])
+        # Extend/wrap the westernmost column
+        if periodic:
+            data_interp[...,0] = data_interp[...,-1]
+        else:
+            data_interp[...,0] = data_tmp[...,0]
+    elif gtype_in == 't' and gtype_out == 'v':
+        # Midpoints in the y direction
+        data_interp[...,1:,:] = 0.5*(data_tmp[...,:-1,:] + data_tmp[...,:-1,:])
+        # Extend the southernmost row
+        data_interp[...,0,:] = data_tmp[...,0,:]
     else:
         print 'Error (interp_grid): interpolation from the ' + gtype_in + '-grid to the ' + gtype_out + '-grid is not yet supported'
         sys.exit()
@@ -67,6 +85,11 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
             data_interp = mask_land_zice(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
         else:
             data_interp = mask_land(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
+
+    if mask_with_zeros:
+        # Remove mask and fill with zeros
+        data_interp[data_interp.mask] = 0
+        data_interp = data_interp.data
 
     return data_interp
 

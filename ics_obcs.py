@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -220,7 +220,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     output_dir = real_dir(output_dir)
 
     # Fields to interpolate
-    fields = ['THETA', 'SALT', 'U', 'V', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']
+    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']
     # Flag for 2D or 3D
     dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
     # Flag for grid type
@@ -269,7 +269,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
         ncfile = NCfile(nc_out, model_grid, 'xyzt')
-        ncfile.add_time(np.arange(12)+1, units='months')
+        ncfile.add_time(np.arange(12)+1, units='months')  
 
     # Process fields
     for n in range(len(fields)):
@@ -282,6 +282,21 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             sose_data = sose_grid.read_field(in_file, 'xyzt')
         else:
             sose_data = sose_grid.read_field(in_file, 'xyt')
+
+        if fields[n] == 'SIarea':
+            # We'll need this field later for SIuice and SIvice
+            print 'Interpolating sea ice area to u and v grids for masking of sea ice velocity'
+            sose_aice_u = interp_grid(sose_data, sose_grid, 't', 'u', time_dependent=True, mask_shelf=True, mask_with_zeros=True, periodic=True)
+            sose_aice_v = interp_grid(sose_data, sose_grid, 't', 'v', time_dependent=True, mask_shelf=True, mask_with_zeros=True, periodic=True)
+
+        # Set sea ice velocity to zero wherever sea ice area is zero
+        if fields[n] in ['SIuice', 'SIvice']:
+            print 'Masking sea ice velocity with sea ice area'
+            if fields[n] == 'SIuice':
+                index = sose_aice_u==0
+            else:
+                index = sose_aice_v==0
+            sose_data[index] = 0            
         
         # Choose the correct grid for lat, lon, hfac
         sose_lon, sose_lat = sose_grid.get_lon_lat(gtype=gtype[n])
@@ -293,7 +308,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             if gtype[n] == 'v':
                 sose_data = c1_e*sose_data[...,j1_e,:] + c2_e*sose_data[...,j2_e,:]
                 # Take floor of hfac so never averaging over land
-                sose_hfac = np.floor(c1_e*sose_hfac[...,j1_e,:] + c2_e*sose_hfac[...,j2_e,:])                
+                sose_hfac = np.floor(c1_e*sose_hfac[...,j1_e,:] + c2_e*sose_hfac[...,j2_e,:])
             else:
                 sose_data = c1*sose_data[...,j1,:] + c2*sose_data[...,j2,:]
                 sose_hfac = np.floor(c1*sose_hfac[...,j1,:] + c2*sose_hfac[...,j2,:])
