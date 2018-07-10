@@ -239,7 +239,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     # End of filenames for input
     infile_tail = '_climatology.data'
     # End of filenames for output
-    outfile_tail = '_SOSE.ini'
+    outfile_tail = '_SOSE.OBCS'
 
     print 'Building MITgcm grid'
     model_grid = Grid(grid_file)

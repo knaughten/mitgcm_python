@@ -269,7 +269,8 @@ class SOSEGrid(Grid):
             # Make sure we're not splitting
             if split != 360:
                 print "Error (SOSEGrid): can't split unless model_grid is defined"
-                sys.exit()            
+                sys.exit()
+            max_lon = 360
 
         # Read longitude at cell centres (make the 2D grid 1D as it's regular)
         self.lon = fix_lon_range(read_binary(grid_dir+'XC.data', self.orig_dims, 'xy'), max_lon=max_lon)[0,:]
