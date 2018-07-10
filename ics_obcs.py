@@ -237,9 +237,11 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     if location == 'S':
         lat0 = model_grid.lat_1d[0]
         lat0_e = model_grid.lat_corners_1d[0]
+        print 'Southern boundary at ' + str(lat0) + ' (cell centre), ' + str(lat0_e) + ' (cell edge)'
     elif location == 'N':
         lat0 = model_grid.lat_1d[-1]
         lat0_e = 2*model_grid.lat_corners_1d[-1] - model_grid.lat_corners_1d[-2]
+        print 'Northern boundary at ' + str(lat0) + ' (cell centre), ' + str(lat0_e) + ' (cell edge)'
     else:
         # Make sure longitude is in the range (0, 360) first to agree with SOSE
         lon = fix_lon_range(model_grid.lon_1d, max_lon=360)
@@ -247,9 +249,11 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
         if location == 'W':
             lon0 = lon[0]
             lon0_e = lon_corners[0]
+            print 'Western boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)'
         elif location == 'E':
             lon0 = lon[-1]
             lon0_e = 2*lon_corners[-1] - lon_corners[-2]
+            print 'Eastern boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)
         else:
             print 'Error (sose_obcs): invalid location ' + str(location)
             sys.exit()
