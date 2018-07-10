@@ -349,6 +349,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
             data_interp = np.zeros([12, model_haxis.size])
         for month in range(12):
             print '...interpolating month ' + str(month+1)
+            data
             data_interp[month,:] = fill_interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
 
         print '...writing ' + out_file
