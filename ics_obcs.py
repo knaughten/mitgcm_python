@@ -4,8 +4,8 @@
 
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
-from file_io import read_binary, write_binary, NCfile, interp_helper
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_bdry
+from file_io import read_binary, write_binary, NCfile
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_bdry, interp_slice_helper
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -269,13 +269,13 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
     # Find interpolation coefficients to the boundary latitude or longitude
     if location in ['N', 'S']:
         # Cell centre
-        j1, j2, c1, c2 = interp_helper(sose_grid.lat, lat0)
+        j1, j2, c1, c2 = interp_slice_helper(sose_grid.lat, lat0)
         # Cell edge
-        j1_e, j2_e, c1_e, c2_e = interp_helper(sose_grid.lat_corners, lat0_e)
+        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(sose_grid.lat_corners, lat0_e)
     else:
         # Pass lon=True to consider the possibility of boundary near 0E
-        i1, i2, c1, c2 = interp_helper(sose_grid.lon, lon0, lon=True)
-        i1_e, i2_e, c1_e, c2_e = interp_helper(sose_grid.lon_corners, lon0_e, lon=True)
+        i1, i2, c1, c2 = interp_slice_helper(sose_grid.lon, lon0, lon=True)
+        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(sose_grid.lon_corners, lon0_e, lon=True)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:

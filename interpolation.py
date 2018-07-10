@@ -263,6 +263,31 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
     return data
 
 
+# Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
+# If the array is longitude and there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
+def interp_slice_helper (data, val0, lon=False):
+
+    # Find the first index greater than val0
+    i2 = np.nonzero(data > val0)[0][0]
+    # Find the last index less than val0
+    if i2 > 0:
+        # General case
+        i1 = i2 - 1
+    elif lon and i2==0 and data[-1]-360 < val0:
+        # Longitude wraps around
+        i1 = data.size - 1
+        c2 = (val0 - (data[i1]-360))/(data[i2] - (data[i1]-360))
+        c1 = 1 - c2
+        return i1, i2, c1, c2
+    else:
+        print 'Error (interp_helper): ' + str(val0) + ' is out of bounds'
+        sys.exit()
+    # Calculate the weighting coefficients
+    c2 = (val0 - data[i1])/(data[i2] - data[i1])
+    c1 = 1 - c2
+    return i1, i2, c1, c2
+
+
 def interp_bdry (source_h, source_z, source_data, target_h, target_z, target_hfac, depth_dependent=False):
 
     if depth_dependent:
