@@ -5,7 +5,7 @@
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import read_binary, write_binary, NCfile
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_bdry_sfc
+from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry
 from constants import sose_nx, sose_ny, sose_nz
 
 import numpy as np
@@ -105,7 +105,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         else:
             # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
             sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
-        # Temperature and salinity should have land mask discarded, and extrapolated slightly into missing regions. There's no need to do this for the 2D sea ice variables as the land mask value of 0 is physically realistic.
+        # Temperature and salinity should have land mask discarded, and extrapolated slightly into missing regions so the interpolation doesn't get messed up. There's no need to do this for the 2D sea ice variables as the land mask value of 0 is physically realistic.
         if dim[n] == 3:
             print '...extrapolating into missing regions'
             sose_data = discard_and_fill(sose_data, sose_mask, fill)
