@@ -113,7 +113,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
             sose_data[model_cavity] = constant_value[n]
         else:
             # Just care about surface layer
-            sose_data = discard_and_fill(sose_data, sose_mask[0,:], fill[0,:])
+            sose_data = discard_and_fill(sose_data, sose_mask[0,:], fill[0,:], use_3d=False)
         print '...interpolating to model grid'
         data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
         # Fill the land mask with zeros
