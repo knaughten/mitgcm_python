@@ -8,25 +8,13 @@ import sys
 from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
 
 
-# Given an array containing longitude, make sure it's either in the range (-180, 180) (if max_lon=180) or (0, 360) (if max_lon=360).
+# Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180).
 def fix_lon_range (lon, max_lon=180):
 
-    if max_lon == 180:
-        # Range (-180, 180)
-        index = lon >= 180
-        lon[index] = lon[index] - 360
-        index = lon < -180
-        lon[index] = lon[index] + 360
-    elif max_lon == 360:
-        # Range (0, 360)
-        index = lon < 0
-        lon[index] = lon[index] + 360
-        index = lon >= 360
-        lon[index] = lon[index] - 360
-    else:
-        print 'Error (fix_lon_range): max_lon must be either 180 or 360'
-        sys.exit()
-
+    index = lon >= max_lon
+    lon[index] = lon[index] - 360
+    index = lon < max_lon-360
+    lon[index] = lon[index] + 360
     return lon
 
 
@@ -353,15 +341,28 @@ def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, 
 
 
 # Tile a 2D (lat x lon) array in depth so it is 3D (depth x lat x lon).
+# grid can either be a Grid object or an array of grid dimensions [nx, ny, nz].
 def xy_to_xyz (data, grid):
 
-    return np.tile(data, (grid.nz, 1, 1))
+    if isinstance(grid, list):
+        nz = grid[2]
+    else:
+        nz = grid.nz
+
+    return np.tile(data, (nz, 1, 1))
 
 
 # Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
 def z_to_xyz (data, grid):
 
-    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, grid.ny, grid.nx))
+    if isinstance(grid, list):
+        nx = grid[0]
+        ny = grid[1]
+    else:
+        nx = grid.nx
+        ny = grid.ny
+
+    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, ny, nx))
 
 
 # Split and rearrange the given array along the given index in the longitude axis (last axis). This is useful when converting from longitude ranges (0, 360) to (-180, 180) if the longitude array needs to be strictly increasing for later interpolation.

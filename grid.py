@@ -15,7 +15,8 @@ from constants import fris_bounds, sose_nx, sose_ny, sose_nz, sose_res
 class Grid:
 
     # Initialisation arguments:
-    # file_path: path to NetCDF grid file    
+    # file_path: path to NetCDF grid file
+    # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon)
     def __init__ (self, file_path, max_lon=180):
 
         # 1D lon and lat axes on regular grids

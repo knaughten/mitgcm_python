@@ -250,6 +250,37 @@ def remove_isolated_cells (data, mask_val=0):
     return data
 
 
+# Interpolate from a regular lat-lon grid to another regular lat-lon grid.
+# All the input lat and lon arrays should be 1D.
+# Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
+def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
+
+    # Build an interpolant
+    interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+    # Make target axes 2D
+    target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+    # Interpolate
+    data_interp = interpolant((target_lat, target_lon))
+    return data_interp
+
+
+# Like interp_reg_2d, but for lat-lon-depth grids.
+def interp_reg_xyz (source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=-9999):
+
+    # Build an interpolant
+    # Make depth positive so it's strictly increasing
+    interpolant = RegularGridInterpolator((-source_grid.z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+    # Make target axes 3D
+    dimensions = [target_lon.size, target_lat.size, target_z.size]
+    target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+    target_lon = xy_to_xyz(target_lon, dimensions)
+    target_lat = xy_to_xyz(target_lat, dimensions)
+    target_z = z_to_xyz(target_z, dimensions)
+    # Interpolate
+    data_interp = interpolant((-target_z, target_lat, target_lon))
+    return data_interp    
+
+
 # Interpolate a field on a regular MITgcm grid, to another regular MITgcm grid. Anything outside the bounds of the source grid will be filled with fill_value.
 # source_grid and target_grid can be either Grid or SOSEGrid objects.
 # Set dim=3 for 3D fields (xyz), dim=2 for 2D fields (xy).
@@ -257,30 +288,16 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 
     # Get the correct lat and lon on the source grid
     source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
-    # Build an interpolant
+    # Get the correct lat and lon on the target grid
+    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
+    
     if dim == 2:
-        interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+        return interp_reg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
     elif dim == 3:
-        interpolant = RegularGridInterpolator((-source_grid.z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
+        return interp_reg_xyz(source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=fill_value)
     else:
         print 'Error (interp_reg): dim must be 2 or 3'
         sys.exit()
-
-    # Get the correct lat and lon on the target grid
-    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
-    # Make 1D axes 2D
-    lon_2d, lat_2d = np.meshgrid(target_lon, target_lat)
-    if dim == 2:        
-        # Interpolate
-        data_interp = interpolant((lat_2d, lon_2d))
-    elif dim == 3:
-        # Make all axes 3D
-        lon_3d = xy_to_xyz(lon_2d, target_grid)
-        lat_3d = xy_to_xyz(lat_2d, target_grid)
-        z_3d = z_to_xyz(target_grid.z, target_grid)
-        data_interp = interpolant((-z_3d, lat_3d, lon_3d))
-    
-    return data_interp
 
 
 # Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
