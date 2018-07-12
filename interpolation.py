@@ -4,7 +4,7 @@
 
 import numpy as np
 import sys
-from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d
+from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d, griddata
 
 from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
 
@@ -264,7 +264,7 @@ def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, 
     return data_interp
 
 
-# Like interp_reg_2d, but for lat-lon-depth grids.
+# Like interp_reg_xy, but for lat-lon-depth grids.
 def interp_reg_xyz (source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=-9999):
 
     # Build an interpolant
@@ -399,6 +399,27 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
             print 'Need to increase num_iters in the call to extend_into_mask.'
         sys.exit()
         
-    return data_interp      
+    return data_interp
 
+
+# Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).
+# The input lat and lon arrays should be 2D for the source grid, and either 1D (if regular) or 2D for the target grid.
+# Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
+def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
+
+    # Figure out if target lon and lat are 1D or 2D
+    if len(target_lon.shape) == 1 and len(target_lat.shape) == 1:
+        # Make them 2D
+        target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+
+    # Set up an nx2 array containing the coordinates of each point in the source grid
+    source_points = np.stack((np.ravel(source_lon), np.ravel(source_lat)), axis=-1)
+    # Same for the target grid
+    target_points = np.stack((np.ravel(target_lon), np.ravel(target_lat)), axis=-1)
+    # Also flatten the data
+    source_values = np.ravel(source_data)
     
+    # Interpolate
+    data_interp = griddata(source_points, source_values, target_points, method='linear', fill_value=fill_value)
+    # Un-flatten the result
+    return np.reshape(data_interp, target_lon.shape)

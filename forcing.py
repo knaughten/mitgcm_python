@@ -3,34 +3,33 @@ import numpy as np
 from grid import Grid
 from file_io import read_netcdf, write_binary, NCfile
 from utils import real_dir, fix_lon_range, mask_land_zice
-from interpolation import interp_reg_xy
+from interpolation import interp_nonreg_xy
 from plot_latlon import latlon_plot
 
-# Interpolate the freshwater flux from iceberg melting (Martin & Adcroft, 2010, doi:doi:10.1016/j.ocemod.2010.05.001) to the model grid so it can be used for runoff forcing.
+# Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
 # Arguments:
 # grid_file: path to MITgcm NetCDF grid file
-# input_dir: path to directory with Martin & Adcroft data
+# input_dir: path to directory with iceberg data
 # output_file: desired path to binary output file which MITgcm will read
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the interpolated data in, so you can easily check that it looks okay. (The annual mean will also be plotted and shown on screen whether or not you define nc_out.)
 # prec: precision to write output_file. Must match exf_iprec in the "data.exf" namelist (default 32)
-def icebergs_ma2010 (grid_file, input_dir, output_file, nc_out=None, prec=32):
+def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
 
-    input_dir = real_dir(input_dir)    
-
-    file_head = 'icebergs.1861-1960.'
-    file_tail = '.melt.nc'
-    max_lon = 80  # Iceberg data is weirdly in the range (-280, 80)
+    input_dir = real_dir(input_dir)
+    file_head = 'icebergs_'
+    file_tail = '.nc'
 
     print 'Building grids'
-    # Read the grid from the first file
+    # Read the NEMO grid from the first file
+    # It has longitude in the range -180 to 180
     file_path = input_dir + file_head + '01' + file_tail
-    lon = read_netcdf(file_path, 'xt')
-    lat = read_netcdf(file_path, 'yt')
+    nemo_lon = read_netcdf(file_path, 'nav_lon')
+    nemo_lat = read_netcdf(file_path, 'nav_lat')
     # Build the model grid
-    model_grid = Grid(grid_file, max_lon=max_lon)
+    model_grid = Grid(grid_file)
 
     print 'Interpolating'
     icebergs_interp = np.zeros([12, model_grid.ny, model_grid.nx])    
@@ -38,9 +37,9 @@ def icebergs_ma2010 (grid_file, input_dir, output_file, nc_out=None, prec=32):
         print '...month ' + str(month+1)
         # Read the data
         file_path = input_dir + file_head + '{0:02d}'.format(month+1) + file_tail
-        icebergs = read_netcdf(file_path, 'melt')
-        # Anything outside the bounds of the source data (i.e. south of ~77S) will be 0
-        icebergs_interp_tmp = interp_reg_xy(lon, lat, icebergs, model_grid.lon_1d, model_grid.lat_1d, fill_value=0)
+        icebergs = read_netcdf(file_path, 'berg_total_melt', time_index=0)
+        # Interpolate
+        icebergs_interp_tmp = interp_nonreg_xy(nemo_lon, nemo_lat, icebergs, model_grid.lon_1d, model_grid.lat_1d, fill_value=0)
         # Make sure the ice shelf cavities don't get any iceberg melt
         icebergs_interp_tmp[model_grid.zice_mask] = 0
         # Save to the master array
