@@ -31,7 +31,8 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
     # Build the list of output files in this directory (use them all for timeseries)
     output_files = []
     for file in os.listdir(output_dir):
-        if file[0] in ['1', '2'] and file.endswith('.nc'):
+        if file.startswith('output_') and file.endswith('.nc'):
+        #if file[0] in ['1', '2'] and file.endswith('.nc'):
             output_files.append(output_dir+file)
     # Make sure in chronological order
     output_files.sort()
