@@ -17,9 +17,30 @@ class Grid:
     # Initialisation arguments:
     # file_path: path to NetCDF grid file
     # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon)
-    def __init__ (self, file_path, max_lon=180):
+    # By default the code will work out whether (0, 360) or (-180, 180) is more appropriate.
+    def __init__ (self, file_path, max_lon=None):
 
         # 1D lon and lat axes on regular grids
+        self.lon_1d = read_netcdf(file_path, 'X')
+        self.lat_1d = read_netcdf(file_path, 'Y')
+
+        if max_lon is None:
+            # Figure out longitude range            
+            if np.all(np.diff(self.lon_1d)>0):
+                # Original range of (0, 360) is fine
+                max_lon = 360
+            else:
+                # Domain crosses 0E, so switch to range (-180, 180)
+                max_lon = 180
+            self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
+            # Make sure it's strictly increasing now
+            if not np.all(np.diff(self.lon_1d)>0):
+                print 'Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).'
+                sys.exit()
+        # Otherwise, enforce whatever limit the user wants                
+        self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
+        self.max_lon = max_lon
+        
         # Make sure longitude is between -180 and 180
         # Cell centres
         self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'), max_lon=max_lon)
@@ -237,14 +258,14 @@ class Grid:
 # Special class for the SOSE grid, which is read from a few binary files. It inherits many functions from Grid.
 
 # To speed up interpolation, trim and/or extend the SOSE grid to agree with the bounds of model_grid (Grid object for the model which you'll be interpolating SOSE data to).
-# Depending on the longitude range within the model grid, it might also be necessary to rearrange the SOSE grid so it splits at 180E=180W (split=180, default, implying longitude ranges from -180 to 180 and max_lon=180 when creating model_grid) instead of its native split at 0E (split=0, implying longitude ranges from 0 to 360 and max_lon=360 when creating model_grid).
+# Depending on the longitude range within the model grid, it might also be necessary to rearrange the SOSE grid so it splits at 180E=180W (split=180, implying longitude ranges from -180 to 180 and max_lon=180 when creating model_grid) instead of its native split at 0E (split=0, implying longitude ranges from 0 to 360 and max_lon=360 when creating model_grid).
 # The rule of thumb is, if your model grid includes 0E, split at 180E, and vice versa. A circumpolar model should be fine either way as long as it doesn't have any points in the SOSE periodic boundary gap (in which case you'll have to write a patch). 
 # MOST IMPORTANTLY, if you are reading a SOSE binary file, don't use read_binary from file_io. Use the class function read_field (defined below) which will repeat the trimming/extending/splitting/rearranging correctly.
 
-# If you don't want to do any trimming or extending, just set model_grid=None and split=360 (or nothing as 360 is the default).
+# If you don't want to do any trimming or extending, just set model_grid=None.
 class SOSEGrid(Grid):
 
-    def __init__ (self, grid_dir, model_grid=None, split=360):
+    def __init__ (self, grid_dir, model_grid=None, split=0):
 
         grid_dir = real_dir(grid_dir)
         self.orig_dims = [sose_nx, sose_ny, sose_nz]
@@ -261,16 +282,12 @@ class SOSEGrid(Grid):
                     print 'Error (SOSEGrid): split=180 does not match model grid'
             elif split == 0:
                 max_lon = 360
-                if np.zmin(model_grid.lon_2d) < 0:
+                if np.amin(model_grid.lon_2d) < 0:
                     print 'Error (SOSEGrid): split=0 does not match model grid'
             else:
                 print 'Error (SOSEGrid): split must be 180 or 0'
                 sys.exit()
         else:
-            # Make sure we're not splitting
-            if split != 360:
-                print "Error (SOSEGrid): can't split unless model_grid is defined"
-                sys.exit()
             max_lon = 360
 
         # Read longitude at cell centres (make the 2D grid 1D as it's regular)

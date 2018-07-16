@@ -61,7 +61,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
     if split == 180:
-        model_grid = Grid(grid_file)
+        model_grid = Grid(grid_file, max_lon=180)
         if model_grid.lon_1d[0] > model_grid.lon_1d[-1]:
             print 'Error (sose_ics): Looks like your domain crosses 180E. Run this again with split=0.'
             sys.exit()

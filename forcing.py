@@ -29,7 +29,7 @@ def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
     nemo_lon = read_netcdf(file_path, 'nav_lon')
     nemo_lat = read_netcdf(file_path, 'nav_lat')
     # Build the model grid
-    model_grid = Grid(grid_file)
+    model_grid = Grid(grid_file, max_lon=180)
 
     print 'Interpolating'
     icebergs_interp = np.zeros([12, model_grid.ny, model_grid.nx])    
