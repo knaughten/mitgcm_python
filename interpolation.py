@@ -290,6 +290,10 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
     # Get the correct lat and lon on the target grid
     target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
+    if dim == 3:
+        # Also get depths
+        source_z = source_grid.z
+        target_z = target_grid.z
     
     if dim == 2:
         return interp_reg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
