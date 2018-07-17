@@ -25,13 +25,13 @@ class Grid:
         self.lat_1d = read_netcdf(file_path, 'Y')
 
         if max_lon is None:
-            # Figure out longitude range            
-            if np.all(np.diff(self.lon_1d)>0):
-                # Original range of (0, 360) is fine
-                max_lon = 360
-            else:
+            # Figure out longitude range
+            if np.amax(self.lon_1d) > 360:
                 # Domain crosses 0E, so switch to range (-180, 180)
                 max_lon = 180
+            else:
+                # Original range of (0, 360) is fine
+                max_lon = 360
             self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
             # Make sure it's strictly increasing now
             if not np.all(np.diff(self.lon_1d)>0):
