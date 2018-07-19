@@ -531,10 +531,11 @@ def merge_bedmap2_changes (orig_file, updated_files, out_file):
             sys.exit()
 
     # Apply the changes
+    data_final = np.copy(data_orig)
     for i in range(num_files):
         data_tmp = data_new[i,:]
         index = data_tmp != data_orig
-        data_orig[index] = data_tmp[index]
+        data_final[index] = data_tmp[index]
 
     # Write to file
     write_binary(data_orig, out_file, prec=32, endian='little')
