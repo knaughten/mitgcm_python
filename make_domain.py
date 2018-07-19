@@ -510,7 +510,7 @@ def merge_bedmap2_changes (orig_file, updated_files, out_file):
 
     # Read all the files
     data_orig = np.fromfile(orig_file, dtype='<f4')
-    num_files = len(updated_files):
+    num_files = len(updated_files)
     data_new = np.empty([num_files, data_orig.size])
     for i in range(num_files):
         data_new[i,:] = np.fromfile(updated_files[i], dtype='<f4')
