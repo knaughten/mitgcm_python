@@ -234,14 +234,21 @@ def read_binary (filename, grid, dimensions, prec=32):
     return np.reshape(data, data_shape)
 
 
-# Write an array ("data"), of any dimension, to a binary file ("file_path"). Default is 32-bit (prec=32) but can also do 64-bit (prec=64).
-def write_binary (data, file_path, prec=32):
+# Write an array ("data"), of any dimension, to a binary file ("file_path"). Default is 32-bit big-endian (prec=32, endian='big') but can also do 64-bit (prec=64) and/or little-endian (endian='little')
+def write_binary (data, file_path, prec=32, endian='big'):
 
     # Set dtype
+    if endian == 'big':
+        dtype = '>'
+    elif endian == 'little':
+        dtype = '<'
+    else:
+        print 'Error (write_binary): invalid endianness'
+        sys.exit()
     if prec == 32:
-        dtype = '>f4'
+        dtype += 'f4'
     elif prec == 64:
-        dtype = '>f8'
+        dtype += 'f8'
     else:
         print 'Error (write_binary): invalid precision'
         sys.exit()

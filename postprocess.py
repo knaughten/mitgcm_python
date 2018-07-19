@@ -100,7 +100,7 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
     # Slice plots
     read_plot_ts_slice(file_path, grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid, lon0=-10, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid, lon0=-25, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png', date_string=date_string)
 
 
 # Plot the sea ice annual min and max for each year of the simulation. First you have to concatenate the sea ice area into a single file, such as:

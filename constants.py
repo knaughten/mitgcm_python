@@ -21,3 +21,8 @@ sose_ny = 320
 sose_nz = 42
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.
+# BEDMAP2 grid parameters
+bedmap_dim = 6667    # Dimension
+bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
+bedmap_res = 1000    # Resolution (m)
+bedmap_missing_val = -9999    # Missing value for bathymetry north of 60S

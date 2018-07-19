@@ -7,7 +7,7 @@ import sys
 import netCDF4 as nc
 import shutil
 
-from constants import deg2rad
+from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d
 from interpolation import extend_into_mask, interp_topo, neighbours, remove_isolated_cells 
@@ -93,12 +93,6 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     # GEBCO file name
     gebco_file = 'GEBCO_2014_2D.nc'
 
-    # BEDMAP2 grid parameters
-    bedmap_dim = 6667    # Dimension
-    bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
-    bedmap_res = 1000    # Resolution (m)
-    missing_val = -9999    # Missing value for bathymetry north of 60S
-
     if np.amin(lat) > -60:
         print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
         sys.exit()
@@ -128,7 +122,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
     if np.amax(lat_b) > -61:
         print 'Extending bathymetry slightly past 60S'
         # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts in the splines near 60S.
-        bathy = extend_into_mask(bathy, missing_val=missing_val, num_iters=5)
+        bathy = extend_into_mask(bathy, missing_val=bedmap_missing_val, num_iters=5)
 
     print 'Calculating ice shelf draft'
     # Calculate ice shelf draft from ice surface and ice thickness
@@ -503,3 +497,48 @@ def check_final_grid (grid_path):
         print 'Something went wrong with the digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
     else:
         print 'Everything looks good!'
+
+
+# Merge updates to a BEDMAP2 field from two or more sources (e.g. Sebastian Rosier's updates to the Filchner and Lianne Harrison's updates to the Larsen). The code makes sure that no updates are contradictory, i.e. trying to change the same points in different ways.
+
+# Arguments:
+# orig_file: path to an original BEDMAP2 file
+# updated_files: list of paths to altered BEDMAP2 files, of the same format (encoding, size, row vs column major)
+# out_file: path to desired merged file
+
+def merge_bedmap2_changes (orig_file, updated_files, out_file):
+
+    # Read all the files
+    data_orig = np.fromfile(orig_file, dtype='<f4')
+    num_files = len(updated_files):
+    data_new = np.empty([num_files, data_orig.size])
+    for i in range(num_files):
+        data_new[i,:] = np.fromfile(updated_files[i], dtype='<f4')
+
+    # Make sure none of the changes overlap
+    changes = (data_new!=data_orig).astype(float)
+    if np.amax(np.sum(changes, axis=0)) > 1:
+        # Some changes overlap, but maybe they are the same changes.
+        stop = False
+        for i in range(num_files):
+            for j in range(i+1, num_files):
+                index = (changes[i,:]==1)*(changes[j,:]==1)
+                if (data_new[i,:][index] != data_new[j,:][index]).any():
+                    stop = True
+                    print updated_files[i] + ' contradicts ' + updated_files[j]
+        if stop:
+            print 'Error (merge_bedmap2_changes): some changes are contradictory'
+            sys.exit()
+
+    # Apply the changes
+    for i in range(num_files):
+        data_tmp = data_new[i,:]
+        index = data_tmp != data_orig
+        data_orig[index] = data_tmp[index]
+
+    # Write to file
+    write_binary(data_orig, out_file, prec=32, endian='little')
+    
+    
+
+    
