@@ -538,7 +538,7 @@ def merge_bedmap2_changes (orig_file, updated_files, out_file):
         data_final[index] = data_tmp[index]
 
     # Write to file
-    write_binary(data_orig, out_file, prec=32, endian='little')
+    write_binary(data_final, out_file, prec=32, endian='little')
     
     
 
