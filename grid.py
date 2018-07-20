@@ -84,13 +84,13 @@ class Grid:
             except(KeyError):
                 self.hfac = read_netcdf(path, 'hFacC')
             try:
-                self.hfac = read_netcdf(path, 'HFacW')
+                self.hfac_w = read_netcdf(path, 'HFacW')
             except(KeyError):
-                self.hfac = read_netcdf(path, 'hFacW')
+                self.hfac_w = read_netcdf(path, 'hFacW')
             try:
-                self.hfac = read_netcdf(path, 'HFacS')
+                self.hfac_s = read_netcdf(path, 'HFacS')
             except(KeyError):
-                self.hfac = read_netcdf(path, 'hFacS')
+                self.hfac_s = read_netcdf(path, 'hFacS')
             self.wct = read_netcdf(path, 'Depth')
         else:
             self.lon_2d = rdmds(path+'XC')
