@@ -293,7 +293,7 @@ def choose_grid (grid, file_path):
     else:
         if not isinstance(grid, Grid):
             # Create a Grid object from the given path (option 3 above)
-            grid = Grid(grid
+            grid = Grid(grid)
         # Otherwise, the Grid object was precomputed (option 1 above)
     return grid
 
