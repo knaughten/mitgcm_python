@@ -67,7 +67,6 @@ class Grid:
             self.dy_w = read_netcdf(path, 'dyG')
             self.dA = read_netcdf(path, 'rA')
             self.z = read_netcdf(path, 'Z')
-            self.z_edges = read_netcdf(path, 'RF')
             self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
             self.dz_t = read_netcdf(path, 'drC')
