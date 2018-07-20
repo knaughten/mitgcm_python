@@ -81,17 +81,19 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
 
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
-# If you are using the Filchner updates from Sebastian, set bed_file='bedmap2_bed_seb.flt'.
-def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file='bedmap2_bed.flt'):
+# You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
+def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None):
 
     topo_dir = real_dir(topo_dir)
 
     # BEDMAP2 file names
-    surface_file = 'bedmap2_surface.flt'
-    thickness_file = 'bedmap2_thickness.flt'
-    mask_file = 'bedmap2_icemask_grounded_and_shelves.flt'
+    surface_file = topo_dir+'bedmap2_surface.flt'
+    thickness_file = topo_dir+'bedmap2_thickness.flt'
+    mask_file = topo_dir+'bedmap2_icemask_grounded_and_shelves.flt'
+    if bed_file is None:
+        bed_file = topo_dir+'bedmap2_bed.flt'
     # GEBCO file name
-    gebco_file = 'GEBCO_2014_2D.nc'
+    gebco_file = topo_dir+'GEBCO_2014_2D.nc'
 
     if np.amin(lat) > -60:
         print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
