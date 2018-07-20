@@ -514,7 +514,7 @@ class SOSEGrid(Grid):
         if self.trim_extend:
 
             # Read the field and split along longitude
-            data_orig = split_longitude(rdmds(file_path.replace('.data', ''), self.i_split)
+            data_orig = split_longitude(rdmds(file_path.replace('.data', ''), self.i_split))
             # Create a new array of the correct dimension (including extended regions)
             data_shape = [self.ny, self.nx]
             if 'z' in dimensions:
