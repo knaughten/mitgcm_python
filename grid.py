@@ -532,7 +532,7 @@ class SOSEGrid(Grid):
 
         else:
             # Nothing fancy to do
-            data = rdmds(file_path.replace('.data', '')
+            data = rdmds(file_path.replace('.data', ''))
 
         return data
             
