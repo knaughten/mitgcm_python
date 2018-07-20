@@ -111,10 +111,19 @@ class Grid:
             self.wct = rdmds(path+'Depth')
 
         # Make 1D versions of latitude and longitude arrays (only useful for regular lat-lon grids)
-        self.lon_1d = self.lon_2d[0,:]
-        self.lat_1d = self.lat_2d[:,0]
-        self.lon_corners_1d = self.lon_corners_2d[0,:]
-        self.lat_corners_1d = self.lat_corners_2d[:,0]
+        if len(self.lon_2d.shape) == 2:
+            self.lon_1d = self.lon_2d[0,:]
+            self.lat_1d = self.lat_2d[:,0]
+            self.lon_corners_1d = self.lon_corners_2d[0,:]
+            self.lat_corners_1d = self.lat_corners_2d[:,0]
+        elif len(self.lon_2d.shape) == 1:
+            # xmitgcm output has these variables as 1D already. So make 2D ones.
+            self.lon_1d = np.copy(self.lon_2d)
+            self.lat_1d = np.copy(self.lat_2d)
+            self.lon_corners_1d = np.copy(self.lon_corners_2d)
+            self.lat_corners_1d = np.copy(self.lat_corners_2d)
+            self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
+            self.lon_corners_2d, self.lat_corners_2d = np.meshgrid(self.lon_corners_1d, self.lat_corners_1d)
 
         # Decide on longitude range
         if max_lon is None:
