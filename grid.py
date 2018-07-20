@@ -12,7 +12,7 @@ import sys
 import os
 from MITgcmutils import rdmds
 
-from file_io import read_netcdf, read_binary, read_field
+from file_io import read_netcdf, read_binary
 from utils import fix_lon_range, real_dir, split_longitude
 from constants import fris_bounds, sose_nx, sose_ny, sose_nz, sose_res
 
