@@ -503,9 +503,9 @@ class SOSEGrid(Grid):
                 sys.exit()
 
             # Now read the rest of the variables we need, splitting/trimming/extending them as needed
-            self.hfac = self.read_field(grid_dir+'hFacC.data', 'xyz', fill_value=0)
-            self.hfac_w = self.read_field(grid_dir+'hFacW.data', 'xyz', fill_value=0)
-            self.hfac_s = self.read_field(grid_dir+'hFacS.data', 'xyz', fill_value=0)
+            self.hfac = self.read_field(grid_dir+'hFacC', 'xyz', fill_value=0)
+            self.hfac_w = self.read_field(grid_dir+'hFacW', 'xyz', fill_value=0)
+            self.hfac_s = self.read_field(grid_dir+'hFacS', 'xyz', fill_value=0)
 
         else:
 
