@@ -79,9 +79,18 @@ class Grid:
                 self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
             self.dz_t = read_netcdf(path, 'drC')
-            self.hfac = read_netcdf(path, 'HFacC')
-            self.hfac_w = read_netcdf(path, 'HFacW')
-            self.hfac_s = read_netcdf(path, 'HFacS')
+            try:
+                self.hfac = read_netcdf(path, 'HFacC')
+            except(KeyError):
+                self.hfac = read_netcdf(path, 'hFacC')
+            try:
+                self.hfac = read_netcdf(path, 'HFacW')
+            except(KeyError):
+                self.hfac = read_netcdf(path, 'hFacW')
+            try:
+                self.hfac = read_netcdf(path, 'HFacS')
+            except(KeyError):
+                self.hfac = read_netcdf(path, 'hFacS')
             self.wct = read_netcdf(path, 'Depth')
         else:
             self.lon_2d = rdmds(path+'XC')
