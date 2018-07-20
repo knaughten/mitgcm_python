@@ -1,120 +1,146 @@
 #######################################################
 # Everything to do with reading the grid
-# This relies on a NetCDF grid file. To create it, run MITgcm just long enough to produce one grid.t*.nc file for each tile, and then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution).
+# You can build this using binary or NetCDF grid files.
+#
+# For binary, put the *.data and *.meta files for the following variables into one directory: Depth, DRC, DRF, DXG, DYG, hFacC, hFacS, hFacW, RAC, RC, RF, XC, XG, YC, YG.
+#
+# For NetCDF, switch MNC on and run MITgcm just long enough to produce one grid.t*.nc file for each tile. Then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution) to create grid.glob.nc. Don't use gluemncbig as this gives different dimensions.
 #######################################################
 
 import numpy as np
 import sys
+import os
+from MITgcmutils import rdmds
 
-from file_io import read_netcdf, read_binary
+from file_io import read_netcdf, read_binary, read_field
 from utils import fix_lon_range, real_dir, split_longitude
 from constants import fris_bounds, sose_nx, sose_ny, sose_nz, sose_res
 
 
-# Grid object containing lots of grid variables.
+# Grid object containing lots of grid variables:
+# nx, ny, nz: dimensions of grid
+# lon_2d: longitude at cell centres (degrees, XY)
+# lat_2d: latitude at cell centres (degrees, XY)
+# lon_corners_2d: longitude at cell corners (degrees, XY)
+# lat_corners_2d: latitude at cell corners (degrees, XY)
+# lon_1d, lat_1d, lon_corners_1d, lat_corners_2d: 1D versions of the corresponding 2D arrays, note this assumes a polar spherical grid! (X or Y)
+# dx_s: width of southern cell edge (m, XY)
+# dy_w: height of western cell edge (m, XY)
+# dA: area of cell (m^2, XY)
+# z: depth axis at cell centres (negative, m, Z)
+# z_edges: depth axis at cell interfaces; dimension 1 larger than z (negative, m, Z)
+# dz: thickness of cell (m, Z)
+# dz_t: thickness between cell centres (m, Z)
+# hfac: partial cell fraction (XYZ)
+# hfac_w: partial cell fraction at u-points (XYZ)
+# hfac_s: partial cell fraction at v-points (XYZ)
+# bathy: bathymetry (negative, m, XY)
+# zice: ice shelf draft (negative, m, XY)
+# wct: water column thickness (m, XYZ)
+# land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY)
+# zice_mask, zice_mask_u, zice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
+# fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
 class Grid:
 
     # Initialisation arguments:
-    # file_path: path to NetCDF grid file
-    # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon)
-    # By default the code will work out whether (0, 360) or (-180, 180) is more appropriate.
-    def __init__ (self, file_path, max_lon=None):
+    # file_path: path to NetCDF grid file OR directory containing binary files
+    # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon). By default the code will work out whether (0, 360) or (-180, 180) is more appropriate.
+    # prec: precision of binary files (matching writeBinaryPrec in "data" namelist to MITgcm, default 32)
+    def __init__ (self, path, max_lon=None, prec=32):
 
-        # 1D lon and lat axes on regular grids
-        self.lon_1d = read_netcdf(file_path, 'X')
-        self.lat_1d = read_netcdf(file_path, 'Y')
+        if path.endswith('.nc'):
+            use_netcdf=True
+        elif os.path.isdir(path):
+            use_netcdf=False
+            path = real_dir(path)
+        else:
+            print 'Error (Grid): ' + path + ' is neither a NetCDF file nor a directory'
+            sys.exit()
+            
+        # Read variables
+        # Note that some variables are capitalised differently in NetCDF versus binary, so can't make this more efficient...
+        if use_netcdf:
+            self.lon_2d = read_netcdf(path, 'XC')
+            self.lat_2d = read_netcdf(path, 'YC')
+            self.lon_corners_2d = read_netcdf(path, 'XG')
+            self.lat_corners_2d = read_netcdf(path, 'YG')
+            self.dx_s = read_netcdf(path, 'dxG')
+            self.dy_w = read_netcdf(path, 'dyG')
+            self.dA = read_netcdf(path, 'rA')
+            self.z = read_netcdf(path, 'RC')
+            self.z_edges = read_netcdf(path, 'RF')
+            self.dz = read_netcdf(path, 'drF')
+            self.dz_t = read_netcdf(path, 'drC')
+            self.hfac = read_netcdf(path, 'HFacC')
+            self.hfac_w = read_netcdf(path, 'HFacW')
+            self.hfac_s = read_netcdf(path, 'HFacS')
+            self.wct = read_netcdf(path, 'Depth')
+        else:
+            self.lon_2d = rdmds(path+'XC')
+            self.lat_2d = rdmds(path+'YC')
+            self.lon_corners_2d = rdmds(path+'XG')
+            self.lat_corners_2d = rdmds(path+'YG')
+            self.dx_s = rdmds(path+'DXG')
+            self.dy_w = rdmds(path+'DYG')
+            self.dA = rdmds(path+'RAC')
+            # Remove singleton dimensions from 1D depth variables
+            self.z = rdmds(path+'RC').squeeze()
+            self.z_edges = rdmds(path+'RF').squeeze()
+            self.dz = rdmds(path+'DRF').squeeze()
+            self.dz_t = rdmds(path+'DRC').squeeze()
+            self.hfac = rdmds(path+'hFacC')
+            self.hfac_w = rdmds(path+'hFacW')
+            self.hfac_s = rdmds(path+'hFacS')
+            self.wct = rdmds(path+'Depth')
 
+        # Make 1D versions of latitude and longitude arrays (only useful for regular lat-lon grids)
+        self.lon_1d = self.lon_2d[0,:]
+        self.lat_1d = self.lat_2d[:,0]
+        self.lon_corners_1d = self.lon_corners_2d[0,:]
+        self.lat_corners_1d = self.lat_corners_2d[:,0]
+
+        # Decide on longitude range
         if max_lon is None:
-            # Figure out longitude range
+            # Choose range automatically
             if np.amax(self.lon_1d) > 360:
                 # Domain crosses 0E, so switch to range (-180, 180)
                 max_lon = 180
             else:
                 # Original range of (0, 360) is fine
                 max_lon = 360
+            # Do one array to test
             self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
             # Make sure it's strictly increasing now
             if not np.all(np.diff(self.lon_1d)>0):
                 print 'Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).'
                 sys.exit()
-        # Otherwise, enforce whatever limit the user wants                
         self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
-        self.max_lon = max_lon
-        
-        # Make sure longitude is between -180 and 180
-        # Cell centres
-        self.lon_1d = fix_lon_range(read_netcdf(file_path, 'X'), max_lon=max_lon)
-        self.lat_1d = read_netcdf(file_path, 'Y')
-        # Cell corners (southwest)
-        self.lon_corners_1d = fix_lon_range(read_netcdf(file_path, 'Xp1'), max_lon=max_lon)
-        self.lat_corners_1d = read_netcdf(file_path, 'Yp1')
+        self.lon_corners_1d = fix_lon_range(self.lon_corners_1d, max_lon=max_lon)
+        self.lon_2d = fix_lon_range(self.lon_2d, max_lon=max_lon)
+        self.lon_corners_2d = fix_lon_range(self.lon_corners_2d, max_lon=max_lon)
 
-        # 2D lon and lat fields on any grid
-        # Cell centres
-        self.lon_2d = fix_lon_range(read_netcdf(file_path, 'XC'), max_lon=max_lon)
-        self.lat_2d = read_netcdf(file_path, 'YC')
-        # Cell corners
-        self.lon_corners_2d = fix_lon_range(read_netcdf(file_path, 'XG'), max_lon=max_lon)
-        self.lat_corners_2d = read_netcdf(file_path, 'YG')
-
-        # 2D integrands of distance
-        # Across faces
-        self.dx = read_netcdf(file_path, 'dxF')
-        self.dy = read_netcdf(file_path, 'dyF')
-        # Between centres
-        self.dx_t = read_netcdf(file_path, 'dxC')
-        self.dy_t = read_netcdf(file_path, 'dyC')
-        # Between u-points
-        self.dx_u = self.dx  # Equivalent to distance across face
-        self.dy_u = read_netcdf(file_path, 'dyU')
-        # Between v-points
-        self.dx_v = read_netcdf(file_path, 'dxV')
-        self.dy_v = self.dy  # Equivalent to distance across face
-        # Between corners
-        self.dx_psi = read_netcdf(file_path, 'dxG')
-        self.dy_psi = read_netcdf(file_path, 'dyG')
-
-        # 2D integrands of area
-        # Area of faces
-        self.dA = read_netcdf(file_path, 'rA')
-        # Centered on u-points
-        self.dA_u = read_netcdf(file_path, 'rAw')
-        # Centered on v-points
-        self.dA_v = read_netcdf(file_path, 'rAs')
-        # Centered on corners
-        self.dA_psi = read_netcdf(file_path, 'rAz')
-
-        # Vertical grid
-        # Assumes we're in the ocean so using z-levels - not sure how this
-        # would handle atmospheric pressure levels.
-        # Depth axis at centres of z-levels
-        self.z = read_netcdf(file_path, 'Z')
-        # Depth axis at edges of z-levels
-        self.z_edges = read_netcdf(file_path, 'Zp1')
-        # Depth axis at w-points
-        self.z_w = read_netcdf(file_path, 'Zl')
-
-        # Vertical integrands of distance
-        # Across cells
-        self.dz = read_netcdf(file_path, 'drF')
-        # Between centres
-        self.dz_t = read_netcdf(file_path, 'drC')
-
-        # Dimension lengths (on tracer grid)
+        # Save dimensions
         self.nx = self.lon_1d.size
         self.ny = self.lat_1d.size
         self.nz = self.z.size
 
-        # Partial cell fractions
-        # At centres
-        self.hfac = read_netcdf(file_path, 'HFacC')
-        # On western edges
-        self.hfac_w = read_netcdf(file_path, 'HFacW')
-        # On southern edges
-        self.hfac_s = read_netcdf(file_path, 'HFacS')
+        # Calculate ice shelf draft
+        self.zice = np.zeros([self.ny, self.nx])
+        self.zice[:,:] = np.nan
+        # Loop from top to bottom
+        for k in range(self.nz):
+            hfac_tmp = self.hfac[k,:]
+            # Identify wet cells with no draft assigned yet
+            index = (hfac_tmp!=0)*np.isnan(self.zice)
+            self.zice[index] = self.z_edges[k] - self.dz[k]*(1-hfac_tmp[index])
+        # Anything still NaN is land mask and should have zero draft
+        index = np.isnan(self.zice)
+        self.zice[index] = 0
+
+        # Calculate bathymetry
+        self.bathy = self.zice - self.wct
 
         # Create masks on the t, u, and v grids
-        # We can't do the psi grid because there is no hfac there
         # Land masks
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
@@ -127,15 +153,6 @@ class Grid:
         self.fris_mask = self.build_fris_mask(self.zice_mask, self.lon_2d, self.lat_2d)
         self.fris_mask_u = self.build_fris_mask(self.zice_mask_u, self.lon_corners_2d, self.lat_2d)
         self.fris_mask_v = self.build_fris_mask(self.zice_mask_v, self.lon_2d, self.lat_corners_2d)
-
-        # Topography (as seen by the model after adjustment for eg hfacMin - not necessarily equal to what is specified by the user)
-        # Bathymetry (bottom depth)
-        self.bathy = read_netcdf(file_path, 'R_low')
-        # Ice shelf draft (surface depth, enforce 0 in land or open-ocean points)
-        self.zice = read_netcdf(file_path, 'Ro_surf')
-        self.zice[np.invert(self.zice_mask)] = 0
-        # Water column thickness
-        self.wct = read_netcdf(file_path, 'Depth')
 
         
     # Given a 3D hfac array on any grid, create the land mask.
