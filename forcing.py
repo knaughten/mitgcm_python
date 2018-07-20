@@ -2,7 +2,7 @@ import numpy as np
 
 from grid import Grid
 from file_io import read_netcdf, write_binary, NCfile
-from utils import real_dir, fix_lon_range, mask_land_zice
+from utils import real_dir, fix_lon_range, mask_land_ice
 from interpolation import interp_nonreg_xy
 from plot_latlon import latlon_plot
 
@@ -41,7 +41,7 @@ def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
         # Interpolate
         icebergs_interp_tmp = interp_nonreg_xy(nemo_lon, nemo_lat, icebergs, model_grid.lon_1d, model_grid.lat_1d, fill_value=0)
         # Make sure the land and ice shelf cavities don't get any iceberg melt
-        icebergs_interp_tmp[model_grid.land_mask+model_grid.zice_mask] = 0
+        icebergs_interp_tmp[model_grid.land_mask+model_grid.ice_mask] = 0
         # Save to the master array
         icebergs_interp[month,:] = icebergs_interp_tmp    
 
@@ -50,7 +50,7 @@ def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
 
     print 'Plotting'
     # Make a nice plot of the annual mean
-    latlon_plot(mask_land_zice(np.mean(icebergs_interp, axis=0), model_grid), model_grid, include_shelf=False, vmin=0, title=r'Annual mean iceberg melt (kg/m$^2$/s)')                
+    latlon_plot(mask_land_ice(np.mean(icebergs_interp, axis=0), model_grid), model_grid, include_shelf=False, vmin=0, title=r'Annual mean iceberg melt (kg/m$^2$/s)')                
     if nc_out is not None:
         # Also write to NetCDF file
         print 'Writing ' + nc_out

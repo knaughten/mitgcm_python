@@ -6,7 +6,7 @@ import numpy as np
 import sys
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d, griddata
 
-from utils import mask_land, mask_land_zice, mask_3d, xy_to_xyz, z_to_xyz
+from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz
 
 
 # Interpolate from one grid type to another. 
@@ -82,7 +82,7 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
         data_interp = mask_3d(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
     else:
         if mask_shelf:
-            data_interp = mask_land_zice(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
+            data_interp = mask_land_ice(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
         else:
             data_interp = mask_land(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
 

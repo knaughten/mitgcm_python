@@ -10,11 +10,11 @@ import numpy as np
 
 from grid import Grid
 from file_io import read_netcdf, find_variable, netcdf_time
-from utils import convert_ismr, mask_except_zice, mask_3d, mask_land_zice, mask_land, select_bottom, select_year, var_min_max
+from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, parse_date
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.latlon import cell_boundaries, shade_land, shade_land_zice, contour_iceshelf_front, prepare_vel, overlay_vectors
+from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf, find_aice_min_max
 
 
@@ -63,7 +63,7 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
         shade_land(ax, grid, gtype=gtype)
     else:
         # Shade land and ice shelves in grey
-        shade_land_zice(ax, grid, gtype=gtype)
+        shade_land_ice(ax, grid, gtype=gtype)
     # Plot the data    
     img = ax.pcolormesh(lon, lat, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
     if include_shelf:
@@ -336,7 +336,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 
     # Read necessary variables from NetCDF file(s), and mask appropriately
     if var == 'ismr':
-        shifwflx = mask_except_zice(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        shifwflx = mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var in ['bwtemp', 'sst', 'tminustf']:
         # Read temperature. Some of these variables need more than temperature and so second_file_path might be set.
         if second_file_path is not None:
@@ -351,15 +351,15 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
             file_path_use = file_path
         salt = mask_3d(read_netcdf(file_path_use, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'aice':
-        aice = mask_land_zice(read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        aice = mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'hice':
-        hice = mask_land_zice(read_netcdf(file_path, 'SIheff', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        hice = mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'mld':
-        mld = mask_land_zice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        mld = mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'eta':
-        eta = mask_land_zice(read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        eta = mask_land_ice(read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'saltflx':
-        saltflx = mask_land_zice(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        saltflx = mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'vel':
         # First read u
         if second_file_path is not None:
@@ -378,12 +378,12 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
             file_path_use = find_variable(file_path, second_file_path, 'SIuice')
         else:
             file_path_use = file_path
-        uice = mask_land_zice(read_netcdf(file_path_use, 'SIuice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u')
+        uice = mask_land_ice(read_netcdf(file_path_use, 'SIuice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u')
         if second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, 'SIvice')
         else:
             file_path_use = file_path
-        vice = mask_land_zice(read_netcdf(file_path_use, 'SIvice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v')
+        vice = mask_land_ice(read_netcdf(file_path_use, 'SIvice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v')
         
     # Plot
     if var == 'ismr':
@@ -420,7 +420,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 # Plot topographic variables: bathymetry, ice shelf draft, water column thickness.
 
 # Arguments:
-# var: 'bathy', 'zice', 'wct'
+# var: 'bathy', 'draft', 'wct'
 # grid: either a Grid object, or the path to the NetCDF grid file
 
 # Optional keyword arguments:
@@ -440,8 +440,8 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
     if var == 'bathy':
         data = abs(mask_land(grid.bathy, grid))
         title = 'Bathymetry (m)'
-    elif var == 'zice':
-        data = abs(mask_except_zice(grid.zice, grid))
+    elif var == 'draft':
+        data = abs(mask_except_ice(grid.draft, grid))
         title = 'Ice shelf draft (m)'
     elif var == 'wct':
         data = abs(mask_land(grid.wct, grid))
@@ -459,7 +459,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None, monthly=True, figsiz
         grid = Grid(grid)
 
     # Read sea ice area and the corresponding dates
-    aice = mask_land_zice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)
+    aice = mask_land_ice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)
     time = netcdf_time(file_path, monthly=monthly)
     # Find the range of dates we care about
     t_start, t_end = select_year(time, year)
@@ -477,7 +477,7 @@ def plot_aice_minmax (file_path, grid, year, fig_name=None, monthly=True, figsiz
     for t in range(2):
         lon, lat, aice_plot = cell_boundaries(aice_minmax[t], grid)
         ax = plt.subplot(gs[0,t])
-        shade_land_zice(ax, grid)
+        shade_land_ice(ax, grid)
         img = ax.pcolormesh(lon, lat, aice_plot, vmin=0, vmax=1)
         latlon_axes(ax, lon, lat)
         if t == 1:

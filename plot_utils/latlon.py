@@ -38,7 +38,7 @@ def cell_boundaries (data, grid, gtype='t'):
 
 
 # Shade various masks in grey on the plot: just the land mask, or the land and ice shelves.
-# shade_mask is the helper function; shade_land and shade_land_zice are the APIs.
+# shade_mask is the helper function; shade_land and shade_land_ice are the APIs.
 
 def shade_mask (ax, mask, grid, gtype='t'):
 
@@ -55,20 +55,20 @@ def shade_land (ax, grid, gtype='t'):
     shade_mask(ax, grid.get_land_mask(gtype=gtype), grid, gtype=gtype)
 
     
-def shade_land_zice (ax, grid, gtype='t'):
+def shade_land_ice (ax, grid, gtype='t'):
     
-    shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_zice_mask(gtype=gtype), grid, gtype=gtype)
+    shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), grid, gtype=gtype)
 
 
 # Contour the ice shelf front in black.
 def contour_iceshelf_front (ax, grid):
 
     # Mask land out of ice shelf draft, so that grounding line isn't contoured
-    zice = mask_land(grid.zice, grid)
+    draft = mask_land(grid.draft, grid)
     # Find the shallowest non-zero ice shelf draft
-    zice0 = np.amax(zice[zice!=0])
+    draft0 = np.amax(draft[draft!=0])
     # Add to plot
-    ax.contour(grid.lon_2d, grid.lat_2d, zice, levels=[zice0], colors=('black'), linestyles='solid')
+    ax.contour(grid.lon_2d, grid.lat_2d, draft, levels=[draft0], colors=('black'), linestyles='solid')
 
 
 # Prepare the velocity vectors for plotting: given 3D arrays of u and v on their original grids, and already masked, do a vertical transformation vel_option and interpolate to the tracer grid. Options for vel_option are:

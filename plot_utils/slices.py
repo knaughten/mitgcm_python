@@ -51,7 +51,7 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
         if return_grid_vars:
             loc0 = lat[j0]
 
-    # Get horizontal boundaries, as well as hfac and surface depth (grid.zice)
+    # Get horizontal boundaries and hfac
     # Also throw away one row of data so all points are bounded
     if h_axis == 'lat':
         if gtype in ['t', 'u']:
@@ -61,9 +61,8 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
             if return_grid_vars:
                 # Boundaries are southern edges of cells in y            
                 h_bdry = grid.lat_corners_1d            
-                # Get hfac and zice at centres
+                # Get hfac at centres
                 hfac = grid.hfac[:,:-1,i0]
-                zice = grid.zice[:-1,i0]
         elif gtype in ['v', 'psi']:
             # Edges in y
             # Throw away southernmost row of data
@@ -73,8 +72,6 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 h_bdry = grid.lat_1d
                 # Get hfac at edges
                 hfac = grid.hfac_s[:,1:,i0]
-                # Ice shelf draft at these edges is the minimum of the tracer points on either side
-                zice = np.minimum(grid.zice[:-1,i0], grid.zice[1:,i0])
     elif h_axis == 'lon':
         if gtype in ['t', 'v']:
             # Centered in x
@@ -83,9 +80,8 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
             if return_grid_vars:
                 # Boundaries are western edges of cells in x
                 h_bdry = grid.lon_corners_1d
-                # Get hfac and zice at centres
+                # Get hfac at centres
                 hfac = grid.hfac[:,j0,:-1]
-                zice = grid.zice[j0,:-1]
         elif gtype in ['u', 'psi']:
             # Edges in x
             # Throw away westernmost row of data
@@ -95,24 +91,20 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 h_bdry = grid.lon_1d
                 # Get hfac at edges
                 hfac = grid.hfac_w[:,j0,1:]
-                # Ice shelf draft at these edges is the minimum of the tracer points on either side
-                zice = np.minimum(grid.zice[j0,:-1], grid.zice[j0,1:])
 
     if return_grid_vars:
-        return data_slice, h_bdry, hfac, zice, loc0
+        return data_slice, h_bdry, hfac, loc0
     else:
         return data_slice
 
 
-def get_slice_boundaries (data_slice, grid, h_bdry, hfac, zice):
+def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
 
     # Set up a bunch of information about the grid, all stored in arrays with the same dimension as data_slice. This helps with vectorisation later.
     nh = data_slice.shape[1]
     # Left and right boundaries (lat or lon)
     left = np.tile(h_bdry[:-1], (grid.nz, 1))
     right = np.tile(h_bdry[1:], (grid.nz, 1))
-    # Ice shelf draft
-    zice = np.tile(zice, (grid.nz, 1))    
     # Depth of vertical layer above
     lev_above = np.tile(np.expand_dims(grid.z_edges[:-1], 1), (1, nh))
     # Depth of vertical layer below
@@ -131,15 +123,16 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac, zice):
     depth_above = np.zeros(data_slice.shape)
     depth_below = np.zeros(data_slice.shape)
     # Partial cells with ice shelves but no seafloor: wet portion is at the bottom
-    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below>0))
+    index = (hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below>0)
     depth_above[index] = lev_below[index] + dz[index]*hfac[index]
     # Partial cells with seafloor but no ice shelves: wet portion is at the top
-    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above>0)*(hfac_below==0))
-    depth_below[index] = lev_above[index] - dz[index]*hfac[index]
-    # Partial cells with both ice shelves and seafloor - now we need to use the surface depth as seen by the model, to properly position the wet portion of the cell.
-    index = np.nonzero((hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below==0))
-    depth_above[index] = zice[index]
-    depth_below[index] = depth_above[index] - dz[index]*hfac[index]
+    index = (hfac>0)*(hfac<1)*(hfac_above>0)*(hfac_below==0)
+    depth_below[index] = lev_above[index] - dz[index]*hfac[index]    
+    # Partial cells with both ice shelves and seafloor - this is a problem with the grid - print a warning, and assume the wet portion is at the bottom.
+    index = (hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below==0)
+    if np.count_nonzero(index) > 0:
+        print 'Warning (get_slice_boundaries): this grid has partial cells with both ice shelves and seafloor. They will be pinched, and the position of the wet portion may not be accurate in this plot.'
+        depth_above[index] = lev_below[index] + dz[index]*hfac[index]
     
     # Now we need to merge depth_above and depth_below, because depth_above for one cell is equal to depth_below for the cell above, and vice versa.
     # Figure out the other option for depth_above based on depth_below
@@ -236,8 +229,8 @@ def get_slice_patches (data_slice, left, right, below, above):
 
 def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, return_bdry=False):
 
-    data_slice, h_bdry, hfac, zice, loc0 = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0)
-    left, right, below, above = get_slice_boundaries(data_slice, grid, h_bdry, hfac, zice)
+    data_slice, h_bdry, hfac, loc0 = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0)
+    left, right, below, above = get_slice_boundaries(data_slice, grid, h_bdry, hfac)
     vmin, vmax, hmin, hmax, zmin, zmax = get_slice_minmax(data_slice, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
     patches = get_slice_patches(data_slice, left, right, below, above)
 

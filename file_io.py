@@ -147,92 +147,7 @@ def find_variable (file_path_1, file_path_2, var_name):
     else:
         print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
         sys.exit()
-
-
-# Read an array from a binary file. This is useful for input files (eg bathymetry) and output files which don't get converted to NetCDF (eg crashes).
-
-# Arguments:
-# filename: path to binary file
-# grid: Grid object OR list of length 3 containing [nx, ny, nz] grid dimensions
-# dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. For a 1D array of a special shape, use '1'.
-
-# Optional keyword arguments:
-# prec: 32 or 64, corresponding to the precision of the file. Default 32. 
-#       Here is how you work out the expected precision of MITgcm files:
-#       Input OBC files: exf_iprec_obcs (data.exf, default equal to exf_iprec)
-#       Input forcing files: exf_iprec (data.exf, default 32)
-#       All other input files: readBinaryPrec (data, default 32)
-#       Restarts/dumps: writeStatePrec (data, default 64)
-#       All other output files: writeBinaryPrec (data, default 32)
-
-# Output: array of specified dimension
-
-def read_binary (filename, grid, dimensions, prec=32):
-
-    if dimensions not in ['xy', 'xyz', 'xyt', 'xyzt', 'z', '1']:
-        print 'Error (read_binary): invalid dimension code ' + dimensions
-        sys.exit()
-
-    if isinstance(grid, list):
-        nx = grid[0]
-        ny = grid[1]
-        nz = grid[2]
-    else:
-        nx = grid.nx
-        ny = grid.ny
-        nz = grid.nz
-
-    # Set dtype
-    if prec == 32:
-        dtype = '>f4'
-    elif prec == 64:
-        dtype = '>f8'
-    else:
-        print 'Error (read_binary): invalid precision'
-        sys.exit()
-
-    # Read data
-    data = np.fromfile(filename, dtype=dtype)
-
-    if dimensions == '1':
-        # No need to reshape
-        return data
-
-    # Work out dimensions
-    # Special case just with 'z' (for some grid variables)
-    if dimensions == 'z':
-        if data.size != nz:
-            print 'Error (read_binary): incorrect dimensions or precision'
-            sys.exit()
-        data_shape = [nz]    
-    elif 'z' in dimensions:
-        if 't' in dimensions:
-            if np.mod(data.size, nx*ny*nz) != 0:
-                print 'Error (read_binary): incorrect dimensions or precision'
-                sys.exit()
-            num_time = data.size/(nx*ny*nz)
-            data_shape = [num_time, nz, ny, nx]
-        else:
-            if data.size != nx*ny*nz:
-                print 'Error (read_binary): incorrect dimensions or precision'
-                sys.exit()
-            data_shape = [nz, ny, nx]
-    else:
-        if 't' in dimensions:
-            if np.mod(data.size, nx*ny) != 0:
-                print 'Error (read_binary): incorrect dimensions or precision'
-                sys.exit()
-            num_time = data.size/(nx*ny)
-            data_shape = [num_time, ny, nx]
-        else:
-            if data.size != nx*ny:
-                print 'Error (read_binary): incorrect dimensions or precision'
-                sys.exit()
-            data_shape = [ny, nx]
-
-    # Reshape the data and return
-    return np.reshape(data, data_shape)
-
+        
 
 # Write an array ("data"), of any dimension, to a binary file ("file_path"). Default is 32-bit big-endian (prec=32, endian='big') but can also do 64-bit (prec=64) and/or little-endian (endian='little')
 def write_binary (data, file_path, prec=32, endian='big'):
@@ -268,7 +183,7 @@ class NCfile:
     # Initialisation arguments:
     # filename: name for desired NetCDF file
     # grid: Grid object
-    # dimensions: as in function read_binary
+    # dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. Include all the dimensions (from x, y, z, t) that any of the variables in the file will need.
     def __init__ (self, filename, grid, dimensions):
 
         # Open the file
@@ -316,7 +231,7 @@ class NCfile:
     # Arguments:
     # var_name: desired name for variable
     # data: array of data for that variable
-    # dimensions: as in function read_binary
+    # dimensions: as in initialisation
 
     # Optional keyword arguments:
     # gtype: as in function cell_boundaries (plus 'w' for w-grid)

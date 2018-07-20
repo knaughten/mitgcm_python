@@ -4,9 +4,11 @@
 
 from grid import Grid, SOSEGrid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
-from file_io import read_binary, write_binary, NCfile
+from file_io import write_binary, NCfile
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
-from constants import sose_nx, sose_ny, sose_nz
+
+from MITgcmutils import rdmds
+from MITgcmutils.mdjwf import densmdjwf
 
 import numpy as np
 import os
@@ -18,11 +20,11 @@ import sys
 # Arguments:
 # in_file: binary SOSE file (.data) containing one record for each month of the SOSE period
 # out_file: desired path to output file
-# dimensions: 'xy' or 'xyz' for 2D and 3D variables respectively
-def make_sose_climatology (in_file, out_file, dimensions):
+def make_sose_climatology (in_file, out_file):
 
-    sose_dim = [sose_nx, sose_ny, sose_nz]
-    data = read_binary(in_file, sose_dim, dimensions+'t')    
+    # Strip .data from filename before reading
+    in_file = in_file.replace('.data', '')
+    data = rdmds(in_file)
     climatology = np.zeros(tuple([12]) + data.shape[1:])
     for month in range(12):
         climatology[month,:] = np.mean(data[month::12,:], axis=0)
@@ -83,7 +85,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     # Find open cells according to the model, interpolated to SOSE grid
     model_open = np.ceil(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1))
     # Find ice shelf cavity points according to model, interpolated to SOSE grid
-    model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.zice_mask, model_grid), fill_value=0)).astype(bool)
+    model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.ice_mask, model_grid), fill_value=0)).astype(bool)
     # Select open, non-cavity cells
     fill = model_open*np.invert(model_cavity)
     # Extend into the mask a few times to make sure there are no artifacts near the coast
@@ -138,7 +140,6 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 
 # Arguments:
 # grid_path: path to NetCDF grid file
-# mitgcm_code_path: path to your copy of the MITgcm source code repository. This is needed so we can access the official function for MDJWF density calculation.
 # out_file: path to desired output file
 
 # Optional keyword arguments:
@@ -146,7 +147,7 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # rhoConst: reference density as in MITgcm's "data" namelist
 # prec: as in function sose_ics
 
-def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
+def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
 
     print 'Things to check in your "data" namelist:'
     print "eosType='MDJWF'"
@@ -155,14 +156,6 @@ def calc_load_anomaly (grid_path, mitgcm_code_path, out_file, constant_t=-1.9, c
 
     g = 9.81  # gravity (m/s^2)
     errorTol = 1e-13  # convergence criteria
-
-    # Load the MDJWF density function
-    mitgcm_utils_path = real_dir(mitgcm_code_path) + 'utils/python/MITgcmutils/MITgcmutils/'
-    if not os.path.isfile(mitgcm_utils_path+'mdjwf.py'):
-        print 'Error (calc_load_anomaly): ' + mitgcm_utils_path + ' does not contain the script mdjwf.py.'
-        sys.exit()    
-    sys.path.insert(0, mitgcm_utils_path)
-    from mdjwf import densmdjwf
 
     # Build the grid
     grid = Grid(grid_path)

@@ -125,9 +125,9 @@ def mask_land (data, grid, gtype='t', time_dependent=False):
 # gtype: as in function Grid.get_hfac
 # time_dependent: as in function apply_mask
 
-def mask_land_zice (data, grid, gtype='t', time_dependent=False):
+def mask_land_ice (data, grid, gtype='t', time_dependent=False):
 
-    return apply_mask(data, grid.get_land_mask(gtype=gtype)+grid.get_zice_mask(gtype=gtype), time_dependent=time_dependent)
+    return apply_mask(data, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), time_dependent=time_dependent)
 
 
 # Mask land and open ocean out of a 2D field, just leaving the ice shelves.
@@ -140,9 +140,9 @@ def mask_land_zice (data, grid, gtype='t', time_dependent=False):
 # gtype: as in function Grid.get_hfac
 # time_dependent: as in function apply_mask
 
-def mask_except_zice (data, grid, gtype='t', time_dependent=False):
+def mask_except_ice (data, grid, gtype='t', time_dependent=False):
 
-    return apply_mask(data, np.invert(grid.get_zice_mask(gtype=gtype)), time_dependent=time_dependent)
+    return apply_mask(data, np.invert(grid.get_ice_mask(gtype=gtype)), time_dependent=time_dependent)
 
 
 # Mask everything except FRIS out of a 2D field.

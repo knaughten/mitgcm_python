@@ -5,6 +5,8 @@
 # For binary, put the *.data and *.meta files for the following variables into one directory: Depth, DRC, DRF, DXG, DYG, hFacC, hFacS, hFacW, RAC, RC, RF, XC, XG, YC, YG.
 #
 # For NetCDF, switch MNC on and run MITgcm just long enough to produce one grid.t*.nc file for each tile. Then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution) to create grid.glob.nc. Don't use gluemncbig as this gives different dimensions.
+#
+# IMPORTANT NOTE: The calculation of ice shelf draft and bathymetry may not be accurate in partial cells which include both ice and seafloor (i.e. the wet portion of the cell is in the middle, not at the top or bottom). However, this should never happen in domains created using make_domain.py, as the digging ensures all water columns are at least two (possibly partial) cells deep.
 #######################################################
 
 import numpy as np
@@ -12,9 +14,9 @@ import sys
 import os
 from MITgcmutils import rdmds
 
-from file_io import read_netcdf, read_binary
+from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude
-from constants import fris_bounds, sose_nx, sose_ny, sose_nz, sose_res
+from constants import fris_bounds, sose_res
 
 
 # Grid object containing lots of grid variables:
@@ -35,10 +37,10 @@ from constants import fris_bounds, sose_nx, sose_ny, sose_nz, sose_res
 # hfac_w: partial cell fraction at u-points (XYZ)
 # hfac_s: partial cell fraction at v-points (XYZ)
 # bathy: bathymetry (negative, m, XY)
-# zice: ice shelf draft (negative, m, XY)
+# draft: ice shelf draft (negative, m, XY)
 # wct: water column thickness (m, XYZ)
 # land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY)
-# zice_mask, zice_mask_u, zice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
+# ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
 class Grid:
 
@@ -67,8 +69,14 @@ class Grid:
             self.dx_s = read_netcdf(path, 'dxG')
             self.dy_w = read_netcdf(path, 'dyG')
             self.dA = read_netcdf(path, 'rA')
-            self.z = read_netcdf(path, 'RC')
-            self.z_edges = read_netcdf(path, 'RF')
+            try:
+                self.z = read_netcdf(path, 'RC')
+            except(KeyError):
+                self.z = read_netcdf(path, 'Z')
+            try:
+                self.z_edges = read_netcdf(path, 'RF')
+            except(KeyError):
+                self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
             self.dz_t = read_netcdf(path, 'drC')
             self.hfac = read_netcdf(path, 'HFacC')
@@ -125,20 +133,20 @@ class Grid:
         self.nz = self.z.size
 
         # Calculate ice shelf draft
-        self.zice = np.zeros([self.ny, self.nx])
-        self.zice[:,:] = np.nan
+        self.draft = np.zeros([self.ny, self.nx])
+        self.draft[:,:] = np.nan
         # Loop from top to bottom
         for k in range(self.nz):
             hfac_tmp = self.hfac[k,:]
             # Identify wet cells with no draft assigned yet
-            index = (hfac_tmp!=0)*np.isnan(self.zice)
-            self.zice[index] = self.z_edges[k] - self.dz[k]*(1-hfac_tmp[index])
+            index = (hfac_tmp!=0)*np.isnan(self.draft)
+            self.draft[index] = self.z_edges[k] - self.dz[k]*(1-hfac_tmp[index])
         # Anything still NaN is land mask and should have zero draft
-        index = np.isnan(self.zice)
-        self.zice[index] = 0
+        index = np.isnan(self.draft)
+        self.draft[index] = 0
 
         # Calculate bathymetry
-        self.bathy = self.zice - self.wct
+        self.bathy = self.draft - self.wct
 
         # Create masks on the t, u, and v grids
         # Land masks
@@ -146,13 +154,13 @@ class Grid:
         self.land_mask_u = self.build_land_mask(self.hfac_w)
         self.land_mask_v = self.build_land_mask(self.hfac_s)
         # Ice shelf masks
-        self.zice_mask = self.build_zice_mask(self.hfac)
-        self.zice_mask_u = self.build_zice_mask(self.hfac_w)
-        self.zice_mask_v = self.build_zice_mask(self.hfac_s)
+        self.ice_mask = self.build_ice_mask(self.hfac)
+        self.ice_mask_u = self.build_ice_mask(self.hfac_w)
+        self.ice_mask_v = self.build_ice_mask(self.hfac_s)
         # FRIS masks
-        self.fris_mask = self.build_fris_mask(self.zice_mask, self.lon_2d, self.lat_2d)
-        self.fris_mask_u = self.build_fris_mask(self.zice_mask_u, self.lon_corners_2d, self.lat_2d)
-        self.fris_mask_v = self.build_fris_mask(self.zice_mask_v, self.lon_2d, self.lat_corners_2d)
+        self.fris_mask = self.build_fris_mask(self.ice_mask, self.lon_2d, self.lat_2d)
+        self.fris_mask_u = self.build_fris_mask(self.ice_mask_u, self.lon_corners_2d, self.lat_2d)
+        self.fris_mask_v = self.build_fris_mask(self.ice_mask_v, self.lon_2d, self.lat_corners_2d)
 
         
     # Given a 3D hfac array on any grid, create the land mask.
@@ -162,23 +170,23 @@ class Grid:
 
 
     # Given a 3D hfac array on any grid, create the ice shelf mask.
-    def build_zice_mask (self, hfac):
+    def build_ice_mask (self, hfac):
 
         return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]==0)
 
 
     # Create a mask just containing FRIS ice shelf points.
     # Arguments:
-    # zice_mask, lon, lat: 2D arrays of the ice shelf mask, longitude, and latitude on any grid
-    def build_fris_mask (self, zice_mask, lon, lat):
+    # ice_mask, lon, lat: 2D arrays of the ice shelf mask, longitude, and latitude on any grid
+    def build_fris_mask (self, ice_mask, lon, lat):
 
-        fris_mask = np.zeros(zice_mask.shape, dtype='bool')
+        fris_mask = np.zeros(ice_mask.shape, dtype='bool')
         # Identify FRIS in two parts, split along the line 45W
         # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
         regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
         for bounds in regions:
             # Select the ice shelf points within these bounds
-            index = zice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
+            index = ice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
             fris_mask[index] = True
         return fris_mask
 
@@ -245,16 +253,16 @@ class Grid:
 
             
     # Return the ice shelf mask for the given grid type.
-    def get_zice_mask (self, gtype='t'):
+    def get_ice_mask (self, gtype='t'):
 
         if gtype == 't':
-            return self.zice_mask
+            return self.ice_mask
         elif gtype == 'u':
-            return self.zice_mask_u
+            return self.ice_mask_u
         elif gtype == 'v':
-            return self.zice_mask_v
+            return self.ice_mask_v
         else:
-            print 'Error (get_zice_mask): no mask exists for the ' + gtype + ' grid'
+            print 'Error (get_ice_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
 
 
@@ -277,15 +285,12 @@ class Grid:
 # To speed up interpolation, trim and/or extend the SOSE grid to agree with the bounds of model_grid (Grid object for the model which you'll be interpolating SOSE data to).
 # Depending on the longitude range within the model grid, it might also be necessary to rearrange the SOSE grid so it splits at 180E=180W (split=180, implying longitude ranges from -180 to 180 and max_lon=180 when creating model_grid) instead of its native split at 0E (split=0, implying longitude ranges from 0 to 360 and max_lon=360 when creating model_grid).
 # The rule of thumb is, if your model grid includes 0E, split at 180E, and vice versa. A circumpolar model should be fine either way as long as it doesn't have any points in the SOSE periodic boundary gap (in which case you'll have to write a patch). 
-# MOST IMPORTANTLY, if you are reading a SOSE binary file, don't use read_binary from file_io. Use the class function read_field (defined below) which will repeat the trimming/extending/splitting/rearranging correctly.
+# MOST IMPORTANTLY, if you are reading a SOSE binary file, don't use rdmds. Use the class function read_field (defined below) which will repeat the trimming/extending/splitting/rearranging correctly.
 
 # If you don't want to do any trimming or extending, just set model_grid=None.
 class SOSEGrid(Grid):
 
     def __init__ (self, grid_dir, model_grid=None, split=0):
-
-        grid_dir = real_dir(grid_dir)
-        self.orig_dims = [sose_nx, sose_ny, sose_nz]
 
         self.trim_extend = True
         if model_grid is None:
@@ -305,10 +310,12 @@ class SOSEGrid(Grid):
                 print 'Error (SOSEGrid): split must be 180 or 0'
                 sys.exit()
         else:
-            max_lon = 360
+            max_lon = 360        
+
+        grid_dir = real_dir(grid_dir)        
 
         # Read longitude at cell centres (make the 2D grid 1D as it's regular)
-        self.lon = fix_lon_range(read_binary(grid_dir+'XC.data', self.orig_dims, 'xy'), max_lon=max_lon)[0,:]
+        self.lon = fix_lon_range(rdmds(grid_dir+'XC'), max_lon=max_lon)[0,:]
         if split == 180:
             # Split the domain at 180E=180W and rearrange the two halves so longitude is strictly ascending
             self.i_split = np.nonzero(self.lon < 0)[0][0]
@@ -318,7 +325,7 @@ class SOSEGrid(Grid):
             self.i_split = 0
             
         # Read longitude at cell corners, splitting as before
-        self.lon_corners = split_longitude(fix_lon_range(read_binary(grid_dir+'XG.data', self.orig_dims, 'xy'), max_lon=max_lon), self.i_split)[0,:]
+        self.lon_corners = split_longitude(fix_lon_range(rdmds(grid_dir+'XG'), max_lon=max_lon), self.i_split)[0,:]
         if self.lon_corners[0] > 0:
             # The split happened between lon_corners[i_split] and lon[i_split].
             # Take mod 360 on this index of lon_corners to make sure it's strictly increasing.
@@ -330,10 +337,15 @@ class SOSEGrid(Grid):
             sys.exit()
             
         # Read latitude at cell centres and corners
-        self.lat = read_binary(grid_dir+'YC.data', self.orig_dims, 'xy')[:,0]
-        self.lat_corners = read_binary(grid_dir+'YG.data', self.orig_dims, 'xy')[:,0]
+        self.lat = rdmds(grid_dir+'YC')[:,0]
+        self.lat_corners = rdmds(grid_dir+'YG')[:,0]
         # Read depth
-        self.z = read_binary(grid_dir+'RC.data', self.orig_dims, 'z')
+        self.z = rdmds(grid_dir+'RC').squeeze()
+
+        # Save original dimensions
+        sose_nx = self.lon.size
+        sose_ny = self.lat.size
+        sose_nz = self.z.size
 
         if self.trim_extend:
         
@@ -480,9 +492,9 @@ class SOSEGrid(Grid):
         else:
 
             # Nothing fancy to do, so read the rest of the fields
-            self.hfac = read_binary(grid_dir+'hFacC.data', self.orig_dims, 'xyz')
-            self.hfac_w = read_binary(grid_dir+'hFacW.data', self.orig_dims, 'xyz')
-            self.hfac_s = read_binary(grid_dir+'hFacS.data', self.orig_dims, 'xyz')
+            self.hfac = rdmds(grid_dir+'hFacC')
+            self.hfac_w = rdmds(grid_dir+'hFacW')
+            self.hfac_s = rdmds(grid_dir+'hFacS')
             self.nx = sose_nx
             self.ny = sose_ny
             self.nz = sose_nz
@@ -498,16 +510,11 @@ class SOSEGrid(Grid):
     # The field can be time dependent: dimensions must be one of 'xy', 'xyt', 'xyz', or 'xyzt'.
     # Extended regions will just be filled with fill_value for now. See function discard_and_fill in interpolation.py for how to extrapolate data into these regions.
     def read_field (self, file_path, dimensions, fill_value=-9999):
-
-        # Expect to have xy in the dimensions. The only case which won't get caught by read_binary is z alone.
-        if dimensions == 'z':
-            print 'Error (read_field): not set up to read fields of dimension ' + dimensions
-            sys.exit()
-
+        
         if self.trim_extend:
 
             # Read the field and split along longitude
-            data_orig = split_longitude(read_binary(file_path, self.orig_dims, dimensions), self.i_split)
+            data_orig = split_longitude(rdmds(file_path.replace('.data', ''), self.i_split)
             # Create a new array of the correct dimension (including extended regions)
             data_shape = [self.ny, self.nx]
             if 'z' in dimensions:
@@ -525,7 +532,7 @@ class SOSEGrid(Grid):
 
         else:
             # Nothing fancy to do
-            data = read_binary(file_path, self, dimensions)
+            data = rdmds(file_path.replace('.data', '')
 
         return data
             
@@ -552,13 +559,13 @@ class SOSEGrid(Grid):
 
 
     # Dummy definitions for functions we don't want, which would otherwise be inhertied from Grid
-    def build_zice_mask (self, hfac):
+    def build_ice_mask (self, hfac):
         print 'Error (SOSEGrid): no ice shelves to mask'
         sys.exit()
     def build_fris_mask (self, hfac):
         print 'Error (SOSEGrid): no ice shelves to mask'
         sys.exit()
-    def get_zice_mask (self, gtype='t'):
+    def get_ice_mask (self, gtype='t'):
         print 'Error (SOSEGrid): no ice shelves to mask'
         sys.exit()
     def get_fris_mask (self, gtype='t'):

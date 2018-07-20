@@ -53,7 +53,7 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
 
 # Arguments:
 # ismr: 2D (lat x lon) array of ice shelf melt rate in m/y
-# mask: boolean array which is True in the points to be included in the calculation (such as grid.fris_mask or grid.zice_mask)
+# mask: boolean array which is True in the points to be included in the calculation (such as grid.fris_mask or grid.ice_mask)
 # grid: Grid object
 
 # Optional keyword argument:
