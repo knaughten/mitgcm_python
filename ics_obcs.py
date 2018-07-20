@@ -18,13 +18,12 @@ import sys
 # Calculate a monthly climatology of the given variable in SOSE, from its monthly output over the entire 6-year reanalysis.
 
 # Arguments:
-# in_file: binary SOSE file (.data) containing one record for each month of the SOSE period
+# in_file: binary SOSE file (.data) containing one record for each month of the SOSE period. You can also leave ".data" off as it will get stripped off anyway.
 # out_file: desired path to output file
 def make_sose_climatology (in_file, out_file):
 
     # Strip .data from filename before reading
-    in_file = in_file.replace('.data', '')
-    data = rdmds(in_file)
+    data = rdmds(in_file.replace('.data', ''))
     climatology = np.zeros(tuple([12]) + data.shape[1:])
     for month in range(12):
         climatology[month,:] = np.mean(data[month::12,:], axis=0)
@@ -34,7 +33,7 @@ def make_sose_climatology (in_file, out_file):
 # Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Ice shelf cavities will be filled with constant temperature and salinity.
 
 # Arguments:
-# grid_file: NetCDF grid file for your MITgcm configuration
+# grid_path: path to directory containing MITgcm binary grid files
 # sose_dir: directory containing SOSE monthly climatologies and grid/ subdirectory (available on Scihub at /data/oceans_input/raw_input_data/SOSE_monthly_climatology)
 # output_dir: directory to save the binary MITgcm initial conditions files (binary)
 
@@ -44,7 +43,7 @@ def make_sose_climatology (in_file, out_file):
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
+def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -63,12 +62,12 @@ def sose_ics (grid_file, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
     if split == 180:
-        model_grid = Grid(grid_file, max_lon=180)
+        model_grid = Grid(grid_path, max_lon=180)
         if model_grid.lon_1d[0] > model_grid.lon_1d[-1]:
             print 'Error (sose_ics): Looks like your domain crosses 180E. Run this again with split=0.'
             sys.exit()
     elif split == 0:
-        model_grid = Grid(grid_file, max_lon=360)
+        model_grid = Grid(grid_path, max_lon=360)
         if model_grid.lon_1d[0] > model_grid.lon_1d[-1]:
             print 'Error (sose_ics): Looks like your domain crosses 0E. Run this again with split=180.'
             sys.exit()
@@ -211,7 +210,7 @@ def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rh
 
 # Arguments:
 # location: 'N', 'S', 'E', or 'W' corresponding to the open boundary to process (north, south, east, west). So, run this function once for each open boundary in your domain.
-# grid_file: path to MITgcm grid file. The latitude or longitude of the open boundary will be determined from this file.
+# grid_path: path to directory containing MITgcm binary grid files. The latitude or longitude of the open boundary will be determined from this file.
 # sose_dir: as in function sose_ics
 # output_dir: directory to save binary MITgcm OBCS files
 
@@ -219,7 +218,7 @@ def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rh
 # nc_out: path to a NetCDF file to save the interpolated boundary conditions to, so you can easily check that they look okay
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
 
-def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
+def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -238,7 +237,7 @@ def sose_obcs (location, grid_file, sose_dir, output_dir, nc_out=None, prec=32):
 
     print 'Building MITgcm grid'
     # Make sure longitude is in the range (0, 360) to match SOSE
-    model_grid = Grid(grid_file, max_lon=360)
+    model_grid = Grid(grid_path, max_lon=360)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
         lat0 = model_grid.lat_1d[0]

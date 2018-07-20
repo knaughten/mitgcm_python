@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 
-from grid import Grid
+from grid import Grid, choose_grid
 from file_io import read_netcdf, find_variable, netcdf_time
 from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max
 from plot_utils.windows import set_panels, finished_plot
@@ -303,9 +303,14 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 #            'vel': UVEL and VVEL
 #            'velice': SIuice and SIvice
 #            If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
-# grid: either a Grid object, or the path to the NetCDF grid file
+
+# There are three ways to deal with the Grid object:
+# (1) If you have precomputed the grid, pass that object to the keyword argument "grid".
+# (2) If you haven't precomputed the grid but file_path contains the grid variables, do nothing. The code will automatically build the grid from file_path.
+# (3) If you haven't precomputed the grid and file_path doesn't contain the grid variables, pass the path to either (a) the binary grid directory or (b) a NetCDF file containing the grid variables to the keyword argument "grid".
 
 # Optional keyword arguments:
+# grid: as described above
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
@@ -318,7 +323,10 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 # vel_option: only matters for 'vel'. As in function prepare_vel.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', figsize=(8,6)):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', figsize=(8,6)):
+
+    # Build the grid if needed
+    grid = choose_grid(grid, file_path)
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
@@ -328,11 +336,6 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
     if date_string is None and time_index is not None:
         # Determine what to write about the date
         date_string = parse_date(file_path=file_path, time_index=time_index)
-
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
 
     # Read necessary variables from NetCDF file(s), and mask appropriately
     if var == 'ismr':
@@ -421,7 +424,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 
 # Arguments:
 # var: 'bathy', 'draft', 'wct'
-# grid: either a Grid object, or the path to the NetCDF grid file
+# grid: either a Grid object, or the path to the binary grid directory or a NetCDF file containing grid variables
 
 # Optional keyword arguments:
 # vmin, vmax: as in function set_colours
@@ -433,8 +436,7 @@ def read_plot_latlon (var, file_path, grid, time_index=None, t_start=None, t_end
 def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None, figsize=(8,6)):
 
     if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
+        # Create a Grid object from the given path
         grid = Grid(grid)
 
     if var == 'bathy':
@@ -451,12 +453,10 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
 
 
 # 1x2 lat-lon plot showing sea ice area at the timesteps of minimum and maximum area in the given year.
-def plot_aice_minmax (file_path, grid, year, fig_name=None, monthly=True, figsize=(12,6)):
+def plot_aice_minmax (file_path, year, grid=None, fig_name=None, monthly=True, figsize=(12,6)):
 
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
+    # Build the grid if needed
+    grid = choose_grid(grid, file_path)
 
     # Read sea ice area and the corresponding dates
     aice = mask_land_ice(read_netcdf(file_path, 'SIarea'), grid, time_dependent=True)

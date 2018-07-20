@@ -473,7 +473,7 @@ def check_one_direction (open_cells, open_cells_beside, loc_string, problem):
     return problem
         
 
-# Given a NetCDF grid file produced by MITgcm (and glued together from all the per-processor files), make sure that the digging worked and that the 2 open cell rule holds.
+# Given the path to a directory containing the binary grid files produced by MITgcm, make sure that the digging worked and that the 2 open cell rule holds.
 def check_final_grid (grid_path):
 
     grid = Grid(grid_path)

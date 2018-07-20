@@ -1,10 +1,8 @@
 #######################################################
 # Everything to do with reading the grid
-# You can build this using binary or NetCDF grid files.
+# You can build this using binary grid files or NetCDF output files created by xmitgcm which include all the necessary grid variables.
 #
 # For binary, put the *.data and *.meta files for the following variables into one directory: Depth, DRC, DRF, DXG, DYG, hFacC, hFacS, hFacW, RAC, RC, RF, XC, XG, YC, YG.
-#
-# For NetCDF, switch MNC on and run MITgcm just long enough to produce one grid.t*.nc file for each tile. Then glue them together using gluemnc (utils/scripts/gluemnc in the MITgcm distribution) to create grid.glob.nc. Don't use gluemncbig as this gives different dimensions.
 #
 # IMPORTANT NOTE: The calculation of ice shelf draft and bathymetry may not be accurate in partial cells which include both ice and seafloor (i.e. the wet portion of the cell is in the middle, not at the top or bottom). However, this should never happen in domains created using make_domain.py, as the digging ensures all water columns are at least two (possibly partial) cells deep.
 #######################################################
@@ -25,7 +23,7 @@ from constants import fris_bounds, sose_res
 # lat_2d: latitude at cell centres (degrees, XY)
 # lon_corners_2d: longitude at cell corners (degrees, XY)
 # lat_corners_2d: latitude at cell corners (degrees, XY)
-# lon_1d, lat_1d, lon_corners_1d, lat_corners_2d: 1D versions of the corresponding 2D arrays, note this assumes a polar spherical grid! (X or Y)
+# lon_1d, lat_1d, lon_corners_1d, lat_corners_1d: 1D versions of the corresponding 2D arrays, note this assumes a polar spherical grid! (X or Y)
 # dx_s: width of southern cell edge (m, XY)
 # dy_w: height of western cell edge (m, XY)
 # dA: area of cell (m^2, XY)
@@ -47,8 +45,7 @@ class Grid:
     # Initialisation arguments:
     # file_path: path to NetCDF grid file OR directory containing binary files
     # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon). By default the code will work out whether (0, 360) or (-180, 180) is more appropriate.
-    # prec: precision of binary files (matching writeBinaryPrec in "data" namelist to MITgcm, default 32)
-    def __init__ (self, path, max_lon=None, prec=32):
+    def __init__ (self, path, max_lon=None):
 
         if path.endswith('.nc'):
             use_netcdf=True
@@ -69,28 +66,14 @@ class Grid:
             self.dx_s = read_netcdf(path, 'dxG')
             self.dy_w = read_netcdf(path, 'dyG')
             self.dA = read_netcdf(path, 'rA')
-            try:
-                self.z = read_netcdf(path, 'RC')
-            except(KeyError):
-                self.z = read_netcdf(path, 'Z')
-            try:
-                self.z_edges = read_netcdf(path, 'RF')
-            except(KeyError):
-                self.z_edges = read_netcdf(path, 'Zp1')
+            self.z = read_netcdf(path, 'Z')
+            self.z_edges = read_netcdf(path, 'RF')
+            self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
             self.dz_t = read_netcdf(path, 'drC')
-            try:
-                self.hfac = read_netcdf(path, 'HFacC')
-            except(KeyError):
-                self.hfac = read_netcdf(path, 'hFacC')
-            try:
-                self.hfac_w = read_netcdf(path, 'HFacW')
-            except(KeyError):
-                self.hfac_w = read_netcdf(path, 'hFacW')
-            try:
-                self.hfac_s = read_netcdf(path, 'HFacS')
-            except(KeyError):
-                self.hfac_s = read_netcdf(path, 'hFacS')
+            self.hfac = read_netcdf(path, 'hFacC')
+            self.hfac_w = read_netcdf(path, 'hFacW')
+            self.hfac_s = read_netcdf(path, 'hFacS')
             self.wct = read_netcdf(path, 'Depth')
         else:
             self.lon_2d = rdmds(path+'XC')
@@ -296,6 +279,23 @@ class Grid:
         else:
             print 'Error (get_fris_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
+
+
+# Interface to Grid for situations such as read_plot_latlon where there are three possibilities:
+# (1) the Grid object is precomputed and saved in variable "grid"; nothing to do
+# (2) the Grid object is not precomputed, but file_path (where the model output is being read from in the master function) contains the grid variables; build the Grid from this file
+# (3) the Grid object is not precomputed and file_path does not contain the grid variables; "grid" instead contains the path to either (a) the binary grid directory or (b) a NetCDF file containing the grid variables; build the grid from this path
+def choose_grid (grid, file_path):
+
+    if grid is None:
+        # Build the grid from file_path (option 2 above)
+        grid = Grid(file_path)
+    else:
+        if not isinstance(grid, Grid):
+            # Create a Grid object from the given path (option 3 above)
+            grid = Grid(grid
+        # Otherwise, the Grid object was precomputed (option 1 above)
+    return grid
 
 
 # Special class for the SOSE grid, which is read from a few binary files. It inherits many functions from Grid.
@@ -589,4 +589,6 @@ class SOSEGrid(Grid):
     def get_fris_mask (self, gtype='t'):
         print 'Error (SOSEGrid): no ice shelves to mask'
         sys.exit()
-    
+
+
+

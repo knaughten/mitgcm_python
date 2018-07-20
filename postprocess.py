@@ -19,12 +19,12 @@ from MITgcmutils import rdmds
 
 # Optional keyword arguments:
 # output_dir: path to directory containing output NetCDF files (assumed to be in one file per segment a la scripts/convert_netcdf.py)
-# grid_path: path to NetCDF grid file
+# grid_path: path to binary grid directory, or NetCDF file containing grid variables
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
 
-def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir='.', file_path=None, monthly=True, date_string=None):
+def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None):
 
     # Make sure proper directories
     output_dir = real_dir(output_dir)
@@ -46,9 +46,9 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
     grid = Grid(grid_path)
 
     # Timeseries
-    plot_fris_massbalance(output_files, grid, fig_name=fig_dir+'fris_massloss.png')
-    plot_hice_corner(output_files, grid, fig_name=fig_dir+'max_hice_corner.png')
-    plot_mld_ewed(output_files, grid, fig_name=fig_dir+'max_mld_ewed.png')
+    plot_fris_massbalance(output_files, grid=grid, fig_name=fig_dir+'fris_massloss.png')
+    plot_hice_corner(output_files, grid=grid, fig_name=fig_dir+'max_hice_corner.png')
+    plot_mld_ewed(output_files, grid=grid, fig_name=fig_dir+'max_mld_ewed.png')
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
@@ -78,7 +78,7 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
         else:
             figsize = (10,6)
         # Plot
-        read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
+        read_plot_latlon(var, file_path, grid=grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
         # Make additional plots if needed
         if var in ['ismr', 'vel', 'bwtemp', 'bwsalt']:
             # Make another plot zoomed into FRIS
@@ -86,23 +86,23 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
             # First adjust bounds
             if var == 'bwtemp':
                 vmax = -1.5
-            read_plot_latlon(var, file_path, grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
         if var == 'tminustf':
             # Call the other options for vertical transformations
-            read_plot_latlon(var, file_path, grid, time_index=-1, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=-1, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png', date_string=date_string, figsize=figsize)
         if var == 'vel':
             # Call the other options for vertical transformations
             figsize = (10,6)
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
-            read_plot_latlon(var, file_path, grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
         if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
-            read_plot_latlon(var, file_path, grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
     # Slice plots
-    read_plot_ts_slice(file_path, grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid, lon0=-25, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png', date_string=date_string)
 
 
 # Plot the sea ice annual min and max for each year of the simulation. First you have to concatenate the sea ice area into a single file, such as:
@@ -112,11 +112,11 @@ def plot_everything (output_dir='.', grid_path='../input/grid.glob.nc', fig_dir=
 # file_path: path to concatenated NetCDF file with sea ice area for the entire simulation
 
 # Optional keyword arguments:
-# grid_path: path to NetCDF grid file
+# grid_path: as in function plot_everything
 # fig_dir: path to directory to save figures in
 # monthly: as in function netcdf_time
 
-def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.', monthly=True):
+def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=True):
 
     fig_dir = real_dir(fig_dir)
 
@@ -130,7 +130,7 @@ def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.
     if time[-1].month < 8:
         last_year -= 1
     for year in range(first_year, last_year+1):
-        plot_aice_minmax(file_path, grid, year, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
+        plot_aice_minmax(file_path, year, grid=grid, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
     
 
 
@@ -138,7 +138,7 @@ def plot_seaice_annual (file_path, grid_path='../input/grid.glob.nc', fig_dir='.
 
 # Arguments:
 # crash_dir: directory including all the state*crash.* files. The NetCDF file will be saved here too, with the name crash.nc.
-# grid_path: path to NetCDF grid file.
+# grid_path: as in function plot_everything
 
 def crash_to_netcdf (crash_dir, grid_path):
 

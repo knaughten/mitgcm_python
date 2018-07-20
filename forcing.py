@@ -9,14 +9,14 @@ from plot_latlon import latlon_plot
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
 # Arguments:
-# grid_file: path to MITgcm NetCDF grid file
+# grid_path: path to directory containing MITgcm binary grid files
 # input_dir: path to directory with iceberg data
 # output_file: desired path to binary output file which MITgcm will read
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the interpolated data in, so you can easily check that it looks okay. (The annual mean will also be plotted and shown on screen whether or not you define nc_out.)
 # prec: precision to write output_file. Must match exf_iprec in the "data.exf" namelist (default 32)
-def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
+def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 
     input_dir = real_dir(input_dir)
     file_head = 'icebergs_'
@@ -29,7 +29,7 @@ def iceberg_meltwater (grid_file, input_dir, output_file, nc_out=None, prec=32):
     nemo_lon = read_netcdf(file_path, 'nav_lon')
     nemo_lat = read_netcdf(file_path, 'nav_lat')
     # Build the model grid
-    model_grid = Grid(grid_file, max_lon=180)
+    model_grid = Grid(grid_path, max_lon=180)
 
     print 'Interpolating'
     icebergs_interp = np.zeros([12, model_grid.ny, model_grid.nx])    

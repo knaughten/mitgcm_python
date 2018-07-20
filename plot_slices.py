@@ -7,7 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys
 
-from grid import Grid
+from grid import choose_grid
 from file_io import read_netcdf, find_variable
 from utils import mask_3d
 from plot_utils.windows import set_panels, finished_plot
@@ -92,9 +92,9 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
 #      'u': 'UVEL'
 #      'v': 'VVEL'
 # If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
-# grid: either a Grid object, or the path to the NetCDF grid file
 
 # Optional keyword arguments:
+# grid: as in function read_plot_latlon
 # lon0, lat0: as in function slice_patches
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
 # hmin, hmax, zmin, zmax: as in function slice_patches
@@ -103,7 +103,10 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
 
-def read_plot_slice (var, file_path, grid, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None):
+def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None):
+
+    # Build the grid if needed
+    grid = choose_grid(grid, file_path)
 
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
@@ -113,11 +116,6 @@ def read_plot_slice (var, file_path, grid, lon0=None, lat0=None, time_index=None
     if date_string is None and time_index is not None:
         # Determine what to write about the date
         date_string = parse_date(file_path=file_path, time_index=time_index)
-
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
 
     # Read necessary variables from NetCDF file and mask appropriately
     if var in ['temp', 'tminustf']:
@@ -213,8 +211,26 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
     finished_plot(fig, fig_name=fig_name)
 
 
-def read_plot_ts_slice (file_path, grid, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path=None):
+# Similar to read_plot_slice, but creates a 2x1 plot containing temperature and salinity.
 
+# Argument:
+# file_path: path to NetCDF file containing THETA and SALT. If these variables are stored in two separate files, you can put the other file in second_file_path (see below).
+
+# Optional keyword arguments:
+# grid: as in function read_plot_latlon
+# lon0, lat0: as in function slice_patches
+# time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
+# hmin, hmax, zmin, zmax: as in function slice_patches
+# tmin, tmax, smin, smax: bounds on temperature and salinity, for the colourbars
+# date_string: as in function slice_plot. If time_index is defined and date_string isn't, date_string will be automatically determined based on the calendar in file_path.
+# fig_name: as in function finished_plot
+# second_file_path: path to NetCDF file containing a THETA or SALT if this is not contained in file_path. It doesn't matter which is which.
+
+def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path=None):
+
+    # Build the grid if needed
+    grid = choose_grid(grid, file_path)
+        
     # Make sure we'll end up with a single record in time
     if time_index is None and not time_average:
         print 'Error (read_plot_ts_slice): either specify time_index or set time_average=True.'
@@ -223,11 +239,6 @@ def read_plot_ts_slice (file_path, grid, lon0=None, lat0=None, time_index=None, 
     if date_string is None and time_index is not None:
         # Determine what to write about the date
         date_string = parse_date(file_path=file_path, time_index=time_index)
-
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
 
     # Read temperature
     if second_file_path is not None:

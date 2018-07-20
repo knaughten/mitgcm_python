@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from grid import Grid
+from grid import choose_grid
 from file_io import netcdf_time
 from timeseries import fris_melt, timeseries_max
 from plot_utils.labels import monthly_ticks, yearly_ticks
@@ -19,18 +19,13 @@ from plot_utils.windows import finished_plot
 
 # Arguments:
 # file_path: path to NetCDF file containing variable "SHIfwFlx", or a list of such files to concatenate
-# grid: either a Grid object, or the path to NetCDF grid file
 
 # Optional keyword arguments:
+# grid: as in function read_plot_latlon
 # fig_name: as in function finished_plot
 # monthly: as in function netcdf_time
 
-def plot_fris_massbalance (file_path, grid, fig_name=None, monthly=True):
-
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
+def plot_fris_massbalance (file_path, grid=None, fig_name=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -41,6 +36,10 @@ def plot_fris_massbalance (file_path, grid, fig_name=None, monthly=True):
     else:
         print 'Error (plot_fris_massbalance): file_path must be a string or a list'
         sys.exit()
+
+    # Build the grid if needed
+    grid = choose_grid(grid, first_file)
+        
     # Calculate timeseries on the first file
     melt, freeze = fris_melt(first_file, grid, mass_balance=True)
     # Read time axis
@@ -74,21 +73,16 @@ def plot_fris_massbalance (file_path, grid, fig_name=None, monthly=True):
 
 # Arguments:
 # file_path: path to NetCDF file containing the variable, or a list of such files to concatenate
-# grid: either a Grid object, or the path to a NetCDF grid file
 
 # Optional keyword arguments:
+# grid: as in function read_plot_latlon
 # xmin, xmax, ymin, ymax: as in function var_min_max
 # title: title to add to the plot
 # units: units for the y-axis
 # fig_name: as in function finished_plot
 # monthly: as in function netcdf_time
 
-def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
-
-    if not isinstance(grid, Grid):
-        # This is the path to the NetCDF grid file, not a Grid object
-        # Make a grid object from it
-        grid = Grid(grid)
+def plot_timeseries_max (file_path, var_name, grid=None, xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -99,6 +93,10 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
     else:
         print 'Error (plot_timeseries_max): file_path must be a string or a list'
         sys.exit()
+
+    # Build the grid if needed
+    grid = choose_grid(grid, first_file)
+        
     # Calculate timeseries on the first file
     values = timeseries_max(first_file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     # Read time axis
@@ -124,12 +122,12 @@ def plot_timeseries_max (file_path, var_name, grid, xmin=None, xmax=None, ymin=N
 
 
 # Maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula.
-def plot_hice_corner (file_path, grid, fig_name=None):
+def plot_hice_corner (file_path, grid=None, fig_name=None):
 
-    plot_timeseries_max(file_path, 'SIheff', grid, xmin=-62, xmax=-59.5, ymin=-75.5, ymax=-74, title='Maximum sea ice thickness in problematic corner', units='m', fig_name=fig_name)
+    plot_timeseries_max(file_path, 'SIheff', grid=grid, xmin=-62, xmax=-59.5, ymin=-75.5, ymax=-74, title='Maximum sea ice thickness in problematic corner', units='m', fig_name=fig_name)
 
 
 # Maximum mixed layer depth in the open Eastern Weddell
-def plot_mld_ewed (file_path, grid, fig_name=None):
+def plot_mld_ewed (file_path, grid=None, fig_name=None):
 
-    plot_timeseries_max(file_path, 'MXLDEPTH', grid, xmin=-30, ymin=-69, title='Maximum mixed layer depth in Eastern Weddell', units='m', fig_name=fig_name)
+    plot_timeseries_max(file_path, 'MXLDEPTH', grid=grid, xmin=-30, ymin=-69, title='Maximum mixed layer depth in Eastern Weddell', units='m', fig_name=fig_name)
