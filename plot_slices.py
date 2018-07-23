@@ -9,7 +9,7 @@ import sys
 
 from grid import choose_grid
 from file_io import read_netcdf, find_variable
-from utils import mask_3d
+from utils import mask_3d, z_to_xyz
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, parse_date
 from plot_utils.colours import set_colours, get_extend
@@ -152,6 +152,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         sys.exit()
 
 
+# Similar to slice_plot, but creates a 2x1 plot containing temperature and salinity.        
 def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbars should do
@@ -255,4 +256,22 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=N
 
     # Plot
     ts_slice_plot(temp, salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, date_string=date_string, fig_name=fig_name)
+
+
+# Plot a slice of vertical resolution (dz).
+# "grid" can be either a Grid object or a path.
+# All other keyword arguments as in slice_plot.
+def vertical_resolution (grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, fig_name=None):
+
+    if not isinstance(grid, Grid):
+        # Create a Grid object from the given path
+        grid = Grid(grid)
+
+    # Tile dz so it's 3D, and apply mask
+    dz = mask_3d(z_to_xyz(grid.dz), grid)
+
+    # Plot
+    slice_plot(dz, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Vertical resolution (m)', fig_name=fig_name)
+
+    
     
