@@ -1,9 +1,9 @@
 import numpy as np
 
-from grid import Grid
+from grid import Grid, SOSEGrid, grid_check_split
 from file_io import read_netcdf, write_binary, NCfile
 from utils import real_dir, fix_lon_range, mask_land_ice
-from interpolation import interp_nonreg_xy
+from interpolation import interp_nonreg_xy, interp_reg
 from plot_latlon import latlon_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
@@ -58,12 +58,63 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('iceberg_melt', icebergs_interp, 'xyt', units='kg/m^2/s')
         ncfile.close()
-    
 
-    
 
-    
+# Set up surface salinity restoring using a monthly climatology interpolated from SOSE. Don't restore on the continental shelf.
 
-    
+# Arguments:
+# grid_path: path to directory containing MITgcm binary grid files
+# sose_dir: directory containing SOSE monthly climatologies and grid/ subdirectory (available on Scihub at /data/oceans_input/raw_input_data/SOSE_monthly_climatology)
+# output_salt_file: desired path to binary file containing salinity values to restore
+# output_mask_file: desired path to binary file containing restoring mask
 
-    
+# Optional keyword arguments:
+# nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
+# h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1500.
+# split: as in function sose_ics
+# prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
+
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1500, split=180, prec=64):
+
+    sose_dir = real_dir(sose_dir)
+
+    print 'Building grids'
+    # First build the model grid and check that we have the right value for split
+    model_grid = grid_check_split(grid_path, split)
+    # Now build the SOSE grid
+    sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
+
+    print 'Building mask'
+    mask_surface = np.ones([model_grid.ny, model_grid.nx])
+    # Mask out land and ice shelves
+    mask_surface[model_grid.hfac[0,:]==0] = 0
+    # Mask out continental shelf
+    mask_surface[model_grid.bathy > h0] = 0
+    # Make a 3D version with zeros in deeper layers
+    mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
+    mask_3d[0,:] = mask_surface
+
+    print 'Reading SOSE salinity'
+    # Just keep the surface layer
+    sose_sss = sose_grid.read_field(sose_dir+'SALT_climatology.data', 'xyzt')[:,0,:,:]
+
+    print 'Interpolating to model grid'
+    sss_interp = np.zeros([12, model_grid.nz, model_grid.ny, model_grid.nx])
+    for month in range(12):
+        print '...month ' + str(month+1)
+        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss[month,:], dim=2)*mask_surface
+
+    print 'Writing ' + output_salt_file
+    write_binary(sss_interp, output_salt_file, prec=prec)
+    print 'Writing ' + output_mask_file
+    write_binary(mask_3d, output_mask_file, prec=prec)
+
+    if nc_out is not None:
+        print 'Writing ' + nc_out
+        ncfile = NCfile(nc_out, model_grid, 'xyzt')
+        ncfile.add_time(np.arange(12)+1, units='months')
+        ncfile.add_variable('salinity', sss_interp, 'xyzt', units='psu')
+        ncfile.add_variable('restoring_mask', mask_3d, 'xyz')
+        ncfile.close()
+
+        

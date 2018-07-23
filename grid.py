@@ -297,6 +297,25 @@ def choose_grid (grid, file_path):
     return grid
 
 
+# Interface to Grid for situations such as sose_ics, where max_lon should be set so there is no jump in longitude in the middle of the model domain. Create the Grid object from grid_path and make sure the user has chosen the correct value for split (180 or 0).
+def grid_check_split (grid_path, split):
+
+    if split == 180:
+        grid = Grid(grid_path, max_lon=180)
+        if grid.lon_1d[0] > grid.lon_1d[-1]:
+            print 'Error (grid_check_split): Looks like your domain crosses 180E. Run this again with split=0.'
+            sys.exit()
+    elif split == 0:
+        grid = Grid(grid_path, max_lon=360)
+        if grid.lon_1d[0] > grid.lon_1d[-1]:
+            print 'Error (grid_check_split): Looks like your domain crosses 0E. Run this again with split=180.'
+            sys.exit()
+    else:
+        print 'Error (grid_check_split): split must be 180 or 0'
+        sys.exit()
+    return grid
+
+
 # Special class for the SOSE grid, which is read from a few binary files. It inherits many functions from Grid.
 
 # To speed up interpolation, trim and/or extend the SOSE grid to agree with the bounds of model_grid (Grid object for the model which you'll be interpolating SOSE data to).

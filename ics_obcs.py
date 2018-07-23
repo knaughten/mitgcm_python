@@ -2,7 +2,7 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from grid import Grid, SOSEGrid
+from grid import Grid, SOSEGrid, grid_check_split
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import write_binary, NCfile
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
@@ -61,19 +61,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
-    if split == 180:
-        model_grid = Grid(grid_path, max_lon=180)
-        if model_grid.lon_1d[0] > model_grid.lon_1d[-1]:
-            print 'Error (sose_ics): Looks like your domain crosses 180E. Run this again with split=0.'
-            sys.exit()
-    elif split == 0:
-        model_grid = Grid(grid_path, max_lon=360)
-        if model_grid.lon_1d[0] > model_grid.lon_1d[-1]:
-            print 'Error (sose_ics): Looks like your domain crosses 0E. Run this again with split=180.'
-            sys.exit()
-    else:
-        print 'Error (sose_ics): split must be 180 or 0'
-        sys.exit()
+    model_grid = grid_check_split(grid_path, split)
     # Now build the SOSE grid
     sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
     # Extract land mask
