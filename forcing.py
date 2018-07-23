@@ -3,7 +3,7 @@ import numpy as np
 from grid import Grid, SOSEGrid, grid_check_split
 from file_io import read_netcdf, write_binary, NCfile
 from utils import real_dir, fix_lon_range, mask_land_ice
-from interpolation import interp_nonreg_xy, interp_reg, discard_and_fill
+from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill
 from plot_latlon import latlon_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
@@ -70,11 +70,11 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
-# h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1500.
+# h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1500, split=180, prec=64):
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
 
@@ -103,12 +103,12 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     print 'Extending into mask'
     # Figure out which SOSE points we need for interpolation
     # Restoring mask interpolated to the SOSE grid
-    fill = np.ceil(interp_reg(model_grid, sose_grid, mask_surface, dim=2), fill_value=1)
+    fill = np.ceil(interp_reg(model_grid, sose_grid, mask_surface, dim=2, fill_value=1))
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
     for month in range(12):
-        print '...month' + str(month+1)
-        sose_sss[month,:] = discard_and_fill(sose_sss[month,:], sose_mask, fill)
+        print '...month ' + str(month+1)
+        sose_sss[month,:] = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
 
     print 'Interpolating to model grid'
     sss_interp = np.zeros([12, model_grid.nz, model_grid.ny, model_grid.nx])
