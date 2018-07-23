@@ -159,8 +159,8 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface, surface salt flux.
 
 # Arguments:
-# var: 'aice', 'hice', 'mld', 'eta', 'saltflx'
-# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, mixed layer depth, free surface (all m), or surface salt flux (kg/m^2/s) already masked with the land and ice shelf
+# var: 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx'
+# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, snow thickness, mixed layer depth, free surface (all m), or surface salt flux (kg/m^2/s) already masked with the land and ice shelf
 # grid: Grid object
 
 # Optional keyword arguments:
@@ -178,6 +178,8 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
         title = 'Sea ice concentration (fraction)'
     elif var == 'hice':
         title = 'Sea ice effective thickness (m)'
+    elif var == 'hsnow':
+        title = 'Snow effective thickness (m)'
     elif var == 'mld':
         title = 'Mixed layer depth (m)'
     elif var == 'eta':
@@ -282,6 +284,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 #      'sss': surface salinity
 #      'aice': sea ice concentration
 #      'hice': sea ice thickness
+#      'hsnow': snow thickness
 #      'mld': mixed layer depth
 #      'eta': free surface
 #      'saltflx': surface salt flux
@@ -296,6 +299,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 #            'sss': SALT
 #            'aice': SIarea
 #            'hice': SIheff
+#            'hsnow': SIhsnow
 #            'mld': MXLDEPTH
 #            'eta': ETAN
 #            'saltflx': SIempmr
@@ -357,6 +361,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         aice = mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'hice':
         hice = mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+    if var == 'hsnow':
+        hsnow = mask_land_ice(read_netcdf(file_path, 'SIhsnow', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'mld':
         mld = mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
     if var == 'eta':
@@ -403,6 +409,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'hice':
         plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+    elif var == 'hsnow':
+        plot_2d_noshelf('hsnow', hsnow, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'mld':
         plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'eta':

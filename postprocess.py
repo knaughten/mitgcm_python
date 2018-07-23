@@ -51,7 +51,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     plot_mld_ewed(output_files, grid=grid, fig_name=fig_dir+'max_mld_ewed.png')
 
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
@@ -95,7 +95,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
             figsize = (10,6)
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
-        if var in ['eta', 'hice']:
+        if var in ['eta', 'hice', 'hsnow']:
             # Make another plot with unbounded colour bar
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
