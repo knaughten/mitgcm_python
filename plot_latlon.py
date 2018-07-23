@@ -533,7 +533,7 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
     # Resolution is the square root of the area of each cell, converted to km
     # Also apply land mask
-    res = mask_land(np.sqrt(grid.dA)*1e-3)
+    res = mask_land(np.sqrt(grid.dA)*1e-3, grid)
 
     latlon_plot(res, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Horizontal resolution (km)', fig_name=fig_name, figsize=figsize)
     
