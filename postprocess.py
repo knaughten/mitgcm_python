@@ -95,7 +95,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
             figsize = (10,6)
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
-        if var in ['eta', 'hice', 'hsnow']:
+        if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
             read_plot_latlon(var, file_path, grid=grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
