@@ -3,7 +3,7 @@ import numpy as np
 from grid import Grid, SOSEGrid, grid_check_split
 from file_io import read_netcdf, write_binary, NCfile
 from utils import real_dir, fix_lon_range, mask_land_ice
-from interpolation import interp_nonreg_xy, interp_reg
+from interpolation import interp_nonreg_xy, interp_reg, discard_and_fill
 from plot_latlon import latlon_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
@@ -83,6 +83,8 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     model_grid = grid_check_split(grid_path, split)
     # Now build the SOSE grid
     sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
+    # Extract surface land mask
+    sose_mask = sose_grid.hfac[0,:] == 0
 
     print 'Building mask'
     mask_surface = np.ones([model_grid.ny, model_grid.nx])
@@ -97,6 +99,16 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     print 'Reading SOSE salinity'
     # Just keep the surface layer
     sose_sss = sose_grid.read_field(sose_dir+'SALT_climatology.data', 'xyzt')[:,0,:,:]
+
+    print 'Extending into mask'
+    # Figure out which SOSE points we need for interpolation
+    # Restoring mask interpolated to the SOSE grid
+    fill = np.ceil(interp_reg(model_grid, sose_grid, mask_surface, dim=2), fill_value=1)
+    # Extend into the mask a few times to make sure there are no artifacts near the coast
+    fill = extend_into_mask(fill, missing_val=0, num_iters=3)
+    for month in range(12):
+        print '...month' + str(month+1)
+        sose_sss[month,:] = discard_and_fill(sose_sss[month,:], sose_mask, fill)
 
     print 'Interpolating to model grid'
     sss_interp = np.zeros([12, model_grid.nz, model_grid.ny, model_grid.nx])
