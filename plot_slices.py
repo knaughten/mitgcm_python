@@ -7,7 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys
 
-from grid import choose_grid
+from grid import choose_grid, Grid
 from file_io import read_netcdf, find_variable
 from utils import mask_3d, z_to_xyz
 from plot_utils.windows import set_panels, finished_plot
