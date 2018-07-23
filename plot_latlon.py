@@ -512,6 +512,32 @@ def plot_tmp_domain (x, y, data, title=None, figsize=(8,6)):
     if title is not None:
         plt.title(title, fontsize=18)
     fig.show()
+
+
+# Plot horizontal resolution (square root of the area of each grid cell).
+
+# Arguments:
+# grid: either a Grid object, or the path to the binary grid directory or a NetCDF file containing grid variables
+
+# Optional keyword arguments:
+# vmin, vmax: as in function set_colours
+# zoom_fris: as in function latlon_axes
+# xmin, xmax, ymin, ymax: as in function latlon_axes
+# fig_name: as in function finished_plot
+# figsize: as in function latlon_plot
+
+def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None, figsize=(8,6)):
+
+    if not isinstance(grid, Grid):
+        grid = Grid(grid)
+
+    # Resolution is the square root of the area of each cell, converted to km
+    # Also apply land mask
+    res = mask_land(np.sqrt(grid.dA)*1e-3)
+
+    latlon_plot(res, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Horizontal resolution (km)', fig_name=fig_name, figsize=figsize)
+    
+    
     
 
     
