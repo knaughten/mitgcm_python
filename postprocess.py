@@ -24,7 +24,7 @@ from MITgcmutils import rdmds
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
 
-def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False):
+def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False):
 
     if time_average:
         time_index = None
@@ -36,8 +36,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     # Build the list of output files in this directory (use them all for timeseries)
     output_files = []
     for file in os.listdir(output_dir):
-        if file.startswith('output_') and file.endswith('.nc'):
-        #if file[0] in ['1', '2'] and file.endswith('.nc'):
+        if (unravelled and file[0] in ['1', '2'] and file.endswith('.nc')) or (not unravelled and file.startswith('output_') and file.endswith('.nc')):
             output_files.append(output_dir+file)
     # Make sure in chronological order
     output_files.sort()
