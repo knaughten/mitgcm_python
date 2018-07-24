@@ -5,6 +5,7 @@
 import numpy as np
 import sys
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d, griddata
+from scipy.ndimage.filters import gaussian_filter
 
 from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz
 
@@ -427,3 +428,8 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
     data_interp = griddata(source_points, source_values, target_points, method='linear', fill_value=fill_value)
     # Un-flatten the result
     return np.reshape(data_interp, target_lon.shape)
+
+
+def smooth_xy (data, sigma=4):
+
+    return gaussian_filter(data, sigma)

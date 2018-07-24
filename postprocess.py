@@ -23,6 +23,7 @@ from MITgcmutils import rdmds
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
+# unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
 def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False):
 
