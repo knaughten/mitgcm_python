@@ -94,6 +94,9 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     mask_land_ice = np.copy(mask_surface)
     # Mask out continental shelf
     mask_surface[model_grid.bathy > h0] = 0
+    # Smooth, and remask the land and ice shelves
+    mask_surface = smooth_xy(mask_surface, sigma=8)*mask_land_ice
+    
     # Make a 3D version with zeros in deeper layers
     mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
     mask_3d[0,:] = mask_surface
@@ -108,16 +111,14 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
 
+    # Process one month at a time
     sss_interp = np.zeros([12, model_grid.nz, model_grid.ny, model_grid.nx])
     for month in range(12):
         print 'Month ' + str(month+1)
         print '...filling missing values'
         sose_sss_filled = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
         print '...interpolating'
-        sss_interp_tmp = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_surface
-        print '...smoothing'
-        # Remask the land and ice shelves after smoothing
-        sss_interp[month,0,:] = smooth_xy(sss_interp, sigma=4)*mask_land_ice
+        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice 
 
     print 'Writing ' + output_salt_file
     write_binary(sss_interp, output_salt_file, prec=prec)

@@ -430,6 +430,6 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
     return np.reshape(data_interp, target_lon.shape)
 
 
-def smooth_xy (data, sigma=4):
+def smooth_xy (data, sigma=8):
 
     return gaussian_filter(data, sigma)
