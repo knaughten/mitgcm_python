@@ -95,7 +95,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     # Mask out continental shelf
     mask_surface[model_grid.bathy > h0] = 0
     # Smooth, and remask the land and ice shelves
-    mask_surface = smooth_xy(mask_surface, sigma=8)*mask_land_ice
+    mask_surface = smooth_xy(mask_surface, sigma=4)*mask_land_ice
     
     # Make a 3D version with zeros in deeper layers
     mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
