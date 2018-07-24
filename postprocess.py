@@ -24,7 +24,10 @@ from MITgcmutils import rdmds
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
 
-def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None):
+def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False):
+
+    if time_average:
+        time_index = None
 
     # Make sure proper directories
     output_dir = real_dir(output_dir)
@@ -78,7 +81,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
         else:
             figsize = (10,6)
         # Plot
-        read_plot_latlon(var, file_path, grid=grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
+        read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
         # Make additional plots if needed
         if var in ['ismr', 'vel', 'bwtemp', 'bwsalt']:
             # Make another plot zoomed into FRIS
@@ -86,23 +89,23 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
             # First adjust bounds
             if var == 'bwtemp':
                 vmax = -1.5
-            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
         if var == 'tminustf':
             # Call the other options for vertical transformations
-            read_plot_latlon(var, file_path, grid=grid, time_index=-1, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png', date_string=date_string, figsize=figsize)
         if var == 'vel':
             # Call the other options for vertical transformations
             figsize = (10,6)
-            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
-            read_plot_latlon(var, file_path, grid=grid, time_index=-1, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
         if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
-            read_plot_latlon(var, file_path, grid=grid, time_index=-1, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
     # Slice plots
-    read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=-1, fig_name='ts_slice_filchner.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=-1, fig_name='ts_slice_ronne.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=-1, fig_name='ts_slice_eweddell.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name='ts_slice_filchner.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name='ts_slice_ronne.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name='ts_slice_eweddell.png', date_string=date_string)
 
 
 # Plot the sea ice annual min and max for each year of the simulation. First you have to concatenate the sea ice area into a single file, such as:
