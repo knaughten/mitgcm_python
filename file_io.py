@@ -147,27 +147,93 @@ def find_variable (file_path_1, file_path_2, var_name):
     else:
         print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
         sys.exit()
-        
 
-# Write an array ("data"), of any dimension, to a binary file ("file_path"). Default is 32-bit big-endian (prec=32, endian='big') but can also do 64-bit (prec=64) and/or little-endian (endian='little')
-def write_binary (data, file_path, prec=32, endian='big'):
 
-    # Set dtype
+# Helper function for read_binary and write_binary. Given a precision (32 or 64) and endian-ness ('big' or 'little'), construct the python data type string.
+def set_dtype (prec, endian):
+
     if endian == 'big':
         dtype = '>'
     elif endian == 'little':
         dtype = '<'
     else:
-        print 'Error (write_binary): invalid endianness'
+        print 'Error (set_dtype): invalid endianness'
         sys.exit()
     if prec == 32:
         dtype += 'f4'
     elif prec == 64:
         dtype += 'f8'
     else:
-        print 'Error (write_binary): invalid precision'
+        print 'Error (set_dtype): invalid precision'
+        sys.exit()
+    return dtype
+
+
+# Read an array from a binary file and reshape to the correct dimensions. If it's an MITgcm array, use rdmds (built into MITgcmutils) instead.
+
+# Arguments:
+# filename: path to binary file
+# grid_sizes: list of length 2 or 3 containing [nx, ny] or [nx, ny, nz] grid sizes
+# dimensions: string containing dimension characters ('x', 'y', 'z', 't') in any order, e.g. 'xyt'
+
+# Optional keyword arguments:
+# prec: precision of data: 32 (default) or 64
+# endian: endian-ness of data: 'big' (default) or 'little'
+
+def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
+
+    dtype = set_dtype(prec, endian)
+
+    # Extract grid sizes
+    nx = grid_sizes[0]
+    ny = grid_sizes[1]
+    if len(grid_sizes) == 3:
+        # It's a 3D grid
+        nz = grid_sizes[2]
+    elif 'z' in dimensions:
+        print 'Error (read_binary): ' + dimensions + ' is depth-dependent, but your grid sizes are 2D.'
         sys.exit()
 
+    # Read data
+    data = np.fromfile(filename, dtype=dtype)
+
+    # Expected shape of data
+    shape = []
+    # Expected size of data, not counting time
+    size0 = 1
+    # Now update these initial values
+    if 'x' in dimensions:
+        shape = [nx] + shape
+        size0 *= nx
+    if 'y' in dimensions:
+        shape = [ny] + shape
+        size0 *= ny
+    if 'z' in dimensions:
+        shape = [nz] + shape
+        size0 *= nz
+
+    if 't' in dimensions:
+        # Time-dependent field; figure out how many timesteps
+        if np.mod(data.size, size0) != 0:
+            print 'Error (read_binary): incorrect dimensions or precision'
+            sys.exit()
+        num_time = data.size/size0
+        shape = [num_time] + shape
+    else:
+        # Time-independent field; just do error checking
+        if data.size != size0:
+            print 'Error (read_binary): incorrect dimensions or precision'
+            sys.exit()
+
+    # Reshape the data and return
+    return np.reshape(data, shape)            
+    
+        
+
+# Write an array ("data"), of any dimension, to a binary file ("file_path"). Optional keyword arguments ("prec" and "endian") are as in function read_binary.
+def write_binary (data, file_path, prec=32, endian='big'):
+
+    dtype = set_dtype(prec, endian)    
     # Make sure data is in the right precision
     data = data.astype(dtype)
 
