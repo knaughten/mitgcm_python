@@ -14,7 +14,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.colours import set_colours
 
-# Figure out whether katabatic winds are stronger in ERA5 than in ERA-Interim, roughly following the methodology of Mathiot et al. 2010. Here we have 3 years of wind data (2008-2010) for each reanalysis, both interpolated to the same regular grid upon downloading, plus a land mask file.
+# Figure out whether katabatic winds are stronger in ERA5 than in ERA-Interim. Here we have 3 years of wind data (2008-2010) for each reanalysis, both interpolated to the same regular grid upon downloading, plus a land mask file.
 def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
 
     fig_dir = real_dir(fig_dir)
@@ -85,7 +85,9 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
             ax = plt.subplot(gs[0,t])
             img = ax.contourf(lon, lat, data[t], 50, cmap=cmap, vmin=vmin, vmax=vmax)
             latlon_axes(ax, lon, lat)
-            plt.colorbar(img, cax=cax[t])
+            if t == 1:
+                ax.set_yticklabels([])
+            plt.colorbar(img, cax=cax[t], orientation='horizontal')
             plt.title(title[t], fontsize=18)
         plt.suptitle(suptitle, fontsize=22)
         finished_plot(fig, fig_name=fig_name)
@@ -97,5 +99,3 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     plot_field(erai_vwind, era5_vwind, 'Meridional wind (m/s)', fig_dir+'vwind.png')
     plot_field(erai_speed, era5_speed, 'Wind speed (m/s)', fig_dir+'speed.png')
     plot_field(erai_angle, era5_angle, 'Wind angle (degrees)', fig_dir+'angle.png')    
-
-    # Scatterplots: ERA-Interim vs ERA5 u and v at each coastal point (yearly or monthly means?), check slope of regression.
