@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from ..file_io import read_netcdf
 from ..constants import deg2rad
 from ..utils import fix_lon_range, split_longitude, real_dir
-from ..plot_utils.windows import set_panels
+from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.colours import set_colours
 
@@ -48,7 +48,7 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
         data = read_netcdf(file_path, var_name)
         if time_dependent:
             data = np.mean(data, axis=0)
-        data = np.flip(data, axis=0)
+        data = np.flipud(data)
         data = split_longitude(data, i_split)
         data = data[j_beg:j_end, i_beg:i_end]
         if land is not None:
@@ -81,14 +81,15 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
         cax = [cax1, cax2]
         title = ['ERA-Interim', 'ERA5 anomaly']
         for t in range(2):
-            cmap = set_colours(data[t], ctype=ctype[t])
+            cmap, vmin, vmax = set_colours(data[t], ctype=ctype[t])
             ax = plt.subplot(gs[0,t])
-            img = ax.contourf(lon, lat, data[t], 50, cmap=cmap)
+            img = ax.contourf(lon, lat, data[t], 50, cmap=cmap, vmin=vmin, vmax=vmax)
             latlon_axes(ax, lon, lat)
             plt.colorbar(img, cax=cax[t])
             plt.title(title[t], fontsize=18)
         plt.suptitle(suptitle, fontsize=22)
         finished_plot(fig, fig_name=fig_name)
+        fig.show()
 
     # Now call it for each variable
     print 'Plotting'
@@ -96,5 +97,5 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     plot_field(erai_vwind, era5_vwind, 'Meridional wind (m/s)', fig_dir+'vwind.png')
     plot_field(erai_speed, era5_speed, 'Wind speed (m/s)', fig_dir+'speed.png')
     plot_field(erai_angle, era5_angle, 'Wind angle (degrees)', fig_dir+'angle.png')    
-    
+
     # Scatterplots: ERA-Interim vs ERA5 u and v at each coastal point (yearly or monthly means?), check slope of regression.
