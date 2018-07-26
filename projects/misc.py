@@ -3,6 +3,9 @@
 ##################################################################
 
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from ..file_io import read_netcdf
 from ..constants import deg2rad
@@ -22,9 +25,11 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     ymin = -84
     ymax = -61
 
-    # Read grid (should be the same in both products because we downloaded it that way)
+    print 'Reading grid'
+    # Should be the same in both products because we downloaded it that way
     lon = fix_lon_range(read_netcdf(erai_file, 'longitude'))
-    lat = read_netcdf(erai_file, 'latitude')
+    # Latitude starts at the North Pole; flip it
+    lat = np.flipud(read_netcdf(erai_file, 'latitude'))
     # Split the domain at 180E=180W and rearrange the two halves
     i_split = np.nonzero(lon < 0)[0][0]
     lon = split_longitude(lon, i_split)
@@ -38,11 +43,12 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     lon = lon[i_beg:i_end]
     lat = lat[j_beg:j_end]
 
-    # Inner function to read a field, (possibly) time-average, split and rearrange, trim, (possibly) mask land
+    # Inner function to read a field, (possibly) time-average, flip along latitude, split and rearrange, trim, (possibly) mask land
     def process_field (file_path, var_name, time_dependent=True, land=None):
         data = read_netcdf(file_path, var_name)
         if time_dependent:
             data = np.mean(data, axis=0)
+        data = np.flip(data, axis=0)
         data = split_longitude(data, i_split)
         data = data[j_beg:j_end, i_beg:i_end]
         if land is not None:
@@ -52,12 +58,14 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     # First do this for the land mask
     land = process_field(land_mask_file, 'lsm', time_dependent=False)
     # Now for all the wind fields
+    print 'Reading data'
     erai_uwind = process_field(erai_file, 'u10', land=land)
     erai_vwind = process_field(erai_file, 'v10', land=land)
     era5_uwind = process_field(era5_file, 'u10', land=land)
     era5_vwind = process_field(era5_file, 'v10', land=land)
 
-    # Calculate derived variables (magnitude and direction of wind vectors)
+    print 'Calculating derived variables'
+    # Magnitude and direction of wind vectors
     erai_speed = np.sqrt(erai_uwind**2 + erai_vwind**2)
     era5_speed = np.sqrt(era5_uwind**2 + era5_vwind**2)
     erai_angle = np.arctan2(erai_vwind, erai_uwind)/deg2rad
@@ -83,6 +91,7 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
         finished_plot(fig, fig_name=fig_name)
 
     # Now call it for each variable
+    print 'Plotting'
     plot_field(erai_uwind, era5_uwind, 'Zonal wind (m/s)', fig_dir+'uwind.png')
     plot_field(erai_vwind, era5_vwind, 'Meridional wind (m/s)', fig_dir+'vwind.png')
     plot_field(erai_speed, era5_speed, 'Wind speed (m/s)', fig_dir+'speed.png')
