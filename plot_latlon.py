@@ -431,7 +431,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', figsize=(8,6)):
 
     # Get set up, just like read_plot_latlon
-    grid = choose_grid(grid, file_path)
+    grid = choose_grid(grid, file_path_1)
     if time_index is None and not time_average:
         print 'Error (read_plot_latlon_diff): either specify time_index or set time_average=True.'
         sys.exit()
