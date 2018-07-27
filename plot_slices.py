@@ -18,7 +18,7 @@ from diagnostics import t_minus_tf
 
 
 # Helper function to determine whether this is a slice along latitude or along longitude, and format the string describing the slice.
-def get_loc (lon0=None, lat0=None):
+def get_loc (loc0, lon0=None, lat0=None):
 
     if lon0 is not None:
         h_axis = 'lat'
@@ -31,12 +31,12 @@ def get_loc (lon0=None, lat0=None):
 
 # Helper function to make a basic slice plot.
 # Reduces duplicated code between slice_plot and slice_plot_diff.
-def make_slice_plot (patches, values, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
+def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
 
     # Set colour map
     cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
     # Figure out orientation and format slice location
-    h_axis, loc_string = get_loc(lon0=lon0, lat0=lat0)
+    h_axis, loc_string = get_loc(loc0, lon0=lon0, lat0=lat0)
     # Set up the title
     title += ' at ' + loc_string
     # Plot
@@ -85,7 +85,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
         vmax = vmax_tmp
 
     # Plot
-    make_slice_plot(patches, values, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
+    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
 
 
 # Slice plot showing difference between two simulations (2 minus 1). It is assumed the corresponding data arrays cover the same period of time.
@@ -111,7 +111,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
         vmax = vmax_tmp
 
     # Plot
-    make_slice_plot(patches, values_diff, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
+    make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice slice plot.
@@ -214,7 +214,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
 
 
 # Similar to make_slice_plot, but creates a 2x1 plot containing temperature and salinity.
-def make_ts_slice_plot (patches, temp_values, salt_values, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=None, lat0=None, extend=['neither', 'neither'], diff=False, date_string=None, fig_name=None):
+def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=None, lat0=None, extend=['neither', 'neither'], diff=False, date_string=None, fig_name=None):
 
     # Set colour map
     if diff:
@@ -225,7 +225,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, hmin, hmax, zmin, zma
     cmap_s, smin, smax = set_colours(salt_values, ctype=ctype, vmin=smin, vmax=smax)
 
     # Figure out orientation and format slice location
-    h_axis, loc_string = get_loc(lon0=lon0, lat0=lat0)
+    h_axis, loc_string = get_loc(loc0, lon0=lon0, lat0=lat0)
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('1x2C2')
@@ -284,7 +284,7 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
         smax = smax_tmp
 
     # Make the plot
-    make_ts_slice_plot(patches, temp_values, salt_values, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, date_string=date_string, fig_name=fig_name)
+    make_ts_slice_plot(patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, date_string=date_string, fig_name=fig_name)
 
 
 # Difference plot for temperature and salinity, between two simulations (2 minus 1).
@@ -318,7 +318,7 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
         smax = smax_tmp
 
     # Plot
-    make_ts_slice_plot(patches, temp_values_diff, salt_values_diff, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, diff=True, date_string=date_string, fig_name=fig_name)
+    make_ts_slice_plot(patches, temp_values_diff, salt_values_diff, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, diff=True, date_string=date_string, fig_name=fig_name)
     
 
 # Similar to read_plot_slice, but creates a 2x1 plot containing temperature and salinity.
