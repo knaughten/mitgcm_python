@@ -468,7 +468,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         
     # Now read and mask the necessary variables
     if var == 'ismr':
-        shifwflx_1, shifwflx_2 = read_and_mask_both('SHIfwFlx', 'except_zice')
+        shifwflx_1, shifwflx_2 = read_and_mask_both('SHIfwFlx', 'except_ice')
     if var in ['bwtemp', 'sst']:
         temp_1, temp_2 = read_and_mask_both('THETA', '3d')
     if var in ['bwsalt', 'sss']:
