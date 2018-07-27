@@ -9,10 +9,10 @@ import sys
 import numpy as np
 
 from grid import Grid, choose_grid
-from file_io import read_netcdf, find_variable, netcdf_time
+from file_io import read_netcdf, find_variable, netcdf_time, check_single_time
 from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max
 from plot_utils.windows import set_panels, finished_plot
-from plot_utils.labels import latlon_axes, parse_date
+from plot_utils.labels import latlon_axes, check_date_string
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf, find_aice_min_max
@@ -331,15 +331,10 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
-
     # Make sure we'll end up with a single record in time
-    if time_index is None and not time_average:
-        print 'Error (read_plot_latlon): either specify time_index or set time_average=True.'
-        sys.exit()
-
-    if date_string is None and time_index is not None:
-        # Determine what to write about the date
-        date_string = parse_date(file_path=file_path, time_index=time_index)
+    check_single_time(time_index, time_average)
+    # Determine what to write about the date
+    date_string = check_date_string(date_string, file_path, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     def read_and_mask (var_name, mask_option, check_second=False):
@@ -432,11 +427,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
 
     # Get set up, just like read_plot_latlon
     grid = choose_grid(grid, file_path_1)
-    if time_index is None and not time_average:
-        print 'Error (read_plot_latlon_diff): either specify time_index or set time_average=True.'
-        sys.exit()
-    if date_string is None and time_index is not None:
-        date_string = parse_date(file_path=file_path_1, time_index=time_index)
+    check_single_time(time_index, time_average)
+    date_string = check_date_string(date_string, file_path, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     # This is the same as in read_plot_latlon except it requires file path arguments

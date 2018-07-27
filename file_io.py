@@ -149,6 +149,13 @@ def find_variable (file_path_1, file_path_2, var_name):
         sys.exit()
 
 
+# Given time parameters, make sure we will end up with a single record in time.
+def check_single_time (time_index, time_average):
+    if time_index is None and not time_average:
+        print 'Error (check_single_time): either specify time_index or set time_average=True.'
+        sys.exit()
+
+
 # Helper function for read_binary and write_binary. Given a precision (32 or 64) and endian-ness ('big' or 'little'), construct the python data type string.
 def set_dtype (prec, endian):
 

@@ -138,3 +138,10 @@ def parse_date (date=None, file_path=None, time_index=None, monthly=True):
     else:
         # Just go with the day that's in the timestamp, even though it's not representative of the averaging period
         return date.strftime('%d %b %Y')
+
+
+# Determine if we need to create a date string, and do so if needed.
+def check_date_string (date_string, file_path, time_index):
+    if date_string is None and time_index is not None:
+        date_string = parse_date(file_path=file_path, time_index=time_index)
+    return date_string

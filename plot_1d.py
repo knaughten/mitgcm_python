@@ -111,10 +111,10 @@ def plot_timeseries (time, data, data_2=None, melt_freeze=False, diff=False, tit
         ax.plot_date(time, data, '-', color='red', linewidth=1.5, label=melt_label)
         ax.plot_date(time, data_2, '-', color='blue', linewidth=1.5, label=freeze_label)
         ax.plot_date(time, data+data_2, '-', color='black', linewidth=1.5, label=total_label)
-        ax.axhline(color='black')
         ax.legend()
     else:
         ax.plot_date(time, data, '-', linewidth=1.5)
+    ax.axhline(color='black')
     ax.grid(True)
     if not monthly:
         monthly_ticks(ax)
