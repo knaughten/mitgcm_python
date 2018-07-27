@@ -549,7 +549,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         include_shelf = False
 
     # Plot
-    latlon_plot(data_diff, grid, include_shelf=include_shelf, dctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)    
+    latlon_plot(data_diff, grid, include_shelf=include_shelf, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)    
 
 
 # Plot topographic variables: bathymetry, ice shelf draft, water column thickness.
