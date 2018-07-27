@@ -341,58 +341,52 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         # Determine what to write about the date
         date_string = parse_date(file_path=file_path, time_index=time_index)
 
-    # Read necessary variables from NetCDF file(s), and mask appropriately
+    # Inner function to read a variable from the correct NetCDF file and mask appropriately
+    def read_and_mask (var_name, mask_option, check_second=False):
+        # Do we need to choose the right file?
+        if check_second and second_file_path is not None:
+            file_path_use = find_variable(file_path, second_file_path, var_name)
+        else:
+            file_path_use = file_path
+        # Read the data
+        data = read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        # Apply the correct mask
+        if mask_option == 'except_ice':
+            data = mask_except_ice(data, grid)
+        elif mask_option == '3d':
+            data = mask_3d(data, grid)
+        elif mask_option == 'land_ice':
+            data = mask_land_ice(data, grid)
+        else:
+            print 'Error (read_and_mask): invalid mask_option ' + mask_option
+            sys.exit()
+        return data
+
+    # Now read and mask the necessary variables
     if var == 'ismr':
-        shifwflx = mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        shifwflx = read_and_mask('SHIfwFlx', 'except_ice')
     if var in ['bwtemp', 'sst', 'tminustf']:
-        # Read temperature. Some of these variables need more than temperature and so second_file_path might be set.
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'THETA')
-        else:
-            file_path_use = file_path        
-        temp = mask_3d(read_netcdf(file_path_use, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        temp = read_and_mask('THETA', '3d', check_second=True)
     if var in ['bwsalt', 'sss', 'tminustf']:
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'SALT')
-        else:
-            file_path_use = file_path
-        salt = mask_3d(read_netcdf(file_path_use, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        salt = read_and_mask('SALT', '3d', check_second=True)
     if var == 'aice':
-        aice = mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        aice = read_and_mask('SIarea', 'land_ice')
     if var == 'hice':
-        hice = mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        hice = read_and_mask('SIheff', 'land_ice')
     if var == 'hsnow':
-        hsnow = mask_land_ice(read_netcdf(file_path, 'SIhsnow', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        hsnow = read_and_mask('SIhsnow', 'land_ice')
     if var == 'mld':
-        mld = mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        mld = read_and_mask('MXLDEPTH', 'land_ice')
     if var == 'eta':
-        eta = mask_land_ice(read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        eta = read_and_mask('ETAN', 'land_ice')
     if var == 'saltflx':
-        saltflx = mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+        saltflx = read_and_mask('SIempmr', 'land_ice')
     if var == 'vel':
-        # First read u
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'UVEL')
-        else:
-            file_path_use = file_path
-        u = mask_3d(read_netcdf(file_path_use, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u')
-        # Now read v
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'VVEL')
-        else:
-            file_path_use = file_path
-        v = mask_3d(read_netcdf(file_path_use, 'VVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v')
+        u = read_and_mask('UVEL', '3d', check_second=True)
+        v = read_and_mask('VVEL', '3d', check_second=True)
     if var == 'velice':
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'SIuice')
-        else:
-            file_path_use = file_path
-        uice = mask_land_ice(read_netcdf(file_path_use, 'SIuice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u')
-        if second_file_path is not None:
-            file_path_use = find_variable(file_path, second_file_path, 'SIvice')
-        else:
-            file_path_use = file_path
-        vice = mask_land_ice(read_netcdf(file_path_use, 'SIvice', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v')
+        uice = read_and_mask('SIuice', 'land_ice', check_second=True)
+        vice = read_and_mask('SIvice', 'land_ice', check_second=True)
         
     # Plot
     if var == 'ismr':
@@ -426,6 +420,136 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
         sys.exit()
+
+
+# NetCDF interface for difference plots. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
+
+# Arguments are largely the same as read_plot_latlon, here are the exceptions:
+# var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice'
+# file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice'). It is assumed they cover the same period of time.
+
+def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', figsize=(8,6)):
+
+    # Get set up, just like read_plot_latlon
+    grid = choose_grid(grid, file_path)
+    if time_index is None and not time_average:
+        print 'Error (read_plot_latlon_diff): either specify time_index or set time_average=True.'
+        sys.exit()
+    if date_string is None and time_index is not None:
+        date_string = parse_date(file_path=file_path_1, time_index=time_index)
+
+    # Inner function to read a variable from the correct NetCDF file and mask appropriately
+    # This is the same as in read_plot_latlon except it requires file path arguments
+    def read_and_mask (var_name, mask_option, file_path, second_file_path=None, check_second=False):
+        # Do we need to choose the right file?
+        if check_second and second_file_path is not None:
+            file_path_use = find_variable(file_path, second_file_path, var_name)
+        else:
+            file_path_use = file_path
+        # Read the data
+        data = read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        # Apply the correct mask
+        if mask_option == 'except_ice':
+            data = mask_except_ice(data, grid)
+        elif mask_option == '3d':
+            data = mask_3d(data, grid)
+        elif mask_option == 'land_ice':
+            data = mask_land_ice(data, grid)
+        else:
+            print 'Error (read_and_mask): invalid mask_option ' + mask_option
+            sys.exit()
+        return data
+
+    # Interface to call read_and_mask for each variable
+    def read_and_mask_both (var_name, mask_option, check_second=False):
+        data1 = read_and_mask(var_name, mask_option, file_path_1, second_file_path=second_file_path_1, check_second=check_second)
+        data2 = read_and_mask(var_name, mask_option, file_path_2, second_file_path=second_file_path_2, check_second=check_second)
+        return data1, data2
+        
+    # Now read and mask the necessary variables
+    if var == 'ismr':
+        shifwflx_1, shifwflx_2 = read_and_mask_both('SHIfwFlx', 'except_zice')
+    if var in ['bwtemp', 'sst']:
+        temp_1, temp_2 = read_and_mask_both('THETA', '3d')
+    if var in ['bwsalt', 'sss']:
+        salt_1, salt_2 = read_and_mask_both('SALT', '3d')
+    if var == 'aice':
+        aice_1, aice_2 = read_and_mask_both('SIarea', 'land_ice')
+    if var == 'hice':
+        hice_1, hice_2 = read_and_mask_both('SIheff', 'land_ice')
+    if var == 'hsnow':
+        hsnow_1, hsnow_2 = read_and_mask_both('SIhsnow', 'land_ice')
+    if var == 'mld':
+        mld_1, mld_2 = read_and_mask_both('MXLDEPTH', 'land_ice')
+    if var == 'eta':
+        eta_1, eta_2 = read_and_mask_both('ETAN', 'land_ice')
+    if var == 'vel':
+        u_1, u_2 = read_and_mask_both('UVEL', '3d', check_second=True)
+        v_1, v_2 = read_and_mask_both('VVEL', '3d', check_second=True)
+    if var == 'velice':
+        uice_1, uice_2 = read_and_mask_both('SIuice', 'land_ice', check_second=True)
+        vice_1, vice_2 = read_and_mask_both('SIvice', 'land_ice', check_second=True)
+
+    # Do necessary conversions and get final difference field; also set title
+    if var == 'ismr':
+        data_diff = convert_ismr(shifwflx_2 - shifwflx_1)
+        title = 'Change in ice shelf melt rate (m/y)'
+    elif var == 'bwtemp':
+        data_diff = select_bottom(temp_2 - temp_1)
+        title = r'Change in bottom water temperature ($^{\circ}$C)'
+    elif var == 'bwsalt':
+        data_diff = select_bottom(salt_2 - salt_1)
+        title = 'Change in bottom water salinity (psu)'
+    elif var == 'sst':
+        data_diff = temp_2[0,:] - temp_1[0,:]
+        title = r'Change in sea surface temperature ($^{\circ}$C)'
+    elif var == 'sss':
+        data_diff = salt_2[0,:] - salt_1[0,:]
+        title = 'Change in sea surface salinity (psu)'
+    elif var == 'aice':
+        data_diff = aice_2 - aice_1
+        title = 'Change in sea ice concentration (fraction)'
+    elif var == 'hice':
+        data_diff = hice_2 - hice_1
+        title = 'Change in sea ice effective thickness (m)'
+    elif var == 'hsnow':
+        data_diff = hsnow_2 - hsnow_1
+        title = 'Change in snow effective thickness (m)'
+    elif var == 'mld':
+        data_diff = mld_2 - mld_1
+        title = 'Change in mixed layer depth (m)'
+    elif var == 'eta':
+        data_diff = eta_2 - eta_1
+        title = 'Change in free surface (m)'
+    elif var == 'vel':
+        speed_1 = prepare_vel(u_1, v_1, grid, vel_option=vel_option)[0]
+        speed_2 = prepare_vel(u_2, v_2, grid, vel_option=vel_option)[0]
+        data_diff = speed_2 - speed_1
+        title = 'Change in '
+        if vel_option == 'avg':
+            title += 'vertically averaged'
+        elif vel_option == 'sfc':
+            title += 'surface'
+        elif vel_option == 'bottom':
+            title += 'bottom'
+        title += ' velocity (m/s)'
+    elif var == 'velice':
+        speed_1 = prepare_vel(uice_1, vice_1, grid, vel_option='ice')[0]
+        speed_2 = prepare_vel(uice_2, vice_2, grid, vel_option='ice')[0]
+        data_diff = speed_2 - speed_1
+        title = 'Change in sea ice velocity (m/s)'
+    else:
+        print 'Error (read_plot_latlon_diff): variable key ' + str(var) + ' does not exist'
+        sys.exit()
+
+    # Choose value for include_shelf
+    if var in ['ismr', 'bwtemp', 'bwsalt', 'vel']:
+        include_shelf = True
+    elif var in ['sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'velice']:
+        include_shelf = False
+
+    # Plot
+    latlon_plot(data_diff, grid, include_shelf=include_shelf, dctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)    
 
 
 # Plot topographic variables: bathymetry, ice shelf draft, water column thickness.
