@@ -532,12 +532,12 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
             title += 'surface'
         elif vel_option == 'bottom':
             title += 'bottom'
-        title += ' velocity (m/s)'
+        title += ' speed (m/s)'
     elif var == 'velice':
         speed_1 = prepare_vel(uice_1, vice_1, grid, vel_option='ice')[0]
         speed_2 = prepare_vel(uice_2, vice_2, grid, vel_option='ice')[0]
         data_diff = speed_2 - speed_1
-        title = 'Change in sea ice velocity (m/s)'
+        title = 'Change in sea ice speed (m/s)'
     else:
         print 'Error (read_plot_latlon_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
