@@ -105,13 +105,13 @@ def plot_timeseries (time, data, data_2=None, melt_freeze=False, diff=False, tit
     fig, ax = plt.subplots()
     if melt_freeze:
         if diff:
-            melt_label = 'Change in melting'
-            freeze_label = 'Change in freezing'
-            total_label = 'Change in total'
+            melt_label = 'Change in melting (>0)'
+            freeze_label = 'Change in freezing (<0)'
+            total_label = 'Change in net'
         else:
             melt_label = 'Melting'
             freeze_label = 'Freezing'
-            total_label = 'Total'
+            total_label = 'Net'
         ax.plot_date(time, data, '-', color='red', linewidth=1.5, label=melt_label)
         ax.plot_date(time, data_2, '-', color='blue', linewidth=1.5, label=freeze_label)
         ax.plot_date(time, data+data_2, '-', color='black', linewidth=1.5, label=total_label)
