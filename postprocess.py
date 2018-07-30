@@ -6,9 +6,9 @@ import os
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
-from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed, read_timeseries
-from plot_latlon import read_plot_latlon, plot_aice_minmax
-from plot_slices import read_plot_ts_slice
+from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed, read_timeseries, plot_fris_massbalance_diff, plot_hice_corner_diff, plot_mld_ewed_diff
+from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
+from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir
 from plot_utils.labels import parse_date
 
@@ -118,6 +118,16 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name='ts_slice_eweddell.png', date_string=date_string)
 
 
+# Compare one simulation to another. Assumes the simulations have monthly averaged output. They don't need to be the same length.
+
+# Keyword arguments:
+# output_dir: as in function plot_everything
+# baseline_dir: like output_dir, but for the simulation you want to use as a baseline. All the plots will show results from output_dir minus baseline_dir. This is the only non-optional keyword argument; it is a named keyword argument with no meaningful default so there's no chance of the user mixing up which simulation is which.
+# grid_path: as in function plot_everything
+# fig_dir: as in function plot_everything
+# option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
+# unravelled: as in function plot_everything
+
 def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False):
 
     # Check that baseline_dir is set
@@ -144,10 +154,6 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
     plot_mld_ewed_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'max_mld_ewed_diff.png')
 
     # Now figure out which time indices to use for plots with no time dependence
-    # First make sure we do have monthly averages
-    if not monthly:
-        print 'Error (plot_everything_diff): no options work with monthly=False.'
-        sys.exit()
     # Concatenate the time arrays from all files
     time_1 = read_timeseries(output_files_1, option='time')
     time_2 = read_timeseries(output_files_2, option='time')
