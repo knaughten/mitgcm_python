@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import sys
+import numpy as np
 
 from grid import choose_grid, Grid
 from file_io import read_netcdf, find_variable, check_single_time
