@@ -113,7 +113,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
         vmax = vmax_tmp
 
     # Plot
-    make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
+    make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype='plusminus', extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice slice plot.
