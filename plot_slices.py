@@ -366,7 +366,7 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=N
 # Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period.
 def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
 
-    grid = choose_grid(grid, file_path)
+    grid = choose_grid(grid, file_path_1)
     check_single_time(time_index, time_average)
     date_string = check_date_string(date_string, file_path_1, time_index)
 
