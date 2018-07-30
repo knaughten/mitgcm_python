@@ -103,7 +103,8 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
     values_diff = values_2 - values_1
     
     # Now figure out the colour bounds
-    vmin_tmp, vmax_tmp = get_slice_minmax(values_diff, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
+    # Note we need to reshape the values array to be 2D again
+    vmin_tmp, vmax_tmp = get_slice_minmax(np.reshape(values_diff, left.shape), left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
     # Update any colour bounds which aren't already set
     if vmin is None:
         vmin = vmin_tmp
