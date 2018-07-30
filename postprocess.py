@@ -180,7 +180,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
         time_index_2 = None
         time_average = True
         # Set date string
-        date_string = 'Year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
+        date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
     elif option == 'last_month':
         # Set the other options
         t_start_1 = None
