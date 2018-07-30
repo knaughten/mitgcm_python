@@ -193,7 +193,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     # Get set up just like read_plot_slice
     grid = choose_grid(grid, file_path_1)
     check_single_time(time_index, time_average)
-    date_string = check_date_string(date_string, file_path, time_index)
+    date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from a NetCDF file and mask appropriately
     def read_and_mask (var_name, file_path):
