@@ -10,6 +10,7 @@ from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed, read
 from plot_latlon import read_plot_latlon, plot_aice_minmax
 from plot_slices import read_plot_ts_slice
 from utils import real_dir
+from plot_utils.labels import parse_date
 
 from MITgcmutils import rdmds
 
@@ -104,7 +105,8 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
         if var == 'vel':
             # Call the other options for vertical transformations
             figsize = (10,6)
-            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option='sfc', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_sfc.png', date_string=date_string, figsize=figsize)
+            for vel_option in ['sfc', 'bottom']:
+                read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize)
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option='bottom', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_bottom.png', date_string=date_string, figsize=figsize)
         if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
@@ -116,16 +118,22 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name='ts_slice_eweddell.png', date_string=date_string)
 
 
-def plot_everything_diff (output_dir_1, output_dir_2, grid_path, fig_dir='.', option='last_year', unravelled=False):
+def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False):
 
-    # Make sure proper directories
-    output_dir_1 = real_dir(output_dir_1)
-    output_dir_2 = real_dir(output_dir_2)
+    # Check that baseline_dir is set
+    # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
+    if baseline_dir is None:
+        print 'Error (plot_everything_diff): must set baseline_dir'
+        sys.exit()
+
+    # Make sure proper directories, and rename so 1=baseline, 2=current
+    output_dir_1 = real_dir(baseline_dir)
+    output_dir_2 = real_dir(output_dir)    
     fig_dir = real_dir(fig_dir)
 
     # Build lists of output files in each directory
-    output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
-    output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
+    output_files_1 = build_file_list(baseline_dir, unravelled=unravelled)
+    output_files_2 = build_file_list(output_dir, unravelled=unravelled)
 
     # Build the grid
     grid = Grid(grid_path)
@@ -147,6 +155,10 @@ def plot_everything_diff (output_dir_1, output_dir_2, grid_path, fig_dir='.', op
     time_index = min(time_1.size, time_2.size) - 1
     file_path_1, time_index_1 = find_time_index(output_files_1, time_index)
     file_path_2, time_index_2 = find_time_index(output_files_2, time_index)
+    # Make sure we got this right
+    if netcdf_time(file_path_1)[time_index_1] != netcdf_time(file_path_2)[time_index_2]:
+        print 'Error (plot_everything_diff): something went wrong when matching time indices between the two files.'
+        sys.exit()
     if option == 'last_year':
         # Add 1 to get the upper bound on the time range we care about
         t_end_1 = time_index_1 + 1
@@ -158,9 +170,41 @@ def plot_everything_diff (output_dir_1, output_dir_2, grid_path, fig_dir='.', op
         if t_beg_1 < 0 or t_beg_2 < 0:
             print "Error (plot_everything_diff): option last_year doesn't work if that year isn't contained within one file, for both simulations."
             sys.exit()
-    elif option != 'last_month':
+        # Set the other options
+        time_index_1 = None
+        time_index_2 = None
+        time_average = True
+        # Set date string
+        date_string = 'Year beginning ' + parse_date(file_path=file_path_1, time_index=t_beg_1)
+    elif option == 'last_month':
+        # Set the other options
+        t_start_1 = None
+        t_start_2 = None
+        t_end_1 = None
+        t_end_2 = None
+        time_average = False
+        # Set date string
+        date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
+    else:
         print 'Error (plot_everything_diff): invalid option ' + option
         sys.exit()
+
+    # Now make lat-lon plots
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
+    for var in var_names:
+        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=(10,6))
+        # Zoom into some variables
+        if var in ['ismr', 'bwtemp', 'bwsalt', 'vel']:
+            read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, zoom_fris=True, date_string=date_string, fig_name=fig_dir+var+'_zoom_diff.png')
+        if var == 'vel':
+            # Call the other options for vertical transformations
+            for vel_option in ['sfc', 'bottom']:
+                read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, vel_option=vel_option, date_string=date_string, fig_name=fig_dir+var+'_'+vel_option+'_diff.png')
+
+    # Slice plots
+    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name='ts_slice_filchner_diff.png')
+    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-55, hmax=-72, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name='ts_slice_ronne_diff.png')
+    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-25, zmin=-2000, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name='ts_slice_eweddell_diff.png')    
     
 
 
