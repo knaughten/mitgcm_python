@@ -189,8 +189,11 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         sys.exit()
 
 
-# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp' or 'salt'.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None):
+# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp' or 'salt'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None):
+
+    # Figure out if the two files use different time indices
+    diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
     # Get set up just like read_plot_slice
     grid = choose_grid(grid, file_path_1)
@@ -198,17 +201,23 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from a NetCDF file and mask appropriately
-    def read_and_mask (var_name, file_path):
-        return mask_3d(read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+    def read_and_mask (var_name, file_path, check_diff_time=False):
+        if check_diff_time and diff_time:
+            return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid)
+        else:
+            return mask_3d(read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+
+    # Interface to call read_and_mask for each variable
+    def read_and_mask_both (var_name):
+        data1 = read_and_mask(var_name, file_path_1)
+        data2 = read_and_mask(var_name, file_path_2, check_diff_time=True)
 
     # Read variables and make plots
     if var == 'temp':
-        temp_1 = read_and_mask('THETA', file_path_1)
-        temp_2 = read_and_mask('THETA', file_path_2)
+        temp_1, temp_2 = read_and_mask_both('THETA')
         slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Change in temperature ($^{\circ}$C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
-        salt_1 = read_and_mask('SALT', file_path_1)
-        salt_2 = read_and_mask('SALT', file_path_2)
+        salt_1, salt_2 = read_and_mask_both('SALT')
         slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
@@ -363,29 +372,37 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=N
     ts_slice_plot(temp, salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, date_string=date_string, fig_name=fig_name)
 
 
-# Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period.
-def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
+# Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period. Otherwise you can set time_index_2 etc. as in function read_plot_latlon_diff.
+def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
+
+    diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
     grid = choose_grid(grid, file_path_1)
     check_single_time(time_index, time_average)
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
-    def read_and_mask (var_name, file_path, second_file_path):
+    def read_and_mask (var_name, file_path, second_file_path=None, check_diff_time=False):
         # Do we need to choose the right file?
         if second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, var_name)
         else:
             file_path_use = file_path
         # Read and mask the data
-        data = mask_3d(read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-        return data
+        if check_diff_time and diff_time:
+            return mask_3d(read_netcdf(file_path_use, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid)
+        else:
+            return mask_3d(read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+
+
+    # Interface to call read_and_mask for each variable
+    def read_and_mask_both (var_name):
+        data1 = read_and_mask(var_name, file_path_1, second_file_path=second_file_path_1)
+        data2 = read_and_mask(var_name, file_path_2, second_file_path=second_file_path_2, check_diff_time=True)
 
     # Read temperature and salinity for each simulation
-    temp_1 = read_and_mask('THETA', file_path_1, second_file_path_1)
-    temp_2 = read_and_mask('THETA', file_path_2, second_file_path_2)
-    salt_1 = read_and_mask('SALT', file_path_1, second_file_path_1)
-    salt_2 = read_and_mask('SALT', file_path_2, second_file_path_2)
+    temp_1, temp_2 = read_and_mask_both('THETA')
+    salt_1, salt_2 = read_and_mask_both('SALT')
 
     # Plot
     ts_slice_plot_diff(temp_1, temp_2, salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, date_string=date_string, fig_name=fig_name)    

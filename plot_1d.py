@@ -141,16 +141,18 @@ def plot_fris_massbalance (file_path, grid=None, fig_name=None, monthly=True):
     plot_timeseries(time, melt, data_2=freeze, melt_freeze=True, title='Basal mass balance of FRIS', units='Gt/y', monthly=monthly, fig_name=fig_name)
 
 
-# Plot the difference in FRIS melting and freezing for two simulations (2 minus 1). It is assumed the corresponding files cover the same period of time.
+# Plot the difference in FRIS melting and freezing for two simulations (2 minus 1). It is assumed the two simulations start at the same time, but it's okay if one is longer - it will get trimmed.
 
 def plot_fris_massbalance_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     # Calculate timeseries for each
-    time, melt_1, freeze_1 = read_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
-    time, melt_2, freeze_2 = read_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
-    # Find the difference
-    melt_diff = melt_2 - melt_1
-    freeze_diff = freeze_2 - freeze_1
+    time_1, melt_1, freeze_1 = read_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
+    time_2, melt_2, freeze_2 = read_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
+    # Find the difference, trimming if needed
+    num_time = max(time_1.size, time_2.size)
+    time = time_1[:num_time]
+    melt_diff = melt_2[:num_time] - melt_1[:num_time]
+    freeze_diff = freeze_2[:num_time] - freeze_1[:num_time]
     # Plot
     plot_timeseries(time, melt_diff, data_2=freeze_diff, melt_freeze=True, diff=True, title='Change in basal mass balance of FRIS', units='Gt/y', monthly=monthly, fig_name=fig_name)    
 
@@ -175,12 +177,15 @@ def plot_timeseries_max (file_path, var_name, grid=None, xmin=None, xmax=None, y
     plot_timeseries(time, values, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 
-# Plot the difference in the maximum value of the given variable in the given region, between two simulations (2 minus 1). It is assumed the corresponding files cover the same period of time.
+# Plot the difference in the maximum value of the given variable in the given region, between two simulations (2 minus 1). It is assumed the two simulations start at the same time, but it's okay if one is longer - it will get trimmed.
+
 def plot_timeseries_max_diff (file_path_1, file_path_2, var_name, grid=None, xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
 
-    time, values_1 = read_timeseries(file_path_1, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    time, values_2 = read_timeseries(file_path_2, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    values_diff = values_2 - values_1
+    time_1, values_1 = read_timeseries(file_path_1, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    time_2, values_2 = read_timeseries(file_path_2, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    num_time = max(time_1.size, time_2.size)
+    time = time_1[:num_time]
+    values_diff = values_2[:num_time] - values_1[:num_time]
     plot_timeseries(time, values_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 

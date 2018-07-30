@@ -421,9 +421,13 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 
 # Arguments are largely the same as read_plot_latlon, here are the exceptions:
 # var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice'
-# file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice'). It is assumed they cover the same period of time.
+# file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice').
+# It is assumed they cover the same period of time. If they don't, you can set time_index_2, etc. for the corresponding timesteps in file_path_2 which match time_index, etc. for file_path_1.
 
-def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', figsize=(8,6)):
+def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', figsize=(8,6)):
+
+    # Figure out if the two files use different time indices
+    diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
     # Get set up, just like read_plot_latlon
     grid = choose_grid(grid, file_path_1)
@@ -432,14 +436,18 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     # This is the same as in read_plot_latlon except it requires file path arguments
-    def read_and_mask (var_name, mask_option, file_path, second_file_path=None, check_second=False):
+    def read_and_mask (var_name, mask_option, file_path, second_file_path=None, check_second=False, check_diff_time=False):
         # Do we need to choose the right file?
         if check_second and second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, var_name)
         else:
             file_path_use = file_path
         # Read the data
-        data = read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if check_diff_time and diff_time:
+            # It's the second simulation and it has alternate time indices
+            data = read_netcdf(file_path_use, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average)
+        else:
+            data = read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         # Apply the correct mask
         if mask_option == 'except_ice':
             data = mask_except_ice(data, grid)
@@ -455,7 +463,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
     # Interface to call read_and_mask for each variable
     def read_and_mask_both (var_name, mask_option, check_second=False):
         data1 = read_and_mask(var_name, mask_option, file_path_1, second_file_path=second_file_path_1, check_second=check_second)
-        data2 = read_and_mask(var_name, mask_option, file_path_2, second_file_path=second_file_path_2, check_second=check_second)
+        data2 = read_and_mask(var_name, mask_option, file_path_2, second_file_path=second_file_path_2, check_second=check_second, check_diff_time=True)
         return data1, data2
         
     # Now read and mask the necessary variables
