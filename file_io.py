@@ -403,6 +403,22 @@ class NCfile_basiclatlon:
         self.id.close()
 
 
+# Given a list of output files (chronological, could concatenate to make the entire simulation) and a time index we want relative to the beginning of the simulation (0-indexed), find the individual file that time index falls within, and what that time index is relative to the beginning of that file.
+def find_time_index (file_list, time_index):
+
+    for file_path in file_list:
+        num_time = netcdf_time(file_path).size
+        if num_time > time_index:
+            return file_path, time_index
+        else:
+            time_index -= num_time
+    # If we're still here, we didn't find it
+    print "Error (find_time_index): this simulation isn't long enough to contain time_index=" + str(time_index)
+    sys.exit()
+
+    
+
+
 
 
     

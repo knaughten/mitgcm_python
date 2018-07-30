@@ -5,13 +5,26 @@
 import os
 
 from grid import Grid
-from file_io import NCfile, netcdf_time
-from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed
+from file_io import NCfile, netcdf_time, find_time_index
+from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed, read_timeseries
 from plot_latlon import read_plot_latlon, plot_aice_minmax
 from plot_slices import read_plot_ts_slice
 from utils import real_dir
 
 from MITgcmutils import rdmds
+
+
+# Helper function to build lists of output files in a directory.
+# If unravelled=True, it will look for filenames of the form 1979.nc, etc. If unravelled=False, it will look for filenames of the form output_001.nc, etc.
+def build_file_list (output_dir, unravelled=False):
+
+    output_files = []
+    for file in os.listdir(output_dir):
+        if (unravelled and file[0] in ['1', '2'] and file.endswith('.nc')) or (not unravelled and file.startswith('output_') and file.endswith('.nc')):
+            output_files.append(output_dir+file)
+    # Make sure in chronological order
+    output_files.sort()
+    return output_files
 
 
 # Make a bunch of plots when the simulation is done.
@@ -35,12 +48,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     fig_dir = real_dir(fig_dir)
     
     # Build the list of output files in this directory (use them all for timeseries)
-    output_files = []
-    for file in os.listdir(output_dir):
-        if (unravelled and file[0] in ['1', '2'] and file.endswith('.nc')) or (not unravelled and file.startswith('output_') and file.endswith('.nc')):
-            output_files.append(output_dir+file)
-    # Make sure in chronological order
-    output_files.sort()
+    output_files = build_file_list(output_dir, unravelled=unravelled)
     if file_path is None:
         # Select the last file for single-timestep analysis
         file_path = output_files[-1]        
@@ -106,6 +114,54 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name='ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name='ts_slice_ronne.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name='ts_slice_eweddell.png', date_string=date_string)
+
+
+def plot_everything_diff (output_dir_1, output_dir_2, grid_path, fig_dir='.', option='last_year', unravelled=False):
+
+    # Make sure proper directories
+    output_dir_1 = real_dir(output_dir_1)
+    output_dir_2 = real_dir(output_dir_2)
+    fig_dir = real_dir(fig_dir)
+
+    # Build lists of output files in each directory
+    output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
+    output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
+
+    # Build the grid
+    grid = Grid(grid_path)
+
+    # Timeseries through the entire simulation
+    plot_fris_massbalance_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'fris_massloss_diff.png')
+    plot_hice_corner_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'max_hice_corner_diff.png')
+    plot_mld_ewed_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'max_mld_ewed_diff.png')
+
+    # Now figure out which time indices to use for plots with no time dependence
+    # First make sure we do have monthly averages
+    if not monthly:
+        print 'Error (plot_everything_diff): no options work with monthly=False.'
+        sys.exit()
+    # Concatenate the time arrays from all files
+    time_1 = read_timeseries(output_files_1, option='time')
+    time_2 = read_timeseries(output_files_2, option='time')
+    # Find the last time index in the shortest simulation
+    time_index = min(time_1.size, time_2.size) - 1
+    file_path_1, time_index_1 = find_time_index(output_files_1, time_index)
+    file_path_2, time_index_2 = find_time_index(output_files_2, time_index)
+    if option == 'last_year':
+        # Add 1 to get the upper bound on the time range we care about
+        t_end_1 = time_index_1 + 1
+        t_end_2 = time_index_2 + 1
+        # Find the index 12 before that
+        t_beg_1 = t_end_1 - 12
+        t_beg_2 = t_end_2 - 12
+        # Make sure it's still contained within one file
+        if t_beg_1 < 0 or t_beg_2 < 0:
+            print "Error (plot_everything_diff): option last_year doesn't work if that year isn't contained within one file, for both simulations."
+            sys.exit()
+    elif option != 'last_month':
+        print 'Error (plot_everything_diff): invalid option ' + option
+        sys.exit()
+    
 
 
 # Plot the sea ice annual min and max for each year of the simulation. First you have to concatenate the sea ice area into a single file, such as:

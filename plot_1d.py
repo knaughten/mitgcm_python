@@ -30,6 +30,7 @@ from plot_utils.windows import finished_plot
 # Output:
 # if option='fris_melt', returns three 1D arrays of time, melting, and freezing.
 # if option='max', returns two 1D arrays of time and maximum values.
+# if option='time', just returns the time array.
 
 def read_timeseries (file_path, option=None, grid=None, var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
 
@@ -44,7 +45,8 @@ def read_timeseries (file_path, option=None, grid=None, var_name=None, xmin=None
         sys.exit()
 
     # Build the grid if needed
-    grid = choose_grid(grid, first_file)
+    if option != 'time':
+        grid = choose_grid(grid, first_file)
 
     # Calculate timeseries on the first file
     if option == 'fris_melt':
@@ -54,7 +56,7 @@ def read_timeseries (file_path, option=None, grid=None, var_name=None, xmin=None
             print 'Error (read_timeseries): must specify var_name'
             sys.exit()
         values = timeseries_max(first_file, var_name, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    else:
+    elif option != 'time':
         print 'Error (read_timeseries): invalid option ' + option
         sys.exit()
     # Read time axis
@@ -79,6 +81,8 @@ def read_timeseries (file_path, option=None, grid=None, var_name=None, xmin=None
         return time, melt, freeze
     elif option == 'max':
         return time, values
+    elif option == 'time':
+        return time
 
 
 # Helper function to plot timeseries.

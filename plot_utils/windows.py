@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 def finished_plot (fig, fig_name=None):
 
     if fig_name is not None:
+        print 'Saving ' + fig_name
         fig.savefig(fig_name)
     else:
         fig.show()
