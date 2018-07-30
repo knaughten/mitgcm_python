@@ -432,7 +432,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
     # Get set up, just like read_plot_latlon
     grid = choose_grid(grid, file_path_1)
     check_single_time(time_index, time_average)
-    date_string = check_date_string(date_string, file_path, time_index)
+    date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     # This is the same as in read_plot_latlon except it requires file path arguments
