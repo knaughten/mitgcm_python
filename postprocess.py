@@ -170,10 +170,10 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
         t_end_1 = time_index_1 + 1
         t_end_2 = time_index_2 + 1
         # Find the index 12 before that
-        t_beg_1 = t_end_1 - 12
-        t_beg_2 = t_end_2 - 12
+        t_start_1 = t_end_1 - 12
+        t_start_2 = t_end_2 - 12
         # Make sure it's still contained within one file
-        if t_beg_1 < 0 or t_beg_2 < 0:
+        if t_start_1 < 0 or t_start_2 < 0:
             print "Error (plot_everything_diff): option last_year doesn't work if that year isn't contained within one file, for both simulations."
             sys.exit()
         # Set the other options
@@ -181,7 +181,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
         time_index_2 = None
         time_average = True
         # Set date string
-        date_string = 'Year beginning ' + parse_date(file_path=file_path_1, time_index=t_beg_1)
+        date_string = 'Year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
     elif option == 'last_month':
         # Set the other options
         t_start_1 = None
