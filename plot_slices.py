@@ -211,6 +211,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     def read_and_mask_both (var_name):
         data1 = read_and_mask(var_name, file_path_1)
         data2 = read_and_mask(var_name, file_path_2, check_diff_time=True)
+        return data1, data2
 
     # Read variables and make plots
     if var == 'temp':
@@ -399,6 +400,7 @@ def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat
     def read_and_mask_both (var_name):
         data1 = read_and_mask(var_name, file_path_1, second_file_path=second_file_path_1)
         data2 = read_and_mask(var_name, file_path_2, second_file_path=second_file_path_2, check_diff_time=True)
+        return data1, data2
 
     # Read temperature and salinity for each simulation
     temp_1, temp_2 = read_and_mask_both('THETA')
