@@ -149,7 +149,7 @@ def plot_fris_massbalance_diff (file_path_1, file_path_2, grid=None, fig_name=No
     time_1, melt_1, freeze_1 = read_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
     time_2, melt_2, freeze_2 = read_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
     # Find the difference, trimming if needed
-    num_time = max(time_1.size, time_2.size)
+    num_time = min(time_1.size, time_2.size)
     time = time_1[:num_time]
     melt_diff = melt_2[:num_time] - melt_1[:num_time]
     freeze_diff = freeze_2[:num_time] - freeze_1[:num_time]
@@ -183,7 +183,7 @@ def plot_timeseries_max_diff (file_path_1, file_path_2, var_name, grid=None, xmi
 
     time_1, values_1 = read_timeseries(file_path_1, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
     time_2, values_2 = read_timeseries(file_path_2, option='max', var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    num_time = max(time_1.size, time_2.size)
+    num_time = min(time_1.size, time_2.size)
     time = time_1[:num_time]
     values_diff = values_2[:num_time] - values_1[:num_time]
     plot_timeseries(time, values_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
