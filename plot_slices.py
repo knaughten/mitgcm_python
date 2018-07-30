@@ -307,8 +307,8 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
     salt_values_diff = salt_values_2 - salt_values_1
 
     # Now figure out the colour bounds
-    tmin_tmp, tmax_tmp = get_slice_minmax(temp_values_diff, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
-    smin_tmp, smax_tmp = get_slice_minmax(salt_values_diff, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
+    tmin_tmp, tmax_tmp = get_slice_minmax(np.reshape(temp_values_diff, left.shape), left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
+    smin_tmp, smax_tmp = get_slice_minmax(np.reshape(salt_values_diff, left.shape), left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
     # Update any colour bounds which aren't already set
     if tmin is None:
         tmin = tmin_tmp
