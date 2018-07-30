@@ -3,6 +3,7 @@
 #######################################################
 
 import os
+import sys
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index

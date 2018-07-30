@@ -74,7 +74,7 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64):
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64, obcs_sponge=0):
 
     sose_dir = real_dir(sose_dir)
 
@@ -96,6 +96,12 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     mask_surface[model_grid.bathy > h0] = 0
     # Smooth, and remask the land and ice shelves
     mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
+    if obcs_sponge > 0:
+        # Also mask the cells affected by OBCS and/or its sponge
+        mask_surface[:obcs_sponge,:] = 0
+        mask_surface[-obcs_sponge:,:] = 0
+        mask_surface[:,:obcs_sponge] = 0
+        mask_surface[:,-obcs_sponge:] = 0
     
     # Make a 3D version with zeros in deeper layers
     mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
