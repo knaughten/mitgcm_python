@@ -88,6 +88,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
         # Area-average or integrate
         timeseries.append(over_area(option, data_tmp, grid, gtype=gtype))
+    return timeseries
 
     
     # Figure out if there's a time dimension
