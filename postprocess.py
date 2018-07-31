@@ -61,7 +61,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     # Timeseries
     var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries(var, file_path, grid=grid, fig_name=fig_dir+var+'.png', monthly=monthly)
+        read_plot_timeseries(var, file_path, grid=grid, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
@@ -151,7 +151,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
     # Timeseries through the entire simulation
     var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries_diff(var, output_files_1, output_files_2, grid=grid, fig_name=fig_dir+var+'.png', monthly=monthly)
+        read_plot_timeseries_diff(var, output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     # Concatenate the time arrays from all files
