@@ -81,7 +81,7 @@ def timeseries_avg_ss (file_path, var_name, grid, gtype='t', time_index=None, t_
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Figure out if there's a time dimension
-    time_dependent = time_index is not None or time_average
+    time_dependent = time_index is None and not time_average
     # Mask
     data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
     # Area-average
