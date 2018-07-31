@@ -263,6 +263,11 @@ def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True
             sys.exit()
         # Now read the timeseries
         time, data = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+
+    # Unit conversions
+    if var == 'seaice_area':
+        # Convert from m^2 to million km^2
+        data *= 1e-12
         
     # Plot
     make_timeseries_plot(time, data, data_2=data_2, melt_freeze=(var=='fris_melt'), title=title, units=units, monthly=monthly, fig_name=fig_name)
