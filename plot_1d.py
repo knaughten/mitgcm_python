@@ -10,7 +10,7 @@ import sys
 
 from grid import choose_grid
 from file_io import netcdf_time
-from timeseries import fris_melt, timeseries_max, timeseries_avg_ss
+from timeseries import fris_melt, timeseries_max, timeseries_avg_ss, timeseries_avg_3d
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 
