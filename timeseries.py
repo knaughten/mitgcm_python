@@ -114,19 +114,19 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Process one time index at a time to save memory
-    timeseries = []
-    for t in range(data.shape[0]):
-        # Mask everything except FRIS out of the array
-        data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
-        # Volume average
-        timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
-    return timeseries
+    #timeseries = []
+    #for t in range(data.shape[0]):
+    #    # Mask everything except FRIS out of the array
+    #    data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
+    #    # Volume average
+    #    timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
+    #return timeseries
         
     
-    #time_dependent = time_index is None and not time_average
-    #if fris:
-    #    # Mask everything except FRIS out of the array
-    #    data = mask_except_fris(data, grid, gtype=gtype, time_dependent=time_dependent, depth_dependent=True)
-    #return volume_average(data, grid, gtype=gtype, time_dependent=time_dependent)
+    time_dependent = time_index is None and not time_average
+    if fris:
+        # Mask everything except FRIS out of the array
+        data = mask_except_fris(data, grid, gtype=gtype, time_dependent=time_dependent, depth_dependent=True)
+    return volume_average(data, grid, gtype=gtype, time_dependent=time_dependent)
 
     
