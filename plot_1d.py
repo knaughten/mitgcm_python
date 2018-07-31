@@ -86,7 +86,7 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
 
     if option == 'fris_melt':
         return time, melt, freeze
-    elif option in ['max', 'avg_ss']
+    elif option in ['max', 'avg_ss']:
         return time, values
     elif option == 'time':
         return time
