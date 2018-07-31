@@ -7,7 +7,7 @@ import sys
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
-from plot_1d import read_plot_timeseries
+from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir
@@ -59,9 +59,9 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     grid = Grid(grid_path)
 
     # Timeseries
-    plot_fris_massbalance(output_files, grid=grid, fig_name=fig_dir+'fris_massloss.png')
-    plot_hice_corner(output_files, grid=grid, fig_name=fig_dir+'max_hice_corner.png')
-    plot_mld_ewed(output_files, grid=grid, fig_name=fig_dir+'max_mld_ewed.png')
+    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
+    for var in var_names:
+        read_plot_timeseries(var, file_path, grid=grid, fig_name=fig_dir+var+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
