@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from timeseries import read_timeseries, read_timeseries_diff, set_parameters
+from timeseries import read_timeseries, read_timeseries_diff, trim_and_diff, set_parameters
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 
