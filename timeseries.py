@@ -178,7 +178,7 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         # More files to read
         for file in file_path[1:]:
             if option == 'fris_melt':
-                melt_tmp, freeze_tmp = fris_melt(file, grid, mass_balance=True)
+                melt_tmp, freeze_tmp = timeseries_fris_melt(file, grid, mass_balance=True)
             elif option == 'max':
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             elif option == 'avg_sfc':
