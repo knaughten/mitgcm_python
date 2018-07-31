@@ -10,7 +10,7 @@ import sys
 
 from grid import choose_grid
 from file_io import netcdf_time
-from timeseries import fris_melt, timeseries_max, timeseries_avg_ss, timeseries_avg_3d
+from timeseries import fris_melt, timeseries_max, timeseries_avg_sfc, timeseries_int_sfc, timeseries_avg_3d
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 
@@ -23,17 +23,18 @@ from plot_utils.windows import finished_plot
 # Optional keyword arguments:
 # option: 'fris_melt': calculates total melting and freezing beneath FRIS
 #          'max': calculates maximum value of variable in region; must specify var_name and possibly xmin etc.
-#          'avg_ss': calculates area-averaged value over the sea surface, i.e. not counting cavities
+#          'avg_sfc': calculates area-averaged value over the sea surface, i.e. not counting cavities
+#          'int_sfc': calculates area-integrated value over the sea surface
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
-# var_name: if option='max' or 'avg_ss', variable name to calculate the maximum or area-average of
+# var_name: variable name to process. Only matters for 'max', 'avg_sfc', 'int_sfc', and 'avg_fris'.
 # xmin, xmax, ymin, ymax: as in function var_min_max
 # monthly: as in function netcdf_time
 
 # Output:
 # if option='fris_melt', returns three 1D arrays of time, melting, and freezing.
-# if option='max', 'avg_ss', or 'avg_fris', returns two 1D arrays of time and the relevant timeseries.
+# if option='max', 'avg_sfc', or 'avg_fris', returns two 1D arrays of time and the relevant timeseries.
 # if option='time', just returns the time array.
 
 def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
@@ -48,7 +49,7 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (read_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option in ['max', 'avg_ss', 'avg_fris'] and var_name is None:
+    if option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris'] and var_name is None:
         print 'Error (read_timeseries): must specify var_name'
         sys.exit()
 
@@ -61,8 +62,10 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         melt, freeze = fris_melt(first_file, grid, mass_balance=True)
     elif option == 'max':
         values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    elif option == 'avg_ss':
-        values = timeseries_avg_ss(first_file, var_name, grid, gtype=gtype)
+    elif option == 'avg_sfc':
+        values = timeseries_avg_sfc(first_file, var_name, grid, gtype=gtype)
+    elif option == 'int_sfc':
+        values = timeseries_int_sfc(first_file, var_name, grid, gtype=gtype)
     elif option == 'avg_fris':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
     elif option != 'time':
@@ -77,8 +80,10 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 melt_tmp, freeze_tmp = fris_melt(file, grid, mass_balance=True)
             elif option == 'max':
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-            elif option == 'avg_ss':
-                values_tmp = timeseries_avg_ss(file, var_name, grid, gtype=gtype)
+            elif option == 'avg_sfc':
+                values_tmp = timeseries_avg_sfc(file, var_name, grid, gtype=gtype)
+            elif option == 'int_sfc':
+                values_tmp = timeseries_int_sfc(file, var_name, grid, gtype=gtype)
             elif option == 'avg_fris':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
             time_tmp = netcdf_time(file, monthly=monthly)
@@ -86,13 +91,13 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             if option == 'fris_melt':
                 melt = np.concatenate((melt, melt_tmp))
                 freeze = np.concatenate((freeze, freeze_tmp))
-            elif option in ['max', 'avg_ss', 'avg_fris']:
+            elif option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris']:
                 values = np.concatenate((values, values_tmp))
             time = np.concatenate((time, time_tmp))
 
     if option == 'fris_melt':
         return time, melt, freeze
-    elif option in ['max', 'avg_ss', 'avg_fris']:
+    elif option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris']:
         return time, values
     elif option == 'time':
         return time
@@ -259,14 +264,14 @@ def plot_mld_ewed_diff (file_path_1, file_path_2, grid=None, fig_name=None, mont
 # Plot timeseries of the area-averaged sea surface height, at every time index in the given file(s).
 def plot_eta_avg (file_path, grid=None, fig_name=None, monthly=True):
 
-    time, eta = read_timeseries(file_path, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
+    time, eta = read_timeseries(file_path, option='avg_sfc', var_name='ETAN', grid=grid, monthly=monthly)
     plot_timeseries(time, eta, title='Area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
 
 
 # Difference in the area-averaged sea surface height between two simulations (2 minus 1).
 def plot_eta_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
-    time, eta_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
+    time, eta_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_sfc', var_name='ETAN', grid=grid, monthly=monthly)
     plot_timeseries(time, eta_diff, title='Change in area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
 
 
@@ -296,3 +301,20 @@ def plot_fris_salt_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None,
 
     time, salt_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_fris', var_name='SALT', grid=grid, monthly=monthly)
     plot_timeseries(time, salt_diff, title='Change in volume-averaged salinity in FRIS cavity', units='psu', monthly=monthly, fig_name=fig_name)
+
+
+# Plot timeseries of total sea ice area, at every time index in the given file(s).
+def plot_total_seaice_area (file_path, grid=None, fig_name=None, monthly=True):
+
+    time, area = read_timeseries(file_path, option='int_sfc', var_name='SIarea', grid=grid, monthly=monthly)
+    # Convert from m^2 to million km^2
+    area *= 1e-12
+    plot_timeseries(time, area, title='Total sea ice area', units=r'million km$^2$', monthly=monthly, fig_name=fig_name)
+
+
+# Difference in total sea ice area between two simulations (2 minus 1).
+def plot_total_seaice_area_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
+
+    time, area_diff = read_timeseries_diff(file_path_1, file_path_2, option='int_sfc', var_name='SIarea', grid=grid, monthly=monthly)
+    area_diff *= 1e-12
+    plot_timeseries(time, area_diff, title='Change in total sea ice area', units=r'million km^2', monthly=monthly, fig_name=fig_name)

@@ -7,7 +7,7 @@ import numpy as np
 from file_io import read_netcdf
 from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
 from diagnostics import total_melt
-from averaging import area_average, volume_average
+from averaging import over_area, volume_average
 
 
 # Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -76,27 +76,47 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
         return max_data
 
 
-# Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
-def timeseries_avg_ss (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-
+# Helper function for timeseries_avg_sfc and timeseries_int_sfc.
+def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+    
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Figure out if there's a time dimension
     time_dependent = time_index is None and not time_average
     # Mask
     data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
-    # Area-average
-    return area_average(data, grid, gtype=gtype, time_dependent=time_dependent)
+    # Area-average or integrate
+    return over_area(option, data, grid, gtype=gtype, time_dependent=time_dependent)
+
+
+# Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
+def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+    return timeseries_area_sfc('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+
+
+# Like timeseries_avg_sfc, but for area-integrals over the sea surface.
+def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+    return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. This can be restricted to the FRIS cavity if you set fris=True.
 def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, fris=False):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    time_dependent = time_index is None and not time_average
-    if fris:
+    # Process one time index at a time to save memory
+    timeseries = []
+    for t in range(data.shape[0]):
         # Mask everything except FRIS out of the array
-        data = mask_except_fris(data, grid, gtype=gtype, time_dependent=time_dependent, depth_dependent=True)
-    return volume_average(data, grid, gtype=gtype, time_dependent=time_dependent)
+        data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
+        # Volume average
+        timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
+    return timeseries
+        
+    
+    #time_dependent = time_index is None and not time_average
+    #if fris:
+    #    # Mask everything except FRIS out of the array
+    #    data = mask_except_fris(data, grid, gtype=gtype, time_dependent=time_dependent, depth_dependent=True)
+    #return volume_average(data, grid, gtype=gtype, time_dependent=time_dependent)
 
     

@@ -119,7 +119,7 @@ def area_average (data, grid, gtype='t', time_dependent=False):
 
 
 # Like area_average, but for area integrals.
-def area_integrate (data, grid, gtype='t', time_dependent=False):
+def area_integral (data, grid, gtype='t', time_dependent=False):
 
     return over_area('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)
 
@@ -138,6 +138,6 @@ def volume_average (data, grid, gtype='t', time_dependent=False):
 
 
 # Like volume_average, but for volume integrals.
-def volume_integrate (data, grid, gtype='t', time_dependent=False):
+def volume_integral (data, grid, gtype='t', time_dependent=False):
 
     return over_volume('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)        
