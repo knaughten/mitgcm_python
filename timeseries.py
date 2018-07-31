@@ -90,14 +90,6 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         timeseries.append(over_area(option, data_tmp, grid, gtype=gtype))
     return timeseries
 
-    
-    # Figure out if there's a time dimension
-    #time_dependent = time_index is None and not time_average
-    # Mask
-    #data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
-    # Area-average or integrate
-    #return over_area(option, data, grid, gtype=gtype, time_dependent=time_dependent)
-
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
 def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
@@ -114,19 +106,10 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Process one time index at a time to save memory
-    #timeseries = []
-    #for t in range(data.shape[0]):
-    #    # Mask everything except FRIS out of the array
-    #    data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
-    #    # Volume average
-    #    timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
-    #return timeseries
-        
-    
-    time_dependent = time_index is None and not time_average
-    if fris:
+    timeseries = []
+    for t in range(data.shape[0]):
         # Mask everything except FRIS out of the array
-        data = mask_except_fris(data, grid, gtype=gtype, time_dependent=time_dependent, depth_dependent=True)
-    return volume_average(data, grid, gtype=gtype, time_dependent=time_dependent)
-
-    
+        data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
+        # Volume average
+        timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
+    return timeseries

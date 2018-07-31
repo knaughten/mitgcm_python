@@ -103,48 +103,6 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         return time
 
 
-# Helper function to plot timeseries.
-
-# Arguments:
-# time: 1D array of Date objects corresponding to time of each record
-# data: 1D array of timeseries to plot
-
-# Optional keyword arguments:
-# melt_freeze: boolean (default False) indicating to plot melting, freezing, and total. Assumes melting is given by "data" and freezing by "data_2".
-# data_2: if melt_freeze=True, array of freezing timeseries
-# diff: boolean (default False) indicating this is an anomaly timeseries. Only matters for melt_freeze as it will change the legend labels.
-# title: title for plot
-# units: units of timeseries
-# monthly: as in function netcdf_time
-# fig_name: as in function finished_plot
-
-def plot_timeseries (time, data, data_2=None, melt_freeze=False, diff=False, title='', units='', monthly=True, fig_name=None):
-
-    fig, ax = plt.subplots()
-    if melt_freeze:
-        if diff:
-            melt_label = 'Change in melting (>0)'
-            freeze_label = 'Change in freezing (<0)'
-            total_label = 'Change in net'
-        else:
-            melt_label = 'Melting'
-            freeze_label = 'Freezing'
-            total_label = 'Net'
-        ax.plot_date(time, data, '-', color='red', linewidth=1.5, label=melt_label)
-        ax.plot_date(time, data_2, '-', color='blue', linewidth=1.5, label=freeze_label)
-        ax.plot_date(time, data+data_2, '-', color='black', linewidth=1.5, label=total_label)
-        ax.legend()
-    else:
-        ax.plot_date(time, data, '-', linewidth=1.5)
-    ax.axhline(color='black')
-    ax.grid(True)
-    if not monthly:
-        monthly_ticks(ax)
-    plt.title(title, fontsize=18)
-    plt.ylabel(units, fontsize=16)
-    finished_plot(fig, fig_name=fig_name)
-
-
 # Helper function to calculate difference timeseries, trimming if needed.
 
 # Arguments:
@@ -175,24 +133,141 @@ def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, 
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
-    
 
-# Plot timeseries of FRIS' basal mass balance components (melting, freezing, total) at every time index in the given files.
+
+# Helper function to plot timeseries.
 
 # Arguments:
-# file_path: path to NetCDF file containing variable "SHIfwFlx", or a list of such files to concatenate
+# time: 1D array of Date objects corresponding to time of each record
+# data: 1D array of timeseries to plot
+
+# Optional keyword arguments:
+# melt_freeze: boolean (default False) indicating to plot melting, freezing, and total. Assumes melting is given by "data" and freezing by "data_2".
+# data_2: if melt_freeze=True, array of freezing timeseries
+# diff: boolean (default False) indicating this is an anomaly timeseries. Only matters for melt_freeze as it will change the legend labels.
+# title: title for plot
+# units: units of timeseries
+# monthly: as in function netcdf_time
+# fig_name: as in function finished_plot
+
+def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False, title='', units='', monthly=True, fig_name=None):
+
+    fig, ax = plt.subplots()
+    if melt_freeze:
+        if diff:
+            melt_label = 'Change in melting (>0)'
+            freeze_label = 'Change in freezing (<0)'
+            total_label = 'Change in net'
+        else:
+            melt_label = 'Melting'
+            freeze_label = 'Freezing'
+            total_label = 'Net'
+        ax.plot_date(time, data, '-', color='red', linewidth=1.5, label=melt_label)
+        ax.plot_date(time, data_2, '-', color='blue', linewidth=1.5, label=freeze_label)
+        ax.plot_date(time, data+data_2, '-', color='black', linewidth=1.5, label=total_label)
+        ax.legend()
+    else:
+        ax.plot_date(time, data, '-', linewidth=1.5)
+    if melt_freeze or (np.amin(data) < 0 and np.amax(data) > 0):
+        # Add a line at 0
+        ax.axhline(color='black')
+    ax.grid(True)
+    if not monthly:
+        monthly_ticks(ax)
+    plt.title(title, fontsize=18)
+    plt.ylabel(units, fontsize=16)
+    finished_plot(fig, fig_name=fig_name)
+
+
+# User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice lat-lon plot.
+
+# Arguments:
+# var: keyword indicating which timeseries to plot. The options are:
+#      'fris_melt': melting, freezing, and net melting beneath FRIS
+#      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
+#      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
+#      'eta_avg': area-averaged sea surface height
+#      'seaice_area': total sea ice area
+#      'fris_temp': volume-averaged temperature in the FRIS cavity
+#      'fris_salt': volume-averaged salinity in the FRIS cavity
+# file_path: either a single filename or a list of filenames, to NetCDF files containing the necessary variable:
+#            'fris_melt': SHIfwFlx
+#            'hice_corner': SIheff
+#            'mld_ewed': MXLDEPTH
+#            'eta_avg': ETAN
+#            'seaice_area': SIarea
+#            'fris_temp': THETA
+#            'fris_salt': SALT
 
 # Optional keyword arguments:
 # grid: as in function read_plot_latlon
 # fig_name: as in function finished_plot
-# monthly: as in function netcdf_time
+# monthly: indicates the model output is monthly-averaged
 
-def plot_fris_massbalance (file_path, grid=None, fig_name=None, monthly=True):
+def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True):
 
-    # Calculate timeseries
-    time, melt, freeze = read_timeseries(file_path, option='fris_melt', grid=grid, monthly=monthly)
+    # Calculate timeseries and set plotting variables
+    if var == 'fris_melt':
+        # Special case for read_timeseries, with extra output argument
+        time, data, data_2 = read_timeseries(file_path, option='fris_melt', grid=grid, monthly=monthly)
+        title = 'Basal mass balance of FRIS'
+        units = 'Gt/y'
+    else:
+        # Set parameters to call read_timeseries with
+        data_2 = None
+        xmin = None
+        xmax = None
+        ymin = None
+        ymax = None
+        if var in ['hice_corner', 'mld_ewed']:
+            # Maximum between spatial bounds
+            option = 'max'
+            if var == 'hice_corner':
+                var_name = 'SIheff'
+                xmin = -62
+                xmax = -59.5
+                ymin = -75.5
+                ymax = -74
+                title = 'Maximum sea ice thickness in problematic corner'
+                units = 'm'
+            elif var == 'mld_ewed':
+                var_name = 'MXLDEPTH'
+                xmin = -30
+                xmax = 30
+                ymin = -69
+                ymax = -60
+                title = 'Maximum mixed layer depth in Eastern Weddell'
+                units = 'm'
+        elif var == 'avg_eta':
+            option = 'avg_sfc'
+            var_name = 'ETAN'
+            title = 'Area-averaged sea surface height'
+            units = 'm'
+        elif var == 'seaice_area':
+            option = 'int_sfc'
+            var_name = 'SIarea'
+            title = 'Total sea ice area'
+            units = r'million km$^2$'
+        elif var in ['fris_temp', 'fris_salt']:
+            option = 'avg_fris'
+            if var == 'fris_temp':
+                var_name = 'THETA'
+                title = 'Volume-averaged temperature in FRIS cavity'
+                units = r'$^{\circ}$C'
+            elif var == 'fris_salt':
+                var_name = 'SALT'
+                title = 'Volume-averaged salinity in FRIS cavity'
+                units = 'psu'
+        else:
+            print 'Error (read_plot_timeseries): invalid variable ' + var
+            sys.exit()
+        # Now read the timeseries
+        time, data = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymin, monthly=monthly)
+        
     # Plot
-    plot_timeseries(time, melt, data_2=freeze, melt_freeze=True, title='Basal mass balance of FRIS', units='Gt/y', monthly=monthly, fig_name=fig_name)
+    make_timeseries_plot(time, data, data_2=data_2, melt_freeze=(option=='fris_melt'), title=title, units=units, monthly=monthly, fig_name=fig_name)
+
+    
 
 
 # Plot the difference in FRIS melting and freezing for two simulations (2 minus 1). It is assumed the two simulations start at the same time, but it's okay if one is longer - it will get trimmed.
@@ -209,26 +284,6 @@ def plot_fris_massbalance_diff (file_path_1, file_path_2, grid=None, fig_name=No
     plot_timeseries(time, melt_diff, data_2=freeze_diff, melt_freeze=True, diff=True, title='Change in basal mass balance of FRIS', units='Gt/y', monthly=monthly, fig_name=fig_name)    
 
 
-# Plot timeseries of the maximum value of the given variable in the given region, at every time index in the given files.
-
-# Arguments:
-# file_path: path to NetCDF file containing the variable, or a list of such files to concatenate
-
-# Optional keyword arguments:
-# grid: as in function read_plot_latlon
-# xmin, xmax, ymin, ymax: as in function var_min_max
-# title: title to add to the plot
-# units: units for the y-axis
-# fig_name: as in function finished_plot
-# monthly: as in function netcdf_time
-
-def plot_timeseries_max (file_path, var_name, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
-
-    time, values = read_timeseries(file_path, option='max', var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-
-    plot_timeseries(time, values, title=title, units=units, monthly=monthly, fig_name=fig_name)
-
-
 # Plot the difference in the maximum value of the given variable in the given region, between two simulations (2 minus 1). It is assumed the two simulations start at the same time, but it's okay if one is longer - it will get trimmed.
 
 def plot_timeseries_max_diff (file_path_1, file_path_2, var_name, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
@@ -237,35 +292,16 @@ def plot_timeseries_max_diff (file_path_1, file_path_2, var_name, grid=None, gty
     plot_timeseries(time, values_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 
-# Maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula.
-def plot_hice_corner (file_path, grid=None, fig_name=None, monthly=True):
-
-    plot_timeseries_max(file_path, 'SIheff', grid=grid, xmin=-62, xmax=-59.5, ymin=-75.5, ymax=-74, title='Maximum sea ice thickness in problematic corner', units='m', fig_name=fig_name, monthly=monthly)
-
-
 # Difference in this maximum sea ice between two simulations (2 minus 1).
 def plot_hice_corner_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     plot_timeseries_max_diff(file_path_1, file_path_2, 'SIheff', grid=grid, xmin=-62, xmax=-59.5, ymin=-75.5, ymax=-74, title='Change in maximum sea ice thickness in problematic corner', units='m', fig_name=fig_name, monthly=monthly)
 
 
-# Maximum mixed layer depth in the open Eastern Weddell
-def plot_mld_ewed (file_path, grid=None, fig_name=None, monthly=True):
-
-    plot_timeseries_max(file_path, 'MXLDEPTH', grid=grid, xmin=-30, ymin=-69, title='Maximum mixed layer depth in Eastern Weddell', units='m', fig_name=fig_name, monthly=monthly)
-
-
 # Difference in this maximum mixed layer depth between two simulations (2 minus 1).
 def plot_mld_ewed_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     plot_timeseries_max_diff(file_path_1, file_path_2, 'MXLDEPTH', grid=grid, xmin=-30, ymin=-69, title='Change in maximum mixed layer depth in Eastern Weddell', units='m', fig_name=fig_name, monthly=monthly)
-
-
-# Plot timeseries of the area-averaged sea surface height, at every time index in the given file(s).
-def plot_eta_avg (file_path, grid=None, fig_name=None, monthly=True):
-
-    time, eta = read_timeseries(file_path, option='avg_sfc', var_name='ETAN', grid=grid, monthly=monthly)
-    plot_timeseries(time, eta, title='Area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
 
 
 # Difference in the area-averaged sea surface height between two simulations (2 minus 1).
@@ -275,41 +311,17 @@ def plot_eta_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, month
     plot_timeseries(time, eta_diff, title='Change in area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
 
 
-# Plot timeseries of the volume-averaged temperature in the FRIS cavity, at every time index in the given file(s).
-def plot_fris_temp_avg (file_path, grid=None, fig_name=None, monthly=True):
-
-    time, temp = read_timeseries(file_path, option='avg_fris', var_name='THETA', grid=grid, monthly=monthly)
-    plot_timeseries(time, temp, title='Volume-averaged temperature in FRIS cavity', units=r'$^{\circ}$C', monthly=monthly, fig_name=fig_name)
-
-
 # Difference in volume-averaged FRIS temperature between two simulations (2 minus 1).
 def plot_fris_temp_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     time, temp_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_fris', var_name='THETA', grid=grid, monthly=monthly)
     plot_timeseries(time, temp_diff, title='Change in volume-averaged temperature in FRIS cavity', units=r'$^{\circ}$C', monthly=monthly, fig_name=fig_name)
 
-
-# Plot timeseries of the volume-averaged salinity in the FRIS cavity, at every time index in the given file(s).
-def plot_fris_salt_avg (file_path, grid=None, fig_name=None, monthly=True):
-
-    time, salt = read_timeseries(file_path, option='avg_fris', var_name='SALT', grid=grid, monthly=monthly)
-    plot_timeseries(time, salt, title='Volume-averaged salinity in FRIS cavity', units='psu', monthly=monthly, fig_name=fig_name)
-
-
 # Difference in volume-averaged FRIS salinity between two simulations (2 minus 1).
 def plot_fris_salt_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     time, salt_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_fris', var_name='SALT', grid=grid, monthly=monthly)
     plot_timeseries(time, salt_diff, title='Change in volume-averaged salinity in FRIS cavity', units='psu', monthly=monthly, fig_name=fig_name)
-
-
-# Plot timeseries of total sea ice area, at every time index in the given file(s).
-def plot_total_seaice_area (file_path, grid=None, fig_name=None, monthly=True):
-
-    time, area = read_timeseries(file_path, option='int_sfc', var_name='SIarea', grid=grid, monthly=monthly)
-    # Convert from m^2 to million km^2
-    area *= 1e-12
-    plot_timeseries(time, area, title='Total sea ice area', units=r'million km$^2$', monthly=monthly, fig_name=fig_name)
 
 
 # Difference in total sea ice area between two simulations (2 minus 1).
