@@ -249,5 +249,5 @@ def plot_eta_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, month
 
     time_1, eta_1 = read_timeseries(file_path_1, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
     time_2, eta_2 = read_timeseries(file_path_2, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
-    time, eta_diff = trim_and_diff(time_1, time_2, values_1, values_2)
+    time, eta_diff = trim_and_diff(time_1, time_2, eta_1, eta_2)
     plot_timeseries(time, eta_diff, title='Change in area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
