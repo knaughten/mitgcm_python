@@ -7,6 +7,7 @@ import sys
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
+from timeseries import read_timeseries
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
