@@ -262,7 +262,7 @@ def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True
             print 'Error (read_plot_timeseries): invalid variable ' + var
             sys.exit()
         # Now read the timeseries
-        time, data = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymin, monthly=monthly)
+        time, data = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
         
     # Plot
     make_timeseries_plot(time, data, data_2=data_2, melt_freeze=(var=='fris_melt'), title=title, units=units, monthly=monthly, fig_name=fig_name)
