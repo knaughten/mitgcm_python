@@ -158,7 +158,7 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Helper function to call read_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of fris_melt.
-def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=grid, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=monthly):
+def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=monthly):
 
     if option == 'fris_melt':
         print "Error (read_timeseries_diff): this function can't be used for option="+option
