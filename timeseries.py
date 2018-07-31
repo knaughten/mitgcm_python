@@ -89,7 +89,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
         # Area-average or integrate
         timeseries.append(over_area(option, data_tmp, grid, gtype=gtype))
-    return timeseries
+    return np.array(timeseries)
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
@@ -113,7 +113,7 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
         data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
         # Volume average
         timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
-    return timeseries
+    return np.array(timeseries)
 
 
 # Calculate timeseries from one or more files.

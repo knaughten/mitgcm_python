@@ -149,9 +149,9 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
     grid = Grid(grid_path)
 
     # Timeseries through the entire simulation
-    plot_fris_massbalance_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'fris_massloss_diff.png')
-    plot_hice_corner_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'max_hice_corner_diff.png')
-    plot_mld_ewed_diff(output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'max_mld_ewed_diff.png')
+    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
+    for var in var_names:
+        read_plot_timeseries_diff(var, output_files_1, output_files_2, grid=grid, fig_name=fig_dir+var+'.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     # Concatenate the time arrays from all files
