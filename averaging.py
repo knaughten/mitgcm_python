@@ -15,8 +15,12 @@ def prepare_area_mask (data, grid, gtype='t', time_dependent=False):
         print 'Error (prepare_area_mask): non-tracer grids not yet supported'
         sys.exit()
 
-    # Get the 2D mask as 1s and 0s
-    mask = np.invert(data.mask).astype(float)
+    # Get the mask as 1s and 0s
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.invert(data.mask).astype(float)
+    else:
+        # No mask, just use 1s everywhere
+        mask = np.ones(data.shape)
     # Get the integrand of area
     dA = grid.dA
     if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
@@ -64,14 +68,14 @@ def over_volume (option, data, grid, gtype='t', time_dependent=False):
 
     # Get dz and hfac
     dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
-    # Get dA (don't care about mask)
-    dA = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)[0]
+    # Get dA and mask
+    dA, mask = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
     # Now get the volume integrand
     dV = dA*dz
     if option == 'average':
-        return np.sum(data*dV*hfac, axis=(-3,-2,-1))/np.sum(dV*hfac, axis=(-3,-2,-1))
+        return np.sum(data*dV*hfac*mask, axis=(-3,-2,-1))/np.sum(dV*hfac*mask, axis=(-3,-2,-1))
     elif option == 'integrate':
-        return np.sum(data*dV*hfac, axis=(-3,-2,-1))
+        return np.sum(data*dV*hfac*mask, axis=(-3,-2,-1))
     else:
         print 'Error (over_volume): invalid option ' + option
 
@@ -120,7 +124,7 @@ def area_integrate (data, grid, gtype='t', time_dependent=False):
     return over_area('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)
 
 
-# Volume-average the given field, taking hfac into account.
+# Volume-average the given field, taking hfac into account, plus any mask which is on data as as MaskedArray.
 
 # Arguments:
 # data: 3D (depth x lat x lon) or 4D (time x depth x lat x lon, needs time_dependent=True) array of data to average

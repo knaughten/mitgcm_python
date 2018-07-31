@@ -24,6 +24,40 @@ def convert_ismr (shifwflx):
     return -shifwflx/rho_fw*sec_per_year
 
 
+# Tile a 2D (lat x lon) array in depth so it is 3D (depth x lat x lon).
+# grid can either be a Grid object or an array of grid dimensions [nx, ny, nz].
+def xy_to_xyz (data, grid):
+
+    if isinstance(grid, list):
+        nz = grid[2]
+    else:
+        nz = grid.nz
+
+    return np.tile(data, (nz, 1, 1))
+
+
+# Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
+def z_to_xyz (data, grid):
+
+    if isinstance(grid, list):
+        nx = grid[0]
+        ny = grid[1]
+    else:
+        nx = grid.nx
+        ny = grid.ny
+
+    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, ny, nx))
+
+
+# Tile any array (of any dimension) in time, with num_time records. Time will be the first dimension in the new array.
+def add_time_dim (data, num_time):
+
+    shape = [num_time]
+    for i in range(len(data.shape)):
+        shape += [1]
+    return np.tile(data, shape)
+
+
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
 # If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d).
 # The only assumption about the input array dimensions is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
@@ -77,20 +111,16 @@ def select_bottom (data):
 
 
 # Helper function for masking functions below
-def apply_mask (data, mask, time_dependent=False):
+# depth_dependent only has an effect if the mask is 2D.
+def apply_mask (data, mask, time_dependent=False, depth_dependent=False):
 
+    if depth_dependent and len(mask.shape)==2:
+        # Tile a 2D mask in the depth dimension
+        grid_dim = [data.shape[-3], data.shape[-2], data.shape[-1]]
+        mask = xy_to_xyz(mask, grid_dim)
     if time_dependent:
         # Tile the mask in the time dimension
-        num_time = data.shape[0]
-        if len(mask.shape) == 2:
-            # Starting with a 2D mask
-            mask = np.tile(mask, (num_time, 1, 1))
-        elif len(mask.shape) == 3:
-            # Starting with a 3D mask
-            mask = np.tile(mask, (num_time, 1, 1, 1))
-        else:
-            print 'Error (apply_mask): invalid dimensions of mask'
-            sys.exit()
+        mask = add_time_dim(mask, data.shape[0])
 
     if len(mask.shape) != len(data.shape):
         print 'Error (apply_mask): invalid dimensions of data'
@@ -100,64 +130,38 @@ def apply_mask (data, mask, time_dependent=False):
     return data
 
 
-# Mask land out of a 2D field.
+# Mask land out of an array.
 
 # Arguments:
-# data: array of data to mask, assumed to be 2D unless time_dependent=True
+# data: array of data to mask, assumed to be 2D unless time_dependent or depth_dependent say otherwise
 # grid: Grid object
 
 # Optional keyword arguments:
 # gtype: as in function Grid.get_hfac
 # time_dependent: as in function apply_mask
+# depth_dependent: as in function apply_mask
 
-def mask_land (data, grid, gtype='t', time_dependent=False):
+def mask_land (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-    return apply_mask(data, grid.get_land_mask(gtype=gtype), time_dependent=time_dependent)
-
-
-# Mask land and ice shelves out of a 2D field, just leaving the open ocean.
-
-# Arguments:
-# data: array of data to mask, assumed to be 2D unless time_dependent=True
-# grid: Grid object
-
-# Optional keyword arguments:
-# gtype: as in function Grid.get_hfac
-# time_dependent: as in function apply_mask
-
-def mask_land_ice (data, grid, gtype='t', time_dependent=False):
-
-    return apply_mask(data, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), time_dependent=time_dependent)
+    return apply_mask(data, grid.get_land_mask(gtype=gtype), time_dependent=time_dependent, depth_dependent=depth_dependent)
 
 
-# Mask land and open ocean out of a 2D field, just leaving the ice shelves.
+# Mask land and ice shelves out of an array, just leaving the open ocean.
+def mask_land_ice (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-# Arguments:
-# data: array of data to mask, assumed to be 2D unless time_dependent=True
-# grid: Grid object
-
-# Optional keyword arguments:
-# gtype: as in function Grid.get_hfac
-# time_dependent: as in function apply_mask
-
-def mask_except_ice (data, grid, gtype='t', time_dependent=False):
-
-    return apply_mask(data, np.invert(grid.get_ice_mask(gtype=gtype)), time_dependent=time_dependent)
+    return apply_mask(data, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), time_dependent=time_dependent, depth_dependent=depth_dependent)
 
 
-# Mask everything except FRIS out of a 2D field.
+# Mask land and open ocean out of an array, just leaving the ice shelves.
+def mask_except_ice (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-# Arguments:
-# data: array of data to mask, assumed to be 2D unless time_dependent=True
-# grid: Grid object
+    return apply_mask(data, np.invert(grid.get_ice_mask(gtype=gtype)), time_dependent=time_dependent=True, depth_dependent=depth_dependent)
 
-# Optional keyword arguments:
-# gtype: as in function Grid.get_hfac
-# time_dependent: as in function apply_mask
 
-def mask_except_fris (data, grid, gtype='t', time_dependent=False):
+# Mask everything except FRIS out of an array.
+def mask_except_fris (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-    return apply_mask(data, np.invert(grid.get_fris_mask(gtype=gtype)), time_dependent=time_dependent)
+    return apply_mask(data, np.invert(grid.get_fris_mask(gtype=gtype)), time_dependent=time_dependent, depth_dependent=depth_dependent)
 
 
 # Apply the 3D hfac mask. Dry cells are masked out; partial cells are untouched.
@@ -338,40 +342,6 @@ def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, 
     index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(imask == 1)
     omask[index] = mask_val
     return omask
-
-
-# Tile a 2D (lat x lon) array in depth so it is 3D (depth x lat x lon).
-# grid can either be a Grid object or an array of grid dimensions [nx, ny, nz].
-def xy_to_xyz (data, grid):
-
-    if isinstance(grid, list):
-        nz = grid[2]
-    else:
-        nz = grid.nz
-
-    return np.tile(data, (nz, 1, 1))
-
-
-# Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
-def z_to_xyz (data, grid):
-
-    if isinstance(grid, list):
-        nx = grid[0]
-        ny = grid[1]
-    else:
-        nx = grid.nx
-        ny = grid.ny
-
-    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, ny, nx))
-
-
-# Tile any array (of any dimension) in time, with num_time records. Time will be the first dimension in the new array.
-def add_time_dim (data, num_time):
-
-    shape = [num_time]
-    for i in range(len(data.shape)):
-        shape += [1]
-    return np.tile(data, shape)
 
 
 # Split and rearrange the given array along the given index in the longitude axis (last axis). This is useful when converting from longitude ranges (0, 360) to (-180, 180) if the longitude array needs to be strictly increasing for later interpolation.

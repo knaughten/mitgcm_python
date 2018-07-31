@@ -21,7 +21,10 @@ from plot_utils.windows import finished_plot
 # file_path: either a single filename or a list of filenames
 
 # Optional keyword arguments:
-# option: either 'fris_melt' (calculates total melting and freezing beneath FRIS), 'max' (calculates maximum value of variable in region; must specify var_name and possibly xmin etc.), or 'avg_ss' (calculates area-averaged value over the sea surface, i.e. not counting cavities)
+# option: 'fris_melt': calculates total melting and freezing beneath FRIS
+#          'max': calculates maximum value of variable in region; must specify var_name and possibly xmin etc.
+#          'avg_ss': calculates area-averaged value over the sea surface, i.e. not counting cavities
+#          'avg_fris': calculates volume-averaged value in the FRIS cavity
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
 # var_name: if option='max' or 'avg_ss', variable name to calculate the maximum or area-average of
@@ -30,8 +33,7 @@ from plot_utils.windows import finished_plot
 
 # Output:
 # if option='fris_melt', returns three 1D arrays of time, melting, and freezing.
-# if option='max', returns two 1D arrays of time and maximum values.
-# if option='avg_ss', returns two 1D arrays of time and area-averaged values.
+# if option='max', 'avg_ss', or 'avg_fris', returns two 1D arrays of time and the relevant timeseries.
 # if option='time', just returns the time array.
 
 def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
@@ -46,7 +48,7 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (read_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option in ['max', 'avg_ss'] and var_name is None:
+    if option in ['max', 'avg_ss', 'avg_fris'] and var_name is None:
         print 'Error (read_timeseries): must specify var_name'
         sys.exit()
 
@@ -61,6 +63,8 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     elif option == 'avg_ss':
         values = timeseries_avg_ss(first_file, var_name, grid, gtype=gtype)
+    elif option == 'avg_fris':
+        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
     elif option != 'time':
         print 'Error (read_timeseries): invalid option ' + option
         sys.exit()
@@ -75,18 +79,20 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             elif option == 'avg_ss':
                 values_tmp = timeseries_avg_ss(file, var_name, grid, gtype=gtype)
+            elif option == 'avg_fris':
+                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'fris_melt':
                 melt = np.concatenate((melt, melt_tmp))
                 freeze = np.concatenate((freeze, freeze_tmp))
-            elif option in ['max', 'avg_ss']:
+            elif option in ['max', 'avg_ss', 'avg_fris']:
                 values = np.concatenate((values, values_tmp))
             time = np.concatenate((time, time_tmp))
 
     if option == 'fris_melt':
         return time, melt, freeze
-    elif option in ['max', 'avg_ss']:
+    elif option in ['max', 'avg_ss', 'avg_fris']:
         return time, values
     elif option == 'time':
         return time
@@ -149,6 +155,21 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
     time = time_1[:num_time]
     data_diff = data_2[:num_time] - data_1[:num_time]
     return time, data_diff
+
+
+# Helper function to call read_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of fris_melt.
+def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=grid, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=monthly):
+
+    if option == 'fris_melt':
+        print "Error (read_timeseries_diff): this function can't be used for option="+option
+        sys.exit()
+
+    # Calculate timeseries for each
+    time_1, values_1 = read_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    time_2, values_2 = read_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    # Find the difference, trimming if needed
+    time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
+    return time, values_diff
     
 
 # Plot timeseries of FRIS' basal mass balance components (melting, freezing, total) at every time index in the given files.
@@ -207,9 +228,7 @@ def plot_timeseries_max (file_path, var_name, grid=None, gtype='t', xmin=None, x
 
 def plot_timeseries_max_diff (file_path_1, file_path_2, var_name, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, title='', units='', fig_name=None, monthly=True):
 
-    time_1, values_1 = read_timeseries(file_path_1, option='max', var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    time_2, values_2 = read_timeseries(file_path_2, option='max', var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
+    time, values_diff = read_timeseries_diff(file_path_1, file_path_2, option='max', var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
     plot_timeseries(time, values_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 
@@ -247,7 +266,33 @@ def plot_eta_avg (file_path, grid=None, fig_name=None, monthly=True):
 # Difference in the area-averaged sea surface height between two simulations (2 minus 1).
 def plot_eta_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
-    time_1, eta_1 = read_timeseries(file_path_1, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
-    time_2, eta_2 = read_timeseries(file_path_2, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
-    time, eta_diff = trim_and_diff(time_1, time_2, eta_1, eta_2)
+    time, eta_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_ss', var_name='ETAN', grid=grid, monthly=monthly)
     plot_timeseries(time, eta_diff, title='Change in area-averaged sea surface height', units='m', monthly=monthly, fig_name=fig_name)
+
+
+# Plot timeseries of the volume-averaged temperature in the FRIS cavity, at every time index in the given file(s).
+def plot_fris_temp_avg (file_path, grid=None, fig_name=None, monthly=True):
+
+    time, temp = read_timeseries(file_path, option='avg_fris', var_name='THETA', grid=grid, monthly=monthly)
+    plot_timeseries(time, temp, title='Volume-averaged temperature in FRIS cavity', units=r'$^{\circ}$C', monthly=monthly, fig_name=fig_name)
+
+
+# Difference in volume-averaged FRIS temperature between two simulations (2 minus 1).
+def plot_fris_temp_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
+
+    time, temp_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_fris', var_name='THETA', grid=grid, monthly=monthly)
+    plot_timeseries(time, temp_diff, title='Change in volume-averaged temperature in FRIS cavity', units=r'$^{\circ}$C', monthly=monthly, fig_name=fig_name)
+
+
+# Plot timeseries of the volume-averaged salinity in the FRIS cavity, at every time index in the given file(s).
+def plot_fris_salt_avg (file_path, grid=None, fig_name=None, monthly=True):
+
+    time, salt = read_timeseries(file_path, option='avg_fris', var_name='SALT', grid=grid, monthly=monthly)
+    plot_timeseries(time, salt, title='Volume-averaged salinity in FRIS cavity', units='psu', monthly=monthly, fig_name=fig_name)
+
+
+# Difference in volume-averaged FRIS salinity between two simulations (2 minus 1).
+def plot_fris_salt_avg_diff (file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
+
+    time, salt_diff = read_timeseries_diff(file_path_1, file_path_2, option='avg_fris', var_name='SALT', grid=grid, monthly=monthly)
+    plot_timeseries(time, salt_diff, title='Change in volume-averaged salinity in FRIS cavity', units='psu', monthly=monthly, fig_name=fig_name)
