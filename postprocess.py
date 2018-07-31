@@ -7,7 +7,7 @@ import sys
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
-from plot_1d import plot_fris_massbalance, plot_hice_corner, plot_mld_ewed, read_timeseries, plot_fris_massbalance_diff, plot_hice_corner_diff, plot_mld_ewed_diff
+from plot_1d import read_plot_timeseries
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir
