@@ -81,12 +81,21 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
     
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Process one time index at a time to save memory
+    timeseries = []
+    for t in range(data.shape[0]):
+        # Mask
+        data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
+        # Area-average or integrate
+        timeseries.append(over_area(option, data_tmp, grid, gtype=gtype))
+
+    
     # Figure out if there's a time dimension
-    time_dependent = time_index is None and not time_average
+    #time_dependent = time_index is None and not time_average
     # Mask
-    data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
+    #data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
     # Area-average or integrate
-    return over_area(option, data, grid, gtype=gtype, time_dependent=time_dependent)
+    #return over_area(option, data, grid, gtype=gtype, time_dependent=time_dependent)
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
