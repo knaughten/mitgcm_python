@@ -155,7 +155,7 @@ def mask_land_ice (data, grid, gtype='t', time_dependent=False, depth_dependent=
 # Mask land and open ocean out of an array, just leaving the ice shelves.
 def mask_except_ice (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-    return apply_mask(data, np.invert(grid.get_ice_mask(gtype=gtype)), time_dependent=time_dependent=True, depth_dependent=depth_dependent)
+    return apply_mask(data, np.invert(grid.get_ice_mask(gtype=gtype)), time_dependent=time_dependent, depth_dependent=depth_dependent)
 
 
 # Mask everything except FRIS out of an array.
