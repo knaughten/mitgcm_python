@@ -116,7 +116,7 @@ def apply_mask (data, mask, time_dependent=False, depth_dependent=False):
 
     if depth_dependent and len(mask.shape)==2:
         # Tile a 2D mask in the depth dimension
-        grid_dim = [data.shape[-3], data.shape[-2], data.shape[-1]]
+        grid_dim = [data.shape[-1], data.shape[-2], data.shape[-3]]
         mask = xy_to_xyz(mask, grid_dim)
     if time_dependent:
         # Tile the mask in the time dimension
