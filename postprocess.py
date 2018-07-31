@@ -128,7 +128,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False):
+def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.

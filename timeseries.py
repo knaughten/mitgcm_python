@@ -236,7 +236,7 @@ def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, 
     return time, values_diff
 
 
-# Set a bunch of parameters corresponding to a given timeseries variable.
+# Set a bunch of parameters corresponding to a given timeseries variable as defined in plot_1d.py (functions read_plot_timeseries and read_plot_timeseries_diff)
 def set_parameters (var):
 
     xmin = None
