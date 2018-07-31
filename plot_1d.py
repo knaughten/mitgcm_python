@@ -238,7 +238,7 @@ def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True
                 ymax = -60
                 title = 'Maximum mixed layer depth in Eastern Weddell'
                 units = 'm'
-        elif var == 'avg_eta':
+        elif var == 'eta_avg':
             option = 'avg_sfc'
             var_name = 'ETAN'
             title = 'Area-averaged sea surface height'
