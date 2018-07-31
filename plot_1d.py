@@ -118,9 +118,10 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, grid=None, fig_nam
         time_1, melt_1, freeze_1 = read_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
         time_2, melt_2, freeze_2 = read_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
         time, data_diff = trim_and_diff(time_1, time_2, melt_1, melt_2)
-        data_2_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
+        data_diff_2 = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
     else:
         time, data_diff = read_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        data_diff_2 = None
 
 
     # Plot
