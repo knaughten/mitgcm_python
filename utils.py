@@ -365,6 +365,15 @@ def z_to_xyz (data, grid):
     return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, ny, nx))
 
 
+# Tile any array (of any dimension) in time, with num_time records. Time will be the first dimension in the new array.
+def add_time_dim (data, num_time):
+
+    shape = [num_time]
+    for i in range(len(data.shape)):
+        shape += [1]
+    return np.tile(data, shape)
+
+
 # Split and rearrange the given array along the given index in the longitude axis (last axis). This is useful when converting from longitude ranges (0, 360) to (-180, 180) if the longitude array needs to be strictly increasing for later interpolation.
 def split_longitude (array, split):
 

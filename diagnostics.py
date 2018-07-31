@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 from constants import rho_ice
-from utils import z_to_xyz
+from utils import z_to_xyz, add_time_dim
 
 
 # Calculate the in-situ freezing point (helper function for t_minus_tf)
@@ -43,8 +43,7 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
     z = z_to_xyz(grid.z, grid)
     if time_dependent:
         # 4D arrays
-        num_time = temp.shape[0]
-        z = np.tile(z, (num_time, 1, 1, 1))        
+        z = add_time_dim(z, temp.shape[0])
 
     return temp - tfreeze(temp, salt, z)
 
@@ -69,19 +68,6 @@ def total_melt (ismr, mask, grid, result='massloss'):
     elif result == 'massloss':
         # Total mass loss
         return np.sum(ismr*grid.dA*mask)*rho_ice*1e-12
-
-
-# Calculate the total sea ice area.
-
-# Arguments:
-# aice: 2D (lat x lon) array of sea ice area. No need to mask it.
-# grid: Grid object
-
-# Output: float containing total sea ice area in million km^2
-
-def total_aice (aice, grid):
-
-    return np.sum(aice*grid.dA)*1e-12
 
 
 # Find the time indices of minimum and maximum sea ice area.

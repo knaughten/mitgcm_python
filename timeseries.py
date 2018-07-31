@@ -5,8 +5,8 @@
 import numpy as np
 
 from file_io import read_netcdf
-from utils import convert_ismr, var_min_max
-from diagnostics import total_melt, total_aice
+from utils import convert_ismr, var_min_max, mask_land_ice
+from diagnostics import total_melt
 
 
 # Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -60,23 +60,8 @@ def fris_melt (file_path, grid, result='massloss', time_index=None, t_start=None
             return melt
 
 
-# Calculate total sea ice area in the given NetCDF file. 
-def seaice_area (file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False):
-
-    aice = read_netcdf(file_path, 'SIarea', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-
-    if time_index is not None or time_average:
-        return total_aice(aice, grid)
-    else:
-        num_time = aice.shape[0]
-        total_aice_ts = np.zeros(num_time)
-        for t in range(num_time):
-            total_aice_ts[t] = total_aice(aice[t,:], grid)
-        return total_aice_ts
-
-
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its maximum value in the given region.
-def timeseries_max (file_path, var_name, grid, time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None):
+def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
@@ -86,5 +71,18 @@ def timeseries_max (file_path, var_name, grid, time_index=None, t_start=None, t_
         num_time = data.shape[0]
         max_data = np.zeros(num_time)
         for t in range(num_time):
-            max_data[t] = var_min_max(data[t,:], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
+            max_data[t] = var_min_max(data[t,:], grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
         return max_data
+
+
+# Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its mean value over the sea surface.
+def timeseries_avg_ss (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read the data
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Figure out if there's a time dimension
+    time_dependent = time_index is not None or time_average
+    # Mask
+    data = mask_land_ice(data, grid, gtype=gtype, time_dependent=time_dependent)
+    # Area-average
+    return area_average(data, grid, gtype=gtype, time_dependent=time_dependent)

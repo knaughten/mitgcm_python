@@ -1,9 +1,83 @@
 #######################################################
-# All things averaging
+# All things averaging and integrating
 #######################################################
 
 import numpy as np
-from utils import z_to_xyz
+from utils import z_to_xyz, xy_to_xyz, add_time_dim
+
+
+# Helper functions to set up integrands and masks, tiled to be the same dimension as the "data" array
+
+# Returns area integrand, and whichever mask is already applied to the MaskedArray "data"
+def prepare_area_mask (data, grid, gtype='t', time_dependent=False):
+    
+    if gtype != 't':
+        print 'Error (prepare_area_mask): non-tracer grids not yet supported'
+        sys.exit()
+
+    # Get the 2D mask as 1s and 0s
+    mask = np.invert(data.mask).astype(float)
+    # Get the integrand of area
+    dA = grid.dA
+    if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
+        # There's also a depth dimension; tile in z
+        dA = xy_to_xyz(dA, grid)
+    if time_dependent:
+        # Tile in time
+        dA = add_time_dim(dA, data.shape[0])
+    return dA, mask
+
+
+# Returns depth integrand and hfac
+def prepare_dz_mask (data, grid, gtype='t', time_dependent=False):
+
+    # Choose the correct integrand of depth
+    if gtype == 'w':
+        dz = grid.dz_t
+    else:
+        dz = grid.dz
+    # Make it 3D
+    dz = z_to_xyz(dz, grid)
+    # Get the correct hFac
+    hfac = grid.get_hfac(gtype=gtype)
+    if time_dependent:
+        # There's also a time dimension
+        dz = add_time_dim(dz, data.shape[0])
+        hfac = add_time_dim(hfac, data.shape[0])
+    return dz, hfac
+
+
+# Helper functions to average/integrate over area or volume (option='average' or 'integrate')
+
+def over_area (option, data, grid, gtype='t', time_dependent=False):
+
+    dA, mask = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
+    if option == 'average':
+        return np.sum(data*dA*mask, axis=(-2,-1))/np.sum(dA*mask, axis=(-2,-1))
+    elif option == 'integrate':
+        return np.sum(data*dA*mask, axis=(-2,-1))
+    else:
+        print 'Error (over_area): invalid option ' + option
+
+
+def over_volume (option, data, grid, gtype='t', time_dependent=False):
+
+    # Get dz and hfac
+    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
+    # Get dA (don't care about mask)
+    dA = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)[0]
+    # Now get the volume integrand
+    dV = dA*dz
+    if option == 'average':
+        return np.sum(data*dV*hfac, axis=(-3,-2,-1))/np.sum(dV*hfac, axis=(-3,-2,-1))
+    elif option == 'integrate':
+        return np.sum(data*dV*hfac, axis=(-3,-2,-1))
+    else:
+        print 'Error (over_volume): invalid option ' + option
+
+
+# Now here are the APIs.
+
 
 # Vertically average the given field over all depths.
 
@@ -19,22 +93,47 @@ from utils import z_to_xyz
 
 def vertical_average (data, grid, gtype='t', time_dependent=False):
 
-    # Choose the correct integrand of depth
-    if gtype == 'w':
-        dz = grid.dz_t
-    else:
-        dz = grid.dz
-    # Make it 3D
-    dz = z_to_xyz(dz, grid)
-    # Get the correct hFac
-    hfac = grid.get_hfac(gtype=gtype)
-    if time_dependent:
-        # There's also a time dimension
-        num_time = data.shape[0]
-        dz = np.tile(dz, (num_time, 1, 1, 1))
-        hfac = np.tile(hfac, (num_time, 1, 1, 1))
-    # Vertically average    
+    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
     return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
 
-    
-        
+
+# Area-average the given field over the unmasked region, using whatever mask is already applied as a MaskedArray.
+
+# Arguments:
+# data: 2D (lat x lon) or 3D (time x lat x lon, needs time_dependent=True) array of data to average. It could also be depth-dependent but then the output array will have a depth dimension which is a bit weird.
+# grid: Grid object
+
+# Optional keyword arguments:
+# gtype: as in function Grid.get_lon_lat; only 't' is supported right now
+# time_dependent: as in function apply_mask
+
+# Output: array of dimension time (if time_dependent=True) or a single value (if time_dependent=False)
+
+def area_average (data, grid, gtype='t', time_dependent=False):
+
+    return over_area('average', data, grid, gtype=gtype, time_dependent=time_dependent)
+
+
+# Like area_average, but for area integrals.
+def area_integrate (data, grid, gtype='t', time_dependent=False):
+
+    return over_area('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)
+
+
+# Volume-average the given field, taking hfac into account.
+
+# Arguments:
+# data: 3D (depth x lat x lon) or 4D (time x depth x lat x lon, needs time_dependent=True) array of data to average
+# grid: Grid object:
+
+# Optional keyword arguments and output as in function area_average.
+
+def volume_average (data, grid, gtype='t', time_dependent=False):
+
+    return over_volume('average', data, grid, gtype=gtype, time_dependent=time_dependent)
+
+
+# Like volume_average, but for volume integrals.
+def volume_integrate (data, grid, gtype='t', time_dependent=False):
+
+    return over_volume('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)        
