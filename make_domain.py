@@ -353,7 +353,7 @@ def level_vars (A, dz, z_edges, include_edge='top'):
     dz_level = np.zeros(A.shape)
     dz_level_below = np.zeros(A.shape)
     # Flag to catch undefined variables after the loop
-    flag = np.zeros(draft.shape)
+    flag = np.zeros(A.shape)
     # Loop over vertical levels
     for k in range(dz.size):
         # Find points within this vertical layer
