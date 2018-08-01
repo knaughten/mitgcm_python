@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters
+from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
@@ -101,18 +101,37 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name
 
 # User interface for difference timeseries. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
 # Arguments are the same as in read_plot_timeseries, but two file paths/lists are supplied. It is assumed the two simulations start at the same time, but it's okay if one is longer than the other.
-def read_plot_timeseries_diff (var, file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
+def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
     # Edit the title to show it's a difference plot
     title = 'Change in ' + title[0].lower() + title[1:]
 
-    # Calculate difference timeseries
+    if precomputed:
+        # Read the time arrays
+        time_1 = netcdf_time(file_path_1)
+        time_2 = netcdf_time(file_path_2)
+
+    # Inner function to read a timeseries from both files and calculate the differences, trimming if needed. Only useful if precomputed=True.
+    def read_and_trim (var_name):
+        data_1 = read_netcdf(file_path_1, var_name)
+        data_2 = read_netcdf(file_path_2, var_name)
+        time, data_diff = trim_and_diff(time_1, time_2, data_1, data_2)
+        return time, data_diff
+
     if var == 'fris_melt':
-        time, data_diff, data_diff_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        if precomputed:
+            time, data_diff = read_and_trim('fris_total_melt')
+            data_diff_2 = read_and_trim('fris_total_freeze')[1]
+        else:
+            # Calculate the difference timeseries
+            time, data_diff, data_diff_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
     else:
-        time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        if precomputed:
+            time, data_diff = read_and_trim(var)
+        else:
+            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
         data_diff_2 = None
 
     # Plot
