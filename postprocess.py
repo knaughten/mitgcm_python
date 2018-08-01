@@ -37,13 +37,14 @@ def build_file_list (output_dir, unravelled=False):
 
 # Optional keyword arguments:
 # output_dir: path to directory containing output NetCDF files (assumed to be in one file per segment a la scripts/convert_netcdf.py)
+# timeseries_file: filename created by precompute_timeseries, within output_dir
 # grid_path: path to binary grid directory, or NetCDF file containing grid variables
 # fig_dir: path to directory to save figures in
 # file_path: specific output file to analyse for non-time-dependent plots (default the most recent segment)
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False):
+def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False):
 
     if time_average:
         time_index = None
@@ -64,7 +65,7 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
     # Timeseries
     var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries(var, file_path, grid=grid, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
+        read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
@@ -126,12 +127,13 @@ def plot_everything (output_dir='.', grid_path='../grid/', fig_dir='.', file_pat
 # Keyword arguments:
 # output_dir: as in function plot_everything
 # baseline_dir: like output_dir, but for the simulation you want to use as a baseline. All the plots will show results from output_dir minus baseline_dir. This is the only non-optional keyword argument; it is a named keyword argument with no meaningful default so there's no chance of the user mixing up which simulation is which.
+# timeseries_file: filename created by precompute_timeseries, within output_dir and baseline_dir
 # grid_path: as in function plot_everything
 # fig_dir: as in function plot_everything
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -154,7 +156,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
     # Timeseries through the entire simulation
     var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries_diff(var, output_files_1, output_files_2, grid=grid, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
+        read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     # Concatenate the time arrays from all files
