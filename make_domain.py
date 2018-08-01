@@ -436,6 +436,7 @@ def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
     level_below_neighbours = np.stack((level_below_w, level_below_e, level_below_s, level_below_n))
     level_below_deepest_neighbour = np.amin(level_below_neighbours, axis=0)
     # Find cells which are in a deeper vertical layer than all their neighbours, and build them up by the minimum amount necessary
+    print '...' + str(np.count_nonzero(bathy < level_below_deepest_neighbour)) + ' cells to fill'
     bathy = np.maximum(bathy, level_below_deepest_neighbour)
 
     return bathy
@@ -506,21 +507,21 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
         print 'Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
 
-    # (1) Filling of isolated bottom cells
+    print 'Filling isolated bottom cells'
     bathy_orig = np.copy(bathy)
     bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after filling')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
-    # (2) Digging of subglacial lakes
+    print 'Digging subglacial lakes'
     bathy_orig = np.copy(bathy)
     bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
-    # (3) Zapping of thin ice shelf draft
+    print 'Zapping thin ice shelf draft'
     imask_orig = np.copy(imask)
     draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
