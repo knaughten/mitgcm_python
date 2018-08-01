@@ -254,7 +254,7 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 def precompute_timeseries (mit_file, timeseries_file, monthly=True):
 
     # Timeseries to compute
-    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area'] #, 'fris_temp', 'fris_salt']
+    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)
@@ -272,14 +272,14 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True):
     # Read the time array from the MITgcm file, and its units
     time, time_units = netcdf_time(mit_file, return_units=True)
     if file_exists:
-        # Read the old time array; overwrite time_units just in case it's different
-        old_time, time_units = netcdf_time(timeseries_file, return_units=True)
-        # Concatenate with the new one
-        time = np.concatenate((old_time, time))
+        # Update the units to match the old time array
+        time_units = id.variables['time'].units
+        # Also figure out how many time indices are in the file so far
+        num_time = id.variables['time'].size
         # Convert to numeric values
         time = nc.date2num(time, time_units)
-        # Update in the timeseries file
-        id.variables['time'][:] = time
+        # Append to file
+        id.variables['time'][num_time:] = time
     else:
         # Add the time variable to the file
         ncfile.add_time(time, units=time_units)
@@ -287,12 +287,8 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True):
     # Inner function to define/update non-time variables
     def write_var (data, var_name, title, units):
         if file_exists:
-            # Read the old array
-            old_data = read_netcdf(timeseries_file, var_name)
-            # Concatenate with the new array
-            data = np.concatenate((old_data, data))
-            # Update in the timeseries file
-            id.variables[var_name][:] = data
+            # Append to file
+            id.variables[var_name][num_time:] = data
         else:
             # Add the variable to the file
             ncfile.add_variable(var_name, data, 't', long_name=title, units=units)
