@@ -445,8 +445,6 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
     bathy_limit -= dz_layer_below*hfac_limit
     # Get bathy_limit at each point's 4 neighbours
     bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n = neighbours(bathy_limit)[:4]
-    # Make a copy of the original bathymetry for comparison later
-    bathy_orig = np.copy(bathy)
     
     # Inner function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
     def dig_one_direction (bathy_limit):
@@ -462,12 +460,8 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
     for i in range(len(loc_strings)):
         print 'Digging based on ice shelf draft to ' + loc_strings[i]
         bathy = dig_one_direction(bathy_limit_neighbours[i])
-    
-    # Plot how the results have changed
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
-
+    return bathy
         
 
 # Arguments:
@@ -491,7 +485,11 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # (1) Fix isolated bottom cells
 
     # (2) Digging
-    do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    bathy_orig = np.copy(bathy_orig)
+    bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    # Plot how the results have changed
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
     '''# Find the actual draft as the model will see it (based on hFac constraints)
     model_draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
