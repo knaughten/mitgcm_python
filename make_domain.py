@@ -385,15 +385,15 @@ def level_vars (A, dz, z_edges, include_edge='top'):
 def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
 
     if option == 'bathy':
-        include_edges = 'bottom'
+        include_edge = 'bottom'
     elif option == 'draft':
-        include_edges = 'top'
+        include_edge = 'top'
     else:
         print 'Error (model_bdry): invalid option ' + option
         sys.exit()
 
     # Get some intermediate variables
-    level_above, level_below, dz_level = level_vars(A, dz, z_edges, include_edges=include_edges)[1:4]
+    level_above, level_below, dz_level = level_vars(A, dz, z_edges, include_edge=include_edge)[1:4]
     # Determine which is the open edge and which is the closed ege
     if option == 'bathy':
         open_edge = level_above
