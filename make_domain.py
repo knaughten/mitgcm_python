@@ -337,39 +337,48 @@ def vertical_layers (dz_file):
     return dz, z_edges
 
 
-# Helper function to calculate a few variables about z-levels based on the given ice shelf draft:
-# (1) Depth of the first z-level below the draft (if the draft is exactly at a z-level, it will still go down to the next one)
-# (2) Thickness of the z-layer the draft is in (i.e. difference between (1) and the level above that)
-# (3) Thickness of the z-level below that
-def draft_level_vars (draft, dz, z_edges):
+# Helper function to calculate a few variables about z-levels based on the given depth field A (which could be bathymetry or ice shelf draft):
+# (1) Index (0-based) of vertical layer that A falls into
+# (2) Depth of the first z-level above A
+# (3) Depth of the first z-level below A
+# (4) Thickness of the vertical layer that A falls into (i.e. difference between 2 and 3)
+# (5) Thickness of the vertical layer below that
+# The keyword argument include_edge determines what happens to values of A on the edge of a level. If include_edge='top', the top edge is considered to be part of the level, while the bottom edge is considered to be part of the level below. If include_edge='bottom', the bottom edge is considered to be part of the level, while the top edge is considered to be part of the level above.
+def level_vars (A, dz, z_edges, include_edge='top'):
 
-    # Prepare to calculate the 3 variables
-    level_below_draft = np.zeros(draft.shape)    
-    dz_at_draft = np.zeros(draft.shape)
-    dz_below_draft = np.zeros(draft.shape)
+    # Prepare to calculate the variables
+    level_number = np.zeros(A.shape)
+    depth_above = np.zeros(A.shape)
+    depth_below = np.zeros(A.shape)
+    dz_level = np.zeros(A.shape)
+    dz_level_below = np.zeros(A.shape)
     # Flag to catch undefined variables after the loop
     flag = np.zeros(draft.shape)
     # Loop over vertical levels
-    for k in range(dz.size-1):
-        # Find ice shelf drafts within this vertical layer (not counting the bottom edge)
-        index = (draft <= z_edges[k])*(draft > z_edges[k+1])
-        level_below_draft[index] = z_edges[k+1]
-        dz_at_draft[index] = dz[k]
-        dz_below_draft[index] = dz[k+1]
+    for k in range(dz.size):
+        # Find points within this vertical layer
+        if include_edge == 'top':
+            index = (A <= z_edges[k])*(A > z_edges[k+1])
+        elif include_edge == 'bottom':
+            if k==0:
+                # In the top layer, include both edges
+                index = (A <= z_edges[k])*(A >= z_edges[k+1])
+            else:
+                index = (A < z_edges[k])*(A >= z_edges[k+1])
+        else:
+            print 'Error (level_vars): invalid include_edge=' + include_edge
+            sys.exit()
+        level_number[index] = k
+        depth_above[index] = z_edges[k]
+        depth_below[index] = z_edges[k+1]
+        dz_level[index] = dz[k]
+        if k+1 < dz.size:   # Points in the bottom layer will keep dz_level_below=0            
+            dz_level_below[index] = dz[k+1]
         flag[index] = 1
     if (flag==0).any():
-        print 'Error (draft_level_vars): some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
+        print 'Error (level_vars): some values not caught by the loop. This could happen if some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
-    return level_below_draft, dz_at_draft, dz_below_draft
-
-
-# Helper function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
-def dig_one_direction (bathy, bathy_limit):
-
-    index = (bathy != 0)*(bathy > bathy_limit)
-    print '...' + str(np.count_nonzero(index)) + ' cells to dig'
-    bathy[index] = bathy_limit[index]
-    return bathy    
+    return level_number, depth_above, depth_below, dz_level, dz_level_below
 
 
 # Deal with two problems which can result from ice shelves and z-levels:
@@ -397,7 +406,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # Find the actual draft as the model will see it (based on hFac constraints)
     model_draft = np.copy(draft)
     # Get some intermediate variables
-    level_below_draft, dz_at_draft = draft_level_vars(draft, dz, z_edges)[:2]
+    level_below_draft, dz_at_draft = level_vars(draft, dz, z_edges)[2:4]
     # Calculate the hFac of the partial cell below the draft
     hfac_below_draft = (draft - level_below_draft)/dz_at_draft
     # Now, modify the draft based on hFac constraints
@@ -409,7 +418,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     index = (hfac_below_draft < hfac_limit)*(hfac_below_draft >= hfac_limit/2)
     model_draft[index] = level_below_draft[index] + dz_at_draft[index]
     # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
-    level_below_draft, dz_at_draft, dz_below_draft = draft_level_vars(model_draft, dz, z_edges)
+    level_below_draft, dz_at_draft, dz_below_draft = draft_level_vars(model_draft, dz, z_edges)[2:]
     
     # Figure out the shallowest acceptable depth of each point and its neighbours, based on the ice shelf draft. We want 2 (at least partially) open cells.
     # The first open cell is between the draft and the z-level below it.
@@ -422,6 +431,14 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # Make a copy of the original bathymetry for comparison later
     bathy_orig = np.copy(bathy)
     
+    # Inner function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
+    def dig_one_direction (bathy, bathy_limit):
+
+        index = (bathy != 0)*(bathy > bathy_limit)
+        print '...' + str(np.count_nonzero(index)) + ' cells to dig'
+        bathy[index] = bathy_limit[index]
+        return bathy
+
     print 'Digging based on local ice shelf draft'
     bathy = dig_one_direction(bathy, bathy_limit)
     bathy_limit_neighbours = [bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n]

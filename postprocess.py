@@ -156,7 +156,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Timeseries through the entire simulation
     var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     for var in var_names:
-        read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
+        read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     # Concatenate the time arrays from all files
