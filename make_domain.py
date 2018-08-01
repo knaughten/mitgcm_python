@@ -406,7 +406,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # Find the actual draft as the model will see it (based on hFac constraints)
     model_draft = np.copy(draft)
     # Get some intermediate variables
-    level_below_draft, dz_at_draft = level_vars(draft, dz, z_edges)[2:4]
+    level_below_draft, dz_at_draft = level_vars(draft, dz, z_edges, include_edge='top')[2:4]
     # Calculate the hFac of the partial cell below the draft
     hfac_below_draft = (draft - level_below_draft)/dz_at_draft
     # Now, modify the draft based on hFac constraints
@@ -418,7 +418,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     index = (hfac_below_draft < hfac_limit)*(hfac_below_draft >= hfac_limit/2)
     model_draft[index] = level_below_draft[index] + dz_at_draft[index]
     # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
-    level_below_draft, dz_at_draft, dz_below_draft = draft_level_vars(model_draft, dz, z_edges)[2:]
+    level_below_draft, dz_at_draft, dz_below_draft = level_vars(model_draft, dz, z_edges, include_edge='top')[2:]
     
     # Figure out the shallowest acceptable depth of each point and its neighbours, based on the ice shelf draft. We want 2 (at least partially) open cells.
     # The first open cell is between the draft and the z-level below it.
