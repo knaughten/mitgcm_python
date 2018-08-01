@@ -63,7 +63,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     grid = Grid(grid_path)
 
     # Timeseries
-    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
+    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
@@ -154,7 +154,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     grid = Grid(grid_path)
 
     # Timeseries through the entire simulation
-    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area']
+    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 

@@ -3,6 +3,7 @@
 #######################################################
 
 import numpy as np
+import sys
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
