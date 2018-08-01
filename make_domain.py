@@ -506,21 +506,21 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
         print 'Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
 
-    # (1) Fix isolated bottom cells
+    # (1) Filling of isolated bottom cells
     bathy_orig = np.copy(bathy)
     bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
-    # (2) Digging
+    # (2) Digging of subglacial lakes
     bathy_orig = np.copy(bathy)
     bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
-    # (3) Zapping
+    # (3) Zapping of thin ice shelf draft
     imask_orig = np.copy(imask)
     draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
