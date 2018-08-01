@@ -74,13 +74,23 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
 
+    if precomputed:
+        # Read the time array
+        time = netcdf_time(file_path)
+
     if var == 'fris_melt':
         if precomputed:
-            time = netcdf_time(file_path)
-            #data = read_netcdf(file_path, 
-        time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+            # Read the fields from the timeseries file
+            data = read_netcdf(file_path, 'fris_total_melt')
+            data_2 = read_netcdf(file_path, 'fris_total_freeze')
+        else:
+            # Calculate the timeseries from the MITgcm file(s)
+            time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
     else:
-        time, data = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+        if precomputed:
+            data = read_netcdf(file_path, var)
+        else:
+            time, data = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
         data_2 = None
         
     # Plot
