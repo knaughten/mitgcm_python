@@ -485,7 +485,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # (1) Fix isolated bottom cells
 
     # (2) Digging
-    bathy_orig = np.copy(bathy_orig)
+    bathy_orig = np.copy(bathy)
     bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
