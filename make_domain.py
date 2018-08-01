@@ -350,8 +350,8 @@ def level_vars (A, dz, z_edges, include_edge='top'):
     level_number = np.zeros(A.shape)
     level_above = np.zeros(A.shape)
     level_below = np.zeros(A.shape)
-    dz_level = np.zeros(A.shape)
-    dz_level_below = np.zeros(A.shape)
+    dz_layer = np.zeros(A.shape)
+    dz_layer_below = np.zeros(A.shape)
     # Flag to catch undefined variables after the loop
     flag = np.zeros(A.shape)
     # Loop over vertical levels
@@ -371,14 +371,14 @@ def level_vars (A, dz, z_edges, include_edge='top'):
         level_number[index] = k
         level_above[index] = z_edges[k]
         level_below[index] = z_edges[k+1]
-        dz_level[index] = dz[k]
-        if k+1 < dz.size:   # Points in the bottom layer will keep dz_level_below=0            
-            dz_level_below[index] = dz[k+1]
+        dz_layer[index] = dz[k]
+        if k+1 < dz.size:   # Points in the bottom layer will keep dz_layer_below=0            
+            dz_layer_below[index] = dz[k+1]
         flag[index] = 1
     if (flag==0).any():
         print 'Error (level_vars): some values not caught by the loop. This could happen if some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
-    return level_number, level_above, level_below, dz_level, dz_level_below
+    return level_number, level_above, level_below, dz_layer, dz_layer_below
 
 
 # Helper function to calculate the actual bathymetry or ice shelf draft as seen by the model, based on hFac constraints.
@@ -393,7 +393,7 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
         sys.exit()
 
     # Get some intermediate variables
-    level_above, level_below, dz_level = level_vars(A, dz, z_edges, include_edge=include_edge)[1:4]
+    level_above, level_below, dz_layer = level_vars(A, dz, z_edges, include_edge=include_edge)[1:4]
     # Determine which is the open edge and which is the closed ege
     if option == 'bathy':
         open_edge = level_above
@@ -402,9 +402,9 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
         open_edge = level_below
         closed_edge = level_above
     # Calculate the hFac of the partial cell
-    hfac = np.abs(A - open_edge)/dz_level
+    hfac = np.abs(A - open_edge)/dz_layer
     # Find the minimum acceptable hFac
-    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_level, 1))
+    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_layer, 1))
     # Update A; start with a deep copy
     model_A = np.copy(A)
     # Find cells which should be fully closed
@@ -415,13 +415,60 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
     model_A[index] = closed_edge[index]
 
     return model_A
-    
 
 
 # Deal with three problems which can result with z-levels:
-# (1) Cells on the bottom can become isolated, with no horizontal neighbours (i.e. adjacent open cells), just one vertical neighbour above. Dense water tends to pool in these cells and can't mix out very easily. Fix this by raising the bathymetry until the bottom cell has at least one horizontal neighbour.
+# (1) Cells on the bottom can become isolated, with no horizontal neighbours (i.e. adjacent open cells), just one vertical neighbour above. Dense water tends to pool in these cells and can't mix out very easily. Fix this by raising the bathymetry until the bottom cell has at least one horizontal neighbour. We call it "filling".
 # (2) Subglacial lakes can form beneath the ice shelves, whereby two cells which should have connected water columns (based on the masks we interpolated from BEDMAP2) are disconnected, i.e. the ice shelf draft at one cell is deeper than the bathymetry at a neighbouring cell (due to interpolation). Fix this by deepening the bathymetry where needed, so there are a minimum of 2 (at least partially) open faces between the neighbouring cells, ensuring that both tracers and velocities are connected. This preserves the BEDMAP2 grounding line locations, even if the bathymetry is somewhat compromised. We call it "digging".
 # (3) Very thin ice shelf drafts (less than half the depth of the surface layer) will violate the hFacMin constraints and be removed by MITgcm. However, older versions of MITgcm have a bug whereby some parts of the code don't remove the ice shelf draft at these points, and they are simultaneously treated as ice shelf and sea ice points. Fix this by removing all such points. We call it "zapping".
+
+# do_filling, do_digging, and do_zapping are the helper functions; remove_grid_problems is the API.
+
+
+# Fix problem (1) above.
+def do_filling ():
+    pass
+
+
+# Fix problem (2) above.
+def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
+
+    # Find the actual draft as the model will see it (based on hFac constraints)
+    model_draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    # Get the depth of the z-level below the draft, and the dz of the layer below that
+    level_below, tmp, dz_layer_below = level_vars(model_draft, dz, z_edges, include_edge='top')[2:]    
+    # Figure out the shallowest acceptable depth of each point and its neighbours, based on the ice shelf draft. We want 2 (at least partially) open cells.
+    # The first open cell is between the draft and the z-level below it.
+    bathy_limit = level_below
+    # The second open cell digs into the level below that by the minimum amount (based on hFac constraints).
+    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_layer_below, 1))
+    bathy_limit -= dz_layer_below*hfac_limit
+    # Get bathy_limit at each point's 4 neighbours
+    bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n = neighbours(bathy_limit)[:4]
+    # Make a copy of the original bathymetry for comparison later
+    bathy_orig = np.copy(bathy)
+    
+    # Inner function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
+    def dig_one_direction (bathy_limit):
+        index = (bathy != 0)*(bathy > bathy_limit)
+        print '...' + str(np.count_nonzero(index)) + ' cells to dig'
+        bathy[index] = bathy_limit[index]
+        return bathy
+
+    print 'Digging based on local ice shelf draft'
+    bathy = dig_one_direction(bathy_limit)
+    bathy_limit_neighbours = [bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n]
+    loc_strings = ['west', 'east', 'south', 'north']
+    for i in range(len(loc_strings)):
+        print 'Digging based on ice shelf draft to ' + loc_strings[i]
+        bathy = dig_one_direction(bathy_limit_neighbours[i])
+    
+    # Plot how the results have changed
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
+
+
+        
 
 # Arguments:
 # nc_in: NetCDF temporary grid file (created by edit_mask if you used that function, otherwise created by interp_bedmap2)
@@ -444,22 +491,10 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     # (1) Fix isolated bottom cells
 
     # (2) Digging
+    do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
 
-    # Find the actual draft as the model will see it (based on hFac constraints)
+    '''# Find the actual draft as the model will see it (based on hFac constraints)
     model_draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
-    '''model_draft = np.copy(draft)
-    # Get some intermediate variables
-    level_below_draft, dz_at_draft = level_vars(draft, dz, z_edges, include_edge='top')[2:4]
-    # Calculate the hFac of the partial cell below the draft
-    hfac_below_draft = (draft - level_below_draft)/dz_at_draft
-    # Now, modify the draft based on hFac constraints
-    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_at_draft, 1))
-    # Find cells which should be fully closed
-    index = hfac_below_draft < hfac_limit/2
-    model_draft[index] = level_below_draft[index]
-    # Find cells which should be fully open
-    index = (hfac_below_draft < hfac_limit)*(hfac_below_draft >= hfac_limit/2)
-    model_draft[index] = level_below_draft[index] + dz_at_draft[index]'''
     # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
     level_below_draft, dz_at_draft, dz_below_draft = level_vars(model_draft, dz, z_edges, include_edge='top')[2:]
     
@@ -492,7 +527,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')'''
 
     # (3) Zapping
 
