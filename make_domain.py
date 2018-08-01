@@ -558,11 +558,21 @@ def check_one_direction (open_cells, open_cells_beside, loc_string, problem):
     return problem
         
 
-# Given the path to a directory containing the binary grid files produced by MITgcm, make sure that the digging worked and that the 2 open cell rule holds.
+# Given the path to a directory containing the binary grid files produced by MITgcm, make sure that the filling and digging worked and that the 2 open cell rule holds.
 def check_final_grid (grid_path):
 
     grid = Grid(grid_path)
     problem = False
+
+    # Check there are no isolated bottom cells
+    # Find points which are open, their neighbour below is closed (i.e. they're at the seafloor), and their horizontal neighoburs are all closed
+    hfac = grid.hfac
+    num_valid_neighbours = neighbours(hfac, missing_val=0)[-1]
+    valid_below = neighbours_z(hfac, missing_val=0)[3]
+    num_isolated = np.count_nonzero((hfac!=0)*(valid_below==0)*(num_valid_neighbours==0))
+    if num_isolated > 0:
+        problem = True
+        print 'Problem!! There are ' + str(num_isolated) + ' locations with isolated bottom cells.'    
 
     # Check that every water column has at least 2 open cells (partial cells count)
     open_cells = np.ceil(grid.hfac)
@@ -577,9 +587,9 @@ def check_final_grid (grid_path):
     loc_strings = ['western', 'eastern', 'southern', 'northern']
     for i in range(len(loc_strings)):
         problem = check_one_direction(open_cells, open_cells_neighbours[i], loc_strings[i], problem)
-
+        
     if problem:
-        print 'Something went wrong with the digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
+        print 'Something went wrong with the filling or digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
     else:
         print 'Everything looks good!'
 
