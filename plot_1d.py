@@ -95,10 +95,10 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, grid=None, fig_nam
 
     # Calculate difference timeseries
     if var == 'fris_melt':
-        time, data, data_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        time, data_diff, data_diff_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
     else:
-        time, data = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
-        data_2 = None
+        time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        data_diff_2 = None
 
     # Plot
     make_timeseries_plot(time, data_diff, data_2=data_diff_2, melt_freeze=(var=='fris_melt'), diff=True, title=title, units=units, monthly=monthly, fig_name=fig_name)
