@@ -10,7 +10,7 @@ import shutil
 from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d
-from interpolation import extend_into_mask, interp_topo, neighbours, remove_isolated_cells 
+from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
 from plot_latlon import plot_tmp_domain
 from grid import Grid
 
