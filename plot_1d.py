@@ -11,6 +11,7 @@ import sys
 from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
+from file_io import netcdf_time, read_netcdf
 
 
 # Helper function to plot timeseries.
