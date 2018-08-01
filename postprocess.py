@@ -254,7 +254,7 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 def precompute_timeseries (mit_file, timeseries_file, monthly=True):
 
     # Timeseries to compute
-    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area'] #, 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)

@@ -138,7 +138,7 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
         time = time_id[t_start:t_end]
     id.close()
 
-    if monthly:
+    if monthly and return_date:
         # Back up one day so at least the year and month are correct
         for t in range(time.size):
             time[t] = time[t] - datetime.timedelta(days=1)
