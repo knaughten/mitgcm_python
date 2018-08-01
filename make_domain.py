@@ -347,7 +347,7 @@ def vertical_layers (dz_file):
 def level_vars (A, dz, z_edges, include_edge='top'):
 
     # Prepare to calculate the variables
-    level_number = np.zeros(A.shape)
+    layer_number = np.zeros(A.shape)
     level_above = np.zeros(A.shape)
     level_below = np.zeros(A.shape)
     dz_layer = np.zeros(A.shape)
@@ -357,18 +357,17 @@ def level_vars (A, dz, z_edges, include_edge='top'):
     # Loop over vertical levels
     for k in range(dz.size):
         # Find points within this vertical layer
-        if include_edge == 'top':
+        if (include_edge == 'top' and k==dz.size-1) or (include_edge=='bottom' and k==0):
+            # Include both edges because there are no more levels
+            index = (A <= z_edges[k])*(A >= z_edges[k+1])
+        elif include_edge == 'top':
             index = (A <= z_edges[k])*(A > z_edges[k+1])
         elif include_edge == 'bottom':
-            if k==0:
-                # In the top layer, include both edges
-                index = (A <= z_edges[k])*(A >= z_edges[k+1])
-            else:
-                index = (A < z_edges[k])*(A >= z_edges[k+1])
+            index = (A < z_edges[k])*(A >= z_edges[k+1])
         else:
             print 'Error (level_vars): invalid include_edge=' + include_edge
             sys.exit()
-        level_number[index] = k
+        layer_number[index] = k
         level_above[index] = z_edges[k]
         level_below[index] = z_edges[k+1]
         dz_layer[index] = dz[k]
@@ -378,7 +377,7 @@ def level_vars (A, dz, z_edges, include_edge='top'):
     if (flag==0).any():
         print 'Error (level_vars): some values not caught by the loop. This could happen if some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
-    return level_number, level_above, level_below, dz_layer, dz_layer_below
+    return layer_number, level_above, level_below, dz_layer, dz_layer_below
 
 
 # Helper function to calculate the actual bathymetry or ice shelf draft as seen by the model, based on hFac constraints.
@@ -426,8 +425,20 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
 
 
 # Fix problem (1) above.
-def do_filling ():
-    pass
+def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
+
+    # Find the actual bathymetry as the model will see it (based on hFac constraints)
+    model_bathy = model_bdry(bathy, dz, z_edges, option='bathy', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    # Find the depth of the z-level below each bathymetry point
+    level_below = level_vars(model_bathy, dz, z_edges, include_edge='bottom')[2]
+    # Also find this value at the deepest horizontal neighbour for every point
+    level_below_w, level_below_e, level_below_s, level_below_n = neighbours(level_below)[:4]
+    level_below_neighbours = np.stack((level_below_w, level_below_e, level_below_s, level_below_n))
+    level_below_deepest_neighbour = np.amin(level_below_neighbours, axis=0)
+    # Find cells which are in a deeper vertical layer than all their neighbours, and build them up by the minimum amount necessary
+    bathy = np.maximum(bathy, level_below_deepest_neighbour)
+
+    return bathy
 
 
 # Fix problem (2) above.
@@ -475,6 +486,8 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
     return draft, imask
         
 
+# Fix all three problems at once.
+
 # Arguments:
 # nc_in: NetCDF temporary grid file (created by edit_mask if you used that function, otherwise created by interp_bedmap2)
 # nc_out: desired path to the new NetCDF grid file with edits
@@ -494,6 +507,11 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
         sys.exit()
 
     # (1) Fix isolated bottom cells
+    bathy_orig = np.copy(bathy)
+    bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    # Plot how the results have changed
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
     # (2) Digging
     bathy_orig = np.copy(bathy)
