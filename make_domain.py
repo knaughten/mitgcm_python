@@ -453,7 +453,6 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
         bathy[index] = bathy_limit[index]
         return bathy
 
-    print 'Digging based on local ice shelf draft'
     bathy = dig_one_direction(bathy_limit)
     bathy_limit_neighbours = [bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n]
     loc_strings = ['west', 'east', 'south', 'north']
@@ -462,6 +461,18 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
         bathy = dig_one_direction(bathy_limit_neighbours[i])
 
     return bathy
+
+
+# Fix problem (3) above.
+def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
+
+    if hFacMinDr >= dz[0]:
+        # Find any points which are less than half the depth of the surface layer
+        index = (draft != 0)*(abs(draft) < 0.5*dz[0])
+        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
+        draft[index] = 0
+        imask[index] = 0
+    return draft, imask
         
 
 # Arguments:
@@ -491,53 +502,11 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
-    '''# Find the actual draft as the model will see it (based on hFac constraints)
-    model_draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
-    # Update the intermediate variables (as the layers might have changed now), and also get dz of the layer below the draft
-    level_below_draft, dz_at_draft, dz_below_draft = level_vars(model_draft, dz, z_edges, include_edge='top')[2:]
-    
-    # Figure out the shallowest acceptable depth of each point and its neighbours, based on the ice shelf draft. We want 2 (at least partially) open cells.
-    # The first open cell is between the draft and the z-level below it.
-    bathy_limit = level_below_draft
-    # The second open cell digs into the level below that by the minimum amount (based on hFac constraints).
-    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_below_draft, 1))
-    bathy_limit -= dz_below_draft*hfac_limit
-    # Get bathy_limit at each point's 4 neighbours
-    bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n = neighbours(bathy_limit)[:4]
-    # Make a copy of the original bathymetry for comparison later
-    bathy_orig = np.copy(bathy)
-    
-    # Inner function to apply limits to bathymetry (based on each point itself, or each point's neighbour in a single direction eg. west).
-    def dig_one_direction (bathy, bathy_limit):
-
-        index = (bathy != 0)*(bathy > bathy_limit)
-        print '...' + str(np.count_nonzero(index)) + ' cells to dig'
-        bathy[index] = bathy_limit[index]
-        return bathy
-
-    print 'Digging based on local ice shelf draft'
-    bathy = dig_one_direction(bathy, bathy_limit)
-    bathy_limit_neighbours = [bathy_limit_w, bathy_limit_e, bathy_limit_s, bathy_limit_n]
-    loc_strings = ['west', 'east', 'south', 'north']
-    for i in range(len(loc_strings)):
-        print 'Digging based on ice shelf draft to ' + loc_strings[i]
-        bathy = dig_one_direction(bathy, bathy_limit_neighbours[i])
-    
-    # Plot how the results have changed
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')'''
-
     # (3) Zapping
-
-    if hFacMinDr >= dz[0]:
-        print 'Zapping ice shelf drafts which are too shallow'
-        # Find any points which are less than half the depth of the surface layer
-        index = (draft != 0)*(abs(draft) < 0.5*dz[0])
-        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
-        draft[index] = 0
-        imask[index] = 0
-        # Plot how the results have changed
-        plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, index.astype(int)), title='Ice shelf points which were zapped')
+    imask_orig = np.copy(imask)
+    draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr)
+    # Plot how the results have changed
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, (imask_orig != imask).astype(int)), title='Ice shelf points which were zapped')
 
     # Copy the NetCDF file to a new name
     shutil.copyfile(nc_in, nc_out)
