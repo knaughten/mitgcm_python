@@ -4,10 +4,11 @@
 
 import os
 import sys
+import numpy as np
 import netCDF4 as nc
 
 from grid import Grid
-from file_io import NCfile, netcdf_time, find_time_index
+from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
 from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
@@ -300,8 +301,8 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True):
     for ts_name in timeseries_types:
         print 'Processing ' + ts_name
         # Get information about the variable; only care about title and units
-        title, units = set_parameters(ts)[2:4]
-        if var == 'fris_melt':
+        title, units = set_parameters(ts_name)[2:4]
+        if ts_name == 'fris_melt':
             melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1:]
             # We need two titles now
             title_melt = 'Total melting beneath FRIS'
@@ -318,7 +319,7 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True):
         id.close()
     else:
         ncfile.close()
-        
+
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.

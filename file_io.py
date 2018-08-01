@@ -52,10 +52,8 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
         # Time-dependent
 
         num_time = id.dimensions[first_dim].size
-        # Make sure the variable itself isn't time
-        if len(id.variables[var_name].shape) == 1:
-            print 'Error (function read_netcdf): you are trying to read the time variable. Use netcdf_time instead.'
-            sys.exit()
+        # Check for 1D timeseries variables
+        timeseries = len(id.variables[var_name].shape) == 1
 
         # Choose range of time values to consider
         # If t_start and/or t_end are already set, use those bounds
@@ -67,9 +65,15 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
         # Now read the variable
         if time_index is not None:
-            data = id.variables[var_name][time_index,:]
+            if timeseries:
+                data = id.variables[var_name][time_index]
+            else:
+                data = id.variables[var_name][time_index,:]
         else:
-            data = id.variables[var_name][t_start:t_end,:]
+            if timeseries:
+                data = id.variables[var_name][t_start:t_end]
+            else:
+                data = id.variables[var_name][t_start:t_end,:]
         id.close()
 
         # Time-average if necessary
