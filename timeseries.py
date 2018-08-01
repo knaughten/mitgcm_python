@@ -138,7 +138,7 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 # if option='max', 'avg_sfc', or 'avg_fris', returns two 1D arrays of time and the relevant timeseries.
 # if option='time', just returns the time array.
 
-def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -147,11 +147,11 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         # More than one
         first_file = file_path[0]
     else:
-        print 'Error (read_timeseries): file_path must be a string or a list'
+        print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
     if option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris'] and var_name is None:
-        print 'Error (read_timeseries): must specify var_name'
+        print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
 
     # Build the grid if needed
@@ -170,7 +170,7 @@ def read_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     elif option == 'avg_fris':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
     elif option != 'time':
-        print 'Error (read_timeseries): invalid option ' + option
+        print 'Error (calc_timeseries): invalid option ' + option
         sys.exit()
     # Read time axis
     time = netcdf_time(first_file, monthly=monthly)
@@ -221,22 +221,29 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
     return time, data_diff
 
 
-# Call read_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_fris_melt.
-def read_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
+# Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_fris_melt.
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
 
     if option == 'fris_melt':
-        print "Error (read_timeseries_diff): this function can't be used for option="+option
+        print "Error (calc_timeseries_diff): this function can't be used for option="+option
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = read_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    time_2, values_2 = read_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
 
 
-# Set a bunch of parameters corresponding to a given timeseries variable as defined in plot_1d.py (functions read_plot_timeseries and read_plot_timeseries_diff)
+# Set a bunch of parameters corresponding to a given timeseries variable:
+#      'fris_melt': melting, freezing, and net melting beneath FRIS
+#      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
+#      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
+#      'eta_avg': area-averaged sea surface height
+#      'seaice_area': total sea ice area
+#      'fris_temp': volume-averaged temperature in the FRIS cavity
+#      'fris_salt': volume-averaged salinity in the FRIS cavity
 def set_parameters (var):
 
     xmin = None
@@ -293,3 +300,49 @@ def set_parameters (var):
         sys.exit()
 
     return option, var_name, title, units, xmin, xmax, ymin, ymax
+
+
+# Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
+def calc_special_timeseries (var, file_path, grid=None, monthly=True):
+
+    # Set parameters (don't care about title or units)
+    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+
+    # Calculate timeseries
+    if var == 'fris_melt':
+        # Special case for calc_timeseries, with extra output argument
+        time, melt, freeze = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, monthly=monthly)
+        return time, melt, freeze
+    else:
+        time, data = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        if var == 'seaice_area':
+            # Convert from m^2 to million km^2
+            data *= 1e-12
+        return time, data
+
+
+# Interface to calc_timeseries_diff for particular timeseries variables, defined in set_parameters.
+def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, monthly=True):
+
+    # Set parameters (don't care about title or units)
+    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+
+    # Calculate difference timeseries
+    if var == 'fris_melt':
+        # Special case; calculate each timeseries separately because there are extra output arguments
+        time_1, melt_1, freeze_1 = calc_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
+        time_2, melt_2, freeze_2 = calc_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
+        time, melt_diff = trim_and_diff(time_1, time_2, melt_1, melt_2)
+        freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
+        return time, melt_diff, freeze_diff
+    else:
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        if var == 'seaice_area':
+            # Convert from m^2 to million km^2
+            data_diff *= 1e-12
+        return time, data_diff
+
+    
+
+
+    

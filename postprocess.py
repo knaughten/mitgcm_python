@@ -7,7 +7,7 @@ import sys
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
-from timeseries import read_timeseries
+from timeseries import calc_timeseries
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
@@ -156,8 +156,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, grid_path='../grid
 
     # Now figure out which time indices to use for plots with no time dependence
     # Concatenate the time arrays from all files
-    time_1 = read_timeseries(output_files_1, option='time')
-    time_2 = read_timeseries(output_files_2, option='time')
+    time_1 = calc_timeseries(output_files_1, option='time')
+    time_2 = calc_timeseries(output_files_2, option='time')
     # Find the last time index in the shortest simulation
     time_index = min(time_1.size, time_2.size) - 1
     file_path_1, time_index_1 = find_time_index(output_files_1, time_index)

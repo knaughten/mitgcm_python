@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from timeseries import read_timeseries, read_timeseries_diff, trim_and_diff, set_parameters
+from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 
@@ -60,22 +60,8 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
 # User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot.
 
 # Arguments:
-# var: keyword indicating which timeseries to plot. The options are:
-#      'fris_melt': melting, freezing, and net melting beneath FRIS
-#      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
-#      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
-#      'eta_avg': area-averaged sea surface height
-#      'seaice_area': total sea ice area
-#      'fris_temp': volume-averaged temperature in the FRIS cavity
-#      'fris_salt': volume-averaged salinity in the FRIS cavity
-# file_path: either a single filename or a list of filenames, to NetCDF files containing the necessary variable:
-#            'fris_melt': SHIfwFlx
-#            'hice_corner': SIheff
-#            'mld_ewed': MXLDEPTH
-#            'eta_avg': ETAN
-#            'seaice_area': SIarea
-#            'fris_temp': THETA
-#            'fris_salt': SALT
+# var: keyword indicating which timeseries to plot. The options are defined in function set_parameters.
+# file_path: either a single filename or a list of filenames, to NetCDF files containing the necessary var_name as defined in set_parameters.
 
 # Optional keyword arguments:
 # grid: as in function read_plot_latlon
@@ -84,19 +70,14 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
 
 def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True):
 
-    # Set plotting variables
+    # Set parameters (only care about title and units)
     option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
 
-    # Calculate timeseries
     if var == 'fris_melt':
-        # Special case for read_timeseries, with extra output argument
-        time, data, data_2 = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, monthly=monthly)
+        time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
     else:
-        time, data = read_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        time, data = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
         data_2 = None
-        if var == 'seaice_area':
-            # Convert from m^2 to million km^2
-            data *= 1e-12
         
     # Plot
     make_timeseries_plot(time, data, data_2=data_2, melt_freeze=(var=='fris_melt'), title=title, units=units, monthly=monthly, fig_name=fig_name)
@@ -107,22 +88,17 @@ def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True
 # Arguments are the same as in read_plot_timeseries, but two file paths/lists are supplied. It is assumed the two simulations start at the same time, but it's okay if one is longer than the other.
 def read_plot_timeseries_diff (var, file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
-    # Set plotting variables
+    # Set parameters (only care about title and units)
     option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
     # Edit the title to show it's a difference plot
     title = 'Change in ' + title[0].lower() + title[1:]
 
     # Calculate difference timeseries
     if var == 'fris_melt':
-        # Special case; calculate each timeseries separately because there are extra output arguments
-        time_1, melt_1, freeze_1 = read_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
-        time_2, melt_2, freeze_2 = read_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
-        time, data_diff = trim_and_diff(time_1, time_2, melt_1, melt_2)
-        data_diff_2 = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
+        time, data, data_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
     else:
-        time, data_diff = read_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-        data_diff_2 = None
-
+        time, data = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        data_2 = None
 
     # Plot
     make_timeseries_plot(time, data_diff, data_2=data_diff_2, melt_freeze=(var=='fris_melt'), diff=True, title=title, units=units, monthly=monthly, fig_name=fig_name)
