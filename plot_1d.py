@@ -77,7 +77,7 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name
     if var == 'fris_melt':
         if precomputed:
             time = netcdf_time(file_path)
-            data = read_netcdf(file_path, 
+            #data = read_netcdf(file_path, 
         time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
     else:
         time, data = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
