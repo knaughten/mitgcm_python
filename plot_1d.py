@@ -71,7 +71,7 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
 def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+    title, units = set_parameters(var)[2:4]
 
     if var == 'fris_melt':
         time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
@@ -89,7 +89,7 @@ def read_plot_timeseries (var, file_path, grid=None, fig_name=None, monthly=True
 def read_plot_timeseries_diff (var, file_path_1, file_path_2, grid=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+    title, units = set_parameters(var)[2:4]
     # Edit the title to show it's a difference plot
     title = 'Change in ' + title[0].lower() + title[1:]
 

@@ -4,10 +4,11 @@
 
 import os
 import sys
+import netCDF4 as nc
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index
-from timeseries import calc_timeseries
+from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
@@ -241,7 +242,83 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
         last_year -= 1
     for year in range(first_year, last_year+1):
         plot_aice_minmax(file_path, year, grid=grid, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
-    
+
+
+# Pre-compute timeseries and save them in a NetCDF file which concatenates after each simulation segment.
+
+# Arguments:
+# mit_file: path to a single NetCDF file output by MITgcm
+# timeseries_file: path to a NetCDF file for saving timeseries. If it exists, it will be appended to; if it doesn't exist, it will be created.
+
+def precompute_timeseries (mit_file, timeseries_file, monthly=True):
+
+    # Timeseries to compute
+    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+
+    # Build the grid
+    grid = Grid(mit_file)
+
+    # Check if the timeseries file already exists
+    file_exists = os.path.isfile(timeseries_file)
+    if file_exists:
+        # Open it
+        id = nc.Dataset(timeseries_file, 'a')
+    else:
+        # Create it
+        ncfile = NCfile(timeseries_file, grid, 't')
+
+    # Define/update time
+    # Read the time array from the MITgcm file, and its units
+    time, time_units = netcdf_time(mit_file, return_units=True)
+    if file_exists:
+        # Read the old time array; overwrite time_units just in case it's different
+        old_time, time_units = netcdf_time(timeseries_file, return_units=True)
+        # Concatenate with the new one
+        time = np.concatenate((old_time, time))
+        # Convert to numeric values
+        time = nc.date2num(time, time_units)
+        # Update in the timeseries file
+        id.variables['time'][:] = time
+    else:
+        # Add the time variable to the file
+        ncfile.add_time(time, units=time_units)
+
+    # Inner function to define/update non-time variables
+    def write_var (data, var_name, title, units):
+        if file_exists:
+            # Read the old array
+            old_data = read_netcdf(timeseries_file, var_name)
+            # Concatenate with the new array
+            data = np.concatenate((old_data, data))
+            # Update in the timeseries file
+            id.variables[var_name][:] = data
+        else:
+            # Add the variable to the file
+            ncfile.add_variable(var_name, data, 't', long_name=title, units=units)
+
+    # Now process all the timeseries
+    for ts_name in timeseries_types:
+        print 'Processing ' + ts_name
+        # Get information about the variable; only care about title and units
+        title, units = set_parameters(ts)[2:4]
+        if var == 'fris_melt':
+            melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1:]
+            # We need two titles now
+            title_melt = 'Total melting beneath FRIS'
+            title_freeze = 'Total refreezing beneath FRIS'
+            # Update two variables
+            write_var(melt, 'fris_total_melt', title_melt, units)
+            write_var(freeze, 'fris_total_freeze', title_freeze, units)
+        else:
+            data = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1]
+            write_var(data, ts_name, title, units)
+
+    # Finished
+    if file_exists:
+        id.close()
+    else:
+        ncfile.close()
+        
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.

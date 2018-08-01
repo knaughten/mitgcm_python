@@ -105,7 +105,11 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
 # Output: 1D numpy array containing the time values (either scalars or Date objects)
 
-def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True, monthly=True):
+def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True, monthly=True, return_units=False):
+
+    if return_units and not return_date:
+        print 'Error (netcdf_time): need return_date=True if return_units=True'
+        sys.exit()
 
     # Open the file and get the length of the record
     id = nc.Dataset(file_path, 'r')
@@ -123,7 +127,8 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
     # Read the variable
     if return_date:
         # Return as handy Date objects
-        time = nc.num2date(time_id[t_start:t_end], units=time_id.units)
+        units = time_id.units
+        time = nc.num2date(time_id[t_start:t_end], units=units)
     else:
         # Return just as scalar values
         time = time_id[t_start:t_end]
@@ -134,7 +139,10 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
         for t in range(time.size):
             time[t] = time[t] - datetime.timedelta(days=1)
 
-    return time
+    if return_units:
+        return time, units
+    else:
+        return time
 
 
 # Given two NetCDF files, figure out which one the given variable is in.
@@ -349,11 +357,19 @@ class NCfile:
     # Special case to simplify writing the time variable.
 
     # Argument:
-    # time: time values
+    # time: time values (either numeric values or DateTime objects)
 
     # Optional keyword argument:
     # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
     def add_time (self, time, units=None):
+
+        if isinstance(time[0], datetime.datetime):
+            # These are DateTime objects
+            if units is None:
+                # Set some default units
+                units = 'seconds since 1979-01-01 00:00:00'
+            # Convert to numeric values
+            time = nc.date2num(time, units)            
 
         self.add_variable('time', time, 't', units=units)
 
