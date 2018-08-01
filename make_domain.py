@@ -510,7 +510,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     bathy_orig = np.copy(bathy)
     bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after filling')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
     # (2) Digging of subglacial lakes
