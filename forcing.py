@@ -171,7 +171,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     
     # Figure out which SOSE points we need for interpolation
     # Restoring mask interpolated to the SOSE grid
-    fill = np.ceil(interp_reg(model_grid, sose_grid, mask_surface, dim=2, fill_value=1))
+    fill = np.ceil(interp_reg(model_grid, sose_grid, mask_3d[0,:], dim=2, fill_value=1))
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
 
