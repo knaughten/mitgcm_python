@@ -81,7 +81,7 @@ def restoring_mask (grid, out_file=None, nc_out=None, h0=-1250, obcs_sponge=0, p
         if polynya == 'maud_rise':
             # Assumes split=180!
             lon0 = 0.
-            lat0 = -66.
+            lat0 = -65.
             rlon = 10.
             rlat = 2.5
         elif polynya == 'near_shelf':
