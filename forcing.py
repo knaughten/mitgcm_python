@@ -75,9 +75,28 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 # obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
 
-def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64, obcs_sponge=0):
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64, obcs_sponge=0, polynya=None):
 
     sose_dir = real_dir(sose_dir)
+
+    # Figure out if we need to add a polynya
+    add_polynya = polynya is not None
+    if add_polynya:
+        if polynya == 'maud_rise':
+            # Assumes split=180!
+            lon0 = 0.
+            lat0 = -64.
+            rlon = 7.
+            rlat = 2.
+        elif polynya == 'near_shelf':
+            # Assumes split=180!
+            lon0 = -35.                
+            lat0 = -68.
+            rlon = 7.
+            rlat = 2.
+        else:
+            print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
+            sys.exit()    
 
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -97,6 +116,10 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     mask_surface[model_grid.bathy > h0] = 0
     # Smooth, and remask the land and ice shelves
     mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
+    if add_polynya:
+        # Cut a hole for a polynya
+        index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
+        mask_surface[index] = 0        
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
