@@ -73,6 +73,7 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
+# obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
 
 def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, split=180, prec=64, obcs_sponge=0):
 
