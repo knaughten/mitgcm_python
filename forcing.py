@@ -182,7 +182,8 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         print '...filling missing values'
         sose_sss_filled = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
         print '...interpolating'
-        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice 
+        # Mask out land and ice shelves
+        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*np.ceil(model_grid.hfac[0,:])
 
     print 'Writing ' + output_salt_file
     write_binary(sss_interp, output_salt_file, prec=prec)
