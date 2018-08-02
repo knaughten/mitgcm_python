@@ -86,7 +86,7 @@ def restoring_mask (grid, out_file=None, nc_out=None, h0=-1250, obcs_sponge=0, p
             rlat = 2.5
         elif polynya == 'near_shelf':
             # Assumes split=180!
-            lon0 = -35.                
+            lon0 = -30.                
             lat0 = -70.
             rlon = 10.
             rlat = 2.5
