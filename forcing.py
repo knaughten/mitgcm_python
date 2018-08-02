@@ -86,14 +86,14 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
             # Assumes split=180!
             lon0 = 0.
             lat0 = -64.
-            rlon = 7.
-            rlat = 2.
+            rlon = 10.
+            rlat = 2.5
         elif polynya == 'near_shelf':
             # Assumes split=180!
             lon0 = -35.                
             lat0 = -68.
-            rlon = 7.
-            rlat = 2.
+            rlon = 10.
+            rlat = 2.5
         else:
             print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
             sys.exit()    
@@ -119,7 +119,9 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     if add_polynya:
         # Cut a hole for a polynya
         index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
-        mask_surface[index] = 0        
+        mask_surface[index] = 0
+        # Smooth again with a smaller radius, and remask the land and ice shelves
+        mask_surface = smooth_xy(mask_surface, sigma=0.5)*mask_land_ice
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
