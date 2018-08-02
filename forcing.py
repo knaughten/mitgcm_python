@@ -73,7 +73,7 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # polynya: string indicating an ellipse should be cut out of the restoring mask to allow a polynya to form. Options are 'maud_rise' (centered at 0E, 64S) or 'near_shelf' (centered at 35W, 70S), both with radius 10 degrees in longitude and 2 degrees in latitude.
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def restoring_mask (grid, output_mask_file=None, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, prec=64):
+def restoring_mask (grid, out_file=None, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, prec=64):
 
     # Figure out if we need to add a polynya
     add_polynya = polynya is not None
@@ -123,12 +123,12 @@ def restoring_mask (grid, output_mask_file=None, nc_out=None, h0=-1250, obcs_spo
     mask_3d = np.zeros([grid.nz, grid.ny, grid.nx])
     mask_3d[0,:] = mask_surface
 
-    if output_mask_file is None:
+    if out_file is None:
         # Return the mask instead of writing it
         return mask_3d
     else:
-        print 'Writing ' + output_mask_file
-        write_binary(mask_3d, output_mask_file, prec=prec)
+        print 'Writing ' + out_file
+        write_binary(mask_3d, out_file, prec=prec)
         if nc_out is not None:
             print 'Writing ' + nc_out
             ncfile = NCfile(nc_out, grid, 'xyz')
