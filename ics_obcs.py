@@ -3,7 +3,7 @@
 ###########################################################
 
 from grid import Grid, SOSEGrid, grid_check_split
-from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, add_time_dim
+from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import write_binary, NCfile, read_binary
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
 
@@ -371,15 +371,15 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
     # Calculate integrands of area, scaled by hFacC
     # Note that dx and dy are only available on western and southern edges of cells respectively; for the eastern and northern boundary, will just have to use 1 cell in. Not perfect, but this correction wouldn't perfectly conserve anyway.
     # Area of western face = dy*dz*hfac
-    dA_w = xy_to_xyz(grid.dy_w)*z_to_xyz(grid.dz)*grid.hfac
+    dA_w = xy_to_xyz(grid.dy_w, grid)*z_to_xyz(grid.dz, grid)*grid.hfac
     # Area of southern face = dx*dz*hfac
-    dA_s = xy_to_xyz(grid.dx_s)*z_to_xyz(grid.dz)*grid.hfac
+    dA_s = xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)*grid.hfac
 
     # Now extract the area array at each boundary, and wrap up into a list for easy iteration later
     dA_bdry = [dA_w[:,:,0], dA_w[:,:,-1], dA_s[:,0,:], dA_s[:,-1,:]]
     # Some more lists:
     bdry_key = ['W', 'E', 'S', 'N']
-    files = [obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_nv]
+    files = [obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v]
     dimensions = ['yzt', 'yzt', 'xzt', 'xzt']
     sign = [1, -1, 1, -1]  # Multiply velocity variable by this to get incoming transport
     # Initialise number of timesteps
@@ -408,7 +408,11 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
         direction = 'out of the domain'
     else:
         direction = 'into the domain'
-    print 'Net transport is ' + abs(net_transport*1e-6) + ' Sv ' + direction
+    print 'Net transport is ' + str(abs(net_transport*1e-6)) + ' Sv ' + direction
+
+    # Calculate correction in m/s
+    correction = -1*net_transport/total_area
+    print 'Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'
 
     # Now apply the correction
     for i in range(len(files)):
@@ -416,10 +420,8 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
             print 'Correcting ' + files[i]
             # Read all the data again
             vel = read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
-            # Calculate the correction at each cell
-            correction = -1*sign[i]*total_transport*dA_bdry[i]/total_area
-            # Apply the same correction field at each time index
-            vel += add_time_dim(correction, num_time)
+            # Apply the correction
+            vel += sign[i]*correction
             # Overwrite the file
             write_binary(vel, files[i], prec=prec)
     
