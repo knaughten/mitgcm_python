@@ -356,16 +356,20 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
     if nc_out is not None:
         ncfile.close()
 
+        
+# Adjust the normal velocity in OBCS files so that the time-averaged total transport into the domain from OBCS is zero.
+# This will not make your model perfectly conserve volume, as this is also affected by other things: sea surface height at the boundary, OBCS sponges, real freshwater fluxes. But, it will be a good starting point to remove the first-order drift.
 
+# Arguments:
+# grid_path: path to Grid directory
+
+# Optional keyword arguments:
+# obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v: paths to OBCS files for UVEL (western and eastern boundaries) or VVEL (southern and northern boundaries). You only have to set the filenames for the boundaries which are actually open in your domain. They will be overwritten with corrected versions.
+# prec: precision of these OBCS files (as in function sose_obcs)
 
 def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, prec=32):
-
-    # Net transport into the domain
-    net_transport = 0
-    # Total area of ocean cells on boundaries
-    total_area = 0
-
-    # Build the grid
+    
+    print 'Building grid'
     grid = Grid(grid_path)
 
     # Calculate integrands of area, scaled by hFacC
@@ -384,7 +388,10 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
     sign = [1, -1, 1, -1]  # Multiply velocity variable by this to get incoming transport
     # Initialise number of timesteps
     num_time = None
-    
+
+    # Calculate the net transport into the domain, and the total area of ocean cells on boundaries
+    net_transport = 0
+    total_area = 0
     for i in range(len(files)):
         if files[i] is not None:
             print 'Processing ' + bdry_key[i] + ' boundary from ' + files[i]
@@ -403,13 +410,15 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
             # Integrate net transport through this boundary into the domain, and add to global sum
             net_transport += np.sum(sign[i]*vel*dA_bdry[i])
 
-    # Print the result to the user in Sv
-    if net_transport < 0:
-        direction = 'out of the domain'
-    else:
-        direction = 'into the domain'
-    print 'Net transport is ' + str(abs(net_transport*1e-6)) + ' Sv ' + direction
+    # Inner function to nicely print the net transport to the user (we will do this twice)
+    def print_net_transport (transport):
+        if transport < 0:
+            direction = 'out of the domain'
+        else:
+            direction = 'into the domain'
+        print 'Net transport is ' + str(abs(transport*1e-6)) + ' Sv ' + direction
 
+    print_net_transport(net_transport)
     # Calculate correction in m/s
     correction = -1*net_transport/total_area
     print 'Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'
@@ -424,4 +433,11 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
             vel += sign[i]*correction
             # Overwrite the file
             write_binary(vel, files[i], prec=prec)
-    
+
+    # Recalculate the transport to make sure it worked
+    net_transport_new = 0
+    for i in range(len(files)):
+        if files[i] is not None:
+            vel = np.mean(read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec), axis=0)
+            net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
+    print_net_transport(net_transport_new)
