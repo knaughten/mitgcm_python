@@ -8,8 +8,11 @@ from file_io import write_binary, NCfile, read_binary
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
 from constants import sec_per_year
 
-from MITgcmutils import rdmds
-from MITgcmutils.mdjwf import densmdjwf
+try:
+    from MITgcmutils import rdmds
+    from MITgcmutils.mdjwf import densmdjwf
+except(ImportError):
+    print "Warning (ics_obcs.py): can't import MITgcmutils"
 
 import numpy as np
 import os
