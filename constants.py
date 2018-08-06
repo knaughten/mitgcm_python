@@ -12,11 +12,25 @@ rho_ice = 917.
 sec_per_year = 365.25*24*60*60
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
+# Celsius to Kelvins intercept
+temp_C2K = 273.15
+# Latent heat of vapourisation (J/kg)
+Lv = 2.5e6
+# Ideal gas constant for water vapour (J/K/kg)
+Rv = 461.5
+# Reference saturation vapour pressure (Pa)
+es0 = 611
+# Coefficient for specific humidity calculation
+sh_coeff = 0.62197
+
+
 # Bounds on FRIS (a few bits of Eastern Weddell ice shelves are included too - use Grid.fris_mask to get just FRIS. These bounds are for plotting.)
 # lon_min, lon_max, lat_min, lat_max
 fris_bounds = [-85, -29, -84, -74]
+
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.
+
 # BEDMAP2 grid parameters
 bedmap_dim = 6667    # Dimension
 bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary

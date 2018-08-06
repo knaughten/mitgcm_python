@@ -5,6 +5,7 @@ from file_io import read_netcdf, write_binary, NCfile
 from utils import real_dir, fix_lon_range, mask_land_ice
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy
 from plot_latlon import latlon_plot
+from constants import temp_C2K, Lv, Rv, es0, sh_coeff
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -200,5 +201,84 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
 
 
+def process_era (in_dir, out_dir, year, first_year=False, prec=32):
 
+    in_dir = real_dir(in_dir)
+    out_dir = real_dir(out_dir)
+
+    if year == 2000 and not first_year:
+        print 'Warning (process_era): last we checked, 2000 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
+
+    # Construct file paths for input and output files
+    in_head = in_dir + 'era5_'
+    var_in = ['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd']
+    in_tail = '_' + str(year) + '.nc'
+    out_head = out_dir + 'ERA5_'
+    var_out = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+    out_tail = '_' + str(year)
+
+    # Northermost latitude to keep
+    lat0 = -30
+    # Length of ERA5 time interval in seconds
+    dt = 3600.  # 1 hour
+
+    # Read the grid from the first file
+    first_file = in_head + var_in[0] + in_tail
+    lon = read_netcdf(first_file, 'longitude')
+    lat = read_netcdf(first_file, 'latitude')
+    # Find the index of the last latitude we don't care about (remember that latitude goes from north to south in ERA files!)
+    j_bound = np.nonzero(lat < lat0)[0][0] - 2
+    # Trim and flip latitude
+    lat = lat[:j_bound:-1]
+    # Also read the first time index for the starting date
+    start_date = netcdf_time(first_file)[0]
+
+    if first_year:
+        # Print grid information to the reader
+        print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:'
+        print 'var_lon0 = ' + str(lon[0])
+        print 'var_lon_inc = ' + str(lon[1]-lon[0])
+        print 'var_nlon = ' + str(lon.size)
+        print 'var_lat0 = ' + str(lat[0])
+        print 'var_lat_inc = ' + str(lat[1]-lat[0])
+        print 'var_nlat = ' + str(lat.size)
+        print 'varperiod = ' + str(dt)
+        print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
+
+    # Loop over variables
+    for i in range(len(var_in)):
         
+        in_file = in_head + var_in[i] + in_tail
+        print 'Reading ' + in_file
+        data = read_netcdf(in_file, var_in[i])
+        
+        print 'Processing'
+        # Trim and flip over latitude
+        data = data[:,:j_bound:-1,:]
+        
+        if var_in[i] == 'msl':
+            # Save pressure for later conversions
+            press = np.copy(data)
+
+        elif var_in[i] == 't2m':
+            # Save temperature for later conversions
+            temp = np.copy(data)
+            # Now convert from Kelvin to Celsius
+            data -= temp_C2K
+
+        elif var_in[i] == 'd2m':
+            # Calculate specific humidity from dew point temperature, temperature, and pressure
+            # Start with vapour pressure
+            e = es0*exp(Lv/Rv*(1/temp - 1/data))
+            data = sh_coeff*e/(press - (1-sh_coeff)*e)
+            
+        elif var_in[i] in ['tp', 'ssrd', 'strd']:
+            # Accumulated variables: convert from integrals to time-averages
+            data /= dt
+            if first_year:
+                # The first 6 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the subsequent 6 hours.
+                data = np.concatenate((data[:6,:], data), axis=0)
+
+        out_file = out_head + var_out[i] + out_tail
+        print 'Writing ' + out_file
+        write_binary(data, out_file, prec=prec)
