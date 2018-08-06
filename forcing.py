@@ -6,11 +6,7 @@ from file_io import read_netcdf, write_binary, NCfile, netcdf_time
 from utils import real_dir, fix_lon_range, mask_land_ice
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff
-
-try:
-    from plot_latlon import latlon_plot
-except(ImportError):
-    print "Warning (forcing.py): can't import plotting scripts"
+from plot_latlon import latlon_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -213,7 +209,6 @@ def process_era (in_dir, out_dir, year, first_year=False, prec=32):
 
     if year == 2000 and not first_year:
         print 'Warning (process_era): last we checked, 2000 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
-        sys.stdout.flush()
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
@@ -250,18 +245,15 @@ def process_era (in_dir, out_dir, year, first_year=False, prec=32):
         print 'var_nlat = ' + str(lat.size)
         print 'varperiod = ' + str(dt)
         print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
-        sys.stdout.flush()
 
     # Loop over variables
     for i in range(len(var_in)):
         
         in_file = in_head + var_in[i] + in_tail
         print 'Reading ' + in_file
-        sys.stdout.flush()
         data = read_netcdf(in_file, var_in[i])
         
         print 'Processing'
-        sys.stdout.flush()
         # Trim and flip over latitude
         data = data[:,:j_bound:-1,:]
         
@@ -290,5 +282,4 @@ def process_era (in_dir, out_dir, year, first_year=False, prec=32):
 
         out_file = out_head + var_out[i] + out_tail
         print 'Writing ' + out_file
-        sys.stdout.flush()
         write_binary(data, out_file, prec=prec)

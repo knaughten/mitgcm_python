@@ -11,10 +11,7 @@ import numpy as np
 import sys
 import os
 
-try:
-    from MITgcmutils import rdmds
-except(ImportError):
-    print "Warning (grid.py): can't import MITgcmutils"
+from MITgcmutils import rdmds
 
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude

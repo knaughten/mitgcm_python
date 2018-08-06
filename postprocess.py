@@ -16,10 +16,7 @@ from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir
 from plot_utils.labels import parse_date
 
-try:
-    from MITgcmutils import rdmds
-except(ImportError):
-    print "Warning (postprocess.py): can't import MITgcmutils"
+from MITgcmutils import rdmds
 
 
 # Helper function to build lists of output files in a directory.

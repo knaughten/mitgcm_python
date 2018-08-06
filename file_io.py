@@ -51,11 +51,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     if first_dim.upper() in ['T', 'TIME', 'YEAR', 'MONTH', 'DAY', 'HOUR', 'MINUTE', 'SECOND', 'TIME_INDEX', 'DELTAT'] or id.dimensions[first_dim].isunlimited():
         # Time-dependent
 
-        try:
-            num_time = id.dimensions[first_dim].size
-        except(AttributeError):
-            # Older versions of netCDF4 don't have this attribute
-            num_time = id.variables[first_dim][:].size
+        num_time = id.dimensions[first_dim].size
         # Check for 1D timeseries variables
         timeseries = len(id.variables[var_name].shape) == 1
 
