@@ -6,6 +6,7 @@ from grid import Grid, SOSEGrid, grid_check_split
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import write_binary, NCfile, read_binary
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
+from constants import sec_per_year
 
 from MITgcmutils import rdmds
 from MITgcmutils.mdjwf import densmdjwf
@@ -357,17 +358,25 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
         ncfile.close()
 
         
-# Adjust the normal velocity in OBCS files so that the time-averaged total transport into the domain from OBCS is zero.
-# This will not make your model perfectly conserve volume, as this is also affected by other things: sea surface height at the boundary, OBCS sponges, real freshwater fluxes. But, it will be a good starting point to remove the first-order drift.
+# Correct the normal velocity in OBCS files to prevent massive sea level drift.
+# Option 1 ('balance'): Calculate net transport into the domain based on OBCS velocities alone. This can be done before simulations even start, and should work well if you have useRealFreshwaterFlux turned off.
+# Option 2 ('correct'): Calculate net transport based on the mean change in sea surface height over a test simulation. Run the model for a while, see how much the area-averaged eta changes over some number of years (timeseries.py should be helpful here), and then run this script to counteract any drift with OBCS corrections.
 
 # Arguments:
 # grid_path: path to Grid directory
 
 # Optional keyword arguments:
+# option: 'balance' or 'correct' (as above)
 # obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v: paths to OBCS files for UVEL (western and eastern boundaries) or VVEL (southern and northern boundaries). You only have to set the filenames for the boundaries which are actually open in your domain. They will be overwritten with corrected versions.
-# prec: precision of these OBCS files (as in function sose_obcs)
+# d_eta: if option='correct', change in area-averaged sea surface height over the test simulation (m)
+# d_t: if option='correct', length of the test simulation (years)
+# prec: precision of the OBCS files (as in function sose_obcs)
 
-def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, prec=32):
+def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, prec=32):
+
+    if option == 'correct' and (d_eta is None or d_t is None):
+        print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
+        sys.exit()
     
     print 'Building grid'
     grid = Grid(grid_path)
@@ -389,28 +398,40 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
     # Initialise number of timesteps
     num_time = None
 
-    # Calculate the net transport into the domain, and the total area of ocean cells on boundaries
-    net_transport = 0
+    # Integrate the total area of ocean cells on boundaries
     total_area = 0
     for i in range(len(files)):
         if files[i] is not None:
-            print 'Processing ' + bdry_key[i] + ' boundary from ' + files[i]
-            # Integrate the area of ocean cells on this boundary and add to global sum
+            print 'Calculating area of ' + bdry_key[i] + ' boundary'
             total_area += np.sum(dA_bdry[i])
-            # Read data
-            vel = read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
-            if num_time is None:
-                # Find number of time indices
-                num_time = vel.shape[0]
-            elif num_time != vel.shape[0]:
-                print 'Error (balance_obcs): inconsistent number of time indices between OBCS files'
-                sys.exit()
-            # Time-average velocity (this is equivalent to calculating the transport at each time index and then time-averaging at the end - it's all just sums)
-            vel = np.mean(vel, axis=0)
-            # Integrate net transport through this boundary into the domain, and add to global sum
-            net_transport += np.sum(sign[i]*vel*dA_bdry[i])
 
-    # Inner function to nicely print the net transport to the user (we will do this twice)
+    # Calculate the net transport into the domain
+    if option == 'balance':
+        # Transport based on OBCS normal velocities
+        net_transport = 0
+        for i in range(len(files)):
+            if files[i] is not None:
+                print 'Processing ' + bdry_key[i] + ' boundary from ' + files[i]
+                # Read data
+                vel = read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
+                if num_time is None:
+                    # Find number of time indices
+                    num_time = vel.shape[0]
+                elif num_time != vel.shape[0]:
+                    print 'Error (balance_obcs): inconsistent number of time indices between OBCS files'
+                    sys.exit()
+                # Time-average velocity (this is equivalent to calculating the transport at each time index and then time-averaging at the end - it's all just sums)
+                vel = np.mean(vel, axis=0)
+                # Integrate net transport through this boundary into the domain, and add to global sum
+                net_transport += np.sum(sign[i]*vel*dA_bdry[i])
+    elif option == 'correct':
+        # Transport based on simulated changes in sea surface height
+        # Need area of sea surface
+        dA_sfc = np.sum(grid.dA*np.invert(grid.land_mask).astype(float))
+        # Calculate transport in m^3/s
+        net_transport = d_eta*dA_sfc/(d_t*sec_per_year)        
+
+    # Inner function to nicely print the net transport to the user
     def print_net_transport (transport):
         if transport < 0:
             direction = 'out of the domain'
@@ -434,10 +455,11 @@ def balance_obcs (grid_path, obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s
             # Overwrite the file
             write_binary(vel, files[i], prec=prec)
 
-    # Recalculate the transport to make sure it worked
-    net_transport_new = 0
-    for i in range(len(files)):
-        if files[i] is not None:
-            vel = np.mean(read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec), axis=0)
-            net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
-    print_net_transport(net_transport_new)
+    if option == 'balance':
+        # Recalculate the transport to make sure it worked
+        net_transport_new = 0
+        for i in range(len(files)):
+            if files[i] is not None:
+                vel = np.mean(read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec), axis=0)
+                net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
+        print_net_transport(net_transport_new)

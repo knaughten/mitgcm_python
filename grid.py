@@ -37,7 +37,7 @@ from constants import fris_bounds, sose_res
 # bathy: bathymetry (negative, m, XY)
 # draft: ice shelf draft (negative, m, XY)
 # wct: water column thickness (m, XYZ)
-# land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY)
+# land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY). True means it is masked.
 # ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
 class Grid:
