@@ -206,16 +206,17 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
 
     if first_year:
         # Print grid information to the reader
-        print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:'
-        print 'varperiod = ' + str(dt)
+        print '\n'
+        print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:\n'
         print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
+        print 'varperiod = ' + str(dt)
         print 'varfile = ' + 'ERA5_var'
         print 'var_lon0 = ' + str(lon[0])
         print 'var_lon_inc = ' + str(lon[1]-lon[0])
-        print 'var_nlon = ' + str(lon.size)
         print 'var_lat0 = ' + str(lat[0])
-        print 'var_lat_inc = ' + str(lat[1]-lat[0])
-        print 'var_nlat = ' + str(lat.size)        
+        print 'var_lat_inc = ' + str(lat.size-1) + '*' + str(lat[1]-lat[0])
+        print 'var_nlon = ' + str(lon.size)
+        print 'var_nlat = ' + str(lat.size)
         print '\n'
 
     # Loop over variables
@@ -251,6 +252,9 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
             if first_year:
                 # The first 6 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the subsequent 6 hours.
                 data = np.concatenate((data[:6,:], data), axis=0)
+            if var_in[i] in ['ssrd', 'strd']:
+                # Swap sign on radiation fluxes
+                data *= -1
 
         out_file = out_head + var_out[i] + out_tail
         print 'Writing ' + out_file
