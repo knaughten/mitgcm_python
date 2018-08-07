@@ -171,8 +171,8 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         ncfile.close()
 
 
-# Convert one year of ERA5 data to the format and units required by MITgcm. This should also work for ERA-Interim (but first check the bit about the first 6 hours missing from accumulated variables!)
-def process_era (in_dir, out_dir, year, first_year=False, prec=32):
+# Convert one year of ERA5 data to the format and units required by MITgcm.
+def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
