@@ -253,7 +253,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
         include_shelf = False
 
     # Make the plot but don't finish it yet
-    fig, ax = latlon_plot(speed, grid, ctype='vel', include_shelf=include_shelf, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, date_string=date_string, title=title_beg+'velocity (m/s)', return_fig=True, figsize=figsize)
+    fig, ax = latlon_plot(speed, grid, ctype='vel', include_shelf=include_shelf, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title_beg+'velocity (m/s)', return_fig=True, figsize=figsize)
 
     # Overlay circulation
     if zoom_fris:
