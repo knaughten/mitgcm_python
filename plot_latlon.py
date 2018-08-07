@@ -235,8 +235,9 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
+# chunk: as in function overlay_vectors
 
-def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None):
 
     # Do the correct vertical transformation, and interpolate to the tracer grid
     speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option)
@@ -256,10 +257,11 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
     fig, ax = latlon_plot(speed, grid, ctype='vel', include_shelf=include_shelf, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title_beg+'velocity (m/s)', return_fig=True, figsize=figsize)
 
     # Overlay circulation
-    if zoom_fris:
-        chunk = 6
-    else:
-        chunk = 10
+    if chunk is None:
+        if zoom_fris:
+            chunk = 6
+        else:
+            chunk = 10
     if vel_option == 'avg':
         scale = 0.8
     elif vel_option == 'sfc':
@@ -325,9 +327,10 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 # change_points: only matters for 'ismr'. As in function set_colours.
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 # vel_option: only matters for 'vel'. As in function prepare_vel.
+# chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', figsize=(8,6)):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', chunk=None, figsize=(8,6)):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -409,9 +412,9 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     elif var == 'tminustf':
         plot_tminustf(temp, salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'vel':
-        plot_vel(u, v, grid, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_vel(u, v, grid, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     elif var == 'velice':
-        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
         sys.exit()
