@@ -171,7 +171,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         ncfile.close()
 
 
-
+# Convert one year of ERA5 data to the format and units required by MITgcm. This should also work for ERA-Interim (but first check the bit about the first 6 hours missing from accumulated variables!)
 def process_era (in_dir, out_dir, year, first_year=False, prec=32):
 
     in_dir = real_dir(in_dir)
@@ -202,19 +202,21 @@ def process_era (in_dir, out_dir, year, first_year=False, prec=32):
     # Trim and flip latitude
     lat = lat[:j_bound:-1]
     # Also read the first time index for the starting date
-    start_date = netcdf_time(first_file)[0]
+    start_date = netcdf_time(first_file, monthly=False)[0]
 
     if first_year:
         # Print grid information to the reader
         print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:'
+        print 'varperiod = ' + str(dt)
+        print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
+        print 'varfile = ' + 'ERA5_var'
         print 'var_lon0 = ' + str(lon[0])
         print 'var_lon_inc = ' + str(lon[1]-lon[0])
         print 'var_nlon = ' + str(lon.size)
         print 'var_lat0 = ' + str(lat[0])
         print 'var_lat_inc = ' + str(lat[1]-lat[0])
-        print 'var_nlat = ' + str(lat.size)
-        print 'varperiod = ' + str(dt)
-        print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
+        print 'var_nlat = ' + str(lat.size)        
+        print '\n'
 
     # Loop over variables
     for i in range(len(var_in)):
@@ -240,7 +242,7 @@ def process_era (in_dir, out_dir, year, first_year=False, prec=32):
         elif var_in[i] == 'd2m':
             # Calculate specific humidity from dew point temperature, temperature, and pressure
             # Start with vapour pressure
-            e = es0*exp(Lv/Rv*(1/temp - 1/data))
+            e = es0*np.exp(Lv/Rv*(1/temp - 1/data))
             data = sh_coeff*e/(press - (1-sh_coeff)*e)
             
         elif var_in[i] in ['tp', 'ssrd', 'strd']:
