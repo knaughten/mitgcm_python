@@ -60,85 +60,9 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('iceberg_melt', icebergs_interp, 'xyt', units='kg/m^2/s')
         ncfile.close()
+        
 
-
-# Set up a mask for surface restoring (eg of salinity). Don't restore on the continental shelf. You can also cut out an ellipse to allow a polynya.
-
-# Arguments:
-# grid: either a Grid object or a file/directory containing grid variables
-
-# Optional keyword arguments:
-# output_mask_file: desired path to binary file containing restoring mask. If not defined (i.e. None), the mask will be returned by the function, rather than written.
-# nc_out: path to a NetCDF file to save the mask in, so you can easily check that it looks okay
-# h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
-# obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
-# polynya: string indicating an ellipse should be cut out of the restoring mask to allow a polynya to form. Options are 'maud_rise' (centered at 0E, 64S) or 'near_shelf' (centered at 35W, 70S), both with radius 10 degrees in longitude and 2 degrees in latitude.
-# prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
-
-def restoring_mask (grid, out_file=None, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, prec=64):
-
-    # Figure out if we need to add a polynya
-    add_polynya = polynya is not None
-    if add_polynya:
-        if polynya == 'maud_rise':
-            # Assumes split=180!
-            lon0 = 0.
-            lat0 = -65.
-            rlon = 10.
-            rlat = 2.5
-        elif polynya == 'near_shelf':
-            # Assumes split=180!
-            lon0 = -30.                
-            lat0 = -70.
-            rlon = 10.
-            rlat = 2.5
-        else:
-            print 'Error (restoring_mask): unrecognised polynya option ' + polynya
-            sys.exit() 
-
-    # Build the grid if we need to
-    grid = choose_grid(grid, None)
-
-    mask_surface = np.ones([grid.ny, grid.nx])
-    # Mask out land and ice shelves
-    mask_surface[grid.hfac[0,:]==0] = 0
-    # Save this for later
-    mask_land_ice = np.copy(mask_surface)
-    # Mask out continental shelf
-    mask_surface[grid.bathy > h0] = 0
-    # Smooth, and remask the land and ice shelves
-    mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
-    if add_polynya:
-        # Cut a hole for a polynya
-        index = (grid.lon_2d - lon0)**2/rlon**2 + (grid.lat_2d - lat0)**2/rlat**2 <= 1
-        mask_surface[index] = 0
-        # Smooth again with a smaller radius, and remask the land and ice shelves
-        mask_surface = smooth_xy(mask_surface, sigma=1)*mask_land_ice
-    if obcs_sponge > 0:
-        # Also mask the cells affected by OBCS and/or its sponge
-        mask_surface[:obcs_sponge,:] = 0
-        mask_surface[-obcs_sponge:,:] = 0
-        mask_surface[:,:obcs_sponge] = 0
-        mask_surface[:,-obcs_sponge:] = 0
-    
-    # Make a 3D version with zeros in deeper layers
-    mask_3d = np.zeros([grid.nz, grid.ny, grid.nx])
-    mask_3d[0,:] = mask_surface
-
-    if out_file is None:
-        # Return the mask instead of writing it
-        return mask_3d
-    else:
-        print 'Writing ' + out_file
-        write_binary(mask_3d, out_file, prec=prec)
-        if nc_out is not None:
-            print 'Writing ' + nc_out
-            ncfile = NCfile(nc_out, grid, 'xyz')
-            ncfile.add_variable('restoring_mask', mask_3d, 'xyz')
-            ncfile.close()
-    
-
-# Set up surface salinity restoring using a monthly climatology interpolated from SOSE.
+# Set up surface salinity restoring using a monthly climatology interpolated from SOSE. Don't restore on the continental shelf. You can also define idealised polynyas with a different (i.e. higher) salinity.
 
 # Arguments:
 # grid_path: path to directory containing MITgcm binary grid files
@@ -148,13 +72,37 @@ def restoring_mask (grid, out_file=None, nc_out=None, h0=-1250, obcs_sponge=0, p
 
 # Optional keyword arguments:
 # nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
-# h0, obcs_sponge, polynya: as in function restoring_mask
+# h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
+# obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
+# polynya: string indicating an ellipse should be cut out of the restoring mask to allow a polynya to form. Options are 'maud_rise' (centered at 0E, 65S, surface salinity 34.68 psu) or 'near_shelf' (centered at 30W, 70S, surface salinity 34.67 psu), both with radius 10 degrees in longitude and 2.5 degrees in latitude.
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
 def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
+
+    # Figure out if we need to add a polynya
+    add_polynya = polynya is not None
+    if add_polynya:
+        # Define the centre and radii of the ellipse bounding the polynya, and the surface salinity to restore to there
+        if polynya == 'maud_rise':
+            # Assumes split=180!
+            lon0 = 0.
+            lat0 = -65.
+            rlon = 10.
+            rlat = 2.5
+            salt_polynya = 34.68
+        elif polynya == 'near_shelf':
+            # Assumes split=180!
+            lon0 = -30.                
+            lat0 = -70.
+            rlon = 10.
+            rlat = 2.5
+            salt_polynya = 34.67
+        else:
+            print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
+            sys.exit() 
 
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -165,8 +113,25 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     sose_mask = sose_grid.hfac[0,:] == 0
 
     print 'Building mask'
-    mask_3d = restoring_mask(model_grid, None, h0=h0, obcs_sponge=obcs_sponge, polynya=polynya)
-
+    mask_surface = np.ones([model_grid.ny, model_grid.nx])
+    # Mask out land and ice shelves
+    mask_surface[model_grid.hfac[0,:]==0] = 0
+    # Save this for later
+    mask_land_ice = np.copy(mask_surface)
+    # Mask out continental shelf
+    mask_surface[model_grid.bathy > h0] = 0
+    # Smooth, and remask the land and ice shelves
+    mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
+    if obcs_sponge > 0:
+        # Also mask the cells affected by OBCS and/or its sponge
+        mask_surface[:obcs_sponge,:] = 0
+        mask_surface[-obcs_sponge:,:] = 0
+        mask_surface[:,:obcs_sponge] = 0
+        mask_surface[:,-obcs_sponge:] = 0
+    # Make a 3D version with zeros in deeper layers
+    mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
+    mask_3d[0,:] = mask_surface
+    
     print 'Reading SOSE salinity'
     # Just keep the surface layer
     sose_sss = sose_grid.read_field(sose_dir+'SALT_climatology.data', 'xyzt')[:,0,:,:]
@@ -185,7 +150,12 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         sose_sss_filled = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
         print '...interpolating'
         # Mask out land and ice shelves
-        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*np.ceil(model_grid.hfac[0,:])
+        sss_interp_tmp = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice
+        if add_polynya:
+            # Different salinity in polynya region
+            index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
+            sss_interp_tmp[index] = salt_polynya
+        sss_interp[month,0,:] = sss_interp_tmp
 
     print 'Writing ' + output_salt_file
     write_binary(sss_interp, output_salt_file, prec=prec)
