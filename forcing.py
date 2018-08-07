@@ -74,7 +74,7 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
 # h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
 # obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
-# polynya: string indicating an ellipse should be cut out of the restoring mask to allow a polynya to form. Options are 'maud_rise' (centered at 0E, 65S, surface salinity 34.68 psu) or 'near_shelf' (centered at 30W, 70S, surface salinity 34.67 psu), both with radius 10 degrees in longitude and 2.5 degrees in latitude.
+# polynya: string indicating an ellipse should be cut out of the restoring mask to allow a polynya to form. Options are 'maud_rise' (centered at 0E, 65S) or 'near_shelf' (centered at 30W, 70S), both with radius 10 degrees in longitude and 2.5 degrees in latitude, and surface salinity 34.6 psu.
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
@@ -92,14 +92,14 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
             lat0 = -65.
             rlon = 10.
             rlat = 2.5
-            salt_polynya = 34.68
+            salt_polynya = 34.6
         elif polynya == 'near_shelf':
             # Assumes split=180!
             lon0 = -30.                
             lat0 = -70.
             rlon = 10.
             rlat = 2.5
-            salt_polynya = 34.67
+            salt_polynya = 34.6
         else:
             print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
             sys.exit() 
