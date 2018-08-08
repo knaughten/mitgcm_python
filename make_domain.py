@@ -529,10 +529,10 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
     print 'Zapping thin ice shelf draft'
-    imask_orig = np.copy(imask)
+    draft_orig = np.copy(draft)
     draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, (imask_orig != imask).astype(int)), title='Ice shelf points which were zapped')
+    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, draft-draft_orig), title='Change in ice shelf draft (m)\ndue to zapping')
 
     # Copy the NetCDF file to a new name
     shutil.copyfile(nc_in, nc_out)
