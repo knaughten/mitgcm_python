@@ -419,7 +419,9 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
 # Deal with three problems which can result with z-levels:
 # (1) Cells on the bottom can become isolated, with no horizontal neighbours (i.e. adjacent open cells), just one vertical neighbour above. Dense water tends to pool in these cells and can't mix out very easily. Fix this by raising the bathymetry until the bottom cell has at least one horizontal neighbour. We call it "filling".
 # (2) Subglacial lakes can form beneath the ice shelves, whereby two cells which should have connected water columns (based on the masks we interpolated from BEDMAP2) are disconnected, i.e. the ice shelf draft at one cell is deeper than the bathymetry at a neighbouring cell (due to interpolation). Fix this by deepening the bathymetry where needed, so there are a minimum of 2 (at least partially) open faces between the neighbouring cells, ensuring that both tracers and velocities are connected. This preserves the BEDMAP2 grounding line locations, even if the bathymetry is somewhat compromised. We call it "digging".
-# (3) Very thin ice shelf drafts (less than half the depth of the surface layer) will violate the hFacMin constraints and be removed by MITgcm. However, older versions of MITgcm have a bug whereby some parts of the code don't remove the ice shelf draft at these points, and they are simultaneously treated as ice shelf and sea ice points. Fix this by removing all such points. We call it "zapping".
+# (3) Ice shelf drafts thin enough to be contained within the surface layer cause problems. There are two cases:
+#    (3a) If hFacMinDr is equal to or greater than the depth of the surface layer, and an ice shelf draft is thinner than half the depth of the surface layer, it will be removed by MITgcm. However, older versions of MITgcm have a bug whereby some parts of the code don't remove the ice shelf draft at these points, and they are simultaneously treated as ice shelf and sea ice points. Fix this by removing all such points. We call it "zapping".
+#    (3b) If hFacMinDr is less than the depth of the surface layer, and an ice shelf draft is also less than the depth of the surface layer, the MITgcm sea ice code (which masks based on hFacC[surface] > 0) will grow sea ice there anyway. Fix this by zapping ice shelf drafts less than half the depth of the surface layer (as in 3a above) and growing ice shelf drafts between half the depth and the full depth of the surface layer, to the bottom of that layer.
 
 # do_filling, do_digging, and do_zapping are the helper functions; remove_grid_problems is the API.
 
@@ -478,12 +480,17 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
 # Fix problem (3) above.
 def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
 
-    if hFacMinDr >= dz[0]:
-        # Find any points which are less than half the depth of the surface layer
-        index = (draft != 0)*(abs(draft) < 0.5*dz[0])
-        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
-        draft[index] = 0
-        imask[index] = 0
+    # Find any points which are less than half the depth of the surface layer and remove them
+    index = (draft != 0)*(abs(draft) < 0.5*dz[0])
+    print '...' + str(np.count_nonzero(index)) + ' cells to zap'
+    draft[index] = 0
+    imask[index] = 0
+    if hFacMinDr < dz[0]:
+        # Also find any points which are between half the depth and the full depth of the surface layer, and grow them
+        index = (abs(draft) >= 0.5*dz[0])*(abs(draft) < dz[0])
+        print '...' + str(np.count_nonzero(index)) + ' cells to grow'
+        draft[index] = -1*dz[0]
+        
     return draft, imask
         
 

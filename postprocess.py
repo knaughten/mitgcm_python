@@ -167,7 +167,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     file_path_1, time_index_1 = find_time_index(output_files_1, time_index)
     file_path_2, time_index_2 = find_time_index(output_files_2, time_index)
     # Make sure we got this right
-    if netcdf_time(file_path_1)[time_index_1] != netcdf_time(file_path_2)[time_index_2]:
+    if netcdf_time(file_path_1, monthly=monthly)[time_index_1] != netcdf_time(file_path_2, monthly=monthly)[time_index_2]:
         print 'Error (plot_everything_diff): something went wrong when matching time indices between the two files.'
         sys.exit()
     if option == 'last_year':
