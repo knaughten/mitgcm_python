@@ -173,7 +173,7 @@ class Grid:
     # Given a 3D hfac array on any grid, create the ice shelf mask.
     def build_ice_mask (self, hfac):
 
-        return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]==0)
+        return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]<1)
 
 
     # Create a mask just containing FRIS ice shelf points.
