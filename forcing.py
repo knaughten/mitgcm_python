@@ -262,8 +262,9 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, pre
             if six_hourly:
                 # Need to read data from the following hour to interpolate to this hour
                 in_file_2 = in_head + var_in[i] + accum_flag + in_tail
-                print 'Reading ' + in_file
-                data_2 = read_netcdf(in_file, var_in[i])
+                print 'Reading ' + in_file_2
+                data_2 = read_netcdf(in_file_2, var_in[i])
+                data_2 = data_2[:,:j_bound:-1,:]
             if first_year:
                 # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the next available time indices.
                 if six_hourly:
