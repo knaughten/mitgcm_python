@@ -250,8 +250,8 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
             # Accumulated variables: convert from integrals to time-averages
             data /= dt
             if first_year:
-                # The first 6 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the subsequent 6 hours.
-                data = np.concatenate((data[:6,:], data), axis=0)
+                # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the subsequent 6 hours.
+                data = np.concatenate((data[:7,:], data), axis=0)
             if var_in[i] in ['ssrd', 'strd']:
                 # Swap sign on radiation fluxes
                 data *= -1
