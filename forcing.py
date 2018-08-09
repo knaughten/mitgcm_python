@@ -127,7 +127,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     if add_polynya:
         # Weaker restoring everywhere outside the polynya region
         index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 > 1
-        mask_surface[index] = 1/tau_factor
+        mask_surface[index] /= tau_factor
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
