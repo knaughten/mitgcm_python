@@ -178,7 +178,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
 
 # Convert one year of ERA5 data to the format and units required by MITgcm.
-def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
+def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, prec=32):
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
@@ -189,6 +189,8 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
     var_in = ['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd']
+    if six_hourly:
+        accum_flag = '_2'
     in_tail = '_' + str(year) + '.nc'
     out_head = out_dir + 'ERA5_'
     var_out = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
@@ -197,7 +199,7 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
     # Northermost latitude to keep
     lat0 = -30
     # Length of ERA5 time interval in seconds
-    dt = 3600.  # 1 hour
+    dt = 3600.
 
     # Read the grid from the first file
     first_file = in_head + var_in[0] + in_tail
@@ -215,7 +217,10 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
         print '\n'
         print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:\n'
         print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
-        print 'varperiod = ' + str(dt)
+        if six_hourly:
+            print 'varperiod = ' + str(6*dt)
+        else:
+            print 'varperiod = ' + str(dt)
         print 'varfile = ' + 'ERA5_var'
         print 'var_lon0 = ' + str(lon[0])
         print 'var_lon_inc = ' + str(lon[1]-lon[0])
@@ -253,11 +258,27 @@ def process_era5 (in_dir, out_dir, year, first_year=False, prec=32):
             data = sh_coeff*e/(press - (1-sh_coeff)*e)
             
         elif var_in[i] in ['tp', 'ssrd', 'strd']:
-            # Accumulated variables: convert from integrals to time-averages
-            data /= dt
+            # Accumulated variables
+            if six_hourly:
+                # Need to read data from the following hour to interpolate to this hour
+                in_file_2 = in_head + var_in[i] + accum_flag + in_tail
+                print 'Reading ' + in_file
+                data_2 = read_netcdf(in_file, var_in[i])
             if first_year:
-                # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the subsequent 6 hours.
-                data = np.concatenate((data[:7,:], data), axis=0)
+                # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the next available time index.
+                if six_hourly:
+                    # The first file is missing two indices (hours 0 and 6)
+                    data = np.concatenate((data[:2,:], data), axis=0)
+                    # The second file is missing one index (hour 1)
+                    data_2 = np.concatenate((data[:1,:], data), axis=0)
+                else:
+                    # Just one file, and it's missing 7 indices (hours 0 to 6)
+                    data = np.concatenate((data[:7,:], data), axis=0)
+            if six_hourly:
+                # Now we can interpolate to the given hour: just the mean of either side
+                data = 0.5*(data + data_2)
+            # Convert from integrals to time-averages
+            data /= dt
             if var_in[i] in ['ssrd', 'strd']:
                 # Swap sign on radiation fluxes
                 data *= -1
