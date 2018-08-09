@@ -265,12 +265,12 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, pre
                 print 'Reading ' + in_file
                 data_2 = read_netcdf(in_file, var_in[i])
             if first_year:
-                # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the next available time index.
+                # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the next available time indices.
                 if six_hourly:
                     # The first file is missing two indices (hours 0 and 6)
                     data = np.concatenate((data[:2,:], data), axis=0)
                     # The second file is missing one index (hour 1)
-                    data_2 = np.concatenate((data[:1,:], data), axis=0)
+                    data_2 = np.concatenate((data_2[:1,:], data_2), axis=0)
                 else:
                     # Just one file, and it's missing 7 indices (hours 0 to 6)
                     data = np.concatenate((data[:7,:], data), axis=0)
