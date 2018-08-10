@@ -292,7 +292,7 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
                     in_file_2 = in_head + var_in[i] + '_' + str(year+1) + '.nc'
                     data_next = read_netcdf(in_file_2, var_in[i], time_index=0)
                     data_next = data_next[:j_bound:-1,:]  
-                data_2 = np.concatenate((data[1:,:], data_next), axis=0)
+                data_2 = np.concatenate((data[1:,:], np.expand_dims(data_next,0)), axis=0)
                 
             # Now we can interpolate to the given hour: just the mean of either side
             data = 0.5*(data + data_2)
