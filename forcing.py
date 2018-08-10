@@ -233,7 +233,7 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
         print '\n'
 
     # Loop over variables
-    for i in range(len(var_in)):
+    for i in range(5, len(var_in)):
         
         in_file = in_head + var_in[i] + in_tail
         print 'Reading ' + in_file
