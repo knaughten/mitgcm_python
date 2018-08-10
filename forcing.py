@@ -178,13 +178,15 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
 
 # Convert one year of ERA5 data to the format and units required by MITgcm.
-def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, prec=32):
+def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, last_year=False, prec=32):
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
 
     if year == 2000 and not first_year:
         print 'Warning (process_era): last we checked, 2000 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
+    if year == 2017 and not first_year:
+        print 'Warning (process_era): last we checked, 2017 was the last year of ERA5. Unless this has changed, you need to set last_year=True.'
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
@@ -259,12 +261,16 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, pre
             
         elif var_in[i] in ['tp', 'ssrd', 'strd']:
             # Accumulated variables
+            # This is more complicated
+            
             if six_hourly:
-                # Need to read data from the following hour to interpolate to this hour
+                # Need to read data from the following hour to interpolate to this hour. This was downloaded into separate files.
                 in_file_2 = in_head + var_in[i] + accum_flag + in_tail
                 print 'Reading ' + in_file_2
                 data_2 = read_netcdf(in_file_2, var_in[i])
                 data_2 = data_2[:,:j_bound:-1,:]
+            # not six_hourly will be dealt with after the first_year check
+            
             if first_year:
                 # The first 7 hours of the accumulated variables are missing during the first year of ERA5. Fill this missing period with data from the next available time indices.
                 if six_hourly:
@@ -273,11 +279,23 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, pre
                     # The second file is missing one index (hour 1)
                     data_2 = np.concatenate((data_2[:1,:], data_2), axis=0)
                 else:
-                    # Just one file, and it's missing 7 indices (hours 0 to 6)
+                    # The first file is missing 7 indices (hours 0 to 6)
                     data = np.concatenate((data[:7,:], data), axis=0)
-            if six_hourly:
-                # Now we can interpolate to the given hour: just the mean of either side
-                data = 0.5*(data + data_2)
+                    
+            if not six_hourly:
+                # Now get data from the following hour. Just shift one timestep ahead.
+                # First need data from the first hour of next year
+                if last_year:
+                    # There is no such data; just copy the last hour of this year
+                    data_next = data[-1,:]
+                else:
+                    in_file_2 = in_head + var_in[i] + '_' + str(year+1) + '.nc'
+                    data_next = read_netcdf(in_file_2, var_in[i], time_index=0)
+                    data_next = data_next[:j_bound:-1,:]  
+                data_2 = np.concatenate((data[1:,:], data_next), axis=0)
+                
+            # Now we can interpolate to the given hour: just the mean of either side
+            data = 0.5*(data + data_2)
             # Convert from integrals to time-averages
             data /= dt
             if var_in[i] in ['ssrd', 'strd']:
