@@ -306,9 +306,19 @@ def edit_mask (nc_in, nc_out, key='WSB'):
         for box in boxes:
             omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
         # Close a disconnected region near Foundation Ice Stream
-        omask = mask_box(omask, lon_2d, lat_2d, xmin=-65.5, xmax=-63.5, ymin=-81.8, ymax=-81.6)
+        omask = mask_box(omask, lon_2d, lat_2d, xmin=-65.5, xmax=-63.5, ymin=-81.8, ymax=-81.6) 
         # Finally, turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
+    elif key == 'WSS':
+        # Small Weddell Sea domain
+        # Block out everything west of the peninsula
+        omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
+        # Close one channel on the northern boundary
+        omask = mask_box(omask, lon_2d, lat_2d, xmin=-58.8, xmax=-58.2, ymin=-64.2)
+        # Close a disconnected region near Foundation Ice Stream
+        omask = mask_box(omask, lon_2d, lat_2d, xmin=-65.5, xmax=-63.5, ymin=-81.8, ymax=-81.6)
+        # Finally, turn the tiny ice shelf beside Riiser-Larsen into land so there are no ice shelves on the open boundaries
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-12, ymin=-71.6)        
 
     # Make the other fields consistent with this new mask
     index = omask == 0

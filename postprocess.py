@@ -147,8 +147,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     fig_dir = real_dir(fig_dir)
 
     # Build lists of output files in each directory
-    output_files_1 = build_file_list(baseline_dir, unravelled=unravelled)
-    output_files_2 = build_file_list(output_dir, unravelled=unravelled)
+    output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
+    output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
     # Build the grid
     grid = Grid(grid_path)
