@@ -312,7 +312,12 @@ def edit_mask (nc_in, nc_out, key='WSB'):
     elif key == 'WSS':
         # Small Weddell Sea domain
         # Block out everything west of the peninsula
+        # First, close a big box
         omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
+        # Now close everything north of a piecewise line defined by these points
+        points = [[-66, -67], [-62, -65], [-60, -64]]
+        for i in range(len(points)-1):
+            omask = mask_above_line(omask, lon_2d, lat_2d, points[i], points[i+1])
         # Close one channel on the northern boundary
         omask = mask_box(omask, lon_2d, lat_2d, xmin=-58.8, xmax=-58.2, ymin=-64.2)
         # Close a disconnected region near Foundation Ice Stream
