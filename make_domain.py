@@ -398,7 +398,7 @@ def level_vars (A, dz, z_edges, include_edge='top'):
 
 
 # Helper function to calculate the actual bathymetry or ice shelf draft as seen by the model, based on hFac constraints.
-def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
+def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=5.):
 
     if option == 'bathy':
         include_edge = 'bottom'
@@ -444,7 +444,7 @@ def model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
 
 
 # Fix problem (1) above.
-def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
+def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=5.):
 
     # Find the actual bathymetry as the model will see it (based on hFac constraints)
     model_bathy = model_bdry(bathy, dz, z_edges, option='bathy', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
@@ -462,7 +462,7 @@ def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
 
 
 # Fix problem (2) above.
-def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
+def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=5.):
 
     # Find the actual draft as the model will see it (based on hFac constraints)
     model_draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
@@ -495,7 +495,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
 
 
 # Fix problem (3) above.
-def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
+def do_zapping (draft, imask, dz, z_edges, hFacMinDr=5.):
 
     # Find any points which are less than half the depth of the surface layer and remove them
     index = (draft != 0)*(abs(draft) < 0.5*dz[0])
@@ -521,7 +521,7 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
 # Optional keyword arguments:
 # hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
 
-def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
+def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=5.):
 
     # Read all the variables
     lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)

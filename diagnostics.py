@@ -7,6 +7,7 @@ import sys
 
 from constants import rho_ice
 from utils import z_to_xyz, add_time_dim
+from averaging import area_integral
 
 
 # Calculate the in-situ freezing point (helper function for t_minus_tf)
@@ -80,11 +81,8 @@ def total_melt (ismr, mask, grid, result='massloss'):
 
 def find_aice_min_max (aice, grid):
 
-    num_time = aice.shape[0]
-    aice_int = np.zeros(num_time)
-    for t in range(num_time):
-        aice_int[t] = total_aice(aice[t,:], grid)
-    return np.argmin(aice_int), np.argmax(aice_int)
+    total_aice = area_integral(aice, grid, time_dependent=True)
+    return np.argmin(total_aice), np.argmax(total_aice)
 
 
 
