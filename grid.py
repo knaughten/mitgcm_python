@@ -473,7 +473,7 @@ class SOSEGrid(Grid):
                 self.k0_after = 1
             if z_deep > self.z[-1]:
                 # Trim
-                self.k1_before = np.nonzero(self.z < z_deep)[0][0]
+                self.k1_before = np.nonzero(self.z < z_deep)[0][0] + 1
             else:
                 # Either extend or do nothing
                 self.k1_before = sose_nz
