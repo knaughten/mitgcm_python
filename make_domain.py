@@ -320,8 +320,10 @@ def edit_mask (nc_in, nc_out, key='WSB'):
             omask = mask_above_line(omask, lon_2d, lat_2d, points[i], points[i+1])
         # Close one channel on the northern boundary
         omask = mask_box(omask, lon_2d, lat_2d, xmin=-58.8, xmax=-58.2, ymin=-64.2)
-        # Close a disconnected region near Foundation Ice Stream
-        omask = mask_box(omask, lon_2d, lat_2d, xmin=-65.5, xmax=-63.5, ymin=-81.8, ymax=-81.6)
+        # Close a couple of disconnected regions, with a few more boxes defined by [xmin, xmax, ymin, ymax]
+        boxes = [[-65.5, -63.5, -81.8, -81.6], [-31.25, -30.75, -80.45, -80.4], [-64, -63.5, -75.1, -74.8], [-62, -61.5, -73.2, -73], [-62.5, -62.25, -69.6, -69.2]]
+        for box in boxes:
+            omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])                         
         # Finally, turn the tiny ice shelf beside Riiser-Larsen into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-12, ymin=-71.6)        
 
