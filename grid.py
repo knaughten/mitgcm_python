@@ -111,12 +111,12 @@ class Grid:
         # Decide on longitude range
         if max_lon is None:
             # Choose range automatically
-            if np.amax(self.lon_1d) > 360:
-                # Domain crosses 0E, so switch to range (-180, 180)
-                max_lon = 180
-            else:
-                # Original range of (0, 360) is fine
+            if np.amin(self.lon_1d) < 180 and np.amax(self.lon_1d) > 180:
+                # Domain crosses 180E, so use the range (0, 360)
                 max_lon = 360
+            else:
+                # Use the range (-180, 180)
+                max_lon = 180
             # Do one array to test
             self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
             # Make sure it's strictly increasing now
