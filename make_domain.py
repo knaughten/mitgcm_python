@@ -315,7 +315,7 @@ def edit_mask (nc_in, nc_out, key='WSB'):
         omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
         # Remove tiny ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-12, ymin=-71.6)
-        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=--70.5)
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=-70.5)
         
     # Make the other fields consistent with this new mask
     index = omask == 0
