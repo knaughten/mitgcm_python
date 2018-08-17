@@ -174,6 +174,8 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('salinity', sss_interp, 'xyzt', units='psu')
         ncfile.add_variable('restoring_mask', mask_3d, 'xyz')
+        if add_polynya:
+            ncfile.add_variable('forced_convection_mask', mask_polynya, 'xy')
         ncfile.close()
 
 
