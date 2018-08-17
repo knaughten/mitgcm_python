@@ -74,37 +74,37 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
 # h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
 # obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
-# polynya: string indicating an artificial elliptical polynya should be imprinted in the restoring, with higher salinity and stronger restoring. Options are 'maud_rise' (centered at 0E, 65S) or 'near_shelf' (centered at 30W, 70S), both with radius 10 degrees in longitude and 2.5 degrees in latitude, surface salinity 34.7 psu, and 10 times stronger restoring (which we actually do by setting the restoring to be 10 times weaker everywhere else - make sure you divide tauRelaxS by 10 in data.rbcs to compensate).
+# polynya: string indicating an artifical elliptical polynya should be cut out of the restoring field, and another mask file should be written for KPP (see output_polynya_mask_file below). Options are 'maud_rise' (centered at 0E, 65S) or 'near_shelf' (centered at 30W, 70S), both with radius 10 degrees in longitude and 2.5 degrees in latitude.
+# output_polynya_mask_file: if polynya=True, desired path to binary file containing the "frcConvMaskFile" listed in input/data.kpp (make sure "useFrcConv" is also switched on there, and define ALLOW_FORCED CONVECTION in KPP_OPTIONS.h). It will be 1 in the polynya region which will tell KPP to mix all the way down to the bottom there.
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, split=180, prec=64):
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, output_polynya_mask_file=None, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
 
     # Figure out if we need to add a polynya
     add_polynya = polynya is not None
     if add_polynya:
-        # Define the centre and radii of the ellipse bounding the polynya, the surface salinity to restore to there, and the factor difference in restoring timescale between the polynya region (stronger) and everywhere else (weaker)
+        # Define the centre and radii of the ellipse bounding the polynya
         if polynya == 'maud_rise':
             # Assumes split=180!
             lon0 = 0.
             lat0 = -65.
             rlon = 10.
             rlat = 2.5
-            salt_polynya = 34.7
-            tau_factor = 10. 
         elif polynya == 'near_shelf':
             # Assumes split=180!
             lon0 = -30.                
             lat0 = -70.
             rlon = 10.
             rlat = 2.5
-            salt_polynya = 34.7
-            tau_factor = 10.
         else:
             print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
-            sys.exit() 
+            sys.exit()
+        if output_polynya_mask_file is None:
+            print 'Error (sose_sss_restoring): must define output_polynya_mask_file when polynya is set'
+            sys.exit()
 
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -125,9 +125,14 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     # Smooth, and remask the land and ice shelves
     mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
     if add_polynya:
-        # Weaker restoring everywhere outside the polynya region
-        index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 > 1
-        mask_surface[index] /= tau_factor
+        # Zero restoring in the polynya region
+        index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
+        mask_surface[index] = 0
+        # Also make the forced-convection mask for KPP
+        mask_polynya = np.zeros([model_grid.ny, model_grid.nx])
+        mask_polynya[index] = 1
+        print 'Writing ' + output_polynya_mask_file
+        write_binary(mask_polynya, output_polynya_mask_file, prec=prec)
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
@@ -156,12 +161,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         sose_sss_filled = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
         print '...interpolating'
         # Mask out land and ice shelves
-        sss_interp_tmp = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice
-        if add_polynya:
-            # Different salinity in polynya region
-            index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
-            sss_interp_tmp[index] = salt_polynya
-        sss_interp[month,0,:] = sss_interp_tmp
+        sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice
 
     print 'Writing ' + output_salt_file
     write_binary(sss_interp, output_salt_file, prec=prec)
