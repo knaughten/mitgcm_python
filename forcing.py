@@ -131,8 +131,6 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         # Also make the forced-convection mask for KPP
         mask_polynya = np.zeros([model_grid.ny, model_grid.nx])
         mask_polynya[index] = 1
-        print 'Writing ' + output_polynya_mask_file
-        write_binary(mask_polynya, output_polynya_mask_file, prec=prec)
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
@@ -167,6 +165,9 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     write_binary(sss_interp, output_salt_file, prec=prec)
     print 'Writing ' + output_mask_file
     write_binary(mask_3d, output_mask_file, prec=prec)
+    if add_polynya:
+        print 'Writing ' + output_polynya_mask_file
+        write_binary(mask_polynya, output_polynya_mask_file, prec=prec)
 
     if nc_out is not None:
         print 'Writing ' + nc_out
