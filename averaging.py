@@ -112,7 +112,7 @@ def vertical_average_column (data, hfac, grid, gtype='t', time_dependent=False):
         # Add time dimension to dz and hfac
         dz = add_time_dim(dz, data.shape[0])
         hfac = add_time_dim(hfac, data.shape[0])
-    return np.sum(data*dz*hfac, axis=0)/np.sum(dz*hfac, axis=0)
+    return np.sum(data*dz*hfac, axis=-1)/np.sum(dz*hfac, axis=-1)
 
 
 # Area-average the given field over the unmasked region, using whatever mask is already applied as a MaskedArray.
