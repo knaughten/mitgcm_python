@@ -155,7 +155,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
