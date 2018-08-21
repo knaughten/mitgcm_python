@@ -123,10 +123,16 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    # Vertically average
-    data = vertical_average(data, grid, gtype=gtype, time_dependent=True)
-    # Interpolate to the point
-    return interp_bilinear(data, lon0, lat0, grid, gtype=gtype)    
+    # Mask land
+    data = mask_3d(data, grid, gtype=gtype, time_dependent=True)
+    # Process one time index at a time to save memory
+    timeseries = []
+    for t in range(data.shape[0]):
+        # Vertically average
+        data_tmp = vertical_average(data[t,:], grid, gtype=gtype)
+        # Interpolate to the point
+        timeseries.append(interp_bilinear(data_tmp, lon0, lat0, grid, gtype=gtype))
+    return np.array(timeseries)
 
 
 # Calculate timeseries from one or more files.
@@ -216,7 +222,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             if option == 'fris_melt':
                 melt = np.concatenate((melt, melt_tmp))
                 freeze = np.concatenate((freeze, freeze_tmp))
-            elif option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris']:
+            elif option != 'time':
                 values = np.concatenate((values, values_tmp))
             time = np.concatenate((time, time_tmp))
 
