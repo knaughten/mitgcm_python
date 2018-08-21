@@ -7,7 +7,7 @@ import sys
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris, mask_3d
+from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
 from diagnostics import total_melt
 from averaging import over_area, volume_average, vertical_average_column
 from interpolation import interp_bilinear
@@ -123,8 +123,6 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)    
-    # Mask land
-    data = mask_3d(data, grid, gtype=gtype, time_dependent=True)
     # Interpolate to the point, and get hfac too
     data_point, hfac_point = interp_bilinear(data, lon0, lat0, grid, gtype=gtype, return_hfac=True)
     # Vertically average to get timeseries
