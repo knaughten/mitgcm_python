@@ -101,6 +101,20 @@ def vertical_average (data, grid, gtype='t', time_dependent=False):
     return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
 
 
+# Vertically average a specific water column with fixed latitude and longitude. So "data" is a depth-dependent array, either 1D or 2D (if time_dependent=True). You also need to supply hfac at the same water column (1D, depth-dependent).
+def vertical_average_column (data, hfac, grid, time_dependent=False):
+
+    if gtype == 'w':
+        dz = grid.dz_t
+    else:
+        dz = grid.dz
+    if time_dependent:
+        # Add time dimension to dz and hfac
+        dz = add_time_dim(dz, data.shape[0])
+        hfac = add_time_dim(hfac, data.shape[0])
+    return np.sum(data*dz*hfac, axis=0)/np.sum(dz*hfac, axis=0)
+
+
 # Area-average the given field over the unmasked region, using whatever mask is already applied as a MaskedArray.
 
 # Arguments:

@@ -9,7 +9,7 @@ from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris, mask_3d
 from diagnostics import total_melt
-from averaging import over_area, volume_average, vertical_average
+from averaging import over_area, volume_average, vertical_average_column
 from interpolation import interp_bilinear
 
 
@@ -122,17 +122,15 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read the data
-    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)    
     # Mask land
     data = mask_3d(data, grid, gtype=gtype, time_dependent=True)
-    # Process one time index at a time to save memory
-    timeseries = []
-    for t in range(data.shape[0]):
-        # Vertically average
-        data_tmp = vertical_average(data[t,:], grid, gtype=gtype)
-        # Interpolate to the point
-        timeseries.append(interp_bilinear(data_tmp, lon0, lat0, grid, gtype=gtype))
-    return np.array(timeseries)
+    # Interpolate to the point
+    data_point = interp_bilinear(data, lon0, lat0, grid, gtype=gtype)
+    # Also need hfac interpolated to that point
+    hfac_point = interp_bilinear(grid.get_hfac(gtype=gtype), lon0, lat0, grid, gtype=gtype)
+    # Vertically average to get timeseries
+    return vertical_average_column(data_point, hfac_point, grid, time_dependent=True)
 
 
 # Calculate timeseries from one or more files.
