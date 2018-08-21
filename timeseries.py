@@ -9,7 +9,8 @@ from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
 from diagnostics import total_melt
-from averaging import over_area, volume_average
+from averaging import over_area, volume_average, vertical_average
+from interpolation import interp_bilinear
 
 
 # Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -117,6 +118,17 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
     return np.array(timeseries)
 
 
+# Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
+def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read the data
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Vertically average
+    data = vertical_average(data, grid, gtype=gtype, time_dependent=True)
+    # Interpolate to the point
+    return interp_bilinear(data, lon0, lat0, grid, gtype=gtype)    
+
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -128,16 +140,20 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 #          'avg_sfc': calculates area-averaged value over the sea surface, i.e. not counting cavities
 #          'int_sfc': calculates area-integrated value over the sea surface
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
+#          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
+#          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
-# var_name: variable name to process. Only matters for 'max', 'avg_sfc', 'int_sfc', and 'avg_fris'.
-# xmin, xmax, ymin, ymax: as in function var_min_max
+# var_name: variable name to process. Doesn't matter for 'fris_melt'.
+# xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
+# lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
 # monthly: as in function netcdf_time
 
 # Output:
 # if option='fris_melt', returns three 1D arrays of time, melting, and freezing.
-# if option='max', 'avg_sfc', or 'avg_fris', returns two 1D arrays of time and the relevant timeseries.
 # if option='time', just returns the time array.
+# Otherwise, returns two 1D arrays of time and the relevant timeseries.
+
 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
 
@@ -151,8 +167,11 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris'] and var_name is None:
+    if option not in ['time', 'fris_melt'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
+        sys.exit()
+    if option == 'point_vavg' and (lon0 is None or lat0 is None):
+        print 'Error (calc_timeseries): must specify lon0 and lat0'
         sys.exit()
 
     # Build the grid if needed
@@ -170,6 +189,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         values = timeseries_int_sfc(first_file, var_name, grid, gtype=gtype)
     elif option == 'avg_fris':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
+    elif option == 'point_vavg':
+        values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
     elif option != 'time':
         print 'Error (calc_timeseries): invalid option ' + option
         sys.exit()
@@ -188,6 +209,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_int_sfc(file, var_name, grid, gtype=gtype)
             elif option == 'avg_fris':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
+            elif option == 'point_vavg':
+                values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'fris_melt':
@@ -199,10 +222,10 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
 
     if option == 'fris_melt':
         return time, melt, freeze
-    elif option in ['max', 'avg_sfc', 'int_sfc', 'avg_fris']:
-        return time, values
     elif option == 'time':
         return time
+    else:
+        return time, values
 
 
 # Helper function to calculate difference timeseries, trimming if needed.
