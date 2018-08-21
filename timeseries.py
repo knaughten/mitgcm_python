@@ -130,7 +130,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
     # Also need hfac interpolated to that point
     hfac_point = interp_bilinear(grid.get_hfac(gtype=gtype), lon0, lat0, grid, gtype=gtype)
     # Vertically average to get timeseries
-    return vertical_average_column(data_point, hfac_point, grid, time_dependent=True)
+    return vertical_average_column(data_point, hfac_point, grid, gtype=gtype, time_dependent=True)
 
 
 # Calculate timeseries from one or more files.

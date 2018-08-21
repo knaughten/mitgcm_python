@@ -102,7 +102,7 @@ def vertical_average (data, grid, gtype='t', time_dependent=False):
 
 
 # Vertically average a specific water column with fixed latitude and longitude. So "data" is a depth-dependent array, either 1D or 2D (if time_dependent=True). You also need to supply hfac at the same water column (1D, depth-dependent).
-def vertical_average_column (data, hfac, grid, time_dependent=False):
+def vertical_average_column (data, hfac, grid, gtype='t', time_dependent=False):
 
     if gtype == 'w':
         dz = grid.dz_t
