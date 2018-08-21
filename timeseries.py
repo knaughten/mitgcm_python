@@ -7,7 +7,7 @@ import sys
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
+from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris, mask_3d
 from diagnostics import total_melt
 from averaging import over_area, volume_average, vertical_average
 from interpolation import interp_bilinear
