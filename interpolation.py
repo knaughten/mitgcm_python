@@ -351,7 +351,7 @@ def interp_slice_helper (data, val0, lon=False):
 # Interpolate an array "data" to a point (lon0, lat0). Other dimensions (eg time, depth) will be preserved.
 def interp_bilinear (data, lon0, lat0, grid, gtype='t'):
 
-    lon, lat = grid.get_lon_lat(grid=grid, dim=1)
+    lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
     i1, i2, a1, a2 = interp_slice_helper(lon, lon0, lon=True)
     j1, j2, b1, b2 = interp_slice_helper(lat, lat0)
     return a1*b1*data[...,j1,i1] + a2*b1*data[...,j1,i2] + a1*b2*data[...,j2,i1] + a2*b2*data[...,j2,i2]
