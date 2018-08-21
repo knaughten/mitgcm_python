@@ -349,12 +349,22 @@ def interp_slice_helper (data, val0, lon=False):
 
 
 # Interpolate an array "data" to a point (lon0, lat0). Other dimensions (eg time, depth) will be preserved.
-def interp_bilinear (data, lon0, lat0, grid, gtype='t'):
+# Can also set return_hfac=True to return the column of hFac values interpolated to this point. If any of the neighbouring points are fully closed (i.e. land), the interpolated hFac will be zero there too.
+def interp_bilinear (data, lon0, lat0, grid, gtype='t', return_hfac=False):
 
     lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
     i1, i2, a1, a2 = interp_slice_helper(lon, lon0, lon=True)
     j1, j2, b1, b2 = interp_slice_helper(lat, lat0)
-    return a1*b1*data[...,j1,i1] + a2*b1*data[...,j1,i2] + a1*b2*data[...,j2,i1] + a2*b2*data[...,j2,i2]
+    data_interp = a1*b1*data[...,j1,i1] + a2*b1*data[...,j1,i2] + a1*b2*data[...,j2,i1] + a2*b2*data[...,j2,i2]
+    if return_hfac:
+        hfac = grid.get_hfac(gtype=gtype)
+        hfac_interp = interp_bilinear(hfac, lon0, lat0, grid, gtype=gtype)
+        # Check for closed points
+        index = hfac[:,j1,i1]*hfac[:,j1,i2]*hfac[:,j2,i1]*hfac[:,j2,i2] == 0
+        hfac_interp[index] = 0
+        return data_interp, hfac_interp
+    else:
+        return data_interp
 
 
 # Interpolate a lateral boundary field from a regular grid to another regular grid. Prior to interpolation, extend the source data into the mask so there are no artifacts caused by missing values.

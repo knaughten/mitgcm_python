@@ -125,10 +125,8 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)    
     # Mask land
     data = mask_3d(data, grid, gtype=gtype, time_dependent=True)
-    # Interpolate to the point
-    data_point = interp_bilinear(data, lon0, lat0, grid, gtype=gtype)
-    # Also need hfac interpolated to that point
-    hfac_point = interp_bilinear(grid.get_hfac(gtype=gtype), lon0, lat0, grid, gtype=gtype)
+    # Interpolate to the point, and get hfac too
+    data_point, hfac_point = interp_bilinear(data, lon0, lat0, grid, gtype=gtype, return_hfac=True)
     # Vertically average to get timeseries
     return vertical_average_column(data_point, hfac_point, grid, gtype=gtype, time_dependent=True)
 
