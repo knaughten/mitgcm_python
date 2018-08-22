@@ -36,7 +36,11 @@ def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
 # A whole bunch of basic preliminary plots to analyse things.
 # First must run precompute_polynya_timeseries.
-def prelim_plots (polynya_dir, baseline_dir, polynya=None, timeseries_file=None, grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False):
+def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_file=None, grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False):
+
+    if baseline_dir is None:
+        print 'Error (prelim_plots): must specify baseline_dir.'
+        sys.exit()
 
     # Make sure proper directories
     polynya_dir = real_dir(polynya_dir)
