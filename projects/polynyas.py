@@ -93,7 +93,7 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
             vmin = None
             vmax = None
             if var == 'bwsalt':
-                vmin = 34.2
+                vmin = 34.3
                 vmax = 34.8
             elif var == 'bwtemp' and zoom_fris:
                 vmax = -1
