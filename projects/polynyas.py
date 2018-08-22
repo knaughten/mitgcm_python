@@ -54,7 +54,7 @@ def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./',
         time, var = calc_timeseries(output_files, option='point_vavg', grid=grid, var_name=var_names[i], lon0=lon0, lat0=lat0)
         make_timeseries_plot(time, var, title='Depth-averaged '+long_names[i]+' at '+point_string, units=units[i], fig_name=fig_dir+'timeseries_polynya_'+short_names[i]+'.png')
         # Repeat for anomalies from baseline
-        time, var_diff = calc_timeseries(baseline_files, output_files, option='point_vavg', grid=grid, var_name=var_names[i], lon0=lon0, lat0=lat0)
+        time, var_diff = calc_timeseries_diff(baseline_files, output_files, option='point_vavg', grid=grid, var_name=var_names[i], lon0=lon0, lat0=lat0)
         make_timeseries_plot(time, var, title='Change in depth-averaged '+long_names[i]+' at '+point_string, units=units[i], fig_name=fig_dir+'timeseries_polynya_'+short_names[i]+'_diff.png')
 
     # Lat-lon plots over the last year/month
