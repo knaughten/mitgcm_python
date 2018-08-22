@@ -73,15 +73,32 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
         read_plot_timeseries_diff(var, baseline_dir+timeseries_file, polynya_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png')
 
     # Lat-lon plots over the last year/month
-    var_names = ['bwtemp', 'bwsalt', 'vel', 'ismr']
-    figsize = (10,6)
+    var_names = ['aice', 'bwtemp', 'bwsalt', 'vel', 'ismr']
     for var in var_names:
         # Want to zoom both in and out
         for zoom_fris in [False, True]:
+            # Set figure size
+            if zoom_fris:
+                figsize = (8,6)
+            else:
+                figsize = (10,6)
+            # Get zooming in the figure name
             zoom_key = ''
             if zoom_fris:
                 zoom_key = '_zoom'
-            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, zoom_fris=zoom_fris, date_string=date_string, fig_name=fig_dir+var+zoom_key+'.png', figsize=figsize)
+            # Don't need a zoomed-in sea ice plot
+            if var == 'aice' and zoom_fris:
+                continue
+            # Set variable bounds
+            vmin = None
+            vmax = None
+            if var == 'bwsalt':
+                vmin = 34.2
+                vmax = 34.8
+            elif var == 'bwtemp' and zoom_fris=True:
+                vmax = -1
+            # Now make the plot
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, date_string=date_string, fig_name=fig_dir+var+zoom_key+'.png', figsize=figsize)
             # Repeat for anomalies from baseline
             read_plot_latlon_diff(var, file_path_baseline, file_path, grid=grid, time_index=time_index_baseline, t_start=t_start_baseline, t_end=t_end_baseline, time_average=time_average, time_index_2=time_index, t_start_2=t_start, t_end_2=t_end, zoom_fris=zoom_fris, date_string=date_string, fig_name=fig_dir+var+zoom_key+'_diff.png', figsize=figsize)
 
