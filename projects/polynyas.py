@@ -95,7 +95,7 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
             if var == 'bwsalt':
                 vmin = 34.2
                 vmax = 34.8
-            elif var == 'bwtemp' and zoom_fris=True:
+            elif var == 'bwtemp' and zoom_fris:
                 vmax = -1
             # Now make the plot
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, date_string=date_string, fig_name=fig_dir+var+zoom_key+'.png', figsize=figsize)
