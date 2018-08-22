@@ -10,7 +10,7 @@ from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..postprocess import build_file_list, select_common_time
 from ..utils import real_dir
 from ..constants import deg_string
-from ..plot_utils.labels import lon_label, lat_label
+from ..plot_utils.labels import lon_label, lat_label, parse_date
 
 # A whole bunch of basic preliminary plots to analyse things.
 def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False, polynya=None):
