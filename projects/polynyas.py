@@ -2,6 +2,7 @@
 # Weddell Sea polynya project
 ##################################################################
 
+from ..grid import Grid
 from ..timeseries import calc_timeseries, calc_timeseries_diff
 from ..plot_1d import make_timeseries_plot
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff
