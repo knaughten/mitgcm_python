@@ -11,9 +11,9 @@ from ..utils import real_dir
 from ..plot_utils.labels import parse_date
 
 
-# Precompute timeseries for temperature and salinity, depth-averaged in the centre of the given polynya.
-def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
-
+# Get longitude and latitude at the centre of the polynya
+def get_polynya_loc (polynya):
+    
     if polynya == 'maud_rise':
         lon0 = 0
         lat0 = -65
@@ -21,20 +21,31 @@ def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
         lon0 = -30
         lat0 = -70
     else:
-        print 'Error (precompute_polynya_timeseries): please specify a valid polynya.'
+        print 'Error (get_polynya_loc): please specify a valid polynya.'
         sys.exit()
+    return lon0, lat0
+
+
+# Precompute timeseries for temperature and salinity, depth-averaged in the centre of the given polynya.
+def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
+
+    lon0, lat0 = get_polynya_loc(polynya)
     precompute_timeseries(mit_file, timeseries_file, polynya=True, lon0=lon0, lat0=lat0)
 
     
 
 # A whole bunch of basic preliminary plots to analyse things.
 # First must run precompute_polynya_timeseries.
-def prelim_plots (polynya_dir, baseline_dir, timeseries_file='timeseries_polynya.nc', grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False):
+def prelim_plots (polynya_dir, baseline_dir, polynya=None, timeseries_file=None, grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False):
 
     # Make sure proper directories
     polynya_dir = real_dir(polynya_dir)
     baseline_dir = real_dir(baseline_dir)
     fig_dir = real_dir(fig_dir)
+
+    lon0, lat0 = get_polynya_loc(polynya)
+    if timeseries_file is None:
+        timeseries_file = 'timeseries_polynya_'+polynya+'.nc'
 
     # Build the grid
     grid = Grid(grid_path)
@@ -62,7 +73,7 @@ def prelim_plots (polynya_dir, baseline_dir, timeseries_file='timeseries_polynya
     figsize = (10,6)
     for var in var_names:
         # Want to zoom both in and out
-        for zoom_fris in [True, False]:
+        for zoom_fris in [False, True]:
             zoom_key = ''
             if zoom_fris:
                 zoom_key = '_zoom'
