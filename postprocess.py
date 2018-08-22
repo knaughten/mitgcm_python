@@ -124,6 +124,52 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     read_plot_ts_slice(file_path, grid=grid, lon0=-30, zmin=-2000, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_near_shelf.png', date_string=date_string)
 
 
+# Given lists of files from two simulations, find the file and time indices corresponding to the last year (if option='last_year') or last month/timestep (if option='last_month') in the shortest simulation.
+def select_common_time (output_files_1, output_files_2, option='last_year', monthly=True):
+
+    if not monthly and option == 'last_year':
+        print 'Error (select_common_time): need monthly output to correctly select the last year.'
+        sys.exit()
+
+    # Concatenate the time arrays from all files
+    time_1 = calc_timeseries(output_files_1, option='time')
+    time_2 = calc_timeseries(output_files_2, option='time')
+    # Find the last time index in the shortest simulation
+    time_index = min(time_1.size, time_2.size) - 1
+    file_path_1, time_index_1 = find_time_index(output_files_1, time_index)
+    file_path_2, time_index_2 = find_time_index(output_files_2, time_index)
+    # Make sure we got this right
+    if netcdf_time(file_path_1, monthly=monthly)[time_index_1] != netcdf_time(file_path_2, monthly=monthly)[time_index_2]:
+        print 'Error (select_common_time): something went wrong when matching time indices between the two files.'
+        sys.exit()
+    if option == 'last_year':
+        # Add 1 to get the upper bound on the time range we care about
+        t_end_1 = time_index_1 + 1
+        t_end_2 = time_index_2 + 1
+        # Find the index 12 before that
+        t_start_1 = t_end_1 - 12
+        t_start_2 = t_end_2 - 12
+        # Make sure it's still contained within one file
+        if t_start_1 < 0 or t_start_2 < 0:
+            print "Error (select_common_time): option last_year doesn't work if that year isn't contained within one file, for both simulations."
+            sys.exit()
+        # Set the other options
+        time_index_1 = None
+        time_index_2 = None
+        time_average = True
+    elif option == 'last_month':
+        # Set the other options
+        t_start_1 = None
+        t_start_2 = None
+        t_end_1 = None
+        t_end_2 = None
+        time_average = False
+    else:
+        print 'Error (select_common_time): invalid option ' + option
+        sys.exit()
+    return file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average
+
+
 # Compare one simulation to another. Assumes the simulations have monthly averaged output. They don't need to be the same length.
 
 # Keyword arguments:
@@ -161,46 +207,12 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
-    # Concatenate the time arrays from all files
-    time_1 = calc_timeseries(output_files_1, option='time')
-    time_2 = calc_timeseries(output_files_2, option='time')
-    # Find the last time index in the shortest simulation
-    time_index = min(time_1.size, time_2.size) - 1
-    file_path_1, time_index_1 = find_time_index(output_files_1, time_index)
-    file_path_2, time_index_2 = find_time_index(output_files_2, time_index)
-    # Make sure we got this right
-    if netcdf_time(file_path_1, monthly=monthly)[time_index_1] != netcdf_time(file_path_2, monthly=monthly)[time_index_2]:
-        print 'Error (plot_everything_diff): something went wrong when matching time indices between the two files.'
-        sys.exit()
+    file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly)
+    # Set date string
     if option == 'last_year':
-        # Add 1 to get the upper bound on the time range we care about
-        t_end_1 = time_index_1 + 1
-        t_end_2 = time_index_2 + 1
-        # Find the index 12 before that
-        t_start_1 = t_end_1 - 12
-        t_start_2 = t_end_2 - 12
-        # Make sure it's still contained within one file
-        if t_start_1 < 0 or t_start_2 < 0:
-            print "Error (plot_everything_diff): option last_year doesn't work if that year isn't contained within one file, for both simulations."
-            sys.exit()
-        # Set the other options
-        time_index_1 = None
-        time_index_2 = None
-        time_average = True
-        # Set date string
         date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
     elif option == 'last_month':
-        # Set the other options
-        t_start_1 = None
-        t_start_2 = None
-        t_end_1 = None
-        t_end_2 = None
-        time_average = False
-        # Set date string
         date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
-    else:
-        print 'Error (plot_everything_diff): invalid option ' + option
-        sys.exit()
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']

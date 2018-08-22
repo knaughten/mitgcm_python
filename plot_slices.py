@@ -16,6 +16,7 @@ from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_strin
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax
 from diagnostics import t_minus_tf
+from constants import deg_string
 
 
 # Helper function to determine whether this is a slice along latitude or along longitude, and format the string describing the slice.
@@ -175,11 +176,11 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
 
     # Plot
     if var == 'temp':
-        slice_plot(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Temperature ($^{\circ}$C)', date_string=date_string, fig_name=fig_name)
+        slice_plot(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
         slice_plot(salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Salinity (psu)', date_string=date_string, fig_name=fig_name)
     elif var == 'tminustf':
-        slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=r'Difference from in-situ freezing point ($^{\circ}$C)', date_string=date_string, fig_name=fig_name)
+        slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Difference from in-situ freezing point ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
@@ -216,7 +217,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     # Read variables and make plots
     if var == 'temp':
         temp_1, temp_2 = read_and_mask_both('THETA')
-        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Change in temperature ($^{\circ}$C)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
         salt_1, salt_2 = read_and_mask_both('SALT')
         slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
@@ -248,9 +249,9 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
     cmap = [cmap_t, cmap_s]
     cax = [cax_t, cax_s]
     if diff:
-        title = [r'Change in temperature ($^{\circ}$C)', 'Change in salinity (psu)']
+        title = ['Change in temperature ('+deg_string+'C)', 'Change in salinity (psu)']
     else:
-        title = [r'Temperature ($^{\circ}$C)', 'Salinity (psu)']
+        title = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         # Plot patches

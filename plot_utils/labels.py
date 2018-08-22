@@ -7,7 +7,7 @@ import numpy as np
 import sys
 
 from ..file_io import netcdf_time
-from ..constants import fris_bounds
+from ..constants import fris_bounds, deg_string
 
 
 # On a timeseries plot with axes ax, label every month (monthly_ticks) or every year (yearly_ticks)
@@ -48,12 +48,12 @@ def latlon_label (x, suff_minus, suff_plus, max_decimals):
 
 def lon_label (x, max_decimals):
 
-    return latlon_label(x, r'$^{\circ}$W', r'$^{\circ}$E', max_decimals)
+    return latlon_label(x, deg_string+'W', deg_string+'E', max_decimals)
 
 
 def lat_label (x, max_decimals):
 
-    return latlon_label(x, r'$^{\circ}$S', r'$^{\circ}$N', max_decimals)
+    return latlon_label(x, deg_string+'S', deg_string+'N', max_decimals)
 
 
 # Set the limits of the longitude and latitude axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.

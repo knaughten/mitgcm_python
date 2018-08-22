@@ -11,6 +11,7 @@ from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
 from diagnostics import total_melt
 from averaging import over_area, volume_average, vertical_average_column
 from interpolation import interp_bilinear
+from constants import deg_string
 
 
 # Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -246,15 +247,15 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_fris_melt.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, monthly=True):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None monthly=True):
 
     if option == 'fris_melt':
         print "Error (calc_timeseries_diff): this function can't be used for option="+option
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
@@ -314,7 +315,7 @@ def set_parameters (var):
         if var == 'fris_temp':
             var_name = 'THETA'
             title = 'Volume-averaged temperature in FRIS cavity'
-            units = r'$^{\circ}$C'
+            units = deg_string+'C'
         elif var == 'fris_salt':
             var_name = 'SALT'
             title = 'Volume-averaged salinity in FRIS cavity'

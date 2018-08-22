@@ -16,6 +16,7 @@ from plot_utils.labels import latlon_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf, find_aice_min_max
+from constants import deg_string
 
 
 # Basic lat-lon plot of any variable.
@@ -126,7 +127,7 @@ def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None,
 def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
 
     if var == 'temp':
-        title = r'Bottom water temperature ($^{\circ}$C)'
+        title = 'Bottom water temperature (' + deg_string + 'C)'
     elif var == 'salt':
         title = 'Bottom water salinity (psu)'
     latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
@@ -150,7 +151,7 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
 
     if var == 'temp':
-        title = r'Sea surface temperature ($^{\circ}$C)'
+        title = 'Sea surface temperature (' + deg_string + 'C)'
     elif var == 'salt':
         title = 'Sea surface salinity (psu)'
     latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
@@ -218,7 +219,7 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
         title_end = '\n(minimum over depth)'
-    latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=r'Difference from in-situ freezing point ($^{\circ}$C)'+title_end, fig_name=fig_name, figsize=figsize)
+    latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=r'Difference from in-situ freezing point ('+deg_string+'C)'+title_end, fig_name=fig_name, figsize=figsize)
 
 
 # Plot horizontal ocean or sea ice velocity: magnitude overlaid with vectors.
@@ -499,13 +500,13 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         title = 'Change in ice shelf melt rate (m/y)'
     elif var == 'bwtemp':
         data_diff = select_bottom(temp_2 - temp_1)
-        title = r'Change in bottom water temperature ($^{\circ}$C)'
+        title = r'Change in bottom water temperature ('+deg_string+'C)'
     elif var == 'bwsalt':
         data_diff = select_bottom(salt_2 - salt_1)
         title = 'Change in bottom water salinity (psu)'
     elif var == 'sst':
         data_diff = temp_2[0,:] - temp_1[0,:]
-        title = r'Change in sea surface temperature ($^{\circ}$C)'
+        title = r'Change in sea surface temperature ('+deg_string+'C)'
     elif var == 'sss':
         data_diff = salt_2[0,:] - salt_1[0,:]
         title = 'Change in sea surface salinity (psu)'

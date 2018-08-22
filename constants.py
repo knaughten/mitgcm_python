@@ -23,6 +23,8 @@ es0 = 611
 # Coefficient for specific humidity calculation
 sh_coeff = 0.62197
 
+# Degrees formatted nicely in a string
+deg_string = r'$^{\circ}$'
 
 # Bounds on FRIS (a few bits of Eastern Weddell ice shelves are included too - use Grid.fris_mask to get just FRIS. These bounds are for plotting.)
 # lon_min, lon_max, lat_min, lat_max
