@@ -23,7 +23,7 @@ def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./',
     else:
         print 'Error (prelim_plots): please specify a valid polynya.'
         sys.exit()    
-    point_string = lon_label(lon0) + ',' + lat_label(lat0)
+    point_string = lon_label(lon0, 0) + ',' + lat_label(lat0, 0)
 
     # Make sure proper directories
     polynya_dir = real_dir(polynya_dir)
