@@ -41,9 +41,9 @@ def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./',
     file_path, file_path_baseline, time_index, time_index_baseline, t_start, t_start_baseline, t_end, t_end_baseline, time_average = select_common_time(output_files, baseline_files, option=option)
     # Set date string
     if option == 'last_year':
-        date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
+        date_string = 'year beginning ' + parse_date(file_path=file_path, time_index=t_start)
     elif option == 'last_month':
-        date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
+        date_string = parse_date(file_path=file_path, time_index=time_index)
 
     # Timeseries of depth-averaged temperature and salinity through the centre of the polynya
     var_names = ['THETA', 'SALT']
