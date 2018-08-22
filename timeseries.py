@@ -331,7 +331,7 @@ def set_parameters (var):
         elif var == 'salt_polynya':
             var_name = 'SALT'
             title = 'Depth-averaged salinity in polynya'
-            units = psu
+            units = 'psu'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
