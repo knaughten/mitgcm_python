@@ -333,7 +333,7 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=Fals
             write_var(melt, 'fris_total_melt', title_melt, units)
             write_var(freeze, 'fris_total_freeze', title_freeze, units)
         else:
-            data = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1]
+            data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
             write_var(data, ts_name, title, units)
 
     # Finished
