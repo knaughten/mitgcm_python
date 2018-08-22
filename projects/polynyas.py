@@ -50,8 +50,8 @@ def prelim_plots (polynya_dir, baseline_dir, timeseries_file='timeseries_polynya
     elif option == 'last_month':
         date_string = parse_date(file_path=file_path, time_index=time_index)
 
-    # Timeseries of depth-averaged temperature and salinity through the centre of the polynya
-    var_names = ['temp_polynya', 'salt_polynya']
+    # Timeseries of depth-averaged temperature and salinity through the centre of the polynya, as well as FRIS basal mass balance
+    var_names = ['temp_polynya', 'salt_polynya', 'fris_melt']
     for var in var_names:
         read_plot_timeseries(var, polynya_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png')
         # Repeat for anomalies from baseline

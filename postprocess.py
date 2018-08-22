@@ -120,8 +120,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     # Slice plots
     read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=0, zmin=-2000, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_maud_rise.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=-30, zmin=-2000, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_near_shelf.png', date_string=date_string)
+    read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string
 
 
 # Given lists of files from two simulations, find the file and time indices corresponding to the last year (if option='last_year') or last month/timestep (if option='last_month') in the shortest simulation.
@@ -276,7 +275,7 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=Fals
 
     # Timeseries to compute
     if polynya:
-        timeseries_types = ['temp_polynya', 'salt_polynya']
+        timeseries_types = ['temp_polynya', 'salt_polynya', 'fris_melt']
         if lon0 is None or lat0 is None:
             print 'Error (precompute_timeseries): must set lon0 and lat0'
             sys.exit()
