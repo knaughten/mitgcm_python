@@ -71,7 +71,7 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=lon0, lat0=lat0, fig_name=None, monthly=True):
+def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
