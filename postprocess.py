@@ -270,11 +270,18 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 # Arguments:
 # mit_file: path to a single NetCDF file output by MITgcm
 # timeseries_file: path to a NetCDF file for saving timeseries. If it exists, it will be appended to; if it doesn't exist, it will be created.
+# polynya: if True, just save the depth-averaged temperature and salinity through the centre of the polynya given by (lon0, lat0).
 
-def precompute_timeseries (mit_file, timeseries_file, monthly=True):
+def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=False, lon0=None, lat0=None):
 
     # Timeseries to compute
-    timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    if polynya:
+        timeseries_types = ['temp_polynya', 'salt_polynya']
+        if lon0 is None or lat0 is None:
+            print 'Error (precompute_timeseries): must set lon0 and lat0'
+            sys.exit()
+    else:
+        timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)

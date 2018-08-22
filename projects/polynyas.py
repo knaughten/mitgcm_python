@@ -3,17 +3,16 @@
 ##################################################################
 
 from ..grid import Grid
-from ..timeseries import calc_timeseries, calc_timeseries_diff
-from ..plot_1d import make_timeseries_plot
+from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from ..postprocess import build_file_list, select_common_time
+from ..postprocess import build_file_list, select_common_time, precompute_timeseries
 from ..utils import real_dir
-from ..constants import deg_string
-from ..plot_utils.labels import lon_label, lat_label, parse_date
+from ..plot_utils.labels import parse_date
 
-# A whole bunch of basic preliminary plots to analyse things.
-def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False, polynya=None):
+
+# Precompute timeseries for temperature and salinity, depth-averaged in the centre of the given polynya.
+def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
     if polynya == 'maud_rise':
         lon0 = 0
@@ -22,9 +21,15 @@ def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./',
         lon0 = -30
         lat0 = -70
     else:
-        print 'Error (prelim_plots): please specify a valid polynya.'
-        sys.exit()    
-    point_string = lon_label(lon0, 0) + ',' + lat_label(lat0, 0)
+        print 'Error (precompute_polynya_timeseries): please specify a valid polynya.'
+        sys.exit()
+    precompute_timeseries(mit_file, timeseries_file, polynya=True, lon0=lon0, lat0=lat0)
+
+    
+
+# A whole bunch of basic preliminary plots to analyse things.
+# First must run precompute_polynya_timeseries.
+def prelim_plots (polynya_dir, baseline_dir, timeseries_file='timeseries_polynya.nc', grid_path='../grid/', fig_dir='./', option='last_year', unravelled=False):
 
     # Make sure proper directories
     polynya_dir = real_dir(polynya_dir)
@@ -46,16 +51,11 @@ def prelim_plots (polynya_dir, baseline_dir, grid_path='../grid/', fig_dir='./',
         date_string = parse_date(file_path=file_path, time_index=time_index)
 
     # Timeseries of depth-averaged temperature and salinity through the centre of the polynya
-    var_names = ['THETA', 'SALT']
-    long_names = ['temperature', 'salinity']
-    short_names = ['temp', 'salt']
-    units = [deg_string+'C', 'psu']
-    for i in range(2):
-        time, var = calc_timeseries(output_files, option='point_vavg', grid=grid, var_name=var_names[i], lon0=lon0, lat0=lat0)
-        make_timeseries_plot(time, var, title='Depth-averaged '+long_names[i]+' at '+point_string, units=units[i], fig_name=fig_dir+'timeseries_polynya_'+short_names[i]+'.png')
+    var_names = ['temp_polynya', 'salt_polynya']
+    for var in var_names:
+        read_plot_timeseries(var, polynya_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png')
         # Repeat for anomalies from baseline
-        time, var_diff = calc_timeseries_diff(baseline_files, output_files, option='point_vavg', grid=grid, var_name=var_names[i], lon0=lon0, lat0=lat0)
-        make_timeseries_plot(time, var, title='Change in depth-averaged '+long_names[i]+' at '+point_string, units=units[i], fig_name=fig_dir+'timeseries_polynya_'+short_names[i]+'_diff.png')
+        read_plot_timeseries_diff(var, baseline_dir+timeseries_file, polynya_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png')
 
     # Lat-lon plots over the last year/month
     var_names = ['bwtemp', 'bwsalt', 'vel', 'ismr']

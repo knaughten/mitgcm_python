@@ -269,6 +269,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, 
 #      'seaice_area': total sea ice area
 #      'fris_temp': volume-averaged temperature in the FRIS cavity
 #      'fris_salt': volume-averaged salinity in the FRIS cavity
+#      'temp_polynya': depth-averaged temperature through the centre of a polynya
+#      'salt_polynya': depth-averaged salinity through the centre of a polynya
 def set_parameters (var):
 
     xmin = None
@@ -320,6 +322,16 @@ def set_parameters (var):
             var_name = 'SALT'
             title = 'Volume-averaged salinity in FRIS cavity'
             units = 'psu'
+    elif var in ['temp_polynya', 'salt_polynya']:
+        option = 'point_vavg'
+        if var == 'temp_polynya':
+            var_name = 'THETA'
+            title = 'Depth-averaged temperature in polynya'
+            units = deg_string+'C'
+        elif var == 'salt_polynya':
+            var_name = 'SALT'
+            title = 'Depth-averaged salinity in polynya'
+            units = psu
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
@@ -328,7 +340,7 @@ def set_parameters (var):
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries (var, file_path, grid=None, monthly=True):
+def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
     option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
@@ -339,7 +351,7 @@ def calc_special_timeseries (var, file_path, grid=None, monthly=True):
         time, melt, freeze = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        time, data = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
         if var == 'seaice_area':
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -347,7 +359,7 @@ def calc_special_timeseries (var, file_path, grid=None, monthly=True):
 
 
 # Interface to calc_timeseries_diff for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, monthly=True):
+def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
     option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
@@ -361,7 +373,7 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, mont
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, monthly=monthly)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
         if var == 'seaice_area':
             # Convert from m^2 to million km^2
             data_diff *= 1e-12

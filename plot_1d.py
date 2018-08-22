@@ -67,10 +67,11 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
 # Optional keyword arguments:
 # precomputed: indicates that the timeseries have been precomputed (by function precompute_timeseries in postprocess.py) and saved in file_path
 # grid: as in function read_plot_latlon
+# lon0, lat0: point to interpolate to for var='temp_polynya' or 'salt_polynya'
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name=None, monthly=True):
+def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=lon0, lat0=lat0, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
@@ -91,7 +92,7 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name
         if precomputed:
             data = read_netcdf(file_path, var)
         else:
-            time, data = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+            time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         data_2 = None
         
     # Plot
@@ -101,7 +102,7 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, fig_name
 
 # User interface for difference timeseries. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
 # Arguments are the same as in read_plot_timeseries, but two file paths/lists are supplied. It is assumed the two simulations start at the same time, but it's okay if one is longer than the other.
-def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, fig_name=None, monthly=True):
+def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
@@ -131,7 +132,7 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
         if precomputed:
             time, data_diff = read_and_trim(var)
         else:
-            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         data_diff_2 = None
 
     # Plot
