@@ -20,6 +20,9 @@ def get_polynya_loc (polynya):
     elif polynya == 'near_shelf':
         lon0 = -30
         lat0 = -70
+    elif polynya == 'free':
+        lon0 = -25
+        lat0 = -70
     else:
         print 'Error (get_polynya_loc): please specify a valid polynya.'
         sys.exit()
