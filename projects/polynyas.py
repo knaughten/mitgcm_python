@@ -197,7 +197,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         elif var == 'bwsalt':
             data = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=-1), grid))
         elif var == 'ismr':
-            data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=-1)))
+            data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=-1), grid))
         elif var == 'vel':
             u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
             v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
@@ -217,7 +217,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             # Read data for this simulation and get the anomaly
             data.append(read_and_process(var_names[j], base_dir+output_dir[i]+mit_file) - baseline)
             # Get min and max values and update global min/max as needed
-            vmin_tmp, vmax_tmp = var_min_max(data, grid, zoom_fris=zoom_fris)
+            vmin_tmp, vmax_tmp = var_min_max(data[i-1], grid, zoom_fris=zoom_fris)
             vmin = min(vmin, vmin_tmp)
             vmax = max(vmax, vmax_tmp)
         # Now we can plot
@@ -230,7 +230,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         # Colourbar
         plt.colorbar(img, cax=cax, orientation='horizontal')
         # Main title
-        plt.suptitle(titles[j], fontsize=22)
+        plt.suptitle(titles[j]+' (add date later)', fontsize=22)
         finished_plot(fig) #, fig_name=fig_dir+var_names[j]+'_diff.png')
             
             
