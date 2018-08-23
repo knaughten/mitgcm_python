@@ -85,7 +85,7 @@ def find_aice_min_max (aice, grid):
     return np.argmin(total_aice), np.argmax(total_aice)
 
 
-# Calculate the barotropic streamfunction.
+# Calculate the barotropic transport streamfunction.
 def barotropic_streamfunction (u, grid):
 
     # Get integrands and partial cell fractions
