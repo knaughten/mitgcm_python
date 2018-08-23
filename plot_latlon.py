@@ -42,7 +42,6 @@ from constants import deg_string
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 # figsize: (width, height) of figure in inches.
 
-
 def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
