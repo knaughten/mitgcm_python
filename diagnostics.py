@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 from constants import rho_ice
-from utils import z_to_xyz, add_time_dim
+from utils import z_to_xyz, add_time_dim, xy_to_xyz
 from averaging import area_integral
 
 
@@ -84,6 +84,28 @@ def find_aice_min_max (aice, grid):
     total_aice = area_integral(aice, grid, time_dependent=True)
     return np.argmin(total_aice), np.argmax(total_aice)
 
+
+# Calculate the barotropic streamfunction.
+def barotropic_streamfunction (u, grid):
+
+    # Get integrands and partial cell fractions
+    # hfac and dz should be 3D
+    hfac = grid.hfac_w
+    dz = z_to_xyz(grid.dz, grid)
+    # dy should be 2D
+    dy = grid.dy_w
+    if len(u.shape)==4:
+        # Time-dependent. Add a time dimension to everything.
+        num_time = u.shape[0]
+        hfac = add_time_dim(hfac, num_time)
+        dz = add_time_dim(dz, num_time)
+        dy = add_time_dim(dy, num_time)
+    # Vertically integrate
+    udz_int = np.sum(u*hfac*dz, axis=-3)
+    # Indefinite integral from south to north, and convert to Sv
+    return np.cumsum(udz_int*dy, axis=-2)*1e-6
+    
+    
 
 
 
