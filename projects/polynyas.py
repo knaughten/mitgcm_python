@@ -12,9 +12,11 @@ from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff, latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..postprocess import build_file_list, select_common_time, precompute_timeseries
-from ..utils import real_dir, mask_land_ice
+from ..utils import real_dir, mask_land_ice, mask_3d, mask_except_ice, select_bottom, convert_ismr, var_min_max
+from ..constants import deg_string
 from ..plot_utils.labels import parse_date
 from ..plot_utils.windows import set_panels, finished_plot
+from ..plot_utils.latlon import prepare_vel
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -143,7 +145,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
-    print 'Plotting restoring masks'
+    '''print 'Plotting restoring masks'
     # 3x1 plot of restoring masks in the simulations where they exist
     fig, gs, cax = set_panels('1x3C1')
     for i in [0, 2, 3]:
@@ -183,8 +185,59 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')
+    finished_plot(fig, fig_name=fig_dir+'aice.png')'''
 
+    # 3x1 difference plots of polynya simulations minus baseline
+    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
+    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)']
+    # Inner function to read variable from a file and process appropriately
+    def read_and_process (var, file_path):
+        if var == 'bwtemp':
+            data = select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=-1), grid))
+        elif var == 'bwsalt':
+            data = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=-1), grid))
+        elif var == 'ismr':
+            data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=-1)))
+        elif var == 'vel':
+            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
+            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
+            data = prepare_vel(u, v, grid)[0]
+        return data
+    # Now make the plots
+    zoom_fris = False
+    for j in range(len(var_names)):
+        print 'Plotting ' + var_names[j]
+        fig, gs, cax = set_panels('1x3C1')
+        # Read baseline data
+        baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
+        vmin = 0
+        vmax = 0
+        data = []
+        for i in range(1,4):
+            # Read data for this simulation and get the anomaly
+            data.append(read_and_process(var_names[j], base_dir+output_dir[i]+mit_file) - baseline)
+            # Get min and max values and update global min/max as needed
+            vmin_tmp, vmax_tmp = var_min_max(data, grid, zoom_fris=zoom_fris)
+            vmin = min(vmin, vmin_tmp)
+            vmax = max(vmax, vmax_tmp)
+        # Now we can plot
+        for i in range(1,4):
+            ax = plt.subplot(gs[0,i-1])
+            img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
+            if i > 0:
+                # Remove latitude labels
+                ax.set_yticklabels([])
+        # Colourbar
+        plt.colorbar(img, cax=cax, orientation='horizontal')
+        # Main title
+        plt.suptitle(titles[j], fontsize=22)
+        finished_plot(fig) #, fig_name=fig_dir+var_names[j]+'_diff.png')
+            
+            
+            
+        
+
+
+    # Zoom difference plots in
     # 2x2 plot of velocity (zoomed in and out)
-    # 3x1 difference plots (each polynya minus baseline) of bwsalt, bwtemp, ismr, vavg (zoomed in and out)
     # Combined timeseries (4 lines) for FRIS net melting, Brunt & Riiser-Larsen net melting, Fimbul net melting

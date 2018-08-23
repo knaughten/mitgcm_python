@@ -366,7 +366,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     date_string = check_date_string(date_string, file_path, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
-    def read_and_mask (var_name, mask_option, check_second=False):
+    def read_and_mask (var_name, mask_option, check_second=False, gtype='t'):
         # Do we need to choose the right file?
         if check_second and second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, var_name)
@@ -376,11 +376,11 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         data = read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         # Apply the correct mask
         if mask_option == 'except_ice':
-            data = mask_except_ice(data, grid)
+            data = mask_except_ice(data, grid, gtype=gtype)
         elif mask_option == '3d':
-            data = mask_3d(data, grid)
+            data = mask_3d(data, grid, gtype=gtype)
         elif mask_option == 'land_ice':
-            data = mask_land_ice(data, grid)
+            data = mask_land_ice(data, grid, gtype=gtype)
         else:
             print 'Error (read_and_mask): invalid mask_option ' + mask_option
             sys.exit()
@@ -406,11 +406,11 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     if var == 'saltflx':
         saltflx = read_and_mask('SIempmr', 'land_ice')
     if var == 'vel':
-        u = read_and_mask('UVEL', '3d', check_second=True)
-        v = read_and_mask('VVEL', '3d', check_second=True)
+        u = read_and_mask('UVEL', '3d', check_second=True, gtype='u')
+        v = read_and_mask('VVEL', '3d', check_second=True, gtype='v')
     if var == 'velice':
-        uice = read_and_mask('SIuice', 'land_ice', check_second=True)
-        vice = read_and_mask('SIvice', 'land_ice', check_second=True)
+        uice = read_and_mask('SIuice', 'land_ice', check_second=True, gtype='u')
+        vice = read_and_mask('SIvice', 'land_ice', check_second=True, gtype='v')
     if var == 'psi':
         psi = read_and_mask('PsiVEL', '3d')
         
