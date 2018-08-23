@@ -130,6 +130,11 @@ def combined_plots (base_dir='./', fig_dir='./'):
     expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
     mit_file = 'output_001.nc'
     timeseries_files = ['timeseries.nc', 'timeseries_polynya_free.nc', 'timeseries_polynya_maud_rise.nc', 'timeseries_polynya_near_shelf.nc']
+    restoring_file = 'sss_restoring.nc'
+
+    # Smaller boundaries on surface plots (where ice shelves are ignored)
+    xmin_sfc = -67
+    ymin_sfc = -80
 
     # Make sure real directories
     base_dir = real_dir(base_dir)
@@ -138,7 +143,28 @@ def combined_plots (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
-    print 'Plotting aice'
+    print 'Plotting restoring masks'
+    # 3x1 plot of restoring masks in the simulations where they exist
+    fig, gs, cax = set_panels('1x3C1')
+    for i in [0, 2, 3]:
+        # Read the restoring mask at the surface
+        restoring = read_netcdf(base_dir+output_dir[i]+restoring_file, 'restoring_mask')[0,:]
+        # Mask land and ice shelves
+        restoring = mask_land_ice(restoring, grid)
+        # Make plot
+        ax = plt.subplot(gs[0,max(i-1,0)])
+        img = latlon_plot(restoring, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
+        if i > 0:
+            # Remove latitude labels
+            ax.set_yticklabels([])
+    # Colourbar
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    # Main title
+    plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
+    finished_plot(fig) #, fig_name=fig_dir+'restoring_mask.png')
+        
+
+    '''print 'Plotting aice'
     # 2x2 plot of sea ice
     fig, gs, cax = set_panels('2x2C1')
     for i in range(4):
@@ -147,7 +173,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         aice = mask_land_ice(aice, grid)
         # Make plot
         ax = plt.subplot(gs[i/2,i%2])
-        img = latlon_plot(aice, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=-67, ymin=-80, title=expt_names[i])
+        img = latlon_plot(aice, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
         if i%2==1:
             # Remove latitude labels
             ax.set_yticklabels([])
@@ -158,8 +184,8 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')
+    finished_plot(fig, fig_name=fig_dir+'aice.png')'''
 
-    # 3x1 plot of restoring masks (baseline, Maud Rise, near shelf)
-    # 3x1 difference plots (each polynya minus baseline) of bwsalt, bwtemp, ismr, vavg. Will it zoom or not?
+    # 2x2 plot of velocity (zoomed in and out)
+    # 3x1 difference plots (each polynya minus baseline) of bwsalt, bwtemp, ismr, vavg (zoomed in and out)
     # Combined timeseries (4 lines) for FRIS net melting, Brunt & Riiser-Larsen net melting, Fimbul net melting
