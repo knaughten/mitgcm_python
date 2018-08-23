@@ -26,20 +26,24 @@ from constants import deg_string
 # grid: Grid object
 
 # Optional keyword arguments:
+# ax: To make a plot within a larger figure, pass an Axes object to this argument. Otherwise, a new figure with just one subplot will be created.
 # gtype: as in function Grid.get_lon_lat
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
+# make_cbar: whether to make a colourbar (default True)
 # ctype: as in function set_colours
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
 # date_string: something to write on the bottom of the plot about the date
 # title: a title to add to the plot
+# titlesize: font size for title
 # return_fig: if True, return the figure and axis variables so that more work can be done on the plot (eg adding titles). Default False.
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, return_fig=False, fig_name=None, change_points=None, figsize=(8,6)):
+
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
@@ -58,7 +62,11 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     # Prepare quadrilateral patches
     lon, lat, data_plot = cell_boundaries(data, grid, gtype=gtype)
 
-    fig, ax = plt.subplots(figsize=figsize)
+    # Make the figure and axes, if needed
+    existing_ax = ax is not None
+    if not existing_ax:
+        fig, ax = plt.subplots(figsize=figsize)
+        
     if include_shelf:
         # Shade land in grey
         shade_land(ax, grid, gtype=gtype)
@@ -70,8 +78,9 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid)
-    # Add a colourbar
-    plt.colorbar(img, extend=extend)
+    if make_cbar:
+        # Add a colourbar
+        plt.colorbar(img, extend=extend)
     # Make nice axes
     latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     if date_string is not None:
@@ -79,11 +88,11 @@ def latlon_plot (data, grid, gtype='t', include_shelf=True, ctype='basic', vmin=
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     if title is not None:
         # Add a title
-        plt.title(title, fontsize=18)
+        plt.title(title, fontsize=titlesize)
 
     if return_fig:
         return fig, ax
-    else:
+    elif not existing_ax:
         finished_plot(fig, fig_name=fig_name)
 
 
@@ -630,15 +639,11 @@ def plot_aice_minmax (file_path, year, grid=None, fig_name=None, monthly=True, f
     # Plot
     fig, gs, cax = set_panels('1x2C1', figsize=figsize)
     for t in range(2):
-        lon, lat, aice_plot = cell_boundaries(aice_minmax[t], grid)
         ax = plt.subplot(gs[0,t])
-        shade_land_ice(ax, grid)
-        img = ax.pcolormesh(lon, lat, aice_plot, vmin=0, vmax=1)
-        latlon_axes(ax, lon, lat)
+        latlon_plot(aice_minmax[t], grid, ax=ax, include_shelf=False, vmin=0, vmax=1, title=parse_date(date=time_minmax[t]), make_cbar=False)
         if t == 1:
             # Don't need latitude labels a second time
             ax.set_yticklabels([])
-        plt.title(parse_date(date=time_minmax[t]), fontsize=18)
     # Colourbar
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title above

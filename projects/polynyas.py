@@ -7,8 +7,10 @@ from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..postprocess import build_file_list, select_common_time, precompute_timeseries
-from ..utils import real_dir
+from ..utils import real_dir, mask_land_ice
 from ..plot_utils.labels import parse_date
+from ..plot_utils.windows import set_panels
+from ..plot_utils.latlon import cell_boundaries, shade_land_ice
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -114,3 +116,39 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
         read_plot_ts_slice(file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, date_string=date_string, fig_name='ts_slice_polynya'+zoom_key+'.png')
         # Repeat for anomalies from baseline
         read_plot_ts_slice_diff(file_path_baseline, file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index_baseline, t_start=t_start_baseline, t_end=t_end_baseline, time_average=time_average, time_index_2=time_index, t_start_2=t_start, t_end_2=t_end, date_string=date_string, fig_name='ts_slice_polynya'+zoom_key+'_diff.png')
+
+
+def combined_plots (base_dir='./', fig_dir='./'):
+
+    grid_path = 'WSB_001/grid/'
+    output_dir = ['WSB_001/output/', 'WSB_007/output/', 'WSB_002/output/', 'WSB_003/output/']
+    expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
+    mit_file = 'output_001.nc'
+    timeseries_files = ['timeseries.nc', 'timeseries_polynya_free.nc', 'timeseries_polynya_maud_rise.nc', 'timeseries_polynya_near_shelf.nc']
+
+    grid = Grid(grid_path)
+
+    # 2x2 plot of sea ice
+    fig, gs, cax = set_panels('2x2C1')
+    for i in range(4):
+
+        
+        # Read and mask data
+        aice = read_netcdf(base_dir+output_dir[i]+mit_file, 'SIarea', time_index=-1)
+        aice = mask_land_ice(aice, grid)
+        lon, lat, aice_plot = cell_boundaries(aice, grid)
+        # Make plot
+        ax = plt.subplot(gs[i/2,i%2])
+        shade_land_ice(ax, grid)
+        img = ax.pcolormesh(lon, lat, aice_plot, vmin=0, vmax=1)
+        latlon_axes(ax, lon, lat)
+        if i%2==1:
+            # Remove latitude labels
+            ax.set_yticklabels([])
+        if i/2==0:
+            # Remove longitude labels
+            ax.set_xticklabels([])
+        plt.title(expt_names[i], fontsize=16)
+    # Colourbar
+    plt.colourbar(img, cax=cax, orientation='horizontal')
+    # Main title 
