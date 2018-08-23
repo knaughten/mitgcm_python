@@ -203,35 +203,39 @@ def combined_plots (base_dir='./', fig_dir='./'):
             v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
             data = prepare_vel(u, v, grid)[0]
         return data
-    # Now make the plots
-    zoom_fris = False
-    for j in range(len(var_names)):
-        print 'Plotting ' + var_names[j]
-        fig, gs, cax = set_panels('1x3C1')
-        # Read baseline data
-        baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
-        vmin = 0
-        vmax = 0
-        data = []
-        for i in range(1,4):
-            # Read data for this simulation and get the anomaly
-            data.append(read_and_process(var_names[j], base_dir+output_dir[i]+mit_file) - baseline)
-            # Get min and max values and update global min/max as needed
-            vmin_tmp, vmax_tmp = var_min_max(data[i-1], grid, zoom_fris=zoom_fris)
-            vmin = min(vmin, vmin_tmp)
-            vmax = max(vmax, vmax_tmp)
-        # Now we can plot
-        for i in range(1,4):
-            ax = plt.subplot(gs[0,i-1])
-            img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
-            if i > 0:
-                # Remove latitude labels
-                ax.set_yticklabels([])
-        # Colourbar
-        plt.colorbar(img, cax=cax, orientation='horizontal')
-        # Main title
-        plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-        finished_plot(fig) #, fig_name=fig_dir+var_names[j]+'_diff.png')
+    # Now make the plots, zoomed both in and out
+    for zoom_fris in [False, True]:
+        if zoom_fris:
+            zoom_string = '_zoom'
+        else:
+            zoom_string = ''
+        for j in range(len(var_names)):
+            print 'Plotting ' + var_names[j]
+            fig, gs, cax = set_panels('1x3C1')
+            # Read baseline data
+            baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
+            vmin = 0
+            vmax = 0
+            data = []
+            for i in range(1,4):
+                # Read data for this simulation and get the anomaly
+                data.append(read_and_process(var_names[j], base_dir+output_dir[i]+mit_file) - baseline)
+                # Get min and max values and update global min/max as needed
+                vmin_tmp, vmax_tmp = var_min_max(data[i-1], grid, zoom_fris=zoom_fris)
+                vmin = min(vmin, vmin_tmp)
+                vmax = max(vmax, vmax_tmp)
+            # Now we can plot
+            for i in range(1,4):
+                ax = plt.subplot(gs[0,i-1])
+                img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
+                if i > 0:
+                    # Remove latitude labels
+                    ax.set_yticklabels([])
+            # Colourbar
+            plt.colorbar(img, cax=cax, orientation='horizontal')
+            # Main title
+            plt.suptitle(titles[j]+' (add date later)', fontsize=22)
+            finished_plot(fig) #, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
             
             
             
