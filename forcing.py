@@ -349,11 +349,11 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
         file_head = 'ERAinterim_'            
 
     for var in var_names:
-        file_in = bin_dir + file_head + var + '_' + str(year)
+        file_in = bin_dir + file_head + var + '_' + str(last_year)
         print 'Reading ' + file_in
         # Select the last time index
         data = read_binary(file_in, [nlon, nlat], 'xyt', prec=prec)[-1,:]
-        file_out = out_dir + file_head + var + '_' + str(year+1)
+        file_out = out_dir + file_head + var + '_' + str(last_year+1)
         print 'Writing ' + file_out
         write_binary(data, file_out, prec=prec)
         
