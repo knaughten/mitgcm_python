@@ -2,7 +2,7 @@ import numpy as np
 import sys
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid
-from file_io import read_netcdf, write_binary, NCfile, netcdf_time
+from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary
 from utils import real_dir, fix_lon_range, mask_land_ice
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff
@@ -308,3 +308,57 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
         out_file = out_head + var_out[i] + out_tail
         print 'Writing ' + out_file
         write_binary(data, out_file, prec=prec)
+
+
+# If you run a simulation that goes until the end of the ERA-Interim or ERA5 record (eg 2017), it will die right before the end, because it needs the first time index of the next year (eg 2018) as an endpoint for interpolation.
+# To avoid this error, copy the last time index of the last year of data to a new file named correctly for the next year. So the model will just hold the atmospheric forcing constant for the last forcing step of the simulation.
+
+# Arguments:
+# bin_dir: path to directory containing ERA-Interim or ERA5 binary files
+# last_year: last year of data (eg 2017)
+
+# Optional keyword arguments:
+# option: 'era5' (default) or 'eraint'; this will determine the file naming convention
+# nlon, nlat: grid dimensions. Default is 1440x241 for ERA5 (which was cut off at 30S), and 480x241 for ERA-Interim.
+# out_dir: if set, will write the new file to this directory instead of bin_dir (useful if you don't have write access for bin_dir).
+# prec: precision of binary files; must match exf_iprec in input/data.exf
+def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out_dir=None, prec=32):
+
+    bin_dir = real_dir(bin_dir)
+    if out_dir is None:
+        out_dir = bin_dir
+        
+    if nlon is None:
+        if option == 'era5':
+            nlon = 1440
+        elif option == 'eraint':
+            nlon = 480
+        else:
+            print 'Error (era_dummy_year): invalid option ' + option
+            sys.exit()
+    if nlat is None:
+        # The same for both cases, assuming ERA5 was cut off at 30S
+        nlat = 241
+
+    # Figure out the file paths
+    if option == 'era5':
+        var_names = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+        file_head = 'ERA5_'
+    elif option == 'eraint':
+        var_names = ['msl', 'tmp2m_degC', 'spfh2m', 'u10m', 'v10m', 'rain', 'dsw', 'dlw']
+        file_head = 'ERAinterim_'            
+
+    for var in var_names:
+        file_in = bin_dir + file_head + var + '_' + str(year)
+        print 'Reading ' + file_in
+        # Select the last time index
+        data = read_binary(file_in, [nlon, nlat], 'xyt', prec=prec)[-1,:]
+        file_out = out_dir + file_head + var + '_' + str(year+1)
+        print 'Writing ' + file_out
+        write_binary(data, file_out, prec=prec)
+        
+
+    
+    
+
+    
