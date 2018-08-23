@@ -161,10 +161,9 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'restoring_mask.png')
+    finished_plot(fig, fig_name=fig_dir+'restoring_mask.png')
         
-
-    '''print 'Plotting aice'
+    print 'Plotting aice'
     # 2x2 plot of sea ice
     fig, gs, cax = set_panels('2x2C1')
     for i in range(4):
@@ -184,7 +183,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')'''
+    finished_plot(fig, fig_name=fig_dir+'aice.png')
 
     # 2x2 plot of velocity (zoomed in and out)
     # 3x1 difference plots (each polynya minus baseline) of bwsalt, bwtemp, ismr, vavg (zoomed in and out)

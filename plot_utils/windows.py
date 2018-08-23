@@ -27,7 +27,7 @@ def set_panels (key, figsize=None):
         elif key == '2x2C1':
             figsize = (10, 7.5)
         elif key == '1x3C1':
-            figsize = (13, 5)
+            figsize = (15, 5)
 
     fig = plt.figure(figsize=figsize)
     
