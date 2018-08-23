@@ -26,10 +26,10 @@ from constants import deg_string
 # grid: Grid object
 
 # Optional keyword arguments:
-# ax: To make a plot within a larger figure, pass an Axes object to this argument. Otherwise, a new figure with just one subplot will be created.
+# ax: To make a plot within a larger figure, pass an Axes object to this argument. The image (output of pcolormesh) will then be returned. Otherwise, a new figure with just one subplot will be created.
 # gtype: as in function Grid.get_lon_lat
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
-# make_cbar: whether to make a colourbar (default True)
+# make_cbar: whether to make a colourbar (default True). 
 # ctype: as in function set_colours
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
@@ -92,7 +92,9 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
 
     if return_fig:
         return fig, ax
-    elif not existing_ax:
+    elif existing_ax:
+        return img
+    else:
         finished_plot(fig, fig_name=fig_name)
 
 
@@ -640,7 +642,7 @@ def plot_aice_minmax (file_path, year, grid=None, fig_name=None, monthly=True, f
     fig, gs, cax = set_panels('1x2C1', figsize=figsize)
     for t in range(2):
         ax = plt.subplot(gs[0,t])
-        latlon_plot(aice_minmax[t], grid, ax=ax, include_shelf=False, vmin=0, vmax=1, title=parse_date(date=time_minmax[t]), make_cbar=False)
+        img = latlon_plot(aice_minmax[t], grid, ax=ax, include_shelf=False, vmin=0, vmax=1, title=parse_date(date=time_minmax[t]), make_cbar=False)
         if t == 1:
             # Don't need latitude labels a second time
             ax.set_yticklabels([])
