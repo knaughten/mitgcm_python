@@ -276,6 +276,19 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
     finished_plot(fig, fig_name=fig_name)
 
 
+# Plot horizontal velocity streamfunction (vertically integrated).
+
+# Arguments:
+# psi: 3D (depth x lat x lon) array of horizontal velocity streamfunction, already masked with hfac
+# Everything else as before.
+
+def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+
+    # Vertically integrate and convert to Sv
+    psi = np.sum(psi, axis=0)*1e-6
+    latlon_plot(psi, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title='Horizontal velocity streamfunction (Sv)\nvertically integrated', fig_name=fig_name, figsize=figsize)
+
+
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
 
 # Arguments:
@@ -294,6 +307,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 #      'tminustf': difference from in-situ freezing point
 #      'vel': horizontal velocity: magnitude overlaid with vectors
 #      'velice': sea ice velocity: magnitude overlaid with vectors
+#      'psi': horizontal velocity streamfunction
 # file_path: path to NetCDF file containing the necessary variable:
 #            'ismr': SHIfwFlx
 #            'bwtemp': THETA
@@ -309,6 +323,7 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
 #            'tminustf': THETA and SALT
 #            'vel': UVEL and VVEL
 #            'velice': SIuice and SIvice
+#            'psi': PsiVEL
 #            If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
 
 # There are three ways to deal with the Grid object:
@@ -386,6 +401,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     if var == 'velice':
         uice = read_and_mask('SIuice', 'land_ice', check_second=True)
         vice = read_and_mask('SIvice', 'land_ice', check_second=True)
+    if var == 'psi':
+        psi = read_and_mask('PsiVEL', '3d')
         
     # Plot
     if var == 'ismr':
@@ -416,6 +433,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         plot_vel(u, v, grid, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     elif var == 'velice':
         plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
+    elif var == 'psi':
+        plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
         sys.exit()
