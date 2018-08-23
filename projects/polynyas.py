@@ -210,8 +210,11 @@ def combined_plots (base_dir='./', fig_dir='./'):
         else:
             zoom_string = ''
         for j in range(len(var_names)):
-            print 'Plotting ' + var_names[j]
-            fig, gs, cax = set_panels('1x3C1')
+            print 'Plotting ' + var_names[j] + zoom_string
+            figsize = None
+            if zoom_fris:
+                figsize = (12, 5)
+            fig, gs, cax = set_panels('1x3C1', figsize=figsize)
             # Read baseline data
             baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
             vmin = 0
