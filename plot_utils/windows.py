@@ -42,10 +42,10 @@ def set_panels (key, figsize=None):
     elif key == '2x2C1':
         # Four plots arranged into two rows and two columns, with one colourbar below
         if figsize is None:
-            figsize = (12,12)
+            figsize = (10,7.5)
         fig = plt.figure(figsize=figsize)
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.07, right=0.97, bottom=0.2, top=0.8, wspace=0.05, hspace=0.05)
-        cax = fig.add_axes([0.3, 0.03, 0.4, 0.02])
-        return fig, gs, cax1, cax2
+        gs.update(left=0.07, right=0.97, bottom=0.12, top=0.88, wspace=0.05, hspace=0.15)
+        cax = fig.add_axes([0.3, 0.03, 0.4, 0.03])
+        return fig, gs, cax
 

@@ -2,9 +2,14 @@
 # Weddell Sea polynya project
 ##################################################################
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
 from ..grid import Grid
+from ..file_io import read_netcdf
 from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
-from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff, plot_latlon
+from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff, latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..postprocess import build_file_list, select_common_time, precompute_timeseries
 from ..utils import real_dir, mask_land_ice
@@ -130,9 +135,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Build the grid
-    grid = Grid(grid_path)
+    print 'Building grid'
+    grid = Grid(base_dir+grid_path)
 
+    print 'Plotting aice'
     # 2x2 plot of sea ice
     fig, gs, cax = set_panels('2x2C1')
     for i in range(4):
@@ -141,7 +147,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         aice = mask_land_ice(aice, grid)
         # Make plot
         ax = plt.subplot(gs[i/2,i%2])
-        img = latlon_plot(aice, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=expt_names[i], titlesize=16)
+        img = latlon_plot(aice, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=-67, ymin=-80, title=expt_names[i])
         if i%2==1:
             # Remove latitude labels
             ax.set_yticklabels([])
@@ -149,7 +155,11 @@ def combined_plots (base_dir='./', fig_dir='./'):
             # Remove longitude labels
             ax.set_xticklabels([])
     # Colourbar
-    plt.colourbar(img, cax=cax, orientation='horizontal')
+    plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'aice.png')
+    finished_plot(fig, fig_name=fig_dir+'aice.png')
+
+    # 3x1 plot of restoring masks (baseline, Maud Rise, near shelf)
+    # 3x1 difference plots (each polynya minus baseline) of bwsalt, bwtemp, ismr, vavg. Will it zoom or not?
+    # Combined timeseries (4 lines) for FRIS net melting, Brunt & Riiser-Larsen net melting, Fimbul net melting
