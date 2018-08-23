@@ -185,7 +185,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')'''
+    finished_plot(fig, fig_name=fig_dir+'aice.png')
 
     # 3x1 difference plots of polynya simulations minus baseline
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
@@ -204,7 +204,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             data = prepare_vel(u, v, grid)[0]
         return data
     # Now make the plots, zoomed both in and out
-    for zoom_fris in [False, True]:
+    for zoom_fris in [True]: #False, True]:
         if zoom_fris:
             zoom_string = '_zoom'
         else:
@@ -238,13 +238,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig) #, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')'''
             
-            
-            
-        
+    
 
 
-    # Zoom difference plots in
-    # 2x2 plot of velocity (zoomed in and out)
-    # Combined timeseries (4 lines) for FRIS net melting, Brunt & Riiser-Larsen net melting, Fimbul net melting
+    # 2x2 plot of velocity with vectors (zoomed in and out)
+    # Combined timeseries (4 lines) for FRIS net melting
