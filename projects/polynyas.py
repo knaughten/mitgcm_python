@@ -147,7 +147,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    '''print 'Building grid'
+    print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
     print 'Plotting restoring masks'
@@ -298,7 +298,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')'''
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
 
     print 'Plotting FRIS melt'
     times = []
@@ -313,7 +313,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         freeze = read_netcdf(file_path, 'fris_total_freeze')[t_start:]
         datas.append(melt+freeze)
     # Make the plot
-    timeseries_multi_plot(times, datas, expt_legend_labels, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
+    timeseries_multi_plot(times, datas, expt_legend_labels, expt_colours, title='FRIS basal mass loss', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt.png')
     # Now make a difference plot
     times_diff = []
     datas_diff = []
@@ -321,7 +321,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
         time, data = trim_and_diff(times[0], times[i], datas[0], datas[i])
         times_diff.append(time)
         datas_diff.append(data)
-    timeseries_multi_plot(times_diff, datas_diff, expt_legend_labels[1:], expt_colours[1:], title='FRIS basal mass loss anomaly', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt_diff.png')
+    timeseries_multi_plot(times_diff, datas_diff, expt_legend_labels[1:], expt_colours[1:], title='FRIS basal mass loss anomaly', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt_diff.png')
             
     
     # 2x2 plot of barotropic streamfunction (zoomed in)
