@@ -55,6 +55,6 @@ def set_panels (key, figsize=None):
 
     if key[-1] == '1':        
         return fig, gs, cax
-    elif key[-2] == '2':
+    elif key[-1] == '2':
         return fig, gs, cax1, cax2
 
