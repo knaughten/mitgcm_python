@@ -135,6 +135,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     restoring_file = 'sss_restoring.nc'
     # Titles etc. for plotting
     expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
+    expt_legend_labels = ['Baseline', 'Free polynya', 'Polynya at\nMaud Rise', 'Polynya\near shelf']
     expt_colours = ['black', 'red', 'blue', 'green']
 
     # Smaller boundaries on surface plots (where ice shelves are ignored)
@@ -302,15 +303,16 @@ def combined_plots (base_dir='./', fig_dir='./'):
     times = []
     datas = []
     for i in range(4):
-        # Read the timeseries file, cutting off the first two years
+        # Read the timeseries file, cutting off the first 5 years
         file_path = base_dir + output_dir[i] + timeseries_files[i]
-        time = netcdf_time(file_path)[24:]
+        t_start = 12*5
+        time = netcdf_time(file_path)[t_start:]
         times.append(time)
-        melt = read_netcdf(file_path, 'fris_total_melt')[24:]
-        freeze = read_netcdf(file_path, 'fris_total_freeze')[24:]
+        melt = read_netcdf(file_path, 'fris_total_melt')[t_start:]
+        freeze = read_netcdf(file_path, 'fris_total_freeze')[t_start:]
         datas.append(melt+freeze)
     # Make the plot
-    timeseries_multi_plot(times, datas, expt_names, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
+    timeseries_multi_plot(times, datas, expt_legend_labels, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
             
     
     # 2x2 plot of barotropic streamfunction (zoomed in)
