@@ -21,33 +21,16 @@ from file_io import netcdf_time, read_netcdf
 # data: 1D array of timeseries to plot
 
 # Optional keyword arguments:
-# melt_freeze: boolean (default False) indicating to plot melting, freezing, and total. Assumes melting is given by "data" and freezing by "data_2".
-# data_2: if melt_freeze=True, array of freezing timeseries
-# diff: boolean (default False) indicating this is an anomaly timeseries. Only matters for melt_freeze as it will change the legend labels.
 # title: title for plot
 # units: units of timeseries
 # monthly: as in function netcdf_time
 # fig_name: as in function finished_plot
 
-def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False, title='', units='', monthly=True, fig_name=None):
+def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name=None):
 
     fig, ax = plt.subplots()
-    if melt_freeze:
-        if diff:
-            melt_label = 'Change in melting (>0)'
-            freeze_label = 'Change in freezing (<0)'
-            total_label = 'Change in net'
-        else:
-            melt_label = 'Melting'
-            freeze_label = 'Freezing'
-            total_label = 'Net'
-        ax.plot_date(time, data, '-', color='red', linewidth=1.5, label=melt_label)
-        ax.plot_date(time, data_2, '-', color='blue', linewidth=1.5, label=freeze_label)
-        ax.plot_date(time, data+data_2, '-', color='black', linewidth=1.5, label=total_label)
-        ax.legend()
-    else:
-        ax.plot_date(time, data, '-', linewidth=1.5)
-    if melt_freeze or (np.amin(data) < 0 and np.amax(data) > 0):
+    ax.plot_date(time, data, '-', linewidth=1.5)
+    if np.amin(data) < 0 and np.amax(data) > 0:
         # Add a line at 0
         ax.axhline(color='black')
     ax.grid(True)
@@ -57,6 +40,16 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
     plt.ylabel(units, fontsize=16)
     finished_plot(fig, fig_name=fig_name)
 
+
+# Plot multiple timeseries on the same axes.
+
+# Arguments:
+# time: either a 1D array of time values for all timeseries, or a list of 1D arrays of time values for each timeseries
+# datas: list of 1D arrays of timeseries
+# labels: list of legend labels (strings) to use for each timeseries
+# colours: list of colours (strings or RGB tuples) to use for each timeseries
+
+# Optional keyword arguments: as in make_timeseries_plot
 
 def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None):
 
@@ -156,17 +149,15 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
 
     if var == 'fris_melt':
         if precomputed:
-            time, data_diff = read_and_trim('fris_total_melt')
-            data_diff_2 = read_and_trim('fris_total_freeze')[1]
+            time, melt_diff = read_and_trim('fris_total_melt')
+            freeze_diff = read_and_trim('fris_total_freeze')[1]
         else:
             # Calculate the difference timeseries
-            time, data_diff, data_diff_2 = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+            time, melt_diff, freeze_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
+        timeseries_multi_plot(time, [melt_diff, freeze_diff, melt_diff+freeze_diff], ['Change in melting (>0)', 'Change in freezing (<0)', 'Change in net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name)
     else:
         if precomputed:
             time, data_diff = read_and_trim(var)
         else:
             time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        data_diff_2 = None
-
-    # Plot
-    make_timeseries_plot(time, data_diff, data_2=data_diff_2, melt_freeze=(var=='fris_melt'), diff=True, title=title, units=units, monthly=monthly, fig_name=fig_name)
+        make_timeseries_plot(time, data_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
