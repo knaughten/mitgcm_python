@@ -302,11 +302,12 @@ def combined_plots (base_dir='./', fig_dir='./'):
     times = []
     datas = []
     for i in range(4):
-        # Read the timeseries file
+        # Read the timeseries file, cutting off the first two years
         file_path = base_dir + output_dir[i] + timeseries_files[i]
-        times.append(netcdf_time(file_path))
-        melt = read_netcdf(file_path, 'fris_total_melt')
-        freeze = read_netcdf(file_path, 'fris_total_freeze')
+        time = netcdf_time(file_path)[24:]
+        times.append(time)
+        melt = read_netcdf(file_path, 'fris_total_melt')[24:]
+        freeze = read_netcdf(file_path, 'fris_total_freeze')[24:]
         datas.append(melt+freeze)
     # Make the plot
     timeseries_multi_plot(times, datas, expt_names, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
