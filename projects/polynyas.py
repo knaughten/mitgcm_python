@@ -16,7 +16,7 @@ from ..utils import real_dir, mask_land_ice, mask_3d, mask_except_ice, select_bo
 from ..constants import deg_string
 from ..plot_utils.labels import parse_date
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.latlon import prepare_vel
+from ..plot_utils.latlon import prepare_vel, overlay_vectors
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -124,13 +124,14 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
         read_plot_ts_slice_diff(file_path_baseline, file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index_baseline, t_start=t_start_baseline, t_end=t_end_baseline, time_average=time_average, time_index_2=time_index, t_start_2=t_start, t_end_2=t_end, date_string=date_string, fig_name=fig_dir+'ts_slice_polynya'+zoom_key+'_diff.png')
 
 
+# Make a bunch of tiled plots showing all polynya simulations at once.
 def combined_plots (base_dir='./', fig_dir='./'):
 
     # File paths
     grid_path = 'WSB_001/grid/'
     output_dir = ['WSB_001/output/', 'WSB_007/output/', 'WSB_002/output/', 'WSB_003/output/']
     expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
-    mit_file = 'output_001.nc'
+    mit_file = 'common_year.nc'
     timeseries_files = ['timeseries.nc', 'timeseries_polynya_free.nc', 'timeseries_polynya_maud_rise.nc', 'timeseries_polynya_near_shelf.nc']
     restoring_file = 'sss_restoring.nc'
 
@@ -163,7 +164,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'restoring_mask.png')
+    finished_plot(fig) #, fig_name=fig_dir+'restoring_mask.png')
         
     print 'Plotting aice'
     # 2x2 plot of sea ice
@@ -185,7 +186,56 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')
+    finished_plot(fig) #, fig_name=fig_dir+'aice.png')
+
+    print 'Plotting velocity'
+    # 2x2 plot of barotropic velocity including vectors
+    for zoom_fris in [True, False]:
+        vmin = 0
+        vmax = 0
+        speed = []
+        u = []
+        v = []    
+        for i in range(4):
+            # Read and mask velocity components
+            u_tmp = mask_3d(read_netcdf(base_dir+output_dir[i]+mit_file, 'UVEL', time_index=-1), grid, gtype='u')
+            v_tmp = mask_3d(read_netcdf(base_dir+output_dir[i]+mit_file, 'VVEL', time_index=-1), grid, gtype='v')
+            # Interpolate to tracer grid and get speed
+            speed_tmp, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid)
+            speed.append(speed_tmp)
+            u.append(u_tmp)
+            v.append(v_tmp)
+            # Get min and max values and update global min/max as needed
+            vmin_tmp, vmax_tmp = var_min_max(speed[i], grid, zoom_fris=zoom_fris)
+            vmin = min(vmin, vmin_tmp)
+            vmax = max(vmax, vmax_tmp)
+        # Now we can plot
+        figsize = None
+        chunk = 10
+        zoom_string = ''
+        if zoom_fris:
+            figsize = (8, 7.5)
+            chunk = 6
+            zoom_string = '_zoom'
+        fig, gs, cax = set_panels('2x2C1', figsize=figsize)
+        for i in range(4):
+            ax = plt.subplot(gs[i/2, i%2])
+            # Plot speed
+            img = latlon_plot(speed[i], grid, ax=ax, make_cbar=False, ctype='vel', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
+            # Add velocity vectors
+            overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
+            if i%2==1:
+                # Remove latitude labels
+                ax.set_yticklabels([])
+            if i/2==0:
+                # Remove longitude labels
+                ax.set_xticklabels([])
+        # Colourbar
+        plt.colorbar(img, cax=cax, orientation='horizontal')
+        # Main title
+        plt.suptitle('Barotropic velocity (m/s) (add date later)', fontsize=22)
+        finished_plot(fig) #, fig_name=fig_dir+'vel_vectors'+zoom_string+'.png')
+        
 
     # 3x1 difference plots of polynya simulations minus baseline
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel', 'mld']
@@ -215,10 +265,6 @@ def combined_plots (base_dir='./', fig_dir='./'):
             if var_names[j] == 'mld' and zoom_fris:
                 continue
             print 'Plotting ' + var_names[j] + zoom_string
-            figsize = None
-            if zoom_fris:
-                figsize = (12, 5)
-            fig, gs, cax = set_panels('1x3C1', figsize=figsize)
             # Read baseline data
             baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
             vmin = 0
@@ -232,6 +278,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
                 vmin = min(vmin, vmin_tmp)
                 vmax = max(vmax, vmax_tmp)
             # Now we can plot
+            figsize = None
+            if zoom_fris:
+                figsize = (12, 5)
+            fig, gs, cax = set_panels('1x3C1', figsize=figsize)
             for i in range(1,4):
                 ax = plt.subplot(gs[0,i-1])
                 img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
@@ -242,10 +292,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
+            finished_plot(fig) #, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
             
     
 
 
-    # 2x2 plot of velocity with vectors (zoomed in and out)
+    # 2x2 plot of barotropic streamfunction (zoomed in)
     # Combined timeseries (4 lines) for FRIS net melting
