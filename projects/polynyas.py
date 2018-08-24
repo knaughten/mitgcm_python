@@ -84,7 +84,7 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
         read_plot_timeseries_diff(var, baseline_dir+timeseries_file, polynya_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png')
 
     # Lat-lon plots over the last year/month
-    var_names = ['aice', 'bwtemp', 'bwsalt', 'vel', 'ismr']
+    var_names = ['aice', 'bwtemp', 'bwsalt', 'vel', 'ismr', 'mld']
     for var in var_names:
         # Want to zoom both in and out
         for zoom_fris in [False, True]:
@@ -97,8 +97,8 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
             zoom_key = ''
             if zoom_fris:
                 zoom_key = '_zoom'
-            # Don't need a zoomed-in sea ice plot
-            if var == 'aice' and zoom_fris:
+            # Don't need a zoomed-in sea ice or MLD plot
+            if var in ['aice', 'mld'] and zoom_fris:
                 continue
             # Set variable bounds
             vmin = None
@@ -119,9 +119,9 @@ def prelim_plots (polynya_dir='./', baseline_dir=None, polynya=None, timeseries_
         zoom_key = ''
         if zmin is not None:
             zoom_key = '_zoom'
-        read_plot_ts_slice(file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, date_string=date_string, fig_name='ts_slice_polynya'+zoom_key+'.png')
+        read_plot_ts_slice(file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, date_string=date_string, fig_name=fig_dir+'ts_slice_polynya'+zoom_key+'.png')
         # Repeat for anomalies from baseline
-        read_plot_ts_slice_diff(file_path_baseline, file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index_baseline, t_start=t_start_baseline, t_end=t_end_baseline, time_average=time_average, time_index_2=time_index, t_start_2=t_start, t_end_2=t_end, date_string=date_string, fig_name='ts_slice_polynya'+zoom_key+'_diff.png')
+        read_plot_ts_slice_diff(file_path_baseline, file_path, grid=grid, lon0=lon0, zmin=zmin, time_index=time_index_baseline, t_start=t_start_baseline, t_end=t_end_baseline, time_average=time_average, time_index_2=time_index, t_start_2=t_start, t_end_2=t_end, date_string=date_string, fig_name=fig_dir+'ts_slice_polynya'+zoom_key+'_diff.png')
 
 
 def combined_plots (base_dir='./', fig_dir='./'):
@@ -188,8 +188,8 @@ def combined_plots (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'aice.png')
 
     # 3x1 difference plots of polynya simulations minus baseline
-    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
-    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)']
+    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel', 'mld']
+    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)', 'Mixed layer depth (m)']
     # Inner function to read variable from a file and process appropriately
     def read_and_process (var, file_path):
         if var == 'bwtemp':
@@ -202,14 +202,18 @@ def combined_plots (base_dir='./', fig_dir='./'):
             u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
             v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
             data = prepare_vel(u, v, grid)[0]
+        elif var == 'mld':
+            data = mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=-1), grid)
         return data
     # Now make the plots, zoomed both in and out
-    for zoom_fris in [True]: #False, True]:
+    for zoom_fris in [False, True]:
         if zoom_fris:
             zoom_string = '_zoom'
         else:
             zoom_string = ''
         for j in range(len(var_names)):
+            if var_names[j] == 'mld' and zoom_fris:
+                continue
             print 'Plotting ' + var_names[j] + zoom_string
             figsize = None
             if zoom_fris:
