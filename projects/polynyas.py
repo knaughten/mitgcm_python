@@ -30,7 +30,7 @@ def get_polynya_loc (polynya):
         lat0 = -70
     elif polynya == 'free':
         lon0 = -25
-        lat0 = -70
+        lat0 = -68
     else:
         print 'Error (get_polynya_loc): please specify a valid polynya.'
         sys.exit()
@@ -145,7 +145,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
-    '''print 'Plotting restoring masks'
+    print 'Plotting restoring masks'
     # 3x1 plot of restoring masks in the simulations where they exist
     fig, gs, cax = set_panels('1x3C1')
     for i in [0, 2, 3]:
@@ -238,7 +238,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')'''
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
             
     
 
