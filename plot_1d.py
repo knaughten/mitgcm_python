@@ -58,7 +58,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
     # Boolean which will tell us whether we need a line at 0
     crosses_zero = False
 
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(11,6))
     # Plot each line
     for i in range(len(datas)):
         if multi_time:
