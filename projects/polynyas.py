@@ -130,10 +130,12 @@ def combined_plots (base_dir='./', fig_dir='./'):
     # File paths
     grid_path = 'WSB_001/grid/'
     output_dir = ['WSB_001/output/', 'WSB_007/output/', 'WSB_002/output/', 'WSB_003/output/']
-    expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
     mit_file = 'common_year.nc'
     timeseries_files = ['timeseries.nc', 'timeseries_polynya_free.nc', 'timeseries_polynya_maud_rise.nc', 'timeseries_polynya_near_shelf.nc']
     restoring_file = 'sss_restoring.nc'
+    # Titles etc. for plotting
+    expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
+    expt_colours = ['black', 'red', 'blue', 'green']
 
     # Smaller boundaries on surface plots (where ice shelves are ignored)
     xmin_sfc = -67
@@ -146,7 +148,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
-    print 'Plotting restoring masks'
+    '''print 'Plotting restoring masks'
     # 3x1 plot of restoring masks in the simulations where they exist
     fig, gs, cax = set_panels('1x3C1')
     for i in [0, 2, 3]:
@@ -294,7 +296,20 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')'''
+
+    print 'Plotting FRIS melt'
+    times = []
+    datas = []
+    for i in range(4):
+        # Read the timeseries file
+        file_path = base_dir + output_dir[i] + timeseries_files[i]
+        times.append(netcdf_time(file_path))
+        melt = read_netcdf(file_path, 'fris_total_melt')
+        freeze = read_netcdf(file_path, 'fris_total_freeze')
+        datas.append(melt+freeze)
+    # Make the plot
+    timeseries_multi_plot(times, datas, expt_names, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
             
     
 
