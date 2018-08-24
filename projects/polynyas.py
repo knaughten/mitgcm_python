@@ -7,7 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid
-from ..file_io import read_netcdf
+from ..file_io import read_netcdf, netcdf_time
 from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff, latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
@@ -312,7 +312,4 @@ def combined_plots (base_dir='./', fig_dir='./'):
     timeseries_multi_plot(times, datas, expt_names, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
             
     
-
-
     # 2x2 plot of barotropic streamfunction (zoomed in)
-    # Combined timeseries (4 lines) for FRIS net melting
