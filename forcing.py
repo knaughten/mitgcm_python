@@ -356,6 +356,41 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
         file_out = out_dir + file_head + var + '_' + str(last_year+1)
         print 'Writing ' + file_out
         write_binary(data, file_out, prec=prec)
+
+
+# Recalculate ERA-Interim humidity: the original Matlab scripts did the conversion using a reference temperature instead of actual temperature. Also make a dummy last year as above.
+def fix_eraint_humidity (in_dir, out_dir, prec=32):
+
+    in_dir = real_dir(in_dir)
+    out_dir = real_dir(out_dir)
+
+    # File paths
+    in_head = in_dir + 'era_a_'
+    in_tail = '_075.nc'
+    out_head = out_dir + 'ERAinterim_spfh2m_'
+    start_year = 1979
+    end_year = 2017
+
+    for year in range(start_year, end_year+1):
+        in_file = in_head + str(year) + in_tail
+        print 'Reading ' + in_file
+        # Need temperature, pressure, and dew point
+        temp = read_netcdf(in_file, 't2m')
+        press = read_netcdf(in_file, 'msl')
+        dewpoint = read_netcdf(in_file, 'd2m')
+        # Calculate vapour pressure
+        e = es0*np.exp(Lv/Rv*(1/temp - 1/dewpoint))
+        # Calculate specific humidity
+        spf = sh_coeff*e/(press - (1-sh_coeff)*e)
+        out_file = out_head + str(year)
+        print 'Writing ' + out_file
+        write_binary(spf, out_file, prec=prec)
+        if year == end_year:
+            # Copy the last timestep as in era_dummy_year
+            spf_last = spf[-1,:]
+            out_file = out_head + str(year+1)
+            print 'Writing ' + out_file
+            write_binary(spf_last, out_file, prec=prec)
         
 
     

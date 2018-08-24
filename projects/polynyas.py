@@ -164,7 +164,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'restoring_mask.png')
+    finished_plot(fig, fig_name=fig_dir+'restoring_mask.png')
         
     print 'Plotting aice'
     # 2x2 plot of sea ice
@@ -186,7 +186,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
     plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'aice.png')
+    finished_plot(fig, fig_name=fig_dir+'aice.png')
 
     print 'Plotting velocity'
     # 2x2 plot of barotropic velocity including vectors
@@ -230,16 +230,18 @@ def combined_plots (base_dir='./', fig_dir='./'):
             if i/2==0:
                 # Remove longitude labels
                 ax.set_xticklabels([])
-        # Colourbar
-        plt.colorbar(img, cax=cax, orientation='horizontal')
+        # Colourbar, hiding every second label so they're not squished
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+        for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+            label.set_visible(False)
         # Main title
         plt.suptitle('Barotropic velocity (m/s) (add date later)', fontsize=22)
-        finished_plot(fig) #, fig_name=fig_dir+'vel_vectors'+zoom_string+'.png')
+        finished_plot(fig, fig_name=fig_dir+'vel_vectors'+zoom_string+'.png')
         
 
     # 3x1 difference plots of polynya simulations minus baseline
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel', 'mld']
-    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)', 'Mixed layer depth (m)']
+    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)', 'Mixed layer depth anomaly (m)']
     # Inner function to read variable from a file and process appropriately
     def read_and_process (var, file_path):
         if var == 'bwtemp':
@@ -292,7 +294,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             # Main title
             plt.suptitle(titles[j]+' (add date later)', fontsize=22)
-            finished_plot(fig) #, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
             
     
 
