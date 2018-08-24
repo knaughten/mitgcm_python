@@ -58,6 +58,41 @@ def make_timeseries_plot (time, data, data_2=None, melt_freeze=False, diff=False
     finished_plot(fig, fig_name=fig_name)
 
 
+def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None):
+
+    # Figure out if time is a list or a single array that applies to all timeseries
+    multi_time = isinstance(times, list)
+    # Boolean which will tell us whether we need a line at 0
+    crosses_zero = False
+
+    fig, ax = plt.subplots(figsize=(10,6))
+    # Plot each line
+    for i in range(len(datas)):
+        if multi_time:
+            time = times[i]
+        else:
+            time = times
+        ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+        if (not crosses_zero) and (np.amin(datas[i]) < 0) and (np.amax(datas[i]) > 0):
+            crosses_zero = True
+
+    ax.grid(True)
+    if crosses_zero:
+        # Add a line at 0
+        ax.axhline(color='black')
+    if not monthly:
+        monthly_ticks(ax)
+    plt.title(title, fontsize=18)
+    plt.ylabel(units, fontsize=16)
+    # Move plot over to make room for legend
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+    # Make legend
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    
+    finished_plot(fig, fig_name=fig_name)
+    
+
 # User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot.
 
 # Arguments:
@@ -83,20 +118,18 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
     if var == 'fris_melt':
         if precomputed:
             # Read the fields from the timeseries file
-            data = read_netcdf(file_path, 'fris_total_melt')
-            data_2 = read_netcdf(file_path, 'fris_total_freeze')
+            melt = read_netcdf(file_path, 'fris_total_melt')
+            freeze = read_netcdf(file_path, 'fris_total_freeze')
         else:
             # Calculate the timeseries from the MITgcm file(s)
-            time, data, data_2 = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+            time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name)
     else:
         if precomputed:
             data = read_netcdf(file_path, var)
         else:
             time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        data_2 = None
-        
-    # Plot
-    make_timeseries_plot(time, data, data_2=data_2, melt_freeze=(var=='fris_melt'), title=title, units=units, monthly=monthly, fig_name=fig_name)
+        make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 
 
