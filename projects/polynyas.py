@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from ..grid import Grid
 from ..file_io import read_netcdf, netcdf_time
-from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff
+from ..plot_1d import read_plot_timeseries, read_plot_timeseries_diff, timeseries_multi_plot
 from ..plot_latlon import read_plot_latlon, read_plot_latlon_diff, latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..postprocess import build_file_list, select_common_time, precompute_timeseries
