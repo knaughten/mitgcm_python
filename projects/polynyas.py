@@ -17,6 +17,7 @@ from ..constants import deg_string
 from ..plot_utils.labels import parse_date
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
+from ..timeseries import trim_and_diff
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -135,7 +136,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     restoring_file = 'sss_restoring.nc'
     # Titles etc. for plotting
     expt_names = ['Baseline', 'Free polynya', 'Polynya at Maud Rise', 'Polynya near shelf']
-    expt_legend_labels = ['Baseline', 'Free polynya', 'Polynya at\nMaud Rise', 'Polynya\near shelf']
+    expt_legend_labels = ['Baseline', 'Free polynya', 'Polynya at\nMaud Rise', 'Polynya\nnear shelf']
     expt_colours = ['black', 'red', 'blue', 'green']
 
     # Smaller boundaries on surface plots (where ice shelves are ignored)
@@ -146,10 +147,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    '''print 'Building grid'
     grid = Grid(base_dir+grid_path)
 
-    '''print 'Plotting restoring masks'
+    print 'Plotting restoring masks'
     # 3x1 plot of restoring masks in the simulations where they exist
     fig, gs, cax = set_panels('1x3C1')
     for i in [0, 2, 3]:
@@ -313,6 +314,14 @@ def combined_plots (base_dir='./', fig_dir='./'):
         datas.append(melt+freeze)
     # Make the plot
     timeseries_multi_plot(times, datas, expt_legend_labels, expt_colours, title='FRIS basal mass loss', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt.png')
+    # Now make a difference plot
+    times_diff = []
+    datas_diff = []
+    for i in range(1,4):
+        time, data = trim_and_diff(times[0], times[i], datas[0], datas[i])
+        times_diff.append(time)
+        datas_diff.append(data)
+    timeseries_multi_plot(times_diff, datas_diff, expt_legend_labels[1:], expt_colours[1:], title='FRIS basal mass loss anomaly', units='Gt/y') #, fig_name=fig_dir+'timeseries_fris_melt_diff.png')
             
     
     # 2x2 plot of barotropic streamfunction (zoomed in)
