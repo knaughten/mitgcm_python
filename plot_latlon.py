@@ -623,9 +623,13 @@ def plot_empty (grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=Non
     if not isinstance(grid, Grid):
         grid = Grid(grid)
 
+    lon = grid.lon_corners_2d
+    lat = grid.lat_corners_2d
+
     fig, ax = plt.subplots(figsize=figsize)
     shade_land(ax, grid)
     contour_iceshelf_front(ax, grid)
+    latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     finished_plot(fig, fig_name=fig_name)
 
 
