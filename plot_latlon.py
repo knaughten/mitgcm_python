@@ -617,6 +617,18 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
     latlon_plot(data, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title, fig_name=fig_name, figsize=figsize)
 
 
+# Make an empty map just showing land in grey and ice shelf contours in black.
+def plot_empty (grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None, figsize=(8,6)):
+
+    if not isinstance(grid, Grid):
+        grid = Grid(grid)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    shade_land(ax, grid)
+    contour_iceshelf_front(ax, grid)
+    finished_plot(fig, fig_name=fig_name)
+
+
 # 1x2 lat-lon plot showing sea ice area at the timesteps of minimum and maximum area in the given year.
 def plot_aice_minmax (file_path, year, grid=None, fig_name=None, monthly=True, figsize=(12,6)):
 

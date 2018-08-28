@@ -323,5 +323,3 @@ def combined_plots (base_dir='./', fig_dir='./'):
         datas_diff.append(data)
     timeseries_multi_plot(times_diff, datas_diff, expt_legend_labels[1:], expt_colours[1:], title='FRIS basal mass loss anomaly', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt_diff.png')
             
-    
-    # 2x2 plot of barotropic streamfunction (zoomed in)
