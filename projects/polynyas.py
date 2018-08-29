@@ -197,7 +197,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     ctype = ['basic', 'basic', 'vel']
     include_shelf = [False, False, True]
     for j in range(len(var_names)):
-         print 'Plotting ' + var_names[j]
+        print 'Plotting ' + var_names[j]
         # Special cases for velocity so save as a boolean
         is_vel = var_names[j] == 'vel'
         # Repeat zoomed in and out, but only for velocity
