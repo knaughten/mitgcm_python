@@ -189,7 +189,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     # Colourbar
     plt.colorbar(img, cax=cax, orientation='horizontal')
     # Main title
-    plt.suptitle('Sea ice concentration (add date later)', fontsize=22)
+    plt.suptitle('Sea ice concentration, 1989-2016', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'aice.png')
 
     print 'Plotting velocity'
@@ -239,13 +239,17 @@ def combined_plots (base_dir='./', fig_dir='./'):
         for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
             label.set_visible(False)
         # Main title
-        plt.suptitle('Barotropic velocity (m/s) (add date later)', fontsize=22)
+        plt.suptitle('Barotropic velocity (m/s), 1989-2016', fontsize=22)
         finished_plot(fig, fig_name=fig_dir+'vel_vectors'+zoom_string+'.png')
         
 
     # 3x1 difference plots of polynya simulations minus baseline
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel', 'mld']
     titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)', 'Mixed layer depth anomaly (m)']
+    # Colour bounds to impose; first sublist in each list is for zoom_fris=True, second is for zoom_fris=False
+    vmin_impose = [[-0.2, None, None, None], [-1, None, None, None, None]]
+    vmax_impose = [[0.2, 0.1, 2, 0.03], [None, 0.15, 2.5, None, None]]
+    extend = [['both', 'max', 'max', 'max'], ['min', 'max', 'max', 'neither', 'neither']]
     # Inner function to read variable from a file and process appropriately
     def read_and_process (var, file_path):
         if var == 'bwtemp':
@@ -265,8 +269,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
     for zoom_fris in [False, True]:
         if zoom_fris:
             zoom_string = '_zoom'
+            zoom_index = 0
         else:
             zoom_string = ''
+            zoom_index = 1
         for j in range(len(var_names)):
             if var_names[j] == 'mld' and zoom_fris:
                 continue
@@ -283,6 +289,11 @@ def combined_plots (base_dir='./', fig_dir='./'):
                 vmin_tmp, vmax_tmp = var_min_max(data[i-1], grid, zoom_fris=zoom_fris)
                 vmin = min(vmin, vmin_tmp)
                 vmax = max(vmax, vmax_tmp)
+            # Overwrite with predetermined bounds if needed
+            if vmin_impose[zoom_index,j] is not None:
+                vmin = vmin_impose[zoom_index,j]
+            if vmax_impose[zoom_index,j] is not None:
+                vmax = vmax_impose[zoom_index,j]
             # Now we can plot
             figsize = None
             if zoom_fris:
@@ -290,14 +301,14 @@ def combined_plots (base_dir='./', fig_dir='./'):
             fig, gs, cax = set_panels('1x3C1', figsize=figsize)
             for i in range(1,4):
                 ax = plt.subplot(gs[0,i-1])
-                img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
+                img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin[j], vmax=vmax[j], title=expt_names[i])
                 if i > 0:
                     # Remove latitude labels
                     ax.set_yticklabels([])
             # Colourbar
-            plt.colorbar(img, cax=cax, orientation='horizontal')
+            plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[zoom_index,j])
             # Main title
-            plt.suptitle(titles[j]+' (add date later)', fontsize=22)
+            plt.suptitle(titles[j]+', 1989-2016', fontsize=22)
             finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
 
     print 'Plotting FRIS melt'
@@ -322,4 +333,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
         times_diff.append(time)
         datas_diff.append(data)
     timeseries_multi_plot(times_diff, datas_diff, expt_legend_labels[1:], expt_colours[1:], title='FRIS basal mass loss anomaly', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt_diff.png')
+    # Also a percent difference plot
+    datas_diff_percent = []
+    for i in range(1,4):
+        data = datas_diff[i-1]
+        datas_diff_percent.append(data/datas[0][:data.size]*100)
+    timeseries_multi_plot(times_diff, datas_diff_percent, expt_legend_labels[1:], expt_colours[1:], title='% anomaly in FRIS basal mass loss', fig_name=fig_dir+'timeseries_fris_melt_percent_diff.png')
             
