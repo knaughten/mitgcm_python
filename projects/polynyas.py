@@ -131,7 +131,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     # File paths
     grid_path = 'WSB_001/grid/'
     output_dir = ['WSB_001/output/', 'WSB_007/output/', 'WSB_002/output/', 'WSB_003/output/']
-    mit_file = 'common_year.nc'
+    mit_file = '1989_2016_avg.nc'
     timeseries_files = ['timeseries.nc', 'timeseries_polynya_free.nc', 'timeseries_polynya_maud_rise.nc', 'timeseries_polynya_near_shelf.nc']
     restoring_file = 'sss_restoring.nc'
     # Titles etc. for plotting
@@ -304,9 +304,9 @@ def combined_plots (base_dir='./', fig_dir='./'):
     times = []
     datas = []
     for i in range(4):
-        # Read the timeseries file, cutting off the first 5 years
+        # Read the timeseries file, cutting off the first 10 years
         file_path = base_dir + output_dir[i] + timeseries_files[i]
-        t_start = 12*5
+        t_start = 12*10
         time = netcdf_time(file_path)[t_start:]
         times.append(time)
         melt = read_netcdf(file_path, 'fris_total_melt')[t_start:]
