@@ -301,7 +301,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             fig, gs, cax = set_panels('1x3C1', figsize=figsize)
             for i in range(1,4):
                 ax = plt.subplot(gs[0,i-1])
-                img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin[j], vmax=vmax[j], title=expt_names[i])
+                img = latlon_plot(data[i-1], grid, ax=ax, make_cbar=False, ctype='plusminus', zoom_fris=zoom_fris, vmin=vmin, vmax=vmax, title=expt_names[i])
                 if i > 0:
                     # Remove latitude labels
                     ax.set_yticklabels([])
