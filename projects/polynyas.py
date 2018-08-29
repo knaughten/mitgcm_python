@@ -173,7 +173,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
     # Inner function to read a lat-lonvariable from a file and process appropriately
     def read_and_process (var, file_path):
         if var == 'aice':
-            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=-1, grid))
+            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=-1), grid)
         elif var == 'bwtemp':
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=-1), grid))
         elif var == 'bwsalt':
