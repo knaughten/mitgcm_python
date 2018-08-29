@@ -306,7 +306,11 @@ def combined_plots (base_dir='./', fig_dir='./'):
                     # Remove latitude labels
                     ax.set_yticklabels([])
             # Colourbar
-            plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[zoom_index][j])
+            cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[zoom_index][j])
+            if var_names[j] == 'vel' and zoom_fris:
+                # Remove every second label so they're not squished
+                for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+                    label.set_visible(False)
             # Main title
             plt.suptitle(titles[j]+', 1989-2016', fontsize=22)
             finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
