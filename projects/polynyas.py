@@ -290,10 +290,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
                 vmin = min(vmin, vmin_tmp)
                 vmax = max(vmax, vmax_tmp)
             # Overwrite with predetermined bounds if needed
-            if vmin_impose[zoom_index,j] is not None:
-                vmin = vmin_impose[zoom_index,j]
-            if vmax_impose[zoom_index,j] is not None:
-                vmax = vmax_impose[zoom_index,j]
+            if vmin_impose[zoom_index][j] is not None:
+                vmin = vmin_impose[zoom_index][j]
+            if vmax_impose[zoom_index][j] is not None:
+                vmax = vmax_impose[zoom_index][j]
             # Now we can plot
             figsize = None
             if zoom_fris:
@@ -306,7 +306,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
                     # Remove latitude labels
                     ax.set_yticklabels([])
             # Colourbar
-            plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[zoom_index,j])
+            plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[zoom_index][j])
             # Main title
             plt.suptitle(titles[j]+', 1989-2016', fontsize=22)
             finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
