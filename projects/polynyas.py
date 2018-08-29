@@ -170,8 +170,8 @@ def combined_plots (base_dir='./', fig_dir='./'):
     plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'restoring_mask.png')
 
-    # Inner function to read a lat-lonvariable from a file and process appropriately
-    def read_and_process (var, file_path):
+    # Inner function to read a lat-lon variable from a file and process appropriately
+    def read_and_process (var, file_path, return_vel_components=False):
         if var == 'aice':
             return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=-1), grid)
         elif var == 'bwtemp':
@@ -184,7 +184,10 @@ def combined_plots (base_dir='./', fig_dir='./'):
             u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
             v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
             speed, u, v = prepare_vel(u_tmp, v_tmp, grid)
-            return speed, u, v
+            if return_vel_components:
+                return speed, u, v
+            else:
+                return speed
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=-1), grid)
 
@@ -213,7 +216,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             for i in range(4):
                 # Read data
                 if is_vel:
-                    data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+output_dir[i]+mit_file)
+                    data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+output_dir[i]+mit_file, return_vel_components=True)
                     data.append(data_tmp)
                     u.append(u_tmp)
                     v.append(v_tmp)
