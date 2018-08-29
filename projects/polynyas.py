@@ -169,114 +169,111 @@ def combined_plots (base_dir='./', fig_dir='./'):
     # Main title
     plt.suptitle('Restoring mask for sea surface salinity', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'restoring_mask.png')
-        
-    print 'Plotting aice'
-    # 2x2 plot of sea ice
-    fig, gs, cax = set_panels('2x2C1')
-    for i in range(4):
-        # Read and mask data
-        aice = read_netcdf(base_dir+output_dir[i]+mit_file, 'SIarea', time_index=-1)
-        aice = mask_land_ice(aice, grid)
-        # Make plot
-        ax = plt.subplot(gs[i/2,i%2])
-        img = latlon_plot(aice, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
-        if i%2==1:
-            # Remove latitude labels
-            ax.set_yticklabels([])
-        if i/2==0:
-            # Remove longitude labels
-            ax.set_xticklabels([])
-    # Colourbar
-    plt.colorbar(img, cax=cax, orientation='horizontal')
-    # Main title
-    plt.suptitle('Sea ice concentration, 1989-2016', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'aice.png')
 
-    print 'Plotting velocity'
-    # 2x2 plot of barotropic velocity including vectors
-    for zoom_fris in [True, False]:
-        vmin = 0
-        vmax = 0
-        speed = []
-        u = []
-        v = []    
-        for i in range(4):
-            # Read and mask velocity components
-            u_tmp = mask_3d(read_netcdf(base_dir+output_dir[i]+mit_file, 'UVEL', time_index=-1), grid, gtype='u')
-            v_tmp = mask_3d(read_netcdf(base_dir+output_dir[i]+mit_file, 'VVEL', time_index=-1), grid, gtype='v')
-            # Interpolate to tracer grid and get speed
-            speed_tmp, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid)
-            speed.append(speed_tmp)
-            u.append(u_tmp)
-            v.append(v_tmp)
-            # Get min and max values and update global min/max as needed
-            vmin_tmp, vmax_tmp = var_min_max(speed[i], grid, zoom_fris=zoom_fris)
-            vmin = min(vmin, vmin_tmp)
-            vmax = max(vmax, vmax_tmp)
-        # Now we can plot
-        figsize = None
-        chunk = 10
-        zoom_string = ''
-        if zoom_fris:
-            figsize = (8, 7.5)
-            chunk = 6
-            zoom_string = '_zoom'
-        fig, gs, cax = set_panels('2x2C1', figsize=figsize)
-        for i in range(4):
-            ax = plt.subplot(gs[i/2, i%2])
-            # Plot speed
-            img = latlon_plot(speed[i], grid, ax=ax, make_cbar=False, ctype='vel', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
-            # Add velocity vectors
-            overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
-            if i%2==1:
-                # Remove latitude labels
-                ax.set_yticklabels([])
-            if i/2==0:
-                # Remove longitude labels
-                ax.set_xticklabels([])
-        # Colourbar, hiding every second label so they're not squished
-        cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
-        for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
-            label.set_visible(False)
-        # Main title
-        plt.suptitle('Barotropic velocity (m/s), 1989-2016', fontsize=22)
-        finished_plot(fig, fig_name=fig_dir+'vel_vectors'+zoom_string+'.png')
-        
+    # Inner function to read a lat-lonvariable from a file and process appropriately
+    def read_and_process (var, file_path):
+        if var == 'aice':
+            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=-1, grid))
+        elif var == 'bwtemp':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=-1), grid))
+        elif var == 'bwsalt':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=-1), grid))
+        elif var == 'ismr':
+            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=-1), grid))
+        elif var == 'vel':
+            u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
+            v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
+            speed, u, v = prepare_vel(u_tmp, v_tmp, grid)
+            return speed, u, v
+        elif var == 'mld':
+            return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=-1), grid)
+
+    # 2x2 plots of absolute variables
+    var_names = ['aice', 'mld', 'vel']
+    titles = ['Sea ice concentration', 'Mixed layer depth (m)', 'Barotropic velocity (m/s)']
+    # Colour bounds to impose
+    vmin_impose = [0, 0, None]
+    vmax_impose = [1, None, None]
+    ctype = ['basic', 'basic', 'vel']
+    include_shelf = [False, False, True]
+    for j in range(len(var_names)):
+         print 'Plotting ' + var_names[j]
+        # Special cases for velocity so save as a boolean
+        is_vel = var_names[j] == 'vel'
+        # Repeat zoomed in and out, but only for velocity
+        for zoom_fris in [False, True]:
+            if zoom_fris and not is_vel:
+                continue
+            data = []
+            if is_vel:
+                u = []
+                v = []
+            vmin = 999
+            vmax = -999
+            for i in range(4):
+                # Read data
+                if is_vel:
+                    data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+output_dir[i]+mit_file)
+                    data.append(data_tmp)
+                    u.append(u_tmp)
+                    v.append(v_tmp)
+                else:
+                    data.append(read_and_process(var_names[j], base_dir+output_dir[i]+mit_file))
+                # Get min and max values and update global min/max as needed
+                vmin_tmp, vmax_tmp = var_min_max(data[i], grid, zoom_fris=zoom_fris)
+                vmin = min(vmin, vmin_tmp)
+                vmax = max(vmax, vmax_tmp)
+            # Overwrite with predetermined bounds if needed
+            if vmin_impose[j] is not None:
+                vmin = vmin_impose[j]
+            if vmax_impose[j] is not None:
+                vmax = vmax_impose[j]
+            # Now make the plot
+            figsize = None
+            chunk = 10
+            zoom_string = ''
+            if zoom_fris:
+                figsize = (8, 7.5)
+                chunk = 6
+                zoom_string = '_zoom'
+            fig, gs, cax = set_panels('2x2C1', figsize=figsize)
+            for i in range(4):
+                ax = plt.subplot(gs[i/2, i%2])
+                img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
+                if is_vel:
+                    # Add velocity vectors
+                    overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
+                if i%2==1:
+                    # Remove latitude labels
+                    ax.set_yticklabels([])
+                if i/2==0:
+                    # Remove longitude labels
+                    ax.set_xticklabels([])
+            # Colourbar, hiding every second label so they're not squished
+            cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+            for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+                label.set_visible(False)
+            # Main title
+            plt.suptitle(titles[j] + ', 1989-2016', fontsize=22)
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'.png')        
 
     # 3x1 difference plots of polynya simulations minus baseline
-    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel', 'mld']
-    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)', 'Mixed layer depth anomaly (m)']
+    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
+    titles = ['Bottom water temperature anomaly ('+deg_string+'C)', 'Bottom water salinity anomaly (psu)', 'Ice shelf melt rate anomaly (m/y)', 'Absolute barotropic velocity anomaly (m/s)']
     # Colour bounds to impose; first sublist in each list is for zoom_fris=True, second is for zoom_fris=False
-    vmin_impose = [[-0.2, None, None, None], [-1, None, None, None, None]]
-    vmax_impose = [[0.2, 0.1, 2, 0.03], [None, 0.15, 2.5, None, None]]
-    extend = [['both', 'max', 'max', 'max'], ['min', 'max', 'max', 'neither', 'neither']]
-    # Inner function to read variable from a file and process appropriately
-    def read_and_process (var, file_path):
-        if var == 'bwtemp':
-            data = select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=-1), grid))
-        elif var == 'bwsalt':
-            data = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=-1), grid))
-        elif var == 'ismr':
-            data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=-1), grid))
-        elif var == 'vel':
-            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=-1), grid, gtype='u')
-            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=-1), grid, gtype='v')
-            data = prepare_vel(u, v, grid)[0]
-        elif var == 'mld':
-            data = mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=-1), grid)
-        return data
+    vmin_impose = [[-0.2, None, None, None], [-1, None, None, None]]
+    vmax_impose = [[0.2, 0.1, 2, 0.03], [None, 0.15, 2.5, None]]
+    extend = [['both', 'max', 'max', 'max'], ['min', 'max', 'max', 'neither']]
     # Now make the plots, zoomed both in and out
-    for zoom_fris in [False, True]:
-        if zoom_fris:
-            zoom_string = '_zoom'
-            zoom_index = 0
-        else:
-            zoom_string = ''
-            zoom_index = 1
-        for j in range(len(var_names)):
-            if var_names[j] == 'mld' and zoom_fris:
-                continue
-            print 'Plotting ' + var_names[j] + zoom_string
+    for j in range(len(var_names)):
+        print 'Plotting ' + var_names[j]
+        for zoom_fris in [False, True]:
+            if zoom_fris:
+                zoom_string = '_zoom'
+                zoom_index = 0
+            else:
+                zoom_string = ''
+                zoom_index = 1
             # Read baseline data
             baseline = read_and_process(var_names[j], base_dir+output_dir[0]+mit_file)
             vmin = 0
@@ -311,7 +308,7 @@ def combined_plots (base_dir='./', fig_dir='./'):
             plt.suptitle(titles[j]+', 1989-2016', fontsize=22)
             finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
 
-    print 'Plotting FRIS melt'
+    print 'Plotting FRIS melt timeseries'
     times = []
     datas = []
     for i in range(4):
