@@ -170,7 +170,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
     titles = ['Sea ice concentration', 'Sea ice effective thickness (m)', 'Snow effective thickness (m)', 'Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Sea surface temperature ('+deg_string+'C)', 'Sea surface salinity (psu)', 'Ice shelf melt rate (m/y)', 'Mixed layer depth (m)', r'Surface salt flux (kg/m$^2$/s)', 'Barotropic velocity (m/s)', 'Sea ice velocity (m/s)']
     # Colour bounds to impose
     vmin_impose = [0, 0, 0, None, 34.2, None, None, None, 0, -0.001, 0, 0]
-    vmax_impose = [1, 5, None, -0.5, None, None, None, None, None, -0.001, None, None]
+    vmax_impose = [1, 5, None, -0.5, None, None, None, None, None, 0.001, None, None]
     ctype = ['basic', 'basic', 'basic', 'basic', 'basic', 'basic', 'basic', 'ismr', 'basic', 'plusminus', 'vel', 'vel']
     extend = ['neither', 'max', 'neither', 'max', 'min', 'neither', 'neither', 'neither', 'neither', 'both', 'neither', 'neither']
     include_shelf = [False, False, False, True, True, False, False, True, False, False, True, False]
