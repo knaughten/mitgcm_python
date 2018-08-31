@@ -248,4 +248,4 @@ def combined_plots(base_dir='./', fig_dir='./'):
         freeze = read_netcdf(file_path, 'fris_total_freeze')[t_start:]
         datas.append(melt+freeze)
     # Make the plot
-    timeseries_multi_plot(times, datas, expt_legend_labels, expt_colours, title='FRIS basal mass loss', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt.png')
+    timeseries_multi_plot(times, datas, expt_names, expt_colours, title='FRIS basal mass loss', units='Gt/y', fig_name=fig_dir+'timeseries_fris_melt.png')
