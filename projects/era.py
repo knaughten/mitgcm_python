@@ -169,16 +169,18 @@ def combined_plots(base_dir='./', fig_dir='./'):
     var_names = ['aice', 'hice', 'hsnow', 'bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'mld', 'saltflx', 'vel', 'velice']
     titles = ['Sea ice concentration', 'Sea ice effective thickness (m)', 'Snow effective thickness (m)', 'Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Sea surface temperature ('+deg_string+'C)', 'Sea surface salinity (psu)', 'Ice shelf melt rate (m/y)', 'Mixed layer depth (m)', r'Surface salt flux (kg/m$^2$/s)', 'Barotropic velocity (m/s)', 'Sea ice velocity (m/s)']
     # Colour bounds to impose
-    vmin_impose = [0, 0, 0, None, None, None, None, None, 0, None, 0, 0]
-    vmax_impose = [1, None, None, None, None, None, None, None, None, None, None, None]
+    vmin_impose = [0, 0, 0, None, 34.2, None, None, None, 0, -0.001, 0, 0]
+    vmax_impose = [1, 5, None, -0.5, None, None, None, None, None, -0.001, None, None]
     ctype = ['basic', 'basic', 'basic', 'basic', 'basic', 'basic', 'basic', 'ismr', 'basic', 'plusminus', 'vel', 'vel']
-    extend = ['neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither', 'neither']
+    extend = ['neither', 'max', 'neither', 'max', 'min', 'neither', 'neither', 'neither', 'neither', 'both', 'neither', 'neither']
     include_shelf = [False, False, False, True, True, False, False, True, False, False, True, False]
     for j in range(len(var_names)):
         print 'Plotting ' + var_names[j]
         is_vel = var_names[j] in ['vel', 'velice']
         for zoom_fris in [False, True]:
             if zoom_fris and not include_shelf[j]:
+                continue
+            if not zoom_fris and var_name in ['bwtemp', 'bwsalt']:
                 continue
             data = []
             if is_vel:
@@ -218,7 +220,11 @@ def combined_plots(base_dir='./', fig_dir='./'):
                 img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
                 if is_vel:
                     # Add velocity vectors
-                    overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
+                    if var_name[j] == 'vel':
+                        scale = 0.8
+                    elif var_name[j] == 'velice':
+                        scale = 4
+                    overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=scale)
                 if i > 0:
                     # Remove latitude labels
                     ax.set_yticklabels([])
@@ -232,9 +238,9 @@ def combined_plots(base_dir='./', fig_dir='./'):
     times = []
     datas = []
     for i in range(3):
-        # Read the timeseries file, cutting off the first 10 years
-        file_path = base_dir + output_dir[i] + timeseries_files[i]
-        t_start = 12*10
+        # Read the timeseries file, cutting off the first 2 years
+        file_path = base_dir + output_dir[i] + timeseries_file
+        t_start = 2*10
         time = netcdf_time(file_path)[t_start:]
         times.append(time)
         melt = read_netcdf(file_path, 'fris_total_melt')[t_start:]
