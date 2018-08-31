@@ -1,7 +1,3 @@
 WSB:
 balance_obcs(option='balance')
-balance_obcs(option='correct', d_eta=-7, d_t=6)
-balance_obcs(option='correct', d_eta=-3, d_t=9)
-
-WSS:
-balance_obcs(option='balance')
+balance_obcs(option='correct', d_eta=-4, d_t=5)
