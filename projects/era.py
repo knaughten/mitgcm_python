@@ -12,6 +12,7 @@ from ..file_io import read_netcdf, netcdf_time
 from ..constants import deg2rad, deg_string
 from ..utils import fix_lon_range, split_longitude, real_dir, mask_land_ice, select_bottom, mask_3d, mask_except_ice, convert_ismr, var_min_max
 from ..plot_latlon import latlon_plot, prepare_vel, overlay_vectors
+from ..plot_1d import timeseries_multi_plot
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.colours import set_colours
