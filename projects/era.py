@@ -180,7 +180,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
         for zoom_fris in [False, True]:
             if zoom_fris and not include_shelf[j]:
                 continue
-            if not zoom_fris and var_name in ['bwtemp', 'bwsalt']:
+            if not zoom_fris and var_name[j] in ['bwtemp', 'bwsalt']:
                 continue
             data = []
             if is_vel:
