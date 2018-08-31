@@ -180,7 +180,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
         for zoom_fris in [False, True]:
             if zoom_fris and not include_shelf[j]:
                 continue
-            if not zoom_fris and var_name[j] in ['bwtemp', 'bwsalt']:
+            if not zoom_fris and var_names[j] in ['bwtemp', 'bwsalt']:
                 continue
             data = []
             if is_vel:
@@ -220,9 +220,9 @@ def combined_plots(base_dir='./', fig_dir='./'):
                 img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
                 if is_vel:
                     # Add velocity vectors
-                    if var_name[j] == 'vel':
+                    if var_names[j] == 'vel':
                         scale = 0.8
-                    elif var_name[j] == 'velice':
+                    elif var_names[j] == 'velice':
                         scale = 4
                     overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=scale)
                 if i > 0:
