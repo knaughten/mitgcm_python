@@ -159,7 +159,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
         elif var == 'velice':
             uice_tmp = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=-1), grid)
             vice_tmp = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=-1), grid)
-            speed, uice, vice = prepare_vel(uice_tmp, vice_tmp, grid, option='ice')
+            speed, uice, vice = prepare_vel(uice_tmp, vice_tmp, grid, vel_option='ice')
             if return_vel_components:
                 return speed, uice, vice
             else:
@@ -226,7 +226,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
             cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend[j])
             # Main title
             plt.suptitle(titles[j] + ', 2008-2017', fontsize=22)
-            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'_diff.png')
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'.png')
 
     print 'Plotting FRIS melt timeseries'
     times = []
