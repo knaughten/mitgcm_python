@@ -68,7 +68,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'tminustf', 'vel', 'velice', 'psi']
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
@@ -97,12 +97,14 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         # Plot
         read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
         # Make additional plots if needed
-        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt']:
+        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi']:
             # Make another plot zoomed into FRIS
             figsize = (8,6)
             # First adjust bounds
             if var == 'bwtemp':
                 vmax = -1.5
+            if var == 'psi':
+                vmax = 0.5
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
         if var == 'tminustf':
             # Call the other options for vertical transformations
