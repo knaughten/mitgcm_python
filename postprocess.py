@@ -44,7 +44,7 @@ def build_file_list (output_dir, unravelled=False):
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSB'):
+def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSK'):
 
     if time_average:
         time_index = None
@@ -90,7 +90,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
             vmax = 1.5
             zoom_fris = True
             fig_name = fig_dir + var + '_min.png'
-        if not zoom_fris and key=='WSB':
+        if not zoom_fris and key=='WSK':
             figsize = (10,6)
         else:
             figsize = (8,6)
@@ -111,7 +111,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, tf_option='max', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_max.png', date_string=date_string, figsize=figsize)
         if var == 'vel':
             # Call the other options for vertical transformations
-            if key=='WSB':
+            if key=='WSK':
                 figsize = (10,6)
             for vel_option in ['sfc', 'bottom']:
                 read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize)
@@ -182,7 +182,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSB'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSK'):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -217,7 +217,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
-    if key == 'WSB':
+    if key == 'WSK':
         figsize = (10,6)
     else:
         figsize = (8,6)

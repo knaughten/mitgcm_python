@@ -284,15 +284,15 @@ def update_nc_grid (nc_file, bathy, draft, omask, imask):
 # nc_out: desired path to the new NetCDF grid file with edits
 
 # Optional keyword argument:
-# key: string (default 'WSB') indicating which domain this is. You can make your own and do custom edits.
+# key: string (default 'WSK') indicating which domain this is. You can make your own and do custom edits.
 
-def edit_mask (nc_in, nc_out, key='WSB'):
+def edit_mask (nc_in, nc_out, key='WSK'):
 
     # Read all the variables
     lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
 
     # Edit the ocean mask based on the domain type
-    if key == 'WSB':
+    if key == 'WSK':
         # Big Weddell Sea domain
         # Block out everything west of the peninsula, and extend the peninsula north to 61S
         # First, close a big box
