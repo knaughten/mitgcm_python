@@ -424,7 +424,7 @@ def crash_to_netcdf (crash_dir, grid_path):
 
 def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
-    # Load Nco package
+    # Load nco package
     try:
         from nco import Nco
         from nco.custom import Limit
@@ -447,7 +447,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
     var_names = []
     id_out = nc.Dataset(output_file, 'a')
     for var in id_out.variables:
-        if 'time' in id_out.variables[var].dimensions and var != 'time':
+        if 'time' in id_out.variables[var].dimensions and len(id_out.variables[var].shape) > 1:
             var_names.append(var)
 
     # Time-average each variable
@@ -498,7 +498,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
             id_in.close()
 
         # Now convert from integral to average
-        data /= ndays
+        data /= total_days
         # Overwrite this variable in the output file
         id_out.variables[var][0,:] = data
 
