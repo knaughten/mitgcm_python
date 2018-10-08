@@ -434,6 +434,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
     # Extract the first time record from the first file
     # This will make a skeleton file with 1 time record and all the right metadata; later we will overwrite the values of all the time-dependent variables with the weighted time-averages.
+    print 'Initialising ' + output_file
     nco = Nco()
     nco.ncks(input=input_files[0], output=output_file, options=[Limit('time', t_start, t_start)])
 
@@ -451,6 +452,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
     # Time-average each variable
     for var in var_names:
+        print 'Processing ' + var
 
         # Reset time
         year = year0
@@ -464,10 +466,12 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
         # Loop over input files
         for i in range(len(input_files)):
 
-            # Figure out how many time indices there are
             file_name = input_files[i]
+            print '...' + file_name
+            
+            # Figure out how many time indices there are
             id_in = nc.Dataset(file_name, 'r')
-            num_time = id_in.variables[var].shape][0]
+            num_time = id_in.variables[var].shape[0]
 
             # Choose which indices we will loop over: special cases for first and last files, if t_start or t_end are set
             if i == 0:
