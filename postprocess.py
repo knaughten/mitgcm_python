@@ -13,7 +13,7 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from utils import real_dir
+from utils import real_dir, days_per_month
 from plot_utils.labels import parse_date
 
 from MITgcmutils import rdmds
@@ -408,3 +408,98 @@ def crash_to_netcdf (crash_dir, grid_path):
             ncfile.add_variable('Empmr', empmr, 'xy', units='kg/m^2/s')
 
     ncfile.close()
+
+
+# Do a proper time-average of files with monthly output, where each month is weighted with the number of days it represents.
+
+# Arguments:
+# input_files: list of paths to filenames to time-average over. They will all be collapsed into a single record.
+# output_file: path to filename to save the time-average.
+
+# Optional keyword arguments:
+# t_start: index (0-based) of the time record to start the average in input_files[0].
+# t_end: index (0-based) of the time record to end the average in input_files[-1]. In python convention, this is the first index to ignore.
+# For example, to average from month 7 (index 6) of the first file to month 10 (index 9)  of the last file, do
+# average_monthly_files(input_files, output_file, t_start=6, t_end=10)
+
+def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
+
+    # Load Nco package
+    try:
+        from nco import Nco
+        from nco.custom import Limit
+    except(ImportError):
+        print 'Error (average_years): Nco package is not installed'
+        sys.exit()
+
+    # Extract the first time record from the first file
+    # This will make a skeleton file with 1 time record and all the right metadata; later we will overwrite the values of all the time-dependent variables with the weighted time-averages.
+    nco = Nco()
+    nco.ncks(input=input_files[0], output=output_file, options=[Limit('time', t_start, t_start)])
+
+    # Get the starting date
+    time0 = netcdf_time(output_file)
+    year0 = time0[0].year
+    month0 = time0[0].month    
+
+    # Find all the time-dependent variables
+    var_names = []
+    id_out = nc.Dataset(output_file, 'a')
+    for var in id_out.variables:
+        if 'time' in id_out.variables[var].dimensions and var != 'time':
+            var_names.append(var)
+
+    # Time-average each variable
+    for var in var_names:
+
+        # Reset time
+        year = year0
+        month = month0
+        # Set up accumulation array of the right dimension for this variable
+        shape = id_out.variables[var].shape[1:]
+        data = np.zeros(shape)
+        # Also accumulate total number of days
+        total_days = 0
+
+        # Loop over input files
+        for i in range(len(input_files)):
+
+            # Figure out how many time indices there are
+            file_name = input_files[i]
+            id_in = nc.Dataset(file_name, 'r')
+            num_time = id_in.variables[var].shape][0]
+
+            # Choose which indices we will loop over: special cases for first and last files, if t_start or t_end are set
+            if i == 0:
+                t_start_curr = t_start
+            else:
+                t_start_curr = 0
+            if i == len(input_files)-1 and t_end is not None:
+                t_end_curr = t_end
+            else:
+                t_end_curr = num_time
+
+            # Now loop over time indices
+            for t in range(t_start_curr, t_end_curr):
+                # Integrate
+                ndays = days_per_month(month, year)
+                data += id_in.variables[var][t,:]*ndays
+                total_days += ndays
+                # Increment month (and year if needed)
+                month += 1
+                if month == 13:
+                    month = 1
+                    year += 1
+
+            id_in.close()
+
+        # Now convert from integral to average
+        data /= ndays
+        # Overwrite this variable in the output file
+        id_out.variables[var][0,:] = data
+
+    id_out.close()
+            
+
+    
+
