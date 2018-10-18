@@ -599,7 +599,7 @@ def make_annual_averages (in_dir='./', out_dir='./'):
             year += 1
 
         if t == num_months[i]:
-            print 'Reached the end of ' file_names[i]
+            print 'Reached the end of ' + file_names[i]
             # Prepare for the next file
             i += 1
             t = 0
