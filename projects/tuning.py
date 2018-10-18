@@ -31,10 +31,10 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
     grid = Grid(grid_dir)
 
     # Loop over variables
-    for j in len(var_names):
+    for j in range(len(var_names)):
         var = var_names[j]
         print 'Processing ' + var
-        
+
         # Initialise data arrays and min/max values
         data = []
         if var == 'vel':
@@ -46,6 +46,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
         # Loop over years
         for year in range(start_year, end_year+1):
             print '...reading ' + str(year)
+            i = year-start_year
 
             # Read data
             file_path = output_dir + str(year) + file_tail
@@ -61,7 +62,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             # Get min and max values and update global min/max as needed
             vmin_tmp, vmax_tmp = var_min_max(data[i], grid, zoom_fris=True)
             vmin = min(vmin, vmin_tmp)
-            vmax = max(vmax_tmp)
+            vmax = max(vmax, vmax_tmp)
 
         if var == 'bwsalt':
             # Impose minimum of 34.3 psu if needed
@@ -69,13 +70,13 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
 
         # Make the plot
         fig, gs, cax = set_panels('5x8C1')
-        
+
         # Loop over years again
         for year in range(start_year, end_year+1):
             print '...plotting ' + str(year)
-
-            # Draw this panel
             i = year-start_year
+
+            # Draw this panel            
             ax = plt.subplot(gs[i/8, i%8])
             img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=True, title=year)
             if var == 'vel':
@@ -92,7 +93,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         # Main title
         plt.suptitle(title[j])
-        finished_plot(fig, fig_name=fig_dir+var+'_peryear.png')
+        finished_plot(fig) #, fig_name=fig_dir+var+'_peryear.png')
             
                 
                 
