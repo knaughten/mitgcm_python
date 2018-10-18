@@ -9,11 +9,12 @@ import matplotlib.pyplot as plt
 from ..grid import Grid
 from ..file_io import read_netcdf
 from ..utils import real_dir, select_bottom, mask_3d, var_min_max
+from ..constants import deg_string
 from ..plot_latlon import latlon_plot
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 
-# Make 2 large multi-panelled plots showing interannual variability in (1) bottom water salinity and (2) vertically averaged velocity. Each plot has one panel per year, showing the conditions averaged over that year.
+# Make 3 large multi-panelled plots showing interannual variability in (1) bottom water salinity, (2) bottom water temperature, and (3) vertically averaged velocity. Each plot has one panel per year, showing the conditions averaged over that year.
 def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir='./'):
 
     # Set up file paths etc.
@@ -23,9 +24,9 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
     file_tail = '_avg.nc'
     start_year = 1979
     end_year = 2016
-    var_names = ['bwsalt', 'vel']
-    ctype = ['basic', 'vel']
-    title = ['Bottom water salinity (psu)', 'Barotropic velocity (m/s)']
+    var_names = ['bwsalt', 'bwtemp', 'vel']
+    ctype = ['basic', 'basic', 'vel']
+    title = ['Bottom water salinity (psu)', 'Bottom water temperature ('+deg_string+'C)', 'Barotropic velocity (m/s)']
 
     print 'Building grid'
     grid = Grid(grid_dir)
@@ -52,6 +53,8 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             file_path = output_dir + str(year) + file_tail
             if var == 'bwsalt':
                 data.append(select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)))
+            elif var == 'bwtemp':
+                data.append(select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)))
             elif var == 'vel':
                 u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
                 v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='u')
@@ -67,6 +70,9 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
         if var == 'bwsalt':
             # Impose minimum of 34.3 psu if needed
             vmin = max(vmin, 34.3)
+        elif var == 'bwtemp':
+            # Impose maximum of 1 C if needed
+            vmax = min(vmax, 1)
 
         # Initialise the plot
         fig, gs, cax = set_panels('5x8C1')
@@ -85,15 +91,15 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             if i%8 != 0:
                 # Remove latitude labels
                 ax.set_yticklabels([])
-            if i/8 != 7:
+            if i/8 != 4:
                 # Remove longitude labels
                 ax.set_xticklabels([])
 
         # Colourbar
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         # Main title
-        plt.suptitle(title[j], fontsize=36)
-        finished_plot(fig) #, fig_name=fig_dir+var+'_peryear.png')
+        plt.suptitle(title[j], fontsize=39)
+        finished_plot(fig, fig_name=fig_dir+var+'_peryear.png')
             
                 
                 
