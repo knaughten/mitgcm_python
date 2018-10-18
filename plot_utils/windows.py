@@ -57,8 +57,8 @@ def set_panels (key, figsize=None):
     elif key == '5x8C1':
         # 38 plots (one per year of observational period) arranged into 5 rows and 8 columns, with one colourbar in the empty space of the last 2 panels
         gs = plt.GridSpec(5,8)
-        gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95, wspace=0.01)
-        cax = fig.add_axes([0.8, 0.03, 0.1, 0.01])
+        gs.update(left=0.025, right=0.99, bottom=0.01, top=0.9, wspace=0.02)
+        cax = fig.add_axes([0.75, 0.05, 0.2, 0.03])
 
     if key[-1] == '1':        
         return fig, gs, cax

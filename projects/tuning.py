@@ -68,7 +68,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             # Impose minimum of 34.3 psu if needed
             vmin = max(vmin, 34.3)
 
-        # Make the plot
+        # Initialise the plot
         fig, gs, cax = set_panels('5x8C1')
 
         # Loop over years again
@@ -92,7 +92,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
         # Colourbar
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         # Main title
-        plt.suptitle(title[j])
+        plt.suptitle(title[j], fontsize=36)
         finished_plot(fig) #, fig_name=fig_dir+var+'_peryear.png')
             
                 
