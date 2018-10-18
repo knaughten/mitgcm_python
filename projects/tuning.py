@@ -14,7 +14,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 
 # Make 2 large multi-panelled plots showing interannual variability in (1) bottom water salinity and (2) vertically averaged velocity. Each plot has one panel per year, showing the conditions averaged over that year.
-def postage_stamp_plots (output_dir='./', grid_dir='../grid/', fig_dir='./'):
+def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir='./'):
 
     # Set up file paths etc.
     output_dir = real_dir(output_dir)
