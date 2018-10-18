@@ -524,7 +524,7 @@ def make_annual_averages (in_dir='./', out_dir='./'):
     file_names = build_file_list(in_dir)
     num_files = len(file_names)
     # Make sure their names go from 1 to n where  n is the number of files
-    if '001' not in file_names[0] or '{0:03d}'.format(num_files) not in num_files[-1]:
+    if '001' not in file_names[0] or '{0:03d}'.format(num_files) not in file_names[-1]:
         print 'Error (make_annual_average): based on filenames, you seem to be missing some files.'
         sys.exit()
 
@@ -606,7 +606,8 @@ def make_annual_averages (in_dir='./', out_dir='./'):
             if i == num_files:
                 # No more files
                 if len(files_to_average)>0:
-                    print 'Warning: ' + str(year) + ' is incomplete. Ignoring it.'            
+                    print 'Warning: ' + str(year) + ' is incomplete. Ignoring it.'
+                break
 
     
 
