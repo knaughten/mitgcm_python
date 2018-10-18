@@ -432,6 +432,10 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
         print 'Error (average_years): Nco package is not installed'
         sys.exit()
 
+    if isinstance(input_files, str):
+        # Only one file
+        input_files = [input_files]
+
     # Extract the first time record from the first file
     # This will make a skeleton file with 1 time record and all the right metadata; later we will overwrite the values of all the time-dependent variables with the weighted time-averages.
     print 'Initialising ' + output_file
@@ -503,6 +507,9 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
         id_out.variables[var][0,:] = data
 
     id_out.close()
+
+
+    
             
 
     
