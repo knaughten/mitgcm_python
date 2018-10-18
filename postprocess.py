@@ -410,7 +410,7 @@ def crash_to_netcdf (crash_dir, grid_path):
     ncfile.close()
 
 
-# Do a proper time-average of files with monthly output, where each month is weighted with the number of days it represents.
+# Do a proper time-average of files with monthly output, where each month is weighted with the number of days it represents. Make sure you load NCO before calling this function.
 
 # Arguments:
 # input_files: list of paths to filenames to time-average over. They will all be collapsed into a single record.
@@ -508,9 +508,105 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
     id_out.close()
 
-
     
-            
+
+# Call average_monthly_files for each year in the simulation.
+
+# Optional keyword arguments:
+# in_dir: path to directory containing output_*.nc files
+# out_dir: path to directory to save the annually averaged files
+def make_annual_averages (in_dir='./', out_dir='./'):
+
+    in_dir = real_dir(in_dir)
+    out_dir = real_dir(out_dir)
+
+    # Find all the files of the form output_*.nc
+    file_names = build_file_list(in_dir)
+    num_files = len(file_names)
+    # Make sure their names go from 1 to n where  n is the number of files
+    if '001' not in file_names[0] or '{0:03d}'.format(num_files) not in num_files[-1]:
+        print 'Error (make_annual_average): based on filenames, you seem to be missing some files.'
+        sys.exit()
+
+    # Get the starting date
+    time0 = netcdf_time(file_names[0])[0]
+    if time0.month != 1:
+        print "Error (make_annual_average): this simulation doesn't start in January."
+        sys.exit()
+    year0 = time0.year
+
+    # Save the number of months in each file
+    num_months = []
+    for file in file_names:
+        id = nc.Dataset(file)
+        num_months.append(id.variables['time'].size)
+        id.close()
+
+    # Now the work starts
+    year = year0
+    i = 0  # file number
+    t = 0  # the next time index that needs to be dealt with
+    files_to_average = [] # list of files containing timesteps from the current year
+    t_start = None  # time index of files_to_average[0] to start the averaging from
+
+    # New iteration of loop each time we process a chunk of time from a file.
+    while True:
+
+        if len(files_to_average)==0 and t+12 <= num_months[i]:
+            # Option 1: Average a full year
+            files_to_average.append(file_names[i])
+            t_start = t
+            t_end = t+12
+            print 'Processing all of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(t_end-1)
+            average_monthly_files(files_to_average, out_dir+str(year)+'_avg.nc', t_start=t_start, t_end=t_end)
+            files_to_average = []
+            t_start = None
+            t += 12
+            year += 1
+
+        elif len(files_to_average)==0 and t+12 > num_months[i]:
+            # Option 2: Start a new year
+            files_to_average.append(file_names[i])
+            t_start = t
+            print 'Processing beginning of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(num_months[i]-1)
+            tmp_months = num_months[i] - t_start
+            print '(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'
+            t = num_months[i]
+
+        elif len(files_to_average)>0 and t+12-tmp_months > num_months[i]:
+            # Option 3: Add onto an existing year, but can't complete it
+            files_to_average.append(file_names[i])
+            if t != 0:
+                print 'Error (make_annual_averages): something weird happened with Option 3'
+                sys.exit()
+            print 'Processing middle of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(num_months[i]-1)
+            tmp_months += num_months[i] - t
+            print '(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'
+            t = num_months[i]
+
+        elif len(files_to_average)>0 and t+12-tmp_months <= num_months[i]:
+            # Option 4: Add onto an existing year and complete it
+            files_to_average.append(file_names[i])
+            if t != 0:
+                print 'Error (make_annual_averages): something weird happened with Option 4'
+                sys.exit()
+            t_end = t+12-tmp_months
+            print 'Processing end of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(t_end-1)
+            average_monthly_files(files_to_average, out_dir+str(year)+'_avg.nc', t_start=t_start, t_end=t_end)
+            files_to_average = []
+            t_start = None
+            t += 12-tmp_months
+            year += 1
+
+        if t == num_months[i]:
+            print 'Reached the end of ' file_names[i]
+            # Prepare for the next file
+            i += 1
+            t = 0
+            if i == num_files:
+                # No more files
+                if len(files_to_average)>0:
+                    print 'Warning: ' + str(year) + ' is incomplete. Ignoring it.'            
 
     
 
