@@ -15,7 +15,8 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 
 # Make 3 large multi-panelled plots showing interannual variability in (1) bottom water salinity, (2) bottom water temperature, and (3) vertically averaged velocity. Each plot has one panel per year, showing the conditions averaged over that year.
-def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir='./'):
+# Also make one three-panelled plot for each year, showing the conditions that year.
+def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir='./'):
 
     # Set up file paths etc.
     output_dir = real_dir(output_dir)
@@ -30,6 +31,11 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
 
     print 'Building grid'
     grid = Grid(grid_dir)
+
+    all_data = []
+    all_vmin = []
+    all_vmax = []
+    all_extend = []
 
     # Loop over variables
     for j in range(len(var_names)):
@@ -67,12 +73,22 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             vmin = min(vmin, vmin_tmp)
             vmax = max(vmax, vmax_tmp)
 
+        extend = 'neither'
         if var == 'bwsalt':
             # Impose minimum of 34.3 psu if needed
             vmin = max(vmin, 34.3)
+            if vmin == 34.3:
+                extend = 'min'
         elif var == 'bwtemp':
-            # Impose maximum of 1 C if needed
-            vmax = min(vmax, 1)
+            # Impose minimum of -2.5 C and maximum of -1.5 C if needed
+            vmin = max(vmin, -2.5)
+            vmax = min(vmax, -1.5)
+            if vmin == -2.5 and vmax == -1.5:
+                extend = 'both'
+            elif vmin == -2.5 and vmax != -1.5:
+                extend = 'min'
+            elif vmin != -2.5 and vmax == -1.5:
+                extend = 'max'
 
         # Initialise the plot
         fig, gs, cax = set_panels('5x8C1')
@@ -87,7 +103,7 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
             img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=True, title=year)
             if var == 'vel':
                 # Add velocity vectors
-                overlay_vectors(ax, u[i], v[i], grid, chunk=6, scale=0.8)
+                overlay_vectors(ax, u[i], v[i], grid, chunk=8, scale=0.8)
             if i%8 != 0:
                 # Remove latitude labels
                 ax.set_yticklabels([])
@@ -96,10 +112,38 @@ def postage_stamp_plots (output_dir='./annual_averages/', grid_dir='../grid/', f
                 ax.set_xticklabels([])
 
         # Colourbar
-        cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
         # Main title
-        plt.suptitle(title[j], fontsize=39)
+        plt.suptitle(title[j], fontsize=30)
         finished_plot(fig, fig_name=fig_dir+var+'_peryear.png')
+
+        # Save the data and bounds for individual year plots
+        all_data.append(data)
+        all_vmin.append(vmin)
+        all_vmax.append(vmax)
+        all_extend.append(extend)
+
+    print 'Plotting conditions for each year'
+    for year in range(start_year, end_year+1):
+        print '...' + str(year)
+        i = year-start_year
+        fig, gs, cax1, cax2, cax3 = set_panels('1x3C3')
+        cax = [cax1, cax2, cax3]
+        
+        for j in range(len(var_names)):
+            var = var_names[j]
+            data = all_data[j][i]
+            ax = plt.subplot(gs[0,j])            
+            img = latlon_plot(data, grid, ax=ax, make_cbar=False, cypte=ctype[j], vmin=all_vmin[j], vmax=all_vmax[j], zoom_fris=True, title=title[j])
+            if var == 'vel':
+                overlay_vectors(ax, u[i], v[i], grid, chunk=6, scale=0.8)
+            if i != 0:
+                ax.set_yticklabels([])
+                ax.set_xticklabels([])
+            plt.colorbar(img, cax=cax[j], orientation='horizontal', extend=all_extend[j])
+            plt.suptitle(str(year), fontsize=20)
+            finished_plot(fig) #, fig_name=fig_dir+str(year)+'_conditions.png')
+    
             
                 
                 
