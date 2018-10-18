@@ -25,9 +25,9 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
     file_tail = '_avg.nc'
     start_year = 1979
     end_year = 2016
-    var_names = ['bwsalt', 'bwtemp', 'vel']
+    var_names = ['bwtemp', 'bwsalt', 'vel']
     ctype = ['basic', 'basic', 'vel']
-    title = ['Bottom water salinity (psu)', 'Bottom water temperature ('+deg_string+'C)', 'Barotropic velocity (m/s)']
+    title = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Barotropic velocity (m/s)']
 
     print 'Building grid'
     grid = Grid(grid_dir)
