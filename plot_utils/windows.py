@@ -47,7 +47,7 @@ def set_panels (key, figsize=None):
     elif key == '2x2C1':
         # Four plots arranged into two rows and two columns, with one colourbar below
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.07, right=0.97, bottom=0.12, top=0.88, wspace=0.05, hspace=0.15)
+        gs.update(left=0.0, right=0.97, bottom=0.12, top=0.88, wspace=0.05, hspace=0.15)
         cax = fig.add_axes([0.3, 0.03, 0.4, 0.03])
     elif key == '1x3C1':
         # Three side-by-side plots with one colourbar below
@@ -58,9 +58,9 @@ def set_panels (key, figsize=None):
         # Three side-by-side plots with three colourbars below
         gs = plt.GridSpec(1,3)
         gs.update(left=0.05, right=0.98, bottom=0.15, top=0.85, wspace=0.05)
-        cax1 = fig.add_axes([0.1, 0.05, 0.24, 0.04])
-        cax2 = fig.add_axes([0.38, 0.05, 0.24, 0.04])
-        cax3 = fig.add_axes([0.66, 0.05, 0.24, 0.04])
+        cax1 = fig.add_axes([0.08, 0.05, 0.25, 0.04])
+        cax2 = fig.add_axes([0.395, 0.05, 0.25, 0.04])
+        cax3 = fig.add_axes([0.71, 0.05, 0.25, 0.04])
     elif key == '5x8C1':
         # 38 plots (one per year of observational period) arranged into 5 rows and 8 columns, with one colourbar in the empty space of the last 2 panels
         gs = plt.GridSpec(5,8)

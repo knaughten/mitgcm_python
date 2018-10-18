@@ -103,7 +103,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
             img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=True, title=year)
             if var == 'vel':
                 # Add velocity vectors
-                overlay_vectors(ax, u[i], v[i], grid, chunk=8, scale=0.8)
+                overlay_vectors(ax, u[i], v[i], grid, chunk=6, scale=0.8)
             if i%8 != 0:
                 # Remove latitude labels
                 ax.set_yticklabels([])
@@ -127,22 +127,26 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
     for year in range(start_year, end_year+1):
         print '...' + str(year)
         i = year-start_year
-        fig, gs, cax1, cax2, cax3 = set_panels('1x3C3')
+        fig, gs, cax1, cax2, cax3 = set_panels('1x3C3', figsize=(12, 5))
         cax = [cax1, cax2, cax3]
-        
+
         for j in range(len(var_names)):
             var = var_names[j]
             data = all_data[j][i]
             ax = plt.subplot(gs[0,j])            
-            img = latlon_plot(data, grid, ax=ax, make_cbar=False, cypte=ctype[j], vmin=all_vmin[j], vmax=all_vmax[j], zoom_fris=True, title=title[j])
+            img = latlon_plot(data, grid, ax=ax, make_cbar=False, ctype=ctype[j], vmin=all_vmin[j], vmax=all_vmax[j], zoom_fris=True, title=title[j])
             if var == 'vel':
                 overlay_vectors(ax, u[i], v[i], grid, chunk=6, scale=0.8)
-            if i != 0:
+            if j != 0:
                 ax.set_yticklabels([])
                 ax.set_xticklabels([])
-            plt.colorbar(img, cax=cax[j], orientation='horizontal', extend=all_extend[j])
-            plt.suptitle(str(year), fontsize=20)
-            finished_plot(fig) #, fig_name=fig_dir+str(year)+'_conditions.png')
+            cbar = plt.colorbar(img, cax=cax[j], orientation='horizontal', extend=all_extend[j])
+            # Remove every second label so they're not squashed
+            for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+                label.set_visible(False)
+
+        plt.suptitle(str(year), fontsize=24)
+        finished_plot(fig, fig_name=fig_dir+str(year)+'_conditions.png')
     
             
                 
