@@ -38,3 +38,7 @@ bedmap_dim = 6667    # Dimension
 bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
 bedmap_res = 1000    # Resolution (m)
 bedmap_missing_val = -9999    # Missing value for bathymetry north of 60S
+
+# Bounds on location to search for grounded iceberg A-23A
+# [xmin, xmax, ymin, ymax]
+a23a_bounds = [-47, -38, -77, -75]

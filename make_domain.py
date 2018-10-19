@@ -7,7 +7,7 @@ import sys
 import netCDF4 as nc
 import shutil
 
-from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val
+from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d
 from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
@@ -82,7 +82,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
-def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None):
+def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None):
 
     topo_dir = real_dir(topo_dir)
 
@@ -94,6 +94,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None):
         bed_file = topo_dir+'bedmap2_bed.flt'
     # GEBCO file name
     gebco_file = topo_dir+'GEBCO_2014_2D.nc'
+    if grounded_iceberg:
+        # RTopo-2 file name (auxiliary file including masks)
+        rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
 
     if np.amin(lat) > -60:
         print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
@@ -229,6 +232,33 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None):
     print 'Removing isolated ice shelf cells'
     imask_interp = remove_isolated_cells(imask_interp)
     draft_interp[imask_interp==0] = 0
+
+    if grounded_iceberg:
+        print 'Adding grounded iceberg A-23A'
+
+        print 'Reading data'
+        id = nc.Dataset(topo_dir+rtopo_file, 'r')
+        lon_rtopo = id.variables['lon'][:]
+        lat_rtopo = id.variables['lat'][:]
+        # Select the region we care about
+        i_start = np.nonzero(lon_rtopo >= a23a_bounds[0])[0][0] - 1
+        i_end = np.nonzero(lon_rtopo >= a23a_bounds[1])[0][0]
+        j_start = np.nonzero(lat_rtopo >= a23a_bounds[2])[0][0] - 1
+        j_end = np.nonzero(lat_rtopo >= a23a_bounds[3])[0][0]
+        # Read mask just from this section
+        mask_rtopo = id.variables['amask'][j_start:j_end, i_start:i_end]
+        id.close()
+        # Trim the grid too
+        lon_rtopo = lon_rtopo[i_start:i_end]
+        lat_rtopo = lat_rtopo[j_start:j_end]
+
+        print 'Interpolating mask'
+        lon_2d, lat_2d = np.meshgrid(lon, lat)
+        mask_rtopo_interp = interp_topo(lon_rtopo, lat_rtopo, mask_rtopo, lon_2d, lat_2d)
+        # The mask is 1 in the grounded iceberg region and 0 elsewhere. Take a threshold of 0.5 for interpolation errors. Treat it as land.
+        index = mask_rtopo_interp >= 0.5
+        omask_interp[index] = 0
+        bathy_interp[index] = 0        
         
     print 'Plotting'
     if use_gebco:

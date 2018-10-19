@@ -368,8 +368,5 @@ def days_per_month (month, year):
     else:
         return days[month-1]
 
-    
 
     
-
-
