@@ -4,6 +4,8 @@
 
 import numpy as np
 
+# Acceleration due to gravity (m/s^2)
+gravity = 9.81
 # Density of freshwater (kg/m^3)
 rho_fw = 1e3
 # Density of ice (kg/m^3)

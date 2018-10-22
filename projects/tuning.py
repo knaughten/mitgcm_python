@@ -9,10 +9,12 @@ import netCDF4 as nc
 import numpy as np
 import sys
 
+from MITgcmutils.mdjwf import densmdjwf
+
 from ..grid import Grid
 from ..file_io import read_netcdf, netcdf_time
 from ..utils import real_dir, select_bottom, mask_3d, var_min_max
-from ..constants import deg_string
+from ..constants import deg_string, gravity
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
@@ -156,16 +158,22 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
 
 
         
-def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
+def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', rhoConst=1035., prec=64):
 
     # Site names
     sites = ['S1', 'S2', 'S3', 'S4', 'S5', 'F1', 'F2', 'F3', 'F4']
     num_sites = len(sites)
 
-    output_dir = real_dir(output_dir)
     ctd_dir = real_dir(ctd_dir)
+    output_dir = real_dir(output_dir)
+    grid_dir = read_dir(grid_dir)
     fig_dir = real_dir(fig_dir)
 
+    # Build Grid object
+    grid = Grid(grid_dir)
+    # Read pressure load anomaly
+    pload_anom_2d = read_binary(pload_file, [grid.nx, grid.ny], 'xy', prec=prec)
+    
     # Make one figure for each site
     for i in range(num_sites):
         
@@ -201,21 +209,31 @@ def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
             print "Error (compare_keith_ctd): couldn't find " + str(ctd_month) + '/' + str(ctd_year) + ' in model output'
             sys.exit()
 
-        # Build Grid object from that file
-        grid = Grid(file0)
         # Read variables
-        mit_press = read_netcdf(file0, 'PHrefC')  # Note this is 1D with depth
         mit_temp_3d = read_netcdf(file0, 'THETA', time_index=t0)
         mit_salt_3d = read_netcdf(file0, 'SALT', time_index=t0)
-        # Interpolate T and S to given point, as well as land mask
+
+        # Interpolate to given point
+        # Temperature and land mask
         mit_temp, hfac = interp_bilinear(mit_temp_3d, ctd_lon, ctd_lat, grid, return_hfac=True)
+        # Salinity
         mit_salt = interp_bilinear(mit_salt_3d, ctd_lon, ctd_lat, grid)
-        # Mask with hfac
+        # Pressure loading anomaly
+        pload_anom = interp_bilinear(pload_anom_2d, ctd_lon, ctd_lat, grid)
+        # Ice shelf draft
+        draft = interp_bilinear(grid.draft, ctd_lon, ctd_lat, grid)
+
+        # Calculate density, assuming pressure in dbar equals depth in m (this term is small)
+        rho = densmdjwf(mit_salt, mit_temp, abs(grid.dz))
+        # Now calculate pressure
+        mit_press = pload_anom + rhoConst*gravity*abs(draft) + np.cumsum(rho*gravity*grid.dz*hfac)        
+
+        # Mask all arrays with hfac
         mit_temp = np.ma.masked_where(hfac==0, mit_temp)
         mit_salt = np.ma.masked_where(hfac==0, mit_salt)
         mit_press = np.ma.masked_where(hfac==0, mit_press)
 
-        # Find the bounds on pressure, adding 5% for white space
+        # Find the bounds on pressure, adding 5% for white space in the plot
         press_min = 0.95*min(np.amin(ctd_press), np.amin(mit_press))
         press_max = 1.05*max(np.amax(ctd_press), np.amax(mit_press))
 
@@ -231,6 +249,7 @@ def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
             ax = plt.subplot(gs[0,j])
             ax.plot(ctd_data[j], ctd_press, color='blue', label='CTD')
             ax.plot(mit_data[j], mit_press, color='red', label='Model')
+            ax.set_ylim([press_max, press_min])
             ax.grid(True)
             plt.title(var_name[j])
             if j==0:
@@ -248,8 +267,8 @@ def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
         plt.suptitle(sites[i] + ', ' + date_string, fontsize=22)        
 
         finished_plot(fig) #, fig_name=fig_dir+sites[i]+'.png')
-            
-                        
+
+
 
     
 
