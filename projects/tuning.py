@@ -12,7 +12,7 @@ import sys
 from MITgcmutils.mdjwf import densmdjwf
 
 from ..grid import Grid
-from ..file_io import read_netcdf, netcdf_time
+from ..file_io import read_netcdf, netcdf_time, read_binary
 from ..utils import real_dir, select_bottom, mask_3d, var_min_max
 from ..constants import deg_string, gravity
 from ..plot_latlon import latlon_plot, plot_empty
@@ -157,8 +157,9 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
         finished_plot(fig, fig_name=fig_dir+str(year)+'_conditions.png')
 
 
-        
-def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', rhoConst=1035., prec=64):
+# Create a number of 3-panelled figures for each CTD site given by Keith. Compare (1) temperature profiles and (2) salinity profiles between the CTD and the model, interpolated to the correct location. Also show (3) a map of the site location.
+
+def compare_keith_ctd (ctd_dir='/work/n02/n02/kaight/raw_input_data/ctd_data/', output_dir='./', grid_dir='../grid/', pload_file='/work/n02/n02/shared/baspog/MITgcm/WS/WSK/pload_WSK', fig_dir='./', rhoConst=1035., prec=64):
 
     # Site names
     sites = ['S1', 'S2', 'S3', 'S4', 'S5', 'F1', 'F2', 'F3', 'F4']
@@ -166,7 +167,7 @@ def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', 
 
     ctd_dir = real_dir(ctd_dir)
     output_dir = real_dir(output_dir)
-    grid_dir = read_dir(grid_dir)
+    grid_dir = real_dir(grid_dir)
     fig_dir = real_dir(fig_dir)
 
     # Build Grid object
@@ -225,8 +226,8 @@ def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', 
 
         # Calculate density, assuming pressure in dbar equals depth in m (this term is small)
         rho = densmdjwf(mit_salt, mit_temp, abs(grid.dz))
-        # Now calculate pressure
-        mit_press = pload_anom + rhoConst*gravity*abs(draft) + np.cumsum(rho*gravity*grid.dz*hfac)        
+        # Now calculate pressure in dbar
+        mit_press = (pload_anom + rhoConst*gravity*abs(draft) + np.cumsum(rho*gravity*grid.dz*hfac))*1e-4
 
         # Mask all arrays with hfac
         mit_temp = np.ma.masked_where(hfac==0, mit_temp)
@@ -238,7 +239,7 @@ def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', 
         press_max = 1.05*max(np.amax(ctd_press), np.amax(mit_press))
 
         # Set up the plot
-        fig, gs = set_panels('1x3C1')[:2]  # Discard colourbar axis
+        fig, gs_1, gs_2 = set_panels('CTD')
 
         # Plot temperature and salinity
         # First wrap some T/S parameters up in arrays so we can iterate
@@ -246,27 +247,29 @@ def compare_keith_ctd (ctd_dir, output_dir, grid_dir, pload_file, fig_dir='./', 
         mit_data = [mit_temp, mit_salt]
         var_name = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
         for j in range(2):
-            ax = plt.subplot(gs[0,j])
+            ax = plt.subplot(gs_1[0,j])
             ax.plot(ctd_data[j], ctd_press, color='blue', label='CTD')
             ax.plot(mit_data[j], mit_press, color='red', label='Model')
             ax.set_ylim([press_max, press_min])
             ax.grid(True)
-            plt.title(var_name[j])
+            plt.title(var_name[j], fontsize=16)
             if j==0:
-                plt.ylabel('Pressure (dbar)')
+                plt.ylabel('Pressure (dbar)', fontsize=14)
             if j==1:
-                # Legend below
-                ax.legend(loc=(0.1, 0.1))
+                # No need for pressure labels
+                ax.set_yticklabels([])
+                # Legend in bottom right, below the map
+                ax.legend(loc=(1.2, 0), ncol=2)
 
         # Plot map
-        ax = plt.subplot(gs[0,2])
+        ax = plt.subplot(gs_2[0,0])
         plot_empty(grid, ax=ax, zoom_fris=True)
-        ax.plot(ctd_lon, ctd_lat, 'o', color='red')
+        ax.plot(ctd_lon, ctd_lat, '*', color='red', markersize=15)
 
         # Main title with month and year
         plt.suptitle(sites[i] + ', ' + date_string, fontsize=22)        
 
-        finished_plot(fig) #, fig_name=fig_dir+sites[i]+'.png')
+        finished_plot(fig, fig_name=fig_dir+sites[i]+'.png')
 
 
 

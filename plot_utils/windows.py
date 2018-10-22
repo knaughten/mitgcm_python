@@ -30,6 +30,8 @@ def set_panels (key, figsize=None):
             figsize = (15, 5)
         elif key == '5x8C1':
             figsize = (30, 20)
+        elif key == 'CTD':
+            figsize = (15, 6)
 
     fig = plt.figure(figsize=figsize)
     
@@ -66,8 +68,16 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(5,8)
         gs.update(left=0.025, right=0.99, bottom=0.03, top=0.93, wspace=0.03, hspace=0.12)
         cax = fig.add_axes([0.77, 0.1, 0.2, 0.025])
+    elif key == 'CTD':
+        # Special case for compare_keith_ctd in projects/tuning.py
+        gs_1 = plt.GridSpec(1,2)
+        gs_1.update(left=0.05, right=0.7, bottom=0.1, top=0.85, wspace=0.12)
+        gs_2 = plt.GridSpec(1,1)
+        gs_2.update(left=0.75, right=0.95, bottom=0.3, top=0.8)
 
-    if key[-1] == '1':        
+    if key == 'CTD':
+        return fig, gs_1, gs_2
+    elif key[-1] == '1':        
         return fig, gs, cax
     elif key[-1] == '2':
         return fig, gs, cax1, cax2
