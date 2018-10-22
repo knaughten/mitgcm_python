@@ -5,14 +5,19 @@
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import netCDF4 as nc
+import numpy as np
 
 from ..grid import Grid
-from ..file_io import read_netcdf
+from ..file_io import read_netcdf, netcdf_time
 from ..utils import real_dir, select_bottom, mask_3d, var_min_max
 from ..constants import deg_string
-from ..plot_latlon import latlon_plot
+from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
+from ..plot_utils.labels import parse_date
+from ..postprocess import build_file_list
+from ..interpolation import interp_bilinear
 
 # Make 3 large multi-panelled plots showing interannual variability in (1) bottom water salinity, (2) bottom water temperature, and (3) vertically averaged velocity. Each plot has one panel per year, showing the conditions averaged over that year.
 # Also make one three-panelled plot for each year, showing the conditions that year.
@@ -147,11 +152,103 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
 
         plt.suptitle(str(year), fontsize=24)
         finished_plot(fig, fig_name=fig_dir+str(year)+'_conditions.png')
-    
+
+
+        
+def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
+
+    # Site names
+    sites = ['S1', 'S2', 'S3', 'S4', 'S5', 'F1', 'F2', 'F3', 'F4']
+    num_sites = len(sites)
+
+    output_dir = real_dir(output_dir)
+    ctd_dir = real_dir(ctd_dir)
+    fig_dir = real_dir(fig_dir)
+
+    # Make one figure for each site
+    for i in range(num_sites):
+        
+        # Construct the filename for this site
+        site_file = ctd_dir + sites[i] + '.nc'
+        # Read arrays
+        ctd_press = read_netcdf(site_file, 'pressure')
+        ctd_temp = read_netcdf(site_file, 'theta')
+        ctd_salt = read_netcdf(site_file, 'salt')
+        # Read global attributes
+        id = nc.Dataset(site_file, 'r')
+        ctd_lat = id.lat
+        ctd_lon = id.lon
+        ctd_year = id.year
+        ctd_month = id.month
+        id.close()
+
+        # Get a list of all the output files from MITgcm
+        output_files = build_file_list(output_dir)
+        # Find the right file and time index corresponding to the given year and month
+        file0 = None
+        for file in output_files:
+            time = netcdf_time(file)
+            for t in range(time.size):
+                if time[t].year == ctd_year and time[t].month == ctd_month:
+                    file0 = file
+                    t0 = t
+                    date_string = parse_date(time[t])
+                    break
+            if file0 is not None:
+                break
+        if file0 is None:
+            print "Error (compare_keith_ctd): couldn't find " + str(ctd_month) + '/' + str(ctd_year) + ' in model output'
+            sys.exit()
+
+        # Build Grid object from that file
+        grid = Grid(file0)
+        # Read variables
+        mit_press = read_netcdf(file0, 'PHrefC')  # Note this is 1D with depth
+        mit_temp_3d = read_netcdf(file0, 'THETA', time_index=t0)
+        mit_salt_3d = read_netcdf(file0, 'SALT', time_index=t0)
+        # Interpolate T and S to given point, as well as land mask
+        mit_temp, hfac = interp_bilinear(mit_temp_3d, ctd_lon, ctd_lat, grid, return_hfac=True)
+        mit_salt = interp_bilinear(mit_salt_3d, ctd_lon, ctd_lat, grid)
+        # Mask with hfac
+        mit_temp = np.ma.masked_where(hfac==0, mit_temp)
+        mit_salt = np.ma.masked_where(hfac==0, mit_salt)
+        mit_press = np.ma.masked_where(hfac==0, mit_press)
+
+        # Find the bounds on pressure, adding 5% for white space
+        press_min = 0.95*min(np.amin(ctd_press), np.amin(mit_press))
+        press_max = 1.05*max(np.amax(ctd_press), np.amax(mit_press))
+
+        # Set up the plot
+        fig, gs = set_panels('1x3C1')[:2]  # Discard colourbar axis
+
+        # Plot temperature and salinity
+        # First wrap some T/S parameters up in arrays so we can iterate
+        ctd_data = [ctd_temp, ctd_salt]
+        mit_data = [mit_temp, mit_salt]
+        var_name = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
+        for j in range(2):
+            ax = plt.subplot(gs[0,j])
+            ax.plot(ctd_data[j], ctd_press, color='blue', label='CTD')
+            ax.plot(mit_data[j], mit_press, color='red', label='Model')
+            ax.grid(True)
+            plt.title(var_name[j])
+            if j==0:
+                plt.ylabel('Pressure (dbar)')
+            if j==1:
+                # Legend below
+                ax.legend(loc=(0.1, 0.1))
+
+        # Plot map
+        ax = plt.subplot(gs[0,2])
+        plot_empty(grid, ax=ax, zoom_fris=True)
+        ax.plot(ctd_lon, ctd_lat, 'o', color='red')
+
+        # Main title with month and year
+        plt.suptitle(sites[i] + ', ' + date_string, fontsize=22)        
+
+        finished_plot(fig) #, fig_name=fig_dir+sites[i]+'.png')
             
-                
-                
-                
+                        
 
     
 
