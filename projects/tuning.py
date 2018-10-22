@@ -7,6 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
+import sys
 
 from ..grid import Grid
 from ..file_io import read_netcdf, netcdf_time
@@ -178,8 +179,8 @@ def compare_keith_ctd (output_dir, ctd_dir, fig_dir='./'):
         id = nc.Dataset(site_file, 'r')
         ctd_lat = id.lat
         ctd_lon = id.lon
-        ctd_year = id.year
-        ctd_month = id.month
+        ctd_year = int(id.year)
+        ctd_month = int(id.month)
         id.close()
 
         # Get a list of all the output files from MITgcm

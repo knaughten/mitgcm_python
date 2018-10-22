@@ -82,6 +82,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
+# If you want the A-23A grounded iceberg in your land mask, set grounded_iceberg=True and make sure you have the RTopo-2 aux file (containing the variable "amask") in your topo_dir; set rtopo_file if it has a different path than the default.
 def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None):
 
     topo_dir = real_dir(topo_dir)
