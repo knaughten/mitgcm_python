@@ -391,7 +391,39 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
             out_file = out_head + str(year+1)
             print 'Writing ' + out_file
             write_binary(spf_last, out_file, prec=prec)
-        
+
+
+# Create a polynya mask file, as in sose_sss_restoring, but with no salinity restoring.
+def polynya_mask (grid_path, polynya, mask_file, prec=64):
+
+    # Define the centre and radii of the ellipse bounding the polynya
+    if polynya == 'maud_rise':
+        lon0 = 0.
+        lat0 = -65.
+        rlon = 10.
+        rlat = 2.5
+    elif polynya == 'near_shelf':
+        lon0 = -30.
+        lat0 = -70.
+        rlon = 10.
+        rlat = 2.5
+    else:
+        print 'Error (polynya_mask): invalid polynya option ' + polynya
+        sys.exit()
+
+    # Build the grid
+    grid = Grid(grid_path)
+    # Set up the mask
+    mask = np.zeros([grid.ny, grid.nx])
+    # Select the polynya region
+    index = (grid.lon_2d - lon0)**2/rlon**2 + (grid.lat_2d - lat0)**2/rlat**2 <= 1
+    mask[index] = 1
+
+    # Write to file
+    write_binary(mask, mask_file, prec=prec)
+    
+
+    
 
     
     
