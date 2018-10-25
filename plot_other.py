@@ -17,7 +17,28 @@ from diagnostics import tfreeze
 from constants import deg_string
 
 
-def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, option='fris', num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
+# Create a temperature vs salinity distribution plot. Temperature and salinity are split into NxN bins (default N=1000) and the colour of each bin shows the log of the volume of water masses in that bin.
+
+# Arguments:
+# file_path: path to NetCDF file containing the variable THETA and/or SALT. You can specify a second file for the second variable in second_file_path if needed.
+
+# Optional keyword arguments:
+# option: 'fris' (only plot water masses in FRIS cavity; default), 'cavities' (only plot water masses in all ice shelf cavities), or 'all' (plot water masses from all parts of the model domain).
+# grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables. If you specify nothing, the grid will be read from file_path.
+# time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
+# second_file_path: path to NetCDF file containing the variable THETA or SALT, if they are not both present in file_path
+# tmin, tmax, smin, smax: bounds on temperature and salinity to plot
+# num_bins: number of temperature and salinity bins used to categorise the water masses. Default is 1000, but if you're zooming in quite a lot using tmin etc., you might want to increase this.
+# date_string: as in function latlon_plot
+# figsize: size of figure you want
+# fig_name: as in function finished_plot
+
+# Suggested bounds for WSK simulation:
+# option='fris': smin=34.2
+# option='cavities': smin=33.5, tmax=1, num_bins=2000
+# option='all': smin=33, tmax=1.5, num_bins=2000
+
+def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
