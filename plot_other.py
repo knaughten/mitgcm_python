@@ -17,7 +17,7 @@ from diagnostics import tfreeze
 from constants import deg_string
 
 
-def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, only_cavities=True, only_fris=True, num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
+def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, option='fris', num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -40,15 +40,18 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     salt = read_data('SALT')
 
     # Select the points we care about
-    if only_fris:
+    if option == 'fris':
         # Select all points in the FRIS cavity
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.fris_mask, grid)
-    elif only_cavities:
+    elif option == 'cavities':
         # Select all points in ice shelf cavities
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.ice_mask, grid)
-    else:
+    elif option == 'all':
         # Select all unmasked points
         loc_index = grid.hfac > 0
+    else:
+        print 'Error (plot_other): invalid option ' + option
+        sys.exit()
 
     # Inner function to set up bins for a given variable (temp or salt)
     def set_bins (data):
@@ -75,10 +78,10 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     # This can't really be vectorised unfortunately
     for i in range(grid.nx):
         for j in range(grid.ny):
-            if only_fris and not grid.fris_mask[j,i]:
+            if option=='fris' and not grid.fris_mask[j,i]:
                 # Disregard all points not in FRIS cavity
                 continue
-            if only_cavities and not grid.ice_mask[j,i]:
+            if option=='cavities' and not grid.ice_mask[j,i]:
                 # Disregard all points not in ice shelf cavities
                 continue            
             for k in range(grid.nz):
@@ -110,9 +113,9 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
         smax = salt_bins[-1]
     # Construct the title
     title = 'Water masses'
-    if only_fris:
+    if option=='fris':
         title += ' in FRIS cavity'
-    elif only_cavities:
+    elif option=='cavities':
         title += ' in ice shelf cavities'
     if date_string != '':
         title += ', ' + date_string
