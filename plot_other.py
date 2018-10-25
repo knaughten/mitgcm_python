@@ -9,9 +9,10 @@ import sys
 import numpy as np
 
 from grid import choose_grid
-from file_io import check_single_time, find_variable
+from file_io import check_single_time, find_variable, read_netcdf
 from plot_utils.labels import check_date_string
-from utils import mask_3d, xy_to_xyz
+from plot_utils.windows import finished_plot
+from utils import mask_3d, xy_to_xyz, z_to_xyz
 from diagnostics import tfreeze
 from constants import deg_string
 
@@ -41,19 +42,19 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     # Select the points we care about
     if only_fris:
         # Select all points in the FRIS cavity
-        index = (grid.hfac > 0)*xy_to_xyz(grid.fris_mask, grid)
+        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.fris_mask, grid)
     elif only_cavities:
         # Select all points in ice shelf cavities
-        index = (grid.hfac > 0)*xy_to_xyz(grid.ice_mask, grid)
+        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.ice_mask, grid)
     else:
         # Select all unmasked points
-        index = grid.hfac > 0
+        loc_index = grid.hfac > 0
 
     # Inner function to set up bins for a given variable (temp or salt)
     def set_bins (data):
         # Find the bounds on the data at the points we care about
-        vmin = np.amin(data[index])
-        vmax = np.amax(data[index])
+        vmin = np.amin(data[loc_index])
+        vmax = np.amax(data[loc_index])
         # Choose a small epsilon to add/subtract from the boundaries
         # This way nothing will be at the edge of a beginning/end bin
         eps = (vmax-vmin)*1e-3
@@ -67,11 +68,13 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     salt_bins, salt_centres = set_bins(salt)
     # Now set up a 2D array to increment with volume of water masses
     volume = np.zeros([temp_centres.size, salt_centres.size])
+    # Calculate volume of each grid cell, taking partial cells into account
+    dV = xy_to_xyz(grid.dA, grid)*z_to_xyz(grid.dz, grid)*grid.hfac     
 
     # Loop over all cells to increment volume
     # This can't really be vectorised unfortunately
     for i in range(grid.nx):
-        for j in range(grid.ny):            
+        for j in range(grid.ny):
             if only_fris and not grid.fris_mask[j,i]:
                 # Disregard all points not in FRIS cavity
                 continue
@@ -86,10 +89,8 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
                 # Figure out which bins it falls into
                 temp_index = np.nonzero(temp_bins > temp[k,j,i])[0][0] - 1
                 salt_index = np.nonzero(salt_bins > salt[k,j,i])[0][0] - 1
-                # Calculate volume of this cell, taking partial cells into account
-                dV = grid.dA[j,i]*grid.dz[k]*grid.hfac[k,j,i]
                 # Increment volume array
-                volume[temp_index, salt_index] += dV
+                volume[temp_index, salt_index] += dV[k,j,i]
     # Mask bins with zero volume
     volume = np.ma.masked_where(volume==0, volume)
 
@@ -99,13 +100,13 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     # Calculate the surface freezing point for plotting
     tfreeze_sfc = tfreeze(salt_centres, 0)
     # Choose the plotting bounds if not set
-    if tmin is not None:
+    if tmin is None:
         tmin = temp_bins[0]
-    if tmax is not None:
+    if tmax is None:
         tmax = temp_bins[-1]
-    if smin is not None:
+    if smin is None:
         smin = salt_bins[0]
-    if smax is not None:
+    if smax is None:
         smax = salt_bins[-1]
     # Construct the title
     title = 'Water masses'
@@ -119,16 +120,16 @@ def ts_distribution_plot (file_path, grid=None, time_index=None, t_start=None, t
     # Plot
     fig, ax = plt.subplots(figsize=figsize)
     # Use a log scale for visibility
-    img = pcolor(salt_centres, temp_centres, np.log(volume), vmin=min_vol, vmax=max_vol)
+    img = plt.pcolor(salt_centres, temp_centres, np.log(volume), vmin=min_vol, vmax=max_vol)
     # Add the surface freezing point
     plt.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
-    grid(True)
+    ax.grid(True)
     ax.set_xlim([smin, smax])
     ax.set_ylim([tmin, tmax])
-    ax.xlabel('Salinity (psu)')
-    ax.ylabel('Temperature ('+deg_string+'C)')
+    plt.xlabel('Salinity (psu)')
+    plt.ylabel('Temperature ('+deg_string+'C)')
     plt.colorbar(img)
-    plt.text(.98, .5, 'log of volume', ha='center', transform=fig.transFigure)
+    plt.text(.9, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
     plt.title(title)
     finished_plot(fig, fig_name=fig_name)
     

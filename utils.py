@@ -33,7 +33,7 @@ def xy_to_xyz (data, grid):
     else:
         nz = grid.nz
 
-    return np.tile(data, (nz, 1, 1))
+    return np.tile(np.copy(data), (nz, 1, 1))
 
 
 # Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
@@ -46,7 +46,7 @@ def z_to_xyz (data, grid):
         nx = grid.nx
         ny = grid.ny
 
-    return np.tile(np.expand_dims(np.expand_dims(data,1),2), (1, ny, nx))
+    return np.tile(np.expand_dims(np.expand_dims(np.copy(data),1),2), (1, ny, nx))
 
 
 # Tile any array (of any dimension) in time, with num_time records. Time will be the first dimension in the new array.
