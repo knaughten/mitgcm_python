@@ -83,7 +83,7 @@ def in_situ_temp (temp, salt, z):
 # Calculate the in-situ freezing point (helper function for t_minus_tf)
 
 # Arguments:
-# salt, z: arrays of any dimension (but both the same dimension) containing salinity (psu) and depth (m, sign doesn't matter).
+# salt, z: arrays of any dimension (but both the same dimension, or else one is a scalar) containing salinity (psu) and depth (m, sign doesn't matter).
 
 # Output: array of the same dimension as salt and z, containing the in-situ freezing point in degC.
 
