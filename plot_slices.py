@@ -420,8 +420,8 @@ def vertical_resolution (grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=
         # Create a Grid object from the given path
         grid = Grid(grid)
 
-    # Tile dz so it's 3D, and apply mask
-    dz = mask_3d(z_to_xyz(grid.dz, grid), grid)
+    # Tile dz so it's 3D, and apply mask and hFac
+    dz = mask_3d(z_to_xyz(grid.dz*grid.hfac, grid), grid)
 
     # Plot
     slice_plot(dz, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Vertical resolution (m)', fig_name=fig_name)
