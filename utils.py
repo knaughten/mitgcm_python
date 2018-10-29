@@ -8,13 +8,14 @@ import sys
 from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
 
 
-# Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180).
+# Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180). If max_lon is None, nothing will be done to the array.
 def fix_lon_range (lon, max_lon=180):
 
-    index = lon >= max_lon
-    lon[index] = lon[index] - 360
-    index = lon < max_lon-360
-    lon[index] = lon[index] + 360
+    if max_lon is not None:
+        index = lon >= max_lon
+        lon[index] = lon[index] - 360
+        index = lon < max_lon-360
+        lon[index] = lon[index] + 360
     return lon
 
 

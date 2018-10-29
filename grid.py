@@ -45,8 +45,9 @@ class Grid:
 
     # Initialisation arguments:
     # file_path: path to NetCDF grid file OR directory containing binary files
+    # is_lon: indicates that X indicates longitude. If True, max_lon will be enforced.
     # max_lon: will adjust longitude to be in the range (max_lon-360, max_lon). By default the code will work out whether (0, 360) or (-180, 180) is more appropriate.
-    def __init__ (self, path, max_lon=None):
+    def __init__ (self, path, is_lon=True, max_lon=None):
 
         if path.endswith('.nc'):
             use_netcdf=True
@@ -109,7 +110,7 @@ class Grid:
             self.lon_corners_2d, self.lat_corners_2d = np.meshgrid(self.lon_corners_1d, self.lat_corners_1d)
 
         # Decide on longitude range
-        if max_lon is None:
+        if max_lon is None and is_lon:            
             # Choose range automatically
             if np.amin(self.lon_1d) < 180 and np.amax(self.lon_1d) > 180:
                 # Domain crosses 180E, so use the range (0, 360)
