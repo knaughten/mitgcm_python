@@ -253,13 +253,15 @@ def remove_isolated_cells (data, mask_val=0):
 
 # Interpolate from a regular lat-lon grid to another regular lat-lon grid.
 # All the input lat and lon arrays should be 1D.
+# You can also interpolate to a non-regular (scattered) grid by setting target_reg=False.
 # Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
-def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
+def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, target_reg=True):
 
     # Build an interpolant
     interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
-    # Make target axes 2D
-    target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+    if target_reg:
+        # Make target axes 2D
+        target_lon, target_lat = np.meshgrid(target_lon, target_lat)
     # Interpolate
     data_interp = interpolant((target_lat, target_lon))
     return data_interp
