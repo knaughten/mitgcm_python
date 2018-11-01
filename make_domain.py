@@ -4,14 +4,12 @@
 
 import numpy as np
 import sys
-import netCDF4 as nc
 import shutil
 
 from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d
 from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
-from plot_latlon import plot_tmp_domain
 from grid import Grid
 
 
@@ -84,6 +82,9 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
 # If you want the A-23A grounded iceberg in your land mask, set grounded_iceberg=True and make sure you have the RTopo-2 aux file (containing the variable "amask") in your topo_dir; set rtopo_file if it has a different path than the default.
 def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None):
+
+    import netCDF4 as nc
+    from plot_latlon import plot_tmp_domain
 
     topo_dir = real_dir(topo_dir)
 
@@ -299,6 +300,8 @@ def read_nc_grid (nc_file):
 
 # Helper function to update variables in a temporary NetCDF grid file
 def update_nc_grid (nc_file, bathy, draft, omask, imask):
+
+    import netCDF4 as nc
 
     id = nc.Dataset(nc_file, 'a')
     id.variables['bathy'][:] = bathy
@@ -543,6 +546,8 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
 # hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
 
 def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20.):
+
+    from plot_latlon import plot_tmp_domain
 
     # Read all the variables
     lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)

@@ -7,7 +7,7 @@ from scipy.io import savemat
 
 from MITgcmutils import rdmds
 
-from utils import convert_ismr
+from utils import real_dir, convert_ismr
 
 
 # Pass data from MITgcm to Ua (melt rates).
@@ -19,6 +19,9 @@ from utils import convert_ismr
 # ua_out_file: desired path to .mat file for Ua to read melt rates from.
 
 def couple_ocn2ice (mit_dir, ismr_name, ua_out_file):
+
+    # Make sure directory ends in /
+    mit_dir = real_dir(mit_dir)
 
     # Read MITgcm grid
     lon = rdmds(mit_dir+'XC')

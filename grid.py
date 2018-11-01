@@ -11,8 +11,6 @@ import numpy as np
 import sys
 import os
 
-from MITgcmutils import rdmds
-
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude
 from constants import fris_bounds, sose_res
@@ -54,6 +52,7 @@ class Grid:
         elif os.path.isdir(path):
             use_netcdf=False
             path = real_dir(path)
+            from MITgcmutils import rdmds
         else:
             print 'Error (Grid): ' + path + ' is neither a NetCDF file nor a directory'
             sys.exit()
@@ -327,6 +326,8 @@ def grid_check_split (grid_path, split):
 
 # If you don't want to do any trimming or extending, just set model_grid=None.
 class SOSEGrid(Grid):
+
+    from MITgcmutils import rdmds
 
     def __init__ (self, grid_dir, model_grid=None, split=0):
 

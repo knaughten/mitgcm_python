@@ -8,9 +8,6 @@ from file_io import write_binary, NCfile, read_binary
 from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
 from constants import sec_per_year
 
-from MITgcmutils import rdmds
-from MITgcmutils.mdjwf import densmdjwf
-
 import numpy as np
 import os
 import sys
@@ -22,6 +19,8 @@ import sys
 # in_file: binary SOSE file (.data) containing one record for each month of the SOSE period. You can also leave ".data" off as it will get stripped off anyway.
 # out_file: desired path to output file
 def make_sose_climatology (in_file, out_file):
+
+    from MITgcmutils import rdmds
 
     # Strip .data from filename before reading
     data = rdmds(in_file.replace('.data', ''))
@@ -136,6 +135,8 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # prec: as in function sose_ics
 
 def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
+
+    from MITgcmutils.mdjwf import densmdjwf
 
     print 'Things to check in your "data" namelist:'
     print "eosType='MDJWF'"

@@ -2,7 +2,6 @@
 # Utilities for file reading and writing, both NetCDF and binary
 #####################################################################
 
-import netCDF4 as nc
 import numpy as np
 import sys
 import os
@@ -36,6 +35,8 @@ import datetime
 # temp = read_netcdf('temp.nc', 'temp', t_start=-12, time_average=True)
 
 def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    import netCDF4 as nc
 
     # Check for conflicting arguments
     if time_index is not None and time_average==True:
@@ -111,6 +112,8 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
 def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_date=True, monthly=True, return_units=False):
 
+    import netCDF4 as nc
+
     if return_units and not return_date:
         print 'Error (netcdf_time): need return_date=True if return_units=True'
         sys.exit()
@@ -151,6 +154,8 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
 
 # Given two NetCDF files, figure out which one the given variable is in.
 def find_variable (file_path_1, file_path_2, var_name):
+
+    import netCDF4 as nc
 
     if var_name in nc.Dataset(file_path_1).variables:
         return file_path_1
@@ -264,6 +269,8 @@ def write_binary (data, file_path, prec=32, endian='big'):
 
 # NCfile object to simplify writing of NetCDF files.
 class NCfile:
+
+    import netCDF4 as nc
 
     # Initialisation arguments:
     # filename: name for desired NetCDF file
@@ -387,6 +394,8 @@ class NCfile:
 
 # Basic version of NCfile for a simple lat-lon file on any regular grid (eg intermediate domain generation steps, see make_domain.py).
 class NCfile_basiclatlon:
+
+    import netCDF4 as nc
 
     # Initialisation arguments:
     # filename: name for desired NetCDF file

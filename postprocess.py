@@ -5,7 +5,6 @@
 import os
 import sys
 import numpy as np
-import netCDF4 as nc
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
@@ -15,8 +14,6 @@ from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_dif
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir, days_per_month
 from plot_utils.labels import parse_date
-
-from MITgcmutils import rdmds
 
 
 # Helper function to build lists of output files in a directory.
@@ -276,6 +273,8 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 
 def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=False, lon0=None, lat0=None):
 
+    import netCDF4 as nc
+
     # Timeseries to compute
     if polynya:
         timeseries_types = ['temp_polynya', 'salt_polynya', 'fris_melt']
@@ -355,6 +354,8 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=Fals
 
 def crash_to_netcdf (crash_dir, grid_path):
 
+    from MITgcmutils import rdmds
+
     # Make sure crash_dir is a proper directory
     crash_dir = real_dir(crash_dir)
 
@@ -425,13 +426,9 @@ def crash_to_netcdf (crash_dir, grid_path):
 
 def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
-    # Load nco package
-    try:
-        from nco import Nco
-        from nco.custom import Limit
-    except(ImportError):
-        print 'Error (average_years): Nco package is not installed'
-        sys.exit()
+    import netCDF4 as nc
+    from nco import Nco
+    from nco.custom import Limit
 
     if isinstance(input_files, str):
         # Only one file
@@ -517,6 +514,8 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 # in_dir: path to directory containing output_*.nc files
 # out_dir: path to directory to save the annually averaged files
 def make_annual_averages (in_dir='./', out_dir='./'):
+
+    import netCDF4 as nc
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)

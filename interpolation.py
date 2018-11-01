@@ -4,8 +4,6 @@
 
 import numpy as np
 import sys
-from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator, interp1d, griddata
-from scipy.ndimage.filters import gaussian_filter
 
 from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz
 
@@ -204,6 +202,8 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3
 
 def interp_topo (x, y, data, x_interp, y_interp, n_subgrid=10):
 
+    from scipy.interpolate import RectBivariateSpline
+
     # x_interp and y_interp are the edges of the grid cells, so the number of cells is 1 less
     num_j = y_interp.shape[0] -1
     num_i = x_interp.shape[1] - 1
@@ -257,6 +257,8 @@ def remove_isolated_cells (data, mask_val=0):
 # Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
 def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, target_reg=True):
 
+    from scipy.interpolate import RegularGridInterpolator
+
     # Build an interpolant
     interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
     if target_reg:
@@ -269,6 +271,8 @@ def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, 
 
 # Like interp_reg_xy, but for lat-lon-depth grids.
 def interp_reg_xyz (source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=-9999):
+
+    from scipy.interpolate import RegularGridInterpolator
 
     # Build an interpolant
     # Make depth positive so it's strictly increasing
@@ -386,6 +390,8 @@ def interp_bilinear (data, lon0, lat0, grid, gtype='t', return_hfac=False):
 
 def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
 
+    from scipy.interpolate import RegularGridInterpolator, interp1d
+
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
         if abs(target_z[0]) < abs(source_z[0]):
@@ -433,6 +439,8 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
 # Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
 def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
 
+    from scipy.interpolate import griddata
+
     # Figure out if target lon and lat are 1D or 2D
     if len(target_lon.shape) == 1 and len(target_lat.shape) == 1:
         # Make them 2D
@@ -454,4 +462,5 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
 # Smooth a lat-lon field with a 2D Gaussian filter. Default radius of 2 grid cells (1/2 degree for a quarter-degree grid).
 def smooth_xy (data, sigma=2):
 
+    from scipy.ndimage.filters import gaussian_filter
     return gaussian_filter(data, sigma)
