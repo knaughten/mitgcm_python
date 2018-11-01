@@ -377,7 +377,7 @@ def vertical_layers (dz_file):
 
 # Helper function to calculate a few variables about z-levels based on the given depth field A (which could be bathymetry or ice shelf draft):
 # (1) Index (0-based) of vertical layer that A falls into
-# (2) Depth of the first z-level above A
+# (2) Depth of the first z-level (edge, not centre) above A
 # (3) Depth of the first z-level below A
 # (4) Thickness of the vertical layer that A falls into (i.e. difference between 2 and 3)
 # (5) Thickness of the vertical layer below that
