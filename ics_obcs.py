@@ -2,11 +2,11 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from grid import Grid, SOSEGrid, grid_check_split
+from grid import Grid, grid_check_split
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
-from file_io import write_binary, NCfile, read_binary
-from interpolation import interp_reg, extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_bdry, interp_grid
-from constants import sec_per_year
+from file_io import write_binary, read_binary
+from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
+from constants import sec_per_year, gravity
 
 import numpy as np
 import os
@@ -44,6 +44,10 @@ def make_sose_climatology (in_file, out_file):
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
 def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
+
+    from grid import SOSEGrid
+    from file_io import NCfile
+    from interpolation import interp_reg
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -123,41 +127,79 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         ncfile.close()
 
 
-# Calculate the initial pressure loading anomaly of the ice shelf. Assume that the water displaced by the ice shelf has the same temperature and salinity as the constant values we filled the ice shelf cavities with in sose_ics.
+# Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are two different assumptions we could make:
+# 1. Assume the displaced water has a constant temperature and salinity (default)
+# 2. Use nearest-neighbour extrapolation within the cavity to set the temperature and salinity of the displaced water. This is equivalent to finding the temperature and salinity of the surface layer immediately beneath the ice base, and extrapolating it up vertically at every point.
 
 # Arguments:
-# grid_path: path to NetCDF grid file
+# grid_path: path to grid directory or NetCDF file
 # out_file: path to desired output file
 
 # Optional keyword arguments:
-# constant_t, constant_s: as in function sose_ics
+# option: 'constant' or 'nearest' as described above
+# constant_t, constant_s: if option='constant', temperature and salinity to use
+# ini_temp_file, ini_salt_file: if option='nearest', paths to initial conditions files (binary) for temperature and salinity
+# eos_type: 'MDFWF', 'JMD95', or 'linear'. Must match value in "data" namelist.
 # rhoConst: reference density as in MITgcm's "data" namelist
+# Talpha, Sbeta, Tref, Sref: if eos_type='linear', set these to match your "data" namelist.
 # prec: as in function sose_ics
 
-def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rhoConst=1035, prec=64):
+def calc_load_anomaly (grid_path, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eos_type='MDJWF', rhoConst=1035, Talpha=None, Sbeta=None, Tref=None, Sref=None, prec=64):
 
-    from MITgcmutils.mdjwf import densmdjwf
+    # Set density functions
+    if eos_type == 'MDJWF':
+        from MITgcmutils.mdjwf import densmdjwf
+    elif eos_type == 'JMD95':
+        from MITgcmutils.jmd95 import densjmd95
+    elif eos_type == 'linear':
+        from diagnostics import dens_linear
+        if none in [Talpha, Sbeta, Tref, Sref]:
+            print 'Error (calc_load_anomaly): for eos_type linear, you must set Talpha, Sbeta, Tref, and Sref'
+            sys.exit()
+    else:
+        print 'Error (calc_load_anomaly): invalid eos_type ' + eos_type
+        sys.exit()
 
-    print 'Things to check in your "data" namelist:'
-    print "eosType='MDJWF'"
-    print 'rhoConst='+str(rhoConst)
-    print 'readBinaryPrec=' + str(prec)
-
-    g = 9.81  # gravity (m/s^2)
-    errorTol = 1e-13  # convergence criteria
+    errorTol = 1e-13  # convergence criteria    
 
     # Build the grid
     grid = Grid(grid_path)
+
+    # Set temperature and salinity
+    if option == 'constant':
+        # 1D arrays: only varies over depth
+        temp = np.zeros(grid.nz) + constant_t
+        salt = np.zeros(grid.nz) + constant_s
+    elif option == 'nearest':
+        # 3D arrays read from file
+        temp = read_binary(ini_temp_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+        salt = read_binary(ini_salt_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+        # Now fill in the ice shelves
+        # Select the layer immediately below the ice shelves and tile to make it 3D
+        temp_top = xy_to_xyz(select_top(temp, masked=False, grid=grid), grid)
+        salt_top = xy_to_xyz(select_top(salt, masked=False, grid=grid), grid)
+        # Fill the 3D mask with these values
+        # It doesn't matter that the bathymetry gets filled too, because pressure is integrated from the top down
+        index = grid.hfac==0
+        temp[index] = temp_top[index]
+        salt[index] = salt_top[index]
+    else:
+        print 'Error (calc_load_anomaly): invalid option ' + option
+        sys.exit()
 
     # Get vertical integrands considering z at both centres and edges of layers
     dz_merged = np.zeros(2*grid.nz)
     dz_merged[::2] = abs(grid.z - grid.z_edges[:-1])  # dz of top half of each cell
     dz_merged[1::2] = abs(grid.z_edges[1:] - grid.z)  # dz of bottom half of each cell
+
+    z = grid.z
+    if option == 'nearest':
+        # Need 3D tiled depth arrays
+        z = z_to_xyz(z, grid)
+        dz_merged = z_to_xyz(dz_merged, grid)
+
     # Initial guess for pressure (dbar) at centres of cells
-    press = abs(grid.z)*g*rhoConst*1e-4
-    # Get depth arrays of T and S
-    temp = np.zeros(grid.nz) + constant_t
-    salt = np.zeros(grid.nz) + constant_s
+    press = abs(z)*gravity*rhoConst*1e-4
 
     # Iteratively calculate pressure load anomaly until it converges
     press_old = np.zeros(press.shape)  # Dummy initial value for pressure from last iteration
@@ -166,28 +208,37 @@ def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rh
         # Save old pressure
         press_old = np.copy(press)
         # Calculate density anomaly at centres of cells
-        drho_c = densmdjwf(salt, temp, press) - rhoConst
+        if eos_type == 'MDJWF':
+            drho_c = densmdjwf(salt, temp, press) - rhoConst
+        elif eos_type == 'JMD95':
+            drho_c = densjmd95(salt, temp, press) - rhoConst
+        elif eos_type == 'linear':
+            drho_c = dens_linear(salt, temp, rhoConst, Tref, Sref, Talpha, Sbeta) - rhoConst
         # Use this for both centres and edges of cells
         drho = np.zeros(dz_merged.shape)
-        drho[::2] = drho_c
-        drho[1::2] = drho_c
+        drho[::2,...] = drho_c
+        drho[1::2,...] = drho_c
         # Integrate pressure load anomaly (Pa)
-        pload_full = np.cumsum(drho*g*dz_merged)
+        pload_full = np.cumsum(drho*gravity*dz_merged, axis=0)
         # Update estimate of pressure
-        press = (abs(grid.z)*g*rhoConst + pload_full[1::2])*1e-4
+        press = (abs(z)*gravity*rhoConst + pload_full[1::2,...])*1e-4
     print 'Converged'
 
-    # Now extract pload at the ice shelf base
-    # First tile pload at level edges to be 3D
-    pload_3d = z_to_xyz(pload_full[::2], grid)
+    # Extract pload at each level edge (don't care about centres anymore)
+    pload_edges = pload_full[::2,...]
+    if len(pload_full.shape) == 1:
+        # Tile to be 3D
+        pload_edges = z_to_xyz(pload_edges, grid)
+
+    # Now find pload at the ice shelf base
     # For each xy point, calculate three variables:
     # (1) pload at the base of the last fully dry ice shelf cell
     # (2) pload at the base of the cell beneath that
     # (3) hFacC for that cell
     # To calculate (1) we have to shift pload_3d_edges upward by 1 cell
-    pload_3d_above = neighbours_z(pload_3d)[0]
-    pload_above = select_top(pload_3d_above, masked=False, grid=grid)
-    pload_below = select_top(pload_3d, masked=False, grid=grid)
+    pload_edges_above = neighbours_z(pload_edges)[0]
+    pload_above = select_top(pload_edges_above, masked=False, grid=grid)
+    pload_below = select_top(pload_edges, masked=False, grid=grid)
     hfac_below = select_top(grid.hfac, masked=False, grid=grid)
     # Now we can interpolate to the ice base
     pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
@@ -209,6 +260,10 @@ def calc_load_anomaly (grid_path, out_file, constant_t=-1.9, constant_s=34.4, rh
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
 
 def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
+
+    from grid import SOSEGrid
+    from file_io import NCfile
+    from interpolation import interp_bdry
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)

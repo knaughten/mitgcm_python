@@ -174,6 +174,13 @@ def barotropic_streamfunction (u, grid):
     udz_int = np.sum(u*hfac*dz, axis=-3)
     # Indefinite integral from south to north, and convert to Sv
     return np.cumsum(udz_int*dy, axis=-2)*1e-6
+
+
+# Calculate seawater density for a linear equation of state.
+def dens_linear (salt, temp, rhoConst, Tref, Sref, Talpha, Sbeta):
+
+    return rhoConst*(1 - Talpha*(temp-Tref) + Sbeta*(salt-Sref))
+
     
     
 
