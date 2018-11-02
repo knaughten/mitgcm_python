@@ -2,7 +2,7 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from grid import Grid, grid_check_split
+from grid import Grid, grid_check_split, choose_grid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import write_binary, read_binary
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
@@ -132,7 +132,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # 2. Use nearest-neighbour extrapolation within the cavity to set the temperature and salinity of the displaced water. This is equivalent to finding the temperature and salinity of the surface layer immediately beneath the ice base, and extrapolating it up vertically at every point.
 
 # Arguments:
-# grid_path: path to grid directory or NetCDF file
+# grid: Grid object OR path to grid directory OR path to NetCDF file
 # out_file: path to desired output file
 
 # Optional keyword arguments:
@@ -144,7 +144,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # Talpha, Sbeta, Tref, Sref: if eos_type='linear', set these to match your "data" namelist.
 # prec: as in function sose_ics
 
-def calc_load_anomaly (grid_path, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eos_type='MDJWF', rhoConst=1035, Talpha=None, Sbeta=None, Tref=None, Sref=None, prec=64):
+def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eos_type='MDJWF', rhoConst=1035, Talpha=None, Sbeta=None, Tref=None, Sref=None, prec=64):
 
     # Set density functions
     if eos_type == 'MDJWF':
@@ -160,10 +160,10 @@ def calc_load_anomaly (grid_path, out_file, option='constant', constant_t=-1.9, 
         print 'Error (calc_load_anomaly): invalid eos_type ' + eos_type
         sys.exit()
 
-    errorTol = 1e-13  # convergence criteria    
+    errorTol = 1e-13  # convergence criteria
 
-    # Build the grid
-    grid = Grid(grid_path)
+    # Build the grid if needed
+    grid = choose_grid(grid, None)
 
     # Set temperature and salinity
     if option == 'constant':
