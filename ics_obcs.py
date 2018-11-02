@@ -114,7 +114,6 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
             data_interp[model_grid.hfac==0] = 0
         else:
             data_interp[model_grid.hfac[0,:]==0] = 0
-        print '...writing ' + out_file
         write_binary(data_interp, out_file, prec=prec)
         if nc_out is not None:
             print '...adding to ' + nc_out
@@ -395,7 +394,6 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
             print '...interpolating month ' + str(month+1)
             data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
 
-        print '...writing ' + out_file
         write_binary(data_interp, out_file, prec=prec)
         
         if nc_out is not None:

@@ -251,7 +251,7 @@ def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
 
     # Reshape the data and return
     return np.reshape(data, shape)            
-    
+
         
 
 # Write an array ("data"), of any dimension, to a binary file ("file_path"). Optional keyword arguments ("prec" and "endian") are as in function read_binary.
@@ -262,6 +262,7 @@ def write_binary (data, file_path, prec=32, endian='big'):
     data = data.astype(dtype)
 
     # Write to file
+    print 'Writing ' + file_path
     id = open(file_path, 'w')
     data.tofile(id)
     id.close()

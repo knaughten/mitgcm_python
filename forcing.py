@@ -48,7 +48,6 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
         # Save to the master array
         icebergs_interp[month,:] = icebergs_interp_tmp    
 
-    print 'Writing ' + output_file
     write_binary(icebergs_interp, output_file, prec=prec)
 
     print 'Plotting'
@@ -162,12 +161,9 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         # Mask out land and ice shelves
         sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice
 
-    print 'Writing ' + output_salt_file
     write_binary(sss_interp, output_salt_file, prec=prec)
-    print 'Writing ' + output_mask_file
     write_binary(mask_3d, output_mask_file, prec=prec)
     if add_polynya:
-        print 'Writing ' + output_polynya_mask_file
         write_binary(mask_polynya, output_polynya_mask_file, prec=prec)
 
     if nc_out is not None:
@@ -307,7 +303,6 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
                 data *= -1
 
         out_file = out_head + var_out[i] + out_tail
-        print 'Writing ' + out_file
         write_binary(data, out_file, prec=prec)
 
 
@@ -355,7 +350,6 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
         # Select the last time index
         data = read_binary(file_in, [nlon, nlat], 'xyt', prec=prec)[-1,:]
         file_out = out_dir + file_head + var + '_' + str(last_year+1)
-        print 'Writing ' + file_out
         write_binary(data, file_out, prec=prec)
 
 
@@ -384,13 +378,11 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
         # Calculate specific humidity
         spf = sh_coeff*e/(press - (1-sh_coeff)*e)
         out_file = out_head + str(year)
-        print 'Writing ' + out_file
         write_binary(spf, out_file, prec=prec)
         if year == end_year:
             # Copy the last timestep as in era_dummy_year
             spf_last = spf[-1,:]
             out_file = out_head + str(year+1)
-            print 'Writing ' + out_file
             write_binary(spf_last, out_file, prec=prec)
 
 
