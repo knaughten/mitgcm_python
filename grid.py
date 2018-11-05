@@ -327,9 +327,9 @@ def grid_check_split (grid_path, split):
 # If you don't want to do any trimming or extending, just set model_grid=None.
 class SOSEGrid(Grid):
 
-    from MITgcmutils import rdmds
-
     def __init__ (self, grid_dir, model_grid=None, split=0):
+
+        from MITgcmutils import rdmds
 
         self.trim_extend = True
         if model_grid is None:
@@ -550,6 +550,8 @@ class SOSEGrid(Grid):
     # The field can be time dependent: dimensions must be one of 'xy', 'xyt', 'xyz', or 'xyzt'.
     # Extended regions will just be filled with fill_value for now. See function discard_and_fill in interpolation.py for how to extrapolate data into these regions.
     def read_field (self, file_path, dimensions, fill_value=-9999):
+
+        from MITgcmutils import rdmds
         
         if self.trim_extend:
 

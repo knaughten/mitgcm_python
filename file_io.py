@@ -274,13 +274,13 @@ def write_binary (data, file_path, prec=32, endian='big'):
 # NCfile object to simplify writing of NetCDF files.
 class NCfile:
 
-    import netCDF4 as nc
-
     # Initialisation arguments:
     # filename: name for desired NetCDF file
     # grid: Grid object
     # dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. Include all the dimensions (from x, y, z, t) that any of the variables in the file will need.
     def __init__ (self, filename, grid, dimensions):
+
+        import netCDF4 as nc
 
         # Open the file
         self.id = nc.Dataset(filename, 'w')
@@ -378,6 +378,8 @@ class NCfile:
     # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
     def add_time (self, time, units=None):
 
+        import netCDF4 as nc
+
         if isinstance(time[0], datetime.datetime):
             # These are DateTime objects
             if units is None:
@@ -399,12 +401,12 @@ class NCfile:
 # Basic version of NCfile for a simple lat-lon file on any regular grid (eg intermediate domain generation steps, see make_domain.py).
 class NCfile_basiclatlon:
 
-    import netCDF4 as nc
-
     # Initialisation arguments:
     # filename: name for desired NetCDF file
     # lon, lat: 1D longitude and latitude arrays
     def __init__ (self, filename, lon, lat):
+
+        import netCDF4 as nc
 
         self.id = nc.Dataset(filename, 'w')
         self.id.createDimension('lat', lat.size)
