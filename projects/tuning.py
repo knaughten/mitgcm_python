@@ -12,8 +12,8 @@ import sys
 from MITgcmutils.mdjwf import densmdjwf
 
 from ..grid import Grid
-from ..file_io import read_netcdf, netcdf_time, read_binary
-from ..utils import real_dir, select_bottom, mask_3d, var_min_max
+from ..file_io import read_netcdf, netcdf_time, read_binary, NCfile
+from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr
 from ..constants import deg_string, gravity
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
@@ -270,6 +270,34 @@ def compare_keith_ctd (ctd_dir='/work/n02/n02/kaight/raw_input_data/ctd_data/', 
         plt.suptitle(sites[i] + ', ' + date_string, fontsize=22)        
 
         finished_plot(fig, fig_name=fig_dir+sites[i]+'.png')
+
+
+# Extract annually averaged melt rates for Sebastian.
+def extract_ismr (out_file, start_year=1994, end_year=2016, output_dir='./annual_averages/', grid_dir='../grid/'):
+
+    output_dir = real_dir(output_dir)
+    grid_dir = real_dir(grid_dir)
+    file_tail = '_avg.nc'
+
+    print 'Building grid'
+    grid = Grid(grid_dir)
+
+    # Set up array to hold melt rates
+    ismr = np.empty([end_year-start_year+1, grid.ny, grid.nx])
+    for year in range(start_year, end_year+1):
+        print 'Processing ' + str(year)
+        file_path = output_dir + str(year) + file_tail
+        ismr_tmp = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=0))
+        ismr[year-start_year,:] = ismr_tmp
+    
+    print 'Writing ' + out_file
+    ncfile = NCfile(out_file, grid, 'xyt')
+    ncfile.add_time(range(start_year,end_year+1), units='year')
+    ncfile.add_variable('melt_rate', ismr, 'xyt', units='m/y')
+    ncfile.close()
+
+    
+    
 
 
 

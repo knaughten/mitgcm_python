@@ -508,7 +508,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
     
 
-# Call average_monthly_files for each year in the simulation.
+# Call average_monthly_files for each year in the simulation. Make sure you load NCO before calling this function.
 
 # Optional keyword arguments:
 # in_dir: path to directory containing output_*.nc files
