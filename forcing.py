@@ -351,7 +351,7 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
 
 
 # Create a mask file to impose polynyas (frcConvMaskFile in input/data.kpp, also switch on useFrcConv in input/data.kpp and define ALLOW_FORCED_CONVECTION in KPP_OPTIONS.h). The mask will be 1 in the polynya region which will tell KPP to mix all the way down to the bottom there.
-# The argument "polynya" is a key determining the centre and radii of the ellipse bounding the polynya. Current options are 'maud_rise', 'near_shelf', and 'maud_rise_big'.
+# The argument "polynya" is a key determining the centre and radii of the ellipse bounding the polynya. Current options are 'maud_rise', 'near_shelf', 'maud_rise_big', and 'maud_rise_small'.
 def polynya_mask (grid_path, polynya, mask_file, prec=64):
 
     from plot_latlon import latlon_plot
