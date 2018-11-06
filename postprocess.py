@@ -419,8 +419,9 @@ def time_dependent_variables (file_name):
     var_names = []
     id = nc.Dataset(file_name, 'r')
     for var in id.variables:
-        if 'time' in id.variables[var].dimensions and len(id_out.variables[var].shape) > 1:
+        if 'time' in id.variables[var].dimensions and len(id.variables[var].shape) > 1:
             var_names.append(var)
+    id.close()
     return var_names
 
 
@@ -616,7 +617,7 @@ def make_annual_averages (in_dir='./', out_dir='./'):
                 break
 
 
-# Make a monthly climatology from unravelled files (in the form 1979.nc, etc. using netcdf_finalise.sh).
+# Make a monthly climatology from unravelled files (in the form 1979.nc, etc. using netcdf_finalise.sh) stored in the given directory. Restrict the climatology to the years start_year to end_year inclusive, and save the result in output_file.
 def make_climatology (start_year, end_year, output_file, directory='./'):
     
     directory = real_dir(directory)
