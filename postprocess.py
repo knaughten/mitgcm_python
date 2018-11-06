@@ -5,6 +5,8 @@
 import os
 import sys
 import numpy as np
+import shutil
+import netCDF4 as nc
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
@@ -273,8 +275,6 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 
 def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=False, lon0=None, lat0=None):
 
-    import netCDF4 as nc
-
     # Timeseries to compute
     if polynya:
         timeseries_types = ['temp_polynya', 'salt_polynya', 'fris_melt']
@@ -412,6 +412,18 @@ def crash_to_netcdf (crash_dir, grid_path):
     ncfile.close()
 
 
+# Helper function for average_monthly_files and make_climatology
+# Find all the time-dependent variables in a NetCDF file (not counting 1D time-dependent variables such as 'time' and 'iters') and return a list of their names.
+def time_dependent_variables (file_name):
+
+    var_names = []
+    id = nc.Dataset(file_name, 'r')
+    for var in id.variables:
+        if 'time' in id.variables[var].dimensions and len(id_out.variables[var].shape) > 1:
+            var_names.append(var)
+    return var_names
+
+
 # Do a proper time-average of files with monthly output, where each month is weighted with the number of days it represents. Make sure you load NCO before calling this function.
 
 # Arguments:
@@ -426,7 +438,6 @@ def crash_to_netcdf (crash_dir, grid_path):
 
 def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 
-    import netCDF4 as nc
     from nco import Nco
     from nco.custom import Limit
 
@@ -446,13 +457,10 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
     month0 = time0[0].month    
 
     # Find all the time-dependent variables
-    var_names = []
-    id_out = nc.Dataset(output_file, 'a')
-    for var in id_out.variables:
-        if 'time' in id_out.variables[var].dimensions and len(id_out.variables[var].shape) > 1:
-            var_names.append(var)
+    var_names = time_dependent_variables(output_file)
 
     # Time-average each variable
+    id_out = nc.Dataset(output_file, 'a')
     for var in var_names:
         print 'Processing ' + var
 
@@ -514,8 +522,6 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
 # in_dir: path to directory containing output_*.nc files
 # out_dir: path to directory to save the annually averaged files
 def make_annual_averages (in_dir='./', out_dir='./'):
-
-    import netCDF4 as nc
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
@@ -608,6 +614,45 @@ def make_annual_averages (in_dir='./', out_dir='./'):
                 if len(files_to_average)>0:
                     print 'Warning: ' + str(year) + ' is incomplete. Ignoring it.'
                 break
+
+
+# Make a monthly climatology from unravelled files (in the form 1979.nc, etc. using netcdf_finalise.sh).
+def make_climatology (start_year, end_year, output_file, directory='./'):
+    
+    directory = real_dir(directory)
+
+    # Copy the first file
+    # This will make a skeleton file with 12 time records and all the right metadata; later we will overwrite the values of all the time-dependent variables.
+    shutil.copyfile(directory+str(start_year)+'.nc', output_file)
+
+    # Find all the time-dependent variables
+    var_names = time_dependent_variables(output_file)
+
+    # Calculate the monthly climatology for each variable
+    id_out = nc.Dataset(output_file, 'a')
+    for var in var_names:
+        print 'Processing ' + var
+
+        # Start with the first year
+        print '...' + str(start_year)
+        data = id_out.variables[var][:]
+        
+        # Add subsequent years
+        for year in range(start_year+1, end_year+1):
+            print '...' + str(year)
+            data += read_netcdf(directory+str(year)+'.nc', var)
+
+        # Divide by number of years to get average
+        data /= (end_year-start_year+1)
+        # Overwrite in output_file
+        id_out.variables[var][:] = data
+
+    id_out.close()
+
+    
+
+    
+    
 
     
 
