@@ -357,12 +357,12 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     from plot_latlon import latlon_plot
 
     # Define the centre and radii of the ellipse bounding the polynya
-    if polynya == 'maud_rise':
+    if polynya == 'maud_rise':  # Area 2.6 x 10^5 km^2
         lon0 = 0.
         lat0 = -65.
         rlon = 8.
         rlat = 2.
-    elif polynya == 'near_shelf':
+    elif polynya == 'near_shelf':  # Area 2.1 x 10^5 km^2
         lon0 = -30.
         lat0 = -70.
         rlon = 8.
@@ -370,8 +370,8 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     elif polynya == 'maud_rise_big':
         lon0 = 0.
         lat0 = -65.
-        rlon = 2.5
-        rlat = 15.
+        rlon = 15.
+        rlat = 2.5
     else:
         print 'Error (polynya_mask): invalid polynya option ' + polynya
         sys.exit()
