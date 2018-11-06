@@ -317,13 +317,13 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     # Calculate interpolation indices and coefficients to the boundary latitude or longitude
     if location in ['N', 'S']:
         # Cell centre
-        j1, j2, c1, c2 = interp_slice_helper(source_grid.lat, lat0)
+        j1, j2, c1, c2 = interp_slice_helper(source_grid.lat_1d, lat0)
         # Cell edge
-        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(source_grid.lat_corners, lat0_e)
+        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(source_grid.lat_corners_1d, lat0_e)
     else:
         # Pass lon=True to consider the possibility of boundary near 0E
-        i1, i2, c1, c2 = interp_slice_helper(source_grid.lon, lon0, lon=True)
-        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(source_grid.lon_corners, lon0_e, lon=True)
+        i1, i2, c1, c2 = interp_slice_helper(source_grid.lon_1d, lon0, lon=True)
+        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(source_grid.lon_corners_1d, lon0_e, lon=True)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:

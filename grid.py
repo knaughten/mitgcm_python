@@ -354,36 +354,36 @@ class SOSEGrid(Grid):
         grid_dir = real_dir(grid_dir)        
 
         # Read longitude at cell centres (make the 2D grid 1D as it's regular)
-        self.lon = fix_lon_range(rdmds(grid_dir+'XC'), max_lon=max_lon)[0,:]
+        self.lon_1d = fix_lon_range(rdmds(grid_dir+'XC'), max_lon=max_lon)[0,:]
         if split == 180:
             # Split the domain at 180E=180W and rearrange the two halves so longitude is strictly ascending
-            self.i_split = np.nonzero(self.lon < 0)[0][0]
-            self.lon = split_longitude(self.lon, self.i_split)
+            self.i_split = np.nonzero(self.lon_1d < 0)[0][0]
+            self.lon_1d = split_longitude(self.lon_1d, self.i_split)
         else:
             # Set i_split to 0 which won't actually do anything
             self.i_split = 0
             
         # Read longitude at cell corners, splitting as before
-        self.lon_corners = split_longitude(fix_lon_range(rdmds(grid_dir+'XG'), max_lon=max_lon), self.i_split)[0,:]
-        if self.lon_corners[0] > 0:
+        self.lon_corners_1d = split_longitude(fix_lon_range(rdmds(grid_dir+'XG'), max_lon=max_lon), self.i_split)[0,:]
+        if self.lon_corners_1d[0] > 0:
             # The split happened between lon_corners[i_split] and lon[i_split].
             # Take mod 360 on this index of lon_corners to make sure it's strictly increasing.
-            self.lon_corners[0] -= 360
+            self.lon_corners_1d[0] -= 360
 
         # Make sure the longitude axes are strictly increasing after the splitting
-        if not np.all(np.diff(self.lon)>0) or not np.all(np.diff(self.lon_corners)>0):
+        if not np.all(np.diff(self.lon_1d)>0) or not np.all(np.diff(self.lon_corners_1d)>0):
             print 'Error (SOSEGrid): longitude is not strictly increasing'
             sys.exit()
             
         # Read latitude at cell centres and corners
-        self.lat = rdmds(grid_dir+'YC')[:,0]
-        self.lat_corners = rdmds(grid_dir+'YG')[:,0]
+        self.lat_1d = rdmds(grid_dir+'YC')[:,0]
+        self.lat_corners_1d = rdmds(grid_dir+'YG')[:,0]
         # Read depth
         self.z = rdmds(grid_dir+'RC').squeeze()
 
         # Save original dimensions
-        sose_nx = self.lon.size
-        sose_ny = self.lat.size
+        sose_nx = self.lon_1d.size
+        sose_ny = self.lat_1d.size
         sose_nz = self.z.size
 
         if self.trim_extend:
@@ -414,24 +414,24 @@ class SOSEGrid(Grid):
             z_deep = model_grid.z[-1]
 
             # Western bound (use longitude at cell centres to make sure all grid types clear the bound)
-            if xmin == self.lon[0]:
+            if xmin == self.lon_1d[0]:
                 # Nothing to do
                 self.i0_before = 0            
-            elif xmin > self.lon[0]:
+            elif xmin > self.lon_1d[0]:
                 # Trim
-                self.i0_before = np.nonzero(self.lon > xmin)[0][0] - 1
+                self.i0_before = np.nonzero(self.lon_1d > xmin)[0][0] - 1
             else:
                 print 'Error (SOSEGrid): not allowed to extend westward'
                 sys.exit()
             self.i0_after = 0
 
             # Eastern bound (use longitude at cell corners, i.e. western edge)
-            if xmax == self.lon_corners[-1]:
+            if xmax == self.lon_corners_1d[-1]:
                 # Nothing to do
                 self.i1_before = sose_nx
-            elif xmax < self.lon_corners[-1]:
+            elif xmax < self.lon_corners_1d[-1]:
                 # Trim
-                self.i1_before = np.nonzero(self.lon_corners > xmax)[0][0] + 1
+                self.i1_before = np.nonzero(self.lon_corners_1d > xmax)[0][0] + 1
             else:
                 print 'Error (SOSEGrid): not allowed to extend eastward'
                 sys.exit()
@@ -439,26 +439,26 @@ class SOSEGrid(Grid):
             self.nx = self.i1_after
 
             # Southern bound (use latitude at cell centres)
-            if ymin == self.lat[0]:
+            if ymin == self.lat_1d[0]:
                 # Nothing to do
                 self.j0_before = 0
                 self.j0_after = 0
-            elif ymin > self.lat[0]:
+            elif ymin > self.lat_1d[0]:
                 # Trim
-                self.j0_before = np.nonzero(self.lat > ymin)[0][0] - 1
+                self.j0_before = np.nonzero(self.lat_1d > ymin)[0][0] - 1
                 self.j0_after = 0
-            elif ymin < self.lat[0]:
+            elif ymin < self.lat_1d[0]:
                 # Extend
-                self.j0_after = int(np.ceil((self.lat[0]-ymin)/sose_res))
+                self.j0_after = int(np.ceil((self.lat_1d[0]-ymin)/sose_res))
                 self.j0_before = 0
 
             # Northern bound (use latitude at cell corners, i.e. southern edge)
-            if ymax == self.lat_corners[-1]:
+            if ymax == self.lat_corners_1d[-1]:
                 # Nothing to do
                 self.j1_before = sose_ny
-            elif ymax < self.lat_corners[-1]:
+            elif ymax < self.lat_corners_1d[-1]:
                 # Trim
-                self.j1_before = np.nonzero(self.lat_corners > ymax)[0][0] + 1
+                self.j1_before = np.nonzero(self.lat_corners_1d > ymax)[0][0] + 1
             else:
                 print 'Error (SOSEGrid): not allowed to extend northward'
                 sys.exit()
@@ -488,15 +488,15 @@ class SOSEGrid(Grid):
 
             # Now we have the indices we need, so trim/extend the axes as needed
             # Longitude: can only trim
-            self.lon = self.lon[self.i0_before:self.i1_before]
-            self.lon_corners = self.lon_corners[self.i0_before:self.i1_before]
+            self.lon_1d = self.lon_1d[self.i0_before:self.i1_before]
+            self.lon_corners_1d = self.lon_corners_1d[self.i0_before:self.i1_before]
             # Latitude: can extend on south side, trim on both sides
-            lat_extend = np.flipud(-1*(np.arange(self.j0_after)+1)*sose_res + self.lat[self.j0_before])
-            lat_trim = self.lat[self.j0_before:self.j1_before]        
-            self.lat = np.concatenate((lat_extend, lat_trim))
-            lat_corners_extend = np.flipud(-1*(np.arange(self.j0_after)+1)*sose_res + self.lat_corners[self.j0_before])
-            lat_corners_trim = self.lat_corners[self.j0_before:self.j1_before]        
-            self.lat_corners = np.concatenate((lat_corners_extend, lat_corners_trim))
+            lat_extend = np.flipud(-1*(np.arange(self.j0_after)+1)*sose_res + self.lat_1d[self.j0_before])
+            lat_trim = self.lat_1d[self.j0_before:self.j1_before]        
+            self.lat_1d = np.concatenate((lat_extend, lat_trim))
+            lat_corners_extend = np.flipud(-1*(np.arange(self.j0_after)+1)*sose_res + self.lat_corners_1d[self.j0_before])
+            lat_corners_trim = self.lat_corners_1d[self.j0_before:self.j1_before]        
+            self.lat_corners_1d = np.concatenate((lat_corners_extend, lat_corners_trim))
             # Depth: can extend on both sides (depth 0 at top and extrapolated at bottom to clear the deepest model depth), trim on deep side
             z_above = 0*np.ones([self.k0_after])  # Will either be [0] or empty
             z_middle = self.z[self.k0_before:self.k1_before]
@@ -504,16 +504,16 @@ class SOSEGrid(Grid):
             self.z = np.concatenate((z_above, z_middle, z_below))
 
             # Make sure we cleared those bounds
-            if self.lon_corners[0] > xmin:
+            if self.lon_corners_1d[0] > xmin:
                 print 'Error (SOSEGrid): western bound not cleared'
                 sys.exit()
-            if self.lon_corners[-1] < xmax:
+            if self.lon_corners_1d[-1] < xmax:
                 print 'Error (SOSEGrid): eastern bound not cleared'
                 sys.exit()
-            if self.lat_corners[0] > ymin:
+            if self.lat_corners_1d[0] > ymin:
                 print 'Error (SOSEGrid): southern bound not cleared'
                 sys.exit()
-            if self.lat_corners[-1] < ymax:
+            if self.lat_corners_1d[-1] < ymax:
                 print 'Error (SOSEGrid): northern bound not cleared'
                 sys.exit()
             if self.z[0] < z_shallow:
@@ -588,13 +588,13 @@ class SOSEGrid(Grid):
             sys.exit()
 
         if gtype in ['t', 'w']:
-            return self.lon, self.lat
+            return self.lon_1d, self.lat_1d
         elif gtype == 'u':
-            return self.lon_corners, self.lat
+            return self.lon_corners_1d, self.lat_1d
         elif gtype == 'v':
-            return self.lon, self.lat_corners
+            return self.lon_1d, self.lat_corners_1d
         elif gtype == 'psi':
-            return self.lon_corners, self.lat_corners
+            return self.lon_corners_1d, self.lat_corners_1d
         else:
             print 'Error (get_lon_lat): invalid gtype ' + gtype
             sys.exit()
