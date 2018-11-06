@@ -623,6 +623,7 @@ def make_climatology (start_year, end_year, output_file, directory='./'):
 
     # Copy the first file
     # This will make a skeleton file with 12 time records and all the right metadata; later we will overwrite the values of all the time-dependent variables.
+    print 'Setting up ' + output_file
     shutil.copyfile(directory+str(start_year)+'.nc', output_file)
 
     # Find all the time-dependent variables
