@@ -62,7 +62,7 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
         ncfile.close()
         
 
-# Set up surface salinity restoring using a monthly climatology interpolated from SOSE. Don't restore on the continental shelf. You can also define idealised polynyas with a different (i.e. higher) salinity.
+# Set up surface salinity restoring using a monthly climatology interpolated from SOSE. Don't restore on the continental shelf.
 
 # Arguments:
 # grid_path: path to directory containing MITgcm binary grid files
@@ -74,37 +74,12 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 # nc_out: path to a NetCDF file to save the salinity and mask in, so you can easily check that they look okay
 # h0: threshold bathymetry (negative, in metres) for definition of continental shelf; everything shallower than this will not be restored. Default -1250 (excludes Maud Rise but keeps Filchner Trough).
 # obcs_sponge: width of the OBCS sponge layer - no need to restore in that region
-# polynya: string indicating an artifical elliptical polynya should be cut out of the restoring field, and another mask file should be written for KPP (see output_polynya_mask_file below). Options are 'maud_rise' (centered at 0E, 65S) or 'near_shelf' (centered at 30W, 70S), both with radius 10 degrees in longitude and 2.5 degrees in latitude.
-# output_polynya_mask_file: if polynya=True, desired path to binary file containing the "frcConvMaskFile" listed in input/data.kpp (make sure "useFrcConv" is also switched on there, and define ALLOW_FORCED CONVECTION in KPP_OPTIONS.h). It will be 1 in the polynya region which will tell KPP to mix all the way down to the bottom there.
 # split: as in function sose_ics
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, obcs_sponge=0, polynya=None, output_polynya_mask_file=None, split=180, prec=64):
+def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file, nc_out=None, h0=-1250, obcs_sponge=0, split=180, prec=64):
 
     sose_dir = real_dir(sose_dir)
-
-    # Figure out if we need to add a polynya
-    add_polynya = polynya is not None
-    if add_polynya:
-        # Define the centre and radii of the ellipse bounding the polynya
-        if polynya == 'maud_rise':
-            # Assumes split=180!
-            lon0 = 0.
-            lat0 = -65.
-            rlon = 10.
-            rlat = 2.5
-        elif polynya == 'near_shelf':
-            # Assumes split=180!
-            lon0 = -30.                
-            lat0 = -70.
-            rlon = 10.
-            rlat = 2.5
-        else:
-            print 'Error (sose_sss_restoring): unrecognised polynya option ' + polynya
-            sys.exit()
-        if output_polynya_mask_file is None:
-            print 'Error (sose_sss_restoring): must define output_polynya_mask_file when polynya is set'
-            sys.exit()
 
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -124,13 +99,6 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     mask_surface[model_grid.bathy > h0] = 0
     # Smooth, and remask the land and ice shelves
     mask_surface = smooth_xy(mask_surface, sigma=2)*mask_land_ice
-    if add_polynya:
-        # Zero restoring in the polynya region
-        index = (model_grid.lon_2d - lon0)**2/rlon**2 + (model_grid.lat_2d - lat0)**2/rlat**2 <= 1
-        mask_surface[index] = 0
-        # Also make the forced-convection mask for KPP
-        mask_polynya = np.zeros([model_grid.ny, model_grid.nx])
-        mask_polynya[index] = 1
     if obcs_sponge > 0:
         # Also mask the cells affected by OBCS and/or its sponge
         mask_surface[:obcs_sponge,:] = 0
@@ -163,8 +131,6 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
     write_binary(sss_interp, output_salt_file, prec=prec)
     write_binary(mask_3d, output_mask_file, prec=prec)
-    if add_polynya:
-        write_binary(mask_polynya, output_polynya_mask_file, prec=prec)
 
     if nc_out is not None:
         print 'Writing ' + nc_out
@@ -172,8 +138,6 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('salinity', sss_interp, 'xyzt', units='psu')
         ncfile.add_variable('restoring_mask', mask_3d, 'xyz')
-        if add_polynya:
-            ncfile.add_variable('forced_convection_mask', mask_polynya, 'xy')
         ncfile.close()
 
 
@@ -386,20 +350,28 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
             write_binary(spf_last, out_file, prec=prec)
 
 
-# Create a polynya mask file, as in sose_sss_restoring, but with no salinity restoring.
+# Create a mask file to impose polynyas (frcConvMaskFile in input/data.kpp, also switch on useFrcConv in input/data.kpp and define ALLOW_FORCED_CONVECTION in KPP_OPTIONS.h). The mask will be 1 in the polynya region which will tell KPP to mix all the way down to the bottom there.
+# The argument "polynya" is a key determining the centre and radii of the ellipse bounding the polynya. Current options are 'maud_rise', 'near_shelf', and 'maud_rise_big'.
 def polynya_mask (grid_path, polynya, mask_file, prec=64):
+
+    from plot_latlon import latlon_plot
 
     # Define the centre and radii of the ellipse bounding the polynya
     if polynya == 'maud_rise':
         lon0 = 0.
         lat0 = -65.
-        rlon = 10.
-        rlat = 2.5
+        rlon = 8. #10.
+        rlat = 2. #2.5
     elif polynya == 'near_shelf':
         lon0 = -30.
         lat0 = -70.
-        rlon = 10.
-        rlat = 2.5
+        rlon = 8. #10.
+        rlat = 2. #2.5
+    elif polynya == 'maud_rise_big':
+        lon0 = 0.
+        lat0 = -65.
+        rlon = 2.5
+        rlat = 15.
     else:
         print 'Error (polynya_mask): invalid polynya option ' + polynya
         sys.exit()
@@ -411,6 +383,11 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     # Select the polynya region
     index = (grid.lon_2d - lon0)**2/rlon**2 + (grid.lat_2d - lat0)**2/rlat**2 <= 1
     mask[index] = 1
+    
+    # Print the area of the polynya
+    print 'Polynya area is ' + str(np.sum(grid.dA[index])*1e-6) + ' km^2'
+    # Plot the mask
+    latlon_plot(mask_land_ice(mask, model_grid), model_grid, include_shelf=False, title='Polynya mask')
 
     # Write to file
     write_binary(mask, mask_file, prec=prec)
