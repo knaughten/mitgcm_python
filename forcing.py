@@ -387,7 +387,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     # Print the area of the polynya
     print 'Polynya area is ' + str(np.sum(grid.dA[index])*1e-6) + ' km^2'
     # Plot the mask
-    latlon_plot(mask_land_ice(mask, model_grid), model_grid, include_shelf=False, title='Polynya mask')
+    latlon_plot(mask_land_ice(mask, grid), grid, include_shelf=False, title='Polynya mask')
 
     # Write to file
     write_binary(mask, mask_file, prec=prec)
