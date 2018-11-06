@@ -246,41 +246,43 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
     write_binary(pload, out_file, prec=prec)
 
 
-# Create open boundary conditions for temperature, salinity, horizontal ocean and sea ice velocities, sea surface height, sea ice area and thickness, using the SOSE monthly climatology.
+# Create open boundary conditions for temperature, salinity, horizontal velocities, and (if you want sea ice) sea ice area, thickness, and velocities. Use either the SOSE monthly climatology (source='SOSE') or output from another MITgcm model, stored in a NetCDF file (source='MIT').
 
 # Arguments:
 # location: 'N', 'S', 'E', or 'W' corresponding to the open boundary to process (north, south, east, west). So, run this function once for each open boundary in your domain.
 # grid_path: path to directory containing MITgcm binary grid files. The latitude or longitude of the open boundary will be determined from this file.
-# sose_dir: as in function sose_ics
+# input_path: either a directory containing SOSE data (if source='SOSE'; as in function sose_ics) or a NetCDF file (with xmitgcm conventions) containing a monthly climatology from another MITgcm model (if source='MIT').
 # output_dir: directory to save binary MITgcm OBCS files
 
 # Optional keyword arguments:
+# source: 'SOSE' or 'MIT' as described above.
+# use_seaice: True if you want sea ice OBCS (default), False if you don't
 # nc_out: path to a NetCDF file to save the interpolated boundary conditions to, so you can easily check that they look okay
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
 
-def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
+def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32):
 
     from grid import SOSEGrid
-    from file_io import NCfile
+    from file_io import NCfile, read_netcdf
     from interpolation import interp_bdry
 
-    sose_dir = real_dir(sose_dir)
+    if source == 'SOSE':
+        input_path = real_dir(input_path)
     output_dir = real_dir(output_dir)
 
     # Fields to interpolate
     # Important: SIarea has to be before SIuice and SIvice so it can be used for masking
-    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'ETAN', 'SIarea', 'SIheff', 'SIuice', 'SIvice']  
+    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'SIarea', 'SIheff', 'SIuice', 'SIvice']  
     # Flag for 2D or 3D
-    dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
+    dim = [3, 3, 3, 3, 2, 2, 2, 2]
     # Flag for grid type
-    gtype = ['t', 't', 'u', 'v', 't', 't', 't', 'u', 'v']
+    gtype = ['t', 't', 'u', 'v', 't', 't', 'u', 'v']
     # End of filenames for input
     infile_tail = '_climatology.data'
     # End of filenames for output
-    outfile_tail = '_SOSE.OBCS_' + location
+    outfile_tail = '_'+source+'.OBCS_'+location
 
     print 'Building MITgcm grid'
-    # Make sure longitude is in the range (0, 360) to match SOSE
     model_grid = Grid(grid_path, max_lon=360)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
@@ -300,21 +302,28 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
         lon0_e = 2*model_grid.lon_corners_1d[-1] - model_grid.lon_corners_1d[-2]
         print 'Eastern boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)'
     else:
-        print 'Error (sose_obcs): invalid location ' + str(location)
+        print 'Error (make_obcs): invalid location ' + str(location)
         sys.exit()
 
-    print 'Building SOSE grid'
-    sose_grid = SOSEGrid(sose_dir+'grid/')
+    if source == 'SOSE':
+        print 'Building SOSE grid'
+        source_grid = SOSEGrid(input_path+'grid/')
+    elif source == 'MIT':
+        print 'Building grid from source model'
+        source_grid = Grid(input_path, max_lon=360)
+    else:
+        print 'Error (make_obcs): invalid source ' + source
+        sys.exit()
     # Calculate interpolation indices and coefficients to the boundary latitude or longitude
     if location in ['N', 'S']:
         # Cell centre
-        j1, j2, c1, c2 = interp_slice_helper(sose_grid.lat, lat0)
+        j1, j2, c1, c2 = interp_slice_helper(source_grid.lat, lat0)
         # Cell edge
-        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(sose_grid.lat_corners, lat0_e)
+        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(source_grid.lat_corners, lat0_e)
     else:
         # Pass lon=True to consider the possibility of boundary near 0E
-        i1, i2, c1, c2 = interp_slice_helper(sose_grid.lon, lon0, lon=True)
-        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(sose_grid.lon_corners, lon0_e, lon=True)
+        i1, i2, c1, c2 = interp_slice_helper(source_grid.lon, lon0, lon=True)
+        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(source_grid.lon_corners, lon0_e, lon=True)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
@@ -323,45 +332,51 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
 
     # Process fields
     for n in range(len(fields)):
+        if fields[n].startswith('SI') and not use_seaice:
+            continue
         
         print 'Processing ' + fields[n]
-        in_file = sose_dir + fields[n] + infile_tail
+        if source == 'SOSE':
+            in_file = input_path + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
         # Read the monthly climatology at all points
-        if dim[n] == 3:
-            sose_data = sose_grid.read_field(in_file, 'xyzt')
+        if source == 'SOSE':
+            if dim[n] == 3:
+                source_data = source_grid.read_field(in_file, 'xyzt')
+            else:
+                source_data = source_grid.read_field(in_file, 'xyt')
         else:
-            sose_data = sose_grid.read_field(in_file, 'xyt')
-
-        if fields[n] == 'SIarea':
-            # We'll need this field later for SIuice and SIvice
+            source_data = read_netcdf(file_path, fields[n])
+        
+        if fields[n] == 'SIarea' and source == 'SOSE':
+            # We'll need this field later for SIuice and SIvice, as SOSE didn't mask those variables properly
             print 'Interpolating sea ice area to u and v grids for masking of sea ice velocity'
-            sose_aice_u = interp_grid(sose_data, sose_grid, 't', 'u', time_dependent=True, mask_with_zeros=True, periodic=True)
-            sose_aice_v = interp_grid(sose_data, sose_grid, 't', 'v', time_dependent=True, mask_with_zeros=True, periodic=True)
+            source_aice_u = interp_grid(source_data, source_grid, 't', 'u', time_dependent=True, mask_with_zeros=True, periodic=True)
+            source_aice_v = interp_grid(source_data, source_grid, 't', 'v', time_dependent=True, mask_with_zeros=True, periodic=True)
         # Set sea ice velocity to zero wherever sea ice area is zero
-        if fields[n] in ['SIuice', 'SIvice']:
+        if fields[n] in ['SIuice', 'SIvice'] and source == 'SOURCE':
             print 'Masking sea ice velocity with sea ice area'
             if fields[n] == 'SIuice':
-                index = sose_aice_u==0
+                index = source_aice_u==0
             else:
-                index = sose_aice_v==0
-            sose_data[index] = 0            
+                index = source_aice_v==0
+            source_data[index] = 0            
         
         # Choose the correct grid for lat, lon, hfac
-        sose_lon, sose_lat = sose_grid.get_lon_lat(gtype=gtype[n])
-        sose_hfac = sose_grid.get_hfac(gtype=gtype[n])
+        source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype[n])
+        source_hfac = source_grid.get_hfac(gtype=gtype[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
         # Interpolate to the correct grid and choose the correct horizontal axis
         if location in ['N', 'S']:
             if gtype[n] == 'v':
-                sose_data = c1_e*sose_data[...,j1_e,:] + c2_e*sose_data[...,j2_e,:]
+                source_data = c1_e*source_data[...,j1_e,:] + c2_e*source_data[...,j2_e,:]
                 # Multiply hfac by the ceiling of hfac on each side, to make sure we're not averaging over land
-                sose_hfac = (c1_e*sose_hfac[...,j1_e,:] + c2_e*sose_hfac[...,j2_e,:])*np.ceil(sose_hfac[...,j1_e,:])*np.ceil(sose_hfac[...,j2_e,:])
+                source_hfac = (c1_e*source_hfac[...,j1_e,:] + c2_e*source_hfac[...,j2_e,:])*np.ceil(source_hfac[...,j1_e,:])*np.ceil(source_hfac[...,j2_e,:])
             else:
-                sose_data = c1*sose_data[...,j1,:] + c2*sose_data[...,j2,:]
-                sose_hfac = (c1*sose_hfac[...,j1,:] + c2*sose_hfac[...,j2,:])*np.ceil(sose_hfac[...,j1,:])*np.ceil(sose_hfac[...,j2,:])
-            sose_haxis = sose_lon
+                source_data = c1*source_data[...,j1,:] + c2*source_data[...,j2,:]
+                source_hfac = (c1*source_hfac[...,j1,:] + c2*source_hfac[...,j2,:])*np.ceil(source_hfac[...,j1,:])*np.ceil(source_hfac[...,j2,:])
+            source_haxis = source_lon
             model_haxis = model_lon
             if location == 'S':
                 model_hfac = model_hfac[:,0,:]
@@ -369,12 +384,12 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
                 model_hfac = model_hfac[:,-1,:]
         else:
             if gtype[n] == 'u':
-                sose_data = c1_e*sose_data[...,i1_e] + c2_e*sose_data[...,i2_e]
-                sose_hfac = (c1_e*sose_hfac[...,i1_e] + c2_e*sose_hfac[...,i2_e])*np.ceil(sose_hfac[...,i1_e])*np.ceil(sose_hfac[...,i2_e])
+                source_data = c1_e*source_data[...,i1_e] + c2_e*source_data[...,i2_e]
+                source_hfac = (c1_e*source_hfac[...,i1_e] + c2_e*source_hfac[...,i2_e])*np.ceil(source_hfac[...,i1_e])*np.ceil(source_hfac[...,i2_e])
             else:
-                sose_data = c1*sose_data[...,i1] + c2*sose_data[...,i2]
-                sose_hfac = (c1*sose_hfac[...,i1] + c2*sose_hfac[...,i2])*np.ceil(sose_hfac[...,i1])*np.ceil(sose_hfac[...,i2])
-            sose_haxis = sose_lat
+                source_data = c1*source_data[...,i1] + c2*source_data[...,i2]
+                source_hfac = (c1*source_hfac[...,i1] + c2*source_hfac[...,i2])*np.ceil(source_hfac[...,i1])*np.ceil(source_hfac[...,i2])
+            source_haxis = source_lat
             model_haxis = model_lat
             if location == 'W':
                 model_hfac = model_hfac[...,0]
@@ -382,7 +397,7 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
                 model_hfac = model_hfac[...,-1]
         # For 2D variables, just need surface hfac
         if dim[n] == 2:
-            sose_hfac = sose_hfac[0,:]
+            source_hfac = source_hfac[0,:]
             model_hfac = model_hfac[0,:]
 
         # Now interpolate each month to the model grid
@@ -392,7 +407,7 @@ def sose_obcs (location, grid_path, sose_dir, output_dir, nc_out=None, prec=32):
             data_interp = np.zeros([12, model_haxis.size])
         for month in range(12):
             print '...interpolating month ' + str(month+1)
-            data_interp[month,:] = interp_bdry(sose_haxis, sose_grid.z, sose_data[month,:], sose_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+            data_interp[month,:] = interp_bdry(source_haxis, source_grid.z, source_data[month,:], source_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
 
         write_binary(data_interp, out_file, prec=prec)
         
