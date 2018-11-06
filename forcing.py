@@ -376,7 +376,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
         lon0 = 0
         lat0 = -65.
         rlon = 5.
-        rlat = 1.
+        rlat = 1.25
     else:
         print 'Error (polynya_mask): invalid polynya option ' + polynya
         sys.exit()
