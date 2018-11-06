@@ -360,23 +360,23 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     if polynya == 'maud_rise':  # Area 2.6 x 10^5 km^2
         lon0 = 0.
         lat0 = -65.
-        rlon = 8.
-        rlat = 2.
+        rlon = 10.
+        rlat = 1.5
     elif polynya == 'near_shelf':  # Area 2.1 x 10^5 km^2
         lon0 = -30.
         lat0 = -70.
-        rlon = 8.
-        rlat = 2.
+        rlon = 10.
+        rlat = 1.5
     elif polynya == 'maud_rise_big':  # Area 6.2 x 10^5 km^2
         lon0 = 0.
         lat0 = -65.
         rlon = 15.
         rlat = 2.5
-    elif polynya == 'maud_rise_small':  # Area 
+    elif polynya == 'maud_rise_small':  # Area 1.0 x 10^5 km^2
         lon0 = 0
         lat0 = -65.
-        rlon = 5.
-        rlat = 1.25
+        rlon = 4.
+        rlat = 1.
     else:
         print 'Error (polynya_mask): invalid polynya option ' + polynya
         sys.exit()
