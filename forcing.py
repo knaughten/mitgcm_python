@@ -372,11 +372,11 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
         lat0 = -65.
         rlon = 15.
         rlat = 2.5
-    elif polynya == 'maud_rise_small':
+    elif polynya == 'maud_rise_small':  # Area 
         lon0 = 0
         lat0 = -65.
-        rlon = 4.
-        rlat = 1.
+        rlon = 6.
+        rlat = 1.5
     else:
         print 'Error (polynya_mask): invalid polynya option ' + polynya
         sys.exit()
