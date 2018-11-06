@@ -360,13 +360,13 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     if polynya == 'maud_rise':
         lon0 = 0.
         lat0 = -65.
-        rlon = 8. #10.
-        rlat = 2. #2.5
+        rlon = 8.
+        rlat = 2.
     elif polynya == 'near_shelf':
         lon0 = -30.
         lat0 = -70.
-        rlon = 8. #10.
-        rlat = 2. #2.5
+        rlon = 8.
+        rlat = 2.
     elif polynya == 'maud_rise_big':
         lon0 = 0.
         lat0 = -65.
@@ -387,7 +387,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     # Print the area of the polynya
     print 'Polynya area is ' + str(np.sum(grid.dA[index])*1e-6) + ' km^2'
     # Plot the mask
-    latlon_plot(mask_land_ice(mask, grid), grid, include_shelf=False, title='Polynya mask')
+    latlon_plot(mask_land_ice(mask, grid), grid, include_shelf=False, title='Polynya mask', figsize=(10,6))
 
     # Write to file
     write_binary(mask, mask_file, prec=prec)
