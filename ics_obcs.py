@@ -138,9 +138,9 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # option: 'constant' or 'nearest' as described above
 # constant_t, constant_s: if option='constant', temperature and salinity to use
 # ini_temp_file, ini_salt_file: if option='nearest', paths to initial conditions files (binary) for temperature and salinity
-# eosType: 'MDFWF', 'JMD95', or 'linear'. Must match value in "data" namelist.
+# eosType: 'MDJWF', 'JMD95', or 'LINEAR'. Must match value in "data" namelist.
 # rhoConst: reference density as in MITgcm's "data" namelist
-# tAlpha, sBeta, Tref, Sref: if eosType='linear', set these to match your "data" namelist.
+# tAlpha, sBeta, Tref, Sref: if eosType='LINEAR', set these to match your "data" namelist.
 # prec: as in function sose_ics
 
 def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64):
@@ -150,10 +150,10 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
         from MITgcmutils.mdjwf import densmdjwf
     elif eosType == 'JMD95':
         from MITgcmutils.jmd95 import densjmd95
-    elif eosType == 'linear':
+    elif eosType == 'LINEAR':
         from diagnostics import dens_linear
         if none in [tAlpha, sBeta, Tref, Sref]:
-            print 'Error (calc_load_anomaly): for eosType linear, you must set tAlpha, sBeta, Tref, and Sref'
+            print 'Error (calc_load_anomaly): for eosType LINEAR, you must set tAlpha, sBeta, Tref, and Sref'
             sys.exit()
     else:
         print 'Error (calc_load_anomaly): invalid eosType ' + eosType
@@ -211,7 +211,7 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
             drho_c = densmdjwf(salt, temp, press) - rhoConst
         elif eosType == 'JMD95':
             drho_c = densjmd95(salt, temp, press) - rhoConst
-        elif eosType == 'linear':
+        elif eosType == 'LINEAR':
             drho_c = dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta) - rhoConst
         # Use this for both centres and edges of cells
         drho = np.zeros(dz_merged.shape)
