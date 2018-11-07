@@ -138,25 +138,25 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 # option: 'constant' or 'nearest' as described above
 # constant_t, constant_s: if option='constant', temperature and salinity to use
 # ini_temp_file, ini_salt_file: if option='nearest', paths to initial conditions files (binary) for temperature and salinity
-# eos_type: 'MDFWF', 'JMD95', or 'linear'. Must match value in "data" namelist.
+# eosType: 'MDFWF', 'JMD95', or 'linear'. Must match value in "data" namelist.
 # rhoConst: reference density as in MITgcm's "data" namelist
-# Talpha, Sbeta, Tref, Sref: if eos_type='linear', set these to match your "data" namelist.
+# tAlpha, sBeta, Tref, Sref: if eosType='linear', set these to match your "data" namelist.
 # prec: as in function sose_ics
 
-def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eos_type='MDJWF', rhoConst=1035, Talpha=None, Sbeta=None, Tref=None, Sref=None, prec=64):
+def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64):
 
     # Set density functions
-    if eos_type == 'MDJWF':
+    if eosType == 'MDJWF':
         from MITgcmutils.mdjwf import densmdjwf
-    elif eos_type == 'JMD95':
+    elif eosType == 'JMD95':
         from MITgcmutils.jmd95 import densjmd95
-    elif eos_type == 'linear':
+    elif eosType == 'linear':
         from diagnostics import dens_linear
-        if none in [Talpha, Sbeta, Tref, Sref]:
-            print 'Error (calc_load_anomaly): for eos_type linear, you must set Talpha, Sbeta, Tref, and Sref'
+        if none in [tAlpha, sBeta, Tref, Sref]:
+            print 'Error (calc_load_anomaly): for eosType linear, you must set tAlpha, sBeta, Tref, and Sref'
             sys.exit()
     else:
-        print 'Error (calc_load_anomaly): invalid eos_type ' + eos_type
+        print 'Error (calc_load_anomaly): invalid eosType ' + eosType
         sys.exit()
 
     errorTol = 1e-13  # convergence criteria
@@ -207,12 +207,12 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
         # Save old pressure
         press_old = np.copy(press)
         # Calculate density anomaly at centres of cells
-        if eos_type == 'MDJWF':
+        if eosType == 'MDJWF':
             drho_c = densmdjwf(salt, temp, press) - rhoConst
-        elif eos_type == 'JMD95':
+        elif eosType == 'JMD95':
             drho_c = densjmd95(salt, temp, press) - rhoConst
-        elif eos_type == 'linear':
-            drho_c = dens_linear(salt, temp, rhoConst, Tref, Sref, Talpha, Sbeta) - rhoConst
+        elif eosType == 'linear':
+            drho_c = dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta) - rhoConst
         # Use this for both centres and edges of cells
         drho = np.zeros(dz_merged.shape)
         drho[::2,...] = drho_c

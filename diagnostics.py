@@ -177,9 +177,9 @@ def barotropic_streamfunction (u, grid):
 
 
 # Calculate seawater density for a linear equation of state.
-def dens_linear (salt, temp, rhoConst, Tref, Sref, Talpha, Sbeta):
+def dens_linear (salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta):
 
-    return rhoConst*(1 - Talpha*(temp-Tref) + Sbeta*(salt-Sref))
+    return rhoConst*(1 - tAlpha*(temp-Tref) + sBeta*(salt-Sref))
 
     
     
