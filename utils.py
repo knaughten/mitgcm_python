@@ -357,6 +357,11 @@ def rms (array1, array2):
     return np.sqrt(np.sum((array1 - array2)**2))
 
 
+# Work out whether the given year is a leap year.
+def is_leap_year (year):
+    return year%4 == 0 and (year%100 != 0 or year%400 == 0)
+
+
 # Return the number of days in the given month (indexed 1-12) of the given year.
 def days_per_month (month, year):
 
@@ -364,7 +369,7 @@ def days_per_month (month, year):
     days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
     # Special case for Feburary in leap years
-    if month == 2 and year%4 == 0 and (year%100 != 0 or year%400 == 0):
+    if month == 2 and is_leap_year(year):
         return days[month-1]+1
     else:
         return days[month-1]
