@@ -20,16 +20,18 @@ def get_polynya_loc (polynya):
     return lon0, lat0
 
 
-# Precompute timeseries for analysis
+# Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
+    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt']
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None
         lat0 = None
     else:
         lon0, lat0 = get_polynya_loc(polynya)
-    precompute_timeseries(mit_file, timeseries_file, polynya=True, lon0=lon0, lat0=lat0)
+        timeseries_types += ['temp_polynya', 'salt_polynya']
+    precompute_timeseries(mit_file, timeseries_file, timeseries_types=timeseries_types, lon0=lon0, lat0=lat0)
 
 
 

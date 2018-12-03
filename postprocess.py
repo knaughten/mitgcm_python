@@ -264,17 +264,15 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 # Arguments:
 # mit_file: path to a single NetCDF file output by MITgcm
 # timeseries_file: path to a NetCDF file for saving timeseries. If it exists, it will be appended to; if it doesn't exist, it will be created.
-# polynya: if True, save a different set of timeseries
-# lon0, lat0: if defined and polynya=True, include timeseries of the depth-averaged temperature and salinity at this point.
 
-def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=False, lon0=None, lat0=None):
+# Optional keyword arguments:
+# timeseries_types: list of timeseries types to compute (subset of the options from set_parameters). If None, a default set will be used.
+# lon0, lat0: if timeseries_types includes 'temp_polynya' and/or 'salt_polynya', use these points as the centre.
+
+def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None):
 
     # Timeseries to compute
-    if polynya:
-        timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt']
-        if None not in [lon0, lat0]:
-            timeseries_types += ['temp_polynya', 'salt_polynya']
-    else:
+    if timeseries_types is None:
         timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
