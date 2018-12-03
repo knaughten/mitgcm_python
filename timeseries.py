@@ -307,7 +307,7 @@ def set_parameters (var):
         option = 'ismr'
         var_name = 'SHIfwFlx'
         units = 'Gt/y'
-        mass_balance = False
+        mass_balance = var=='fris_mass_balance'        
         if var in ['fris_mass_balance', 'fris_ismr']:
             shelves = 'fris'
             title = 'Basal mass balance of FRIS'            
