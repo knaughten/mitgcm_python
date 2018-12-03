@@ -108,7 +108,7 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
         # Read the time array
         time = netcdf_time(file_path)
 
-    if var == 'fris_melt':
+    if var == 'fris_mass_balance':
         if precomputed:
             # Read the fields from the timeseries file
             melt = read_netcdf(file_path, 'fris_total_melt')
@@ -147,7 +147,7 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
         time, data_diff = trim_and_diff(time_1, time_2, data_1, data_2)
         return time, data_diff
 
-    if var == 'fris_melt':
+    if var == 'fris_mass_balance':
         if precomputed:
             time, melt_diff = read_and_trim('fris_total_melt')
             freeze_diff = read_and_trim('fris_total_freeze')[1]

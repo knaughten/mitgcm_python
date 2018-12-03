@@ -62,7 +62,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     grid = Grid(grid_path)
 
     # Timeseries
-    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
@@ -196,7 +196,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     grid = Grid(grid_path)
 
     # Timeseries through the entire simulation
-    var_names = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
@@ -264,18 +264,18 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 # Arguments:
 # mit_file: path to a single NetCDF file output by MITgcm
 # timeseries_file: path to a NetCDF file for saving timeseries. If it exists, it will be appended to; if it doesn't exist, it will be created.
-# polynya: if True, just save the depth-averaged temperature and salinity through the centre of the polynya given by (lon0, lat0).
+# polynya: if True, save a different set of timeseries
+# lon0, lat0: if defined and polynya=True, include timeseries of the depth-averaged temperature and salinity at this point.
 
 def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=False, lon0=None, lat0=None):
 
     # Timeseries to compute
     if polynya:
-        timeseries_types = ['temp_polynya', 'salt_polynya', 'fris_melt']
-        if lon0 is None or lat0 is None:
-            print 'Error (precompute_timeseries): must set lon0 and lat0'
-            sys.exit()
+        timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt']
+        if None not in [lon0, lat0]:
+            timeseries_types += ['temp_polynya', 'salt_polynya']
     else:
-        timeseries_types = ['fris_melt', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+        timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)
@@ -319,7 +319,7 @@ def precompute_timeseries (mit_file, timeseries_file, monthly=True, polynya=Fals
         print 'Processing ' + ts_name
         # Get information about the variable; only care about title and units
         title, units = set_parameters(ts_name)[2:4]
-        if ts_name == 'fris_melt':
+        if ts_name == 'fris_mass_balance':
             melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1:]
             # We need two titles now
             title_melt = 'Total melting beneath FRIS'

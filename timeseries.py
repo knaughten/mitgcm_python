@@ -14,13 +14,14 @@ from interpolation import interp_bilinear
 from constants import deg_string
 
 
-# Calculate total mass loss or area-averaged melt rate from FRIS in the given NetCDF file. The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
+# Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (current options are 'fris', 'ewed', and 'all'). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
 
 # Arguments:
 # file_path: path to NetCDF file containing 'SHIfwFlx' variable
 # grid = Grid object
 
 # Optional keyword arguments:
+# shelves: 'fris' (default) restricts the calculation to FRIS. 'ewed' restricts the calculation to ice shelves between the Eastern Weddell bounds given in constants.py. 'all' considers all ice shelves.
 # result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
 # time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
@@ -30,7 +31,18 @@ from constants import deg_string
 # Otherwise: 1D array containing timeseries of mass loss or average melt rate
 # If mass_balance=True: two values/arrays will be returned, with the positive and negative components.
 
-def timeseries_fris_melt (file_path, grid, result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
+def timeseries_ismr (file_path, grid, shelves='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
+
+    # Choose the appropriate mask
+    if shelves == 'fris':
+        mask = grid.fris_mask
+    elif shelves == 'ewed':
+        mask = grid.ewed_mask        
+    elif shelves == 'all':
+        mask = grid.ice_mask
+    else:
+        print 'Error (timeseries_ismr): invalid shelves=' + shelves
+        sys.exit()
 
     # Read ice shelf melt rate and convert to m/y
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
@@ -43,11 +55,11 @@ def timeseries_fris_melt (file_path, grid, result='massloss', time_index=None, t
     if time_index is not None or time_average:
         # Just one timestep
         if mass_balance:
-            melt = total_melt(ismr_positive, grid.fris_mask, result=result)
-            freeze = total_melt(ismr_negative, grid.fris_mask, result=result)
+            melt = total_melt(ismr_positive, mask, result=result)
+            freeze = total_melt(ismr_negative, mask, result=result)
             return melt, freeze
         else:
-            return total_melt(ismr, grid.fris_mask, grid, result=result)
+            return total_melt(ismr, mask, grid, result=result)
     else:
         # Loop over timesteps
         num_time = ismr.shape[0]
@@ -55,13 +67,13 @@ def timeseries_fris_melt (file_path, grid, result='massloss', time_index=None, t
             melt = np.zeros(num_time)
             freeze = np.zeros(num_time)
             for t in range(num_time):
-                melt[t] = total_melt(ismr_positive[t,:], grid.fris_mask, grid, result=result)
-                freeze[t] = total_melt(ismr_negative[t,:], grid.fris_mask, grid, result=result)
+                melt[t] = total_melt(ismr_positive[t,:], mask, grid, result=result)
+                freeze[t] = total_melt(ismr_negative[t,:], mask, grid, result=result)
             return melt, freeze
         else:
             melt = np.zeros(num_time)
             for t in range(num_time):
-                melt[t] = total_melt(ismr[t,:], grid.fris_mask, grid, result=result)
+                melt[t] = total_melt(ismr[t,:], mask, grid, result=result)
             return melt
 
 
@@ -136,7 +148,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 # file_path: either a single filename or a list of filenames
 
 # Optional keyword arguments:
-# option: 'fris_melt': calculates total melting and freezing beneath FRIS
+# option: 'ismr': calculates net melting OR total melting and freezing beneath given ice shelves; must specify shelves and mass_balance
 #          'max': calculates maximum value of variable in region; must specify var_name and possibly xmin etc.
 #          'avg_sfc': calculates area-averaged value over the sea surface, i.e. not counting cavities
 #          'int_sfc': calculates area-integrated value over the sea surface
@@ -145,18 +157,20 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
-# var_name: variable name to process. Doesn't matter for 'fris_melt'.
+# shelves: as in function timeseries_ismr. Only matters for 'ismr'.
+# mass_balance: as in function timeseries_ismr. Only matters for 'ismr'.
+# var_name: variable name to process. Doesn't matter for 'ismr'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
 # monthly: as in function netcdf_time
 
 # Output:
-# if option='fris_melt', returns three 1D arrays of time, melting, and freezing.
+# if option='ismr' and mass_balance=True, returns three 1D arrays of time, melting, and freezing.
 # if option='time', just returns the time array.
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', shelves='fris', mass_balance=False, var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -168,7 +182,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option not in ['time', 'fris_melt'] and var_name is None:
+    if option not in ['time', 'ismr'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -180,8 +194,11 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, first_file)
 
     # Calculate timeseries on the first file
-    if option == 'fris_melt':
-        melt, freeze = timeseries_fris_melt(first_file, grid, mass_balance=True)
+    if option == 'ismr':
+        if mass_balance:
+            melt, freeze = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance)
+        else:
+            values = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance)
     elif option == 'max':
         values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     elif option == 'avg_sfc':
@@ -200,8 +217,11 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if isinstance(file_path, list):
         # More files to read
         for file in file_path[1:]:
-            if option == 'fris_melt':
-                melt_tmp, freeze_tmp = timeseries_fris_melt(file, grid, mass_balance=True)
+            if option == 'ismr':
+                if mass_balance:
+                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance)
+                else:
+                    values_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance)
             elif option == 'max':
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             elif option == 'avg_sfc':
@@ -214,14 +234,14 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
-            if option == 'fris_melt':
+            if option == 'ismr' and mass_balance:
                 melt = np.concatenate((melt, melt_tmp))
                 freeze = np.concatenate((freeze, freeze_tmp))
             elif option != 'time':
                 values = np.concatenate((values, values_tmp))
             time = np.concatenate((time, time_tmp))
 
-    if option == 'fris_melt':
+    if option == 'ismr' and mass_balance:
         return time, melt, freeze
     elif option == 'time':
         return time
@@ -246,23 +266,26 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
     return time, data_diff
 
 
-# Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_fris_melt.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
+# Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
 
-    if option == 'fris_melt':
-        print "Error (calc_timeseries_diff): this function can't be used for option="+option
+    if option == 'ismr' and mass_balance=True:
+        print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
 
 
 # Set a bunch of parameters corresponding to a given timeseries variable:
-#      'fris_melt': melting, freezing, and net melting beneath FRIS
+#      'fris_mass_balance': melting, freezing, and net melting beneath FRIS
+#      'fris_ismr': net melting beneath FRIS
+#      'ewed_ismr': net melting beneath Eastern Weddell ice shelves
+#      'ismr': net melting beneath all ice shelves in the domain
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
@@ -277,12 +300,23 @@ def set_parameters (var):
     xmax = None
     ymin = None
     ymax = None
+    shelves = None
+    mass_balance = None
 
-    if var == 'fris_melt':
-        option = 'fris_melt'
+    if var in ['fris_mass_balance', 'fris_ismr', 'ewed_ismr', 'all_ismr']:
+        option = 'ismr'
         var_name = 'SHIfwFlx'
-        title = 'Basal mass balance of FRIS'
         units = 'Gt/y'
+        mass_balance = False
+        if var in ['fris_mass_balance', 'fris_ismr']:
+            shelves = 'fris'
+            title = 'Basal mass balance of FRIS'            
+        elif var == 'ewed_ismr':
+            shelves = 'ewed'
+            title = 'Basal mass balance of Eastern Weddell ice shelves'
+        elif var == 'all_ismr':
+            shelves = 'all'
+            title = 'Basal mass balance of ice shelves'        
     elif var in ['hice_corner', 'mld_ewed']:
         # Maximum between spatial bounds
         option = 'max'
@@ -336,22 +370,22 @@ def set_parameters (var):
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance = set_parameters(var)
 
     # Calculate timeseries
-    if var == 'fris_melt':
+    if option == 'ismr' and mass_balance:
         # Special case for calc_timeseries, with extra output argument
-        time, melt, freeze = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, monthly=monthly)
+        time, melt, freeze = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
         if var == 'seaice_area':
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -362,18 +396,18 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance = set_parameters(var)
 
     # Calculate difference timeseries
-    if var == 'fris_melt':
+    if option == 'ismr' and mass_balance:
         # Special case; calculate each timeseries separately because there are extra output arguments
-        time_1, melt_1, freeze_1 = calc_timeseries(file_path_1, option='fris_melt', grid=grid, monthly=monthly)
-        time_2, melt_2, freeze_2 = calc_timeseries(file_path_2, option='fris_melt', grid=grid, monthly=monthly)
+        time_1, melt_1, freeze_1 = calc_timeseries(file_path_1, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
+        time_2, melt_2, freeze_2 = calc_timeseries(file_path_2, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
         time, melt_diff = trim_and_diff(time_1, time_2, melt_1, melt_2)
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
         if var == 'seaice_area':
             # Convert from m^2 to million km^2
             data_diff *= 1e-12

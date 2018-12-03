@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude
-from constants import fris_bounds, sose_res
+from constants import fris_bounds, ewed_bounds, sose_res
 
 
 # Grid object containing lots of grid variables:
@@ -39,6 +39,7 @@ from constants import fris_bounds, sose_res
 # land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY). True means it is masked.
 # ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
+# ewed_mask: boolean Eastern Weddell ice shelf mask on the tracer grid (XY)
 class Grid:
 
     # Initialisation arguments:
@@ -162,6 +163,8 @@ class Grid:
         self.fris_mask = self.build_fris_mask(self.ice_mask, self.lon_2d, self.lat_2d)
         self.fris_mask_u = self.build_fris_mask(self.ice_mask_u, self.lon_corners_2d, self.lat_2d)
         self.fris_mask_v = self.build_fris_mask(self.ice_mask_v, self.lon_2d, self.lat_corners_2d)
+        # Eastern Weddell ice shelf mask
+        self.ewed_mask = self.build_ewed_mask(self.ice_mask, self.lon_2d, self.lat_2d)
 
         
     # Given a 3D hfac array on any grid, create the land mask.
@@ -190,6 +193,12 @@ class Grid:
             index = ice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
             fris_mask[index] = True
         return fris_mask
+
+    
+    # Like build_fris_mask, but for Eastern Weddell ice shelves. A fair bit simpler.
+    def build_ewed_mask (self, ice_mask, lon, lat):
+
+        return ice_mask*(lon >= ewed_bounds[0])*(lon <= ewed_bounds[1])*(lat >= ewed_bounds[2])*(lat <= ewed_bounds[3])
 
         
     # Return the longitude and latitude arrays for the given grid type.
