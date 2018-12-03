@@ -341,6 +341,8 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
         e = es0*np.exp(Lv/Rv*(1/temp - 1/dewpoint))
         # Calculate specific humidity
         spf = sh_coeff*e/(press - (1-sh_coeff)*e)
+        # Now flip in latitude to match Matlab-generated files
+        spf = spf[:,::-1,:]
         out_file = out_head + str(year)
         write_binary(spf, out_file, prec=prec)
         if year == end_year:
