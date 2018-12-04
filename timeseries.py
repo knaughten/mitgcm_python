@@ -338,6 +338,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'wed_gyre_trans': Weddell Gyre transport
 def set_parameters (var):
 
+    var_name = None
     xmin = None
     xmax = None
     ymin = None
