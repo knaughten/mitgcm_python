@@ -174,7 +174,7 @@ def barotropic_streamfunction (u, grid):
 def wed_gyre_trans (u, grid):
 
     strf = barotropic_streamfunction(u, grid)
-    vmin, vmax = var_min_max(u, grid, xmin=wed_gyre_bounds[0], xmax=wed_gyre_bounds[1], ymin=wed_gyre_bounds[2], ymax=wed_gyre_bounds[3], gtype='u')
+    vmin, vmax = var_min_max(strf, grid, xmin=wed_gyre_bounds[0], xmax=wed_gyre_bounds[1], ymin=wed_gyre_bounds[2], ymax=wed_gyre_bounds[3], gtype='u')
     return -1*vmin
 
 
