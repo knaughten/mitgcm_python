@@ -8,7 +8,7 @@ import sys
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
-from diagnostics import total_melt
+from diagnostics import total_melt, wed_gyre_trans
 from averaging import over_area, volume_average, vertical_average_column
 from interpolation import interp_bilinear
 from constants import deg_string
@@ -156,6 +156,18 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
     return vertical_average_column(data_point, hfac_point, grid, gtype=gtype, time_dependent=True)
 
 
+# Calculate timeseries of the Weddell Gyre transport in the given NetCDF file. Assumes the Weddell Gyre is actually in your domain.
+def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read u
+    u = read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=t_average)
+    # Build the timeseries
+    timeseries = []
+    for t in range(u.shape[0]):
+        timeseries.append(wed_gyre_trans(u[t,:], grid))
+    return np.array(timeseries)
+
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -169,12 +181,13 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 #          'area_threshold': calculates area of sea surface where the variable exceeds the given threshold
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
+#          'wed_gyre_trans': calculates Weddell Gyre transport.
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
 # shelves: as in function timeseries_ismr. Only matters for 'ismr'.
 # mass_balance: as in function timeseries_ismr. Only matters for 'ismr'.
-# var_name: variable name to process. Doesn't matter for 'ismr'.
+# var_name: variable name to process. Doesn't matter for 'ismr' or 'wed_gyre_trans'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
 # threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
@@ -198,7 +211,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option not in ['time', 'ismr'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -230,6 +243,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
     elif option == 'point_vavg':
         values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
+    elif option == 'wed_gyre_trans':
+        values = timeseries_wed_gyre(first_file, grid)
     elif option != 'time':
         print 'Error (calc_timeseries): invalid option ' + option
         sys.exit()
@@ -255,6 +270,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
             elif option == 'point_vavg':
                 values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
+            elif option == 'wed_gyre_trans':
+                values_tmp = timeseries_wed_gyre(file, grid)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'ismr' and mass_balance:
@@ -318,6 +335,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'temp_polynya': depth-averaged temperature through the centre of a polynya
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
 #      'conv_area': total area of convection (MLD > 2000 m)
+#      'wed_gyre_trans': Weddell Gyre transport
 def set_parameters (var):
 
     xmin = None
@@ -397,6 +415,10 @@ def set_parameters (var):
         threshold = 2000.
         title = 'Convective area'
         units = r'million km$^2$'
+    elif var == 'wed_gyre_trans':
+        option = 'wed_gyre_trans'
+        title = 'Weddell Gyre transport'
+        units = 'Sv'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

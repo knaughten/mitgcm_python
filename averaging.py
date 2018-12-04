@@ -8,11 +8,17 @@ from utils import z_to_xyz, xy_to_xyz, add_time_dim
 
 # Helper functions to set up integrands and masks, tiled to be the same dimension as the "data" array
 
-# Returns area integrand, and whichever mask is already applied to the MaskedArray "data"
-def prepare_area_mask (data, grid, gtype='t', time_dependent=False):
+# Returns area or distance integrand (option='dA', 'dx', or 'dy'), and whichever mask is already applied to the MaskedArray "data".
+def prepare_area_mask (data, grid, gtype='t', option='dA', time_dependent=False):
     
-    if gtype != 't':
+    if option == 'dA' and gtype != 't':
         print 'Error (prepare_area_mask): non-tracer grids not yet supported'
+        sys.exit()
+    elif option == 'dx' and gtype == 'u':
+        print 'Error (prepare_area_mask): u-grid not yet supported for dx'
+        sys.exit()
+    elif option == 'dy' and gtype == 'v':
+        print 'Error (prepare_area_mask): v-grid not yet supported for dy'
         sys.exit()
 
     # Get the mask as 1s and 0s
@@ -21,15 +27,22 @@ def prepare_area_mask (data, grid, gtype='t', time_dependent=False):
     else:
         # No mask, just use 1s everywhere
         mask = np.ones(data.shape)
-    # Get the integrand of area
-    dA = grid.dA
+    # Get the integrand
+    if option == 'dA':
+        integrand = grid.dA
+    elif option == 'dx':
+        integrand = grid.dx_s
+    elif option == 'dy':
+        integrand = grid.dy_w
+    else:
+        print 'Error (prepare_area_mask): invalid option ' + option
     if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
         # There's also a depth dimension; tile in z
-        dA = xy_to_xyz(dA, grid)
+        integrand = xy_to_xyz(integrand, grid)
     if time_dependent:
         # Tile in time
-        dA = add_time_dim(dA, data.shape[0])
-    return dA, mask
+        integrand = add_time_dim(integrand, data.shape[0])
+    return integrand, mask
 
 
 # Returns depth integrand and hfac
@@ -51,7 +64,19 @@ def prepare_dz_mask (data, grid, gtype='t', time_dependent=False):
     return dz, hfac
 
 
-# Helper functions to average/integrate over area or volume (option='average' or 'integrate')
+# Helper functions to average/integrate over depth, area, or volume (option='average' or 'integrate')
+
+def over_depth (option, data, grid, gtype='t', time_dependent=False):
+
+    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
+    if option == 'average':
+        return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
+    elif option == 'integrate':
+        return np.sum(data*dz*hfac, axis=-3)
+    else:
+        print 'Error (over_depth): invalid option ' + option
+        sys.exit()
+
 
 def over_area (option, data, grid, gtype='t', time_dependent=False):
 
@@ -62,6 +87,7 @@ def over_area (option, data, grid, gtype='t', time_dependent=False):
         return np.sum(data*dA*mask, axis=(-2,-1))
     else:
         print 'Error (over_area): invalid option ' + option
+        sys.exit()
 
 
 def over_volume (option, data, grid, gtype='t', time_dependent=False):
@@ -78,6 +104,7 @@ def over_volume (option, data, grid, gtype='t', time_dependent=False):
         return np.sum(data*dV*hfac*mask, axis=(-3,-2,-1))
     else:
         print 'Error (over_volume): invalid option ' + option
+        sys.exit()
 
 
 # Now here are the APIs.
@@ -96,9 +123,12 @@ def over_volume (option, data, grid, gtype='t', time_dependent=False):
 # Output: array of dimension lat x lon (if time_dependent=False) or time x lat x lon (if time_dependent=True)
 
 def vertical_average (data, grid, gtype='t', time_dependent=False):
+    return over_depth('average', data, grid, gtype=gtype, time_dependent=time_dependent)
 
-    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
-    return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
+
+# Vertically integrate.
+def vertical_integral (data, grid, gtype='t', time_dependent=False):
+    return over_depth('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)
 
 
 # Vertically average a specific water column with fixed latitude and longitude. So "data" is a depth-dependent array, either 1D or 2D (if time_dependent=True). You also need to supply hfac at the same water column (1D, depth-dependent).
@@ -154,4 +184,11 @@ def volume_average (data, grid, gtype='t', time_dependent=False):
 # Like volume_average, but for volume integrals.
 def volume_integral (data, grid, gtype='t', time_dependent=False):
 
-    return over_volume('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)        
+    return over_volume('integrate', data, grid, gtype=gtype, time_dependent=time_dependent)
+
+
+# Indefinite integral from south to north.
+def indefinite_ns_integral (data, grid, gtype='t', time_dependent=False):
+
+    dy, mask = prepare_area_mask(data, grid, gtype=gtype, option='dy', time_dependent=time_dependent)
+    return np.cumsum(data*dy*mask, axis=-2)
