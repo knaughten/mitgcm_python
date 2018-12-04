@@ -117,6 +117,20 @@ def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t
     return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
 
+# Integrate the area of the sea surface where the given variable exceeds the given threshold.
+def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read the data
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Convert to array of 1s and 0s based on threshold
+    data = (data >= threshold).astype(float)
+    # Now build the timeseries
+    timeseries = []
+    for t in range(data.shape[0]):
+        timeseries.append(over_area('integrate', data[t,:], grid, gtype=gtype))
+    return np.array(timeseries)
+
+
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. This can be restricted to the FRIS cavity if you set fris=True.
 def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, fris=False):
 
@@ -152,6 +166,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 #          'max': calculates maximum value of variable in region; must specify var_name and possibly xmin etc.
 #          'avg_sfc': calculates area-averaged value over the sea surface, i.e. not counting cavities
 #          'int_sfc': calculates area-integrated value over the sea surface
+#          'area_threshold': calculates area of sea surface where the variable exceeds the given threshold
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
 #          'time': just returns the time array
@@ -161,6 +176,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 # mass_balance: as in function timeseries_ismr. Only matters for 'ismr'.
 # var_name: variable name to process. Doesn't matter for 'ismr'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
+# threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
 # monthly: as in function netcdf_time
 
@@ -170,7 +186,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', shelves='fris', mass_balance=False, var_name=None, xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -187,6 +203,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', shelves='fris
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
         print 'Error (calc_timeseries): must specify lon0 and lat0'
+        sys.exit()
+    if option == 'area_threshold' and threshold is None:
+        print 'Error (calc_timeseries): must specify threshold'
         sys.exit()
 
     # Build the grid if needed
@@ -205,6 +224,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', shelves='fris
         values = timeseries_avg_sfc(first_file, var_name, grid, gtype=gtype)
     elif option == 'int_sfc':
         values = timeseries_int_sfc(first_file, var_name, grid, gtype=gtype)
+    elif option == 'area_threshold':
+        values = timeseries_area_threshold(first_file, var_name, threshold, grid, gtype=gtype)
     elif option == 'avg_fris':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
     elif option == 'point_vavg':
@@ -228,6 +249,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', shelves='fris
                 values_tmp = timeseries_avg_sfc(file, var_name, grid, gtype=gtype)
             elif option == 'int_sfc':
                 values_tmp = timeseries_int_sfc(file, var_name, grid, gtype=gtype)
+            elif option == 'area_threshold':
+                values_tmp = timeseries_area_threshold(file, var_name, threshold, grid, gtype=gtype)
             elif option == 'avg_fris':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
             elif option == 'point_vavg':
@@ -267,15 +290,15 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, lon0=None, lat0=None, monthly=True):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, monthly=True):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
@@ -294,6 +317,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'fris_salt': volume-averaged salinity in the FRIS cavity
 #      'temp_polynya': depth-averaged temperature through the centre of a polynya
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
+#      'conv_area': total area of convection (MLD > 2000 m)
 def set_parameters (var):
 
     xmin = None
@@ -302,6 +326,7 @@ def set_parameters (var):
     ymax = None
     shelves = None
     mass_balance = None
+    threshold = None
 
     if var in ['fris_mass_balance', 'fris_ismr', 'ewed_ismr', 'all_ismr']:
         option = 'ismr'
@@ -366,18 +391,24 @@ def set_parameters (var):
             var_name = 'SALT'
             title = 'Depth-averaged salinity in polynya'
             units = 'psu'
+    elif var == 'conv_area':
+        option = 'area_threshold'
+        var_name = 'MXLDEPTH'
+        threshold = 2000.
+        title = 'Convective area'
+        units = r'million km$^2$'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
@@ -385,8 +416,8 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
         time, melt, freeze = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
-        if var == 'seaice_area':
+        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+        if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data *= 1e-12
         return time, data
@@ -396,7 +427,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:
@@ -407,8 +438,8 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, lon0=lon0, lat0=lat0, monthly=monthly)
-        if var == 'seaice_area':
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+        if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data_diff *= 1e-12
         return time, data_diff
