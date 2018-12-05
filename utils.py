@@ -368,7 +368,7 @@ def days_per_month (month, year):
     # Days per month in non-leap years
     days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-    # Special case for Feburary in leap years
+    # Special case for February in leap years
     if month == 2 and is_leap_year(year):
         return days[month-1]+1
     else:

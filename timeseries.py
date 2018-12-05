@@ -4,10 +4,11 @@
 
 import numpy as np
 import sys
+import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris
+from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris, days_per_month
 from diagnostics import total_melt, wed_gyre_trans
 from averaging import over_area, volume_average, vertical_average_column
 from interpolation import interp_bilinear
@@ -466,6 +467,42 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
             # Convert from m^2 to million km^2
             data_diff *= 1e-12
         return time, data_diff
+
+
+# Given a monthly timeseries (and corresponding array of Date objects), calculate the annually-averaged timeseries. Return it as well as a new Date array with dates in the midpoint of each year.
+def monthly_to_annual (data, time):
+
+    # Make sure we start at the beginning of a year
+    if time[0].month != 1:
+        print 'Error (monthly_to_annual): timeseries must start with January.'
+        sys.exit()
+
+    # Weighted average of each year, taking days per month into account
+    new_data = []
+    new_time = []
+    data_accum = 0
+    ndays = 0
+    for t in range(data.size):
+        ndays_curr = days_per_month(time[t].month, time[t].year)
+        data_accum += data[t]*ndays_curr
+        ndays += ndays_curr
+        if time[t].month == 12:
+            # End of the year
+            # Convert from integral to average
+            new_data.append(data_accum/ndays)
+            # Calculate the midpoint of this year
+            year_start = datetime.date(time[t].year, 1, 1)
+            year_mid = year_start - datetime.timedelta(days=ndays/2)
+            new_time.append(year_mid)
+            # Reset the accumulation arrays
+            data_accum = 0
+            ndays = 0
+
+    return new_data, new_time
+        
+        
+
+    
 
     
 

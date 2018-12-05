@@ -10,7 +10,7 @@ from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf
 from ..constants import deg_string
-from ..timeseries import trim_and_diff
+from ..timeseries import trim_and_diff, monthly_to_annual
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -62,7 +62,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     grid = Grid(base_dir+grid_dir)
 
     # Inner function to plot timeseries on the same axes, plus potentially a difference plot and/or a percent difference plot.
-    def plot_polynya_timeseries (var_name, title, units, use_baseline=True, diff=None, percent_diff=None):
+    def plot_polynya_timeseries (var_name, title, units, use_baseline=True, diff=None, percent_diff=None, annual=True):
         
         if use_baseline:
             i0 = 0
@@ -75,6 +75,10 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         if percent_diff and not diff:
             print "Error (plot_polynya_timeseries): can't make percent difference plot without a difference plot"
             sys.exit()
+        if annual:
+            monthly_str = ''
+        else:
+            monthly_str = '_monthly_'
 
         # Read data
         data = []
@@ -85,11 +89,14 @@ def prelim_plots (base_dir='./', fig_dir='./'):
                 time = netcdf_time(file_path)
             # Read the variable
             data_tmp = read_netcdf(file_path, var_name)
+            if annual:
+                # Annually average
+                data_tmp, time = monthly_to_annual(data_tmp, time)
             # Parcel into array
             data.append(data_tmp)
             
         # Make the plot
-        timeseries_multi_plot(time, data, expt_names[i0:], expt_colours[i0:], title=title, units=units, fig_name=fig_dir+var_name+'.png')
+        timeseries_multi_plot(time, data, expt_names[i0:], expt_colours[i0:], title=title, units=units, fig_name=fig_dir+var_name+monthly_str+'.png')
         
         if diff:
             # Also make a difference plot
@@ -99,20 +106,21 @@ def prelim_plots (base_dir='./', fig_dir='./'):
                 data_diff_tmp = trim_and_diff(time, time, data[0], data[i])[1]
                 data_diff.append(data_diff_tmp)
             # Make the plot
-            timeseries_multi_plot(time, data_diff, expt_names[1:], expt_colours[1:], title=title+' anomaly', units=units, fig_name=fig_dir+var_name+'_diff.png')
+            timeseries_multi_plot(time, data_diff, expt_names[1:], expt_colours[1:], title=title+' anomaly', units=units, fig_name=fig_dir+var_name+monthly_str+'_diff.png')
 
             if percent_diff:
                 # Also make a percent difference plot
                 data_diff_percent = []
                 for i in range(num_expts-1):
                     data_diff_percent.append(data_diff[i]/data[0]*100)
-                timeseries_multi_plot(time, data_diff_percent, expt_names[1:], expt_colours[1:], title=title+' % anomaly', fig_name=fig_dir+var_name+'_percent_diff.png')
+                timeseries_multi_plot(time, data_diff_percent, expt_names[1:], expt_colours[1:], title=title+' % anomaly', fig_name=fig_dir+var_name+monthly_str+'_percent_diff.png')
 
     # end inner function
 
     # Now make the timeseries plots
-    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', percent_diff=False)
+    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y')
+    plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y', annual=False)
     plot_polynya_timeseries('ewed_ismr', 'EWIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('wed_gyre_trans', 'Weddell Gyre transport', 'Sv')
     plot_polynya_timeseries('fris_temp', 'FRIS cavity temperature', deg_string+'C', percent_diff=False)
