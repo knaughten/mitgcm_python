@@ -10,6 +10,7 @@ from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf
 from ..constants import deg_string
+from ..timeseries import trim_and_diff
 
 
 # Get longitude and latitude at the centre of the polynya
