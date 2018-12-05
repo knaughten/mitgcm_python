@@ -8,7 +8,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir
+from ..utils import real_dir, mask_land_ice
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -147,7 +147,11 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # 2x2 lat-lon plot of polynya masks
     fig, gs = set_panels('2x2C0')
     for i in range(1, num_expts-1):
+        # Read polynya mask from binary
         data = read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64)
+        # Mask out land and ice shelves
+        data = mask_land_ice(data, grid)
+        # Plot
         ax = plt.subplot(gs[(i-1)/2, (i-1)%2])
         img = latlon_plot(data, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=expt_names[i], xmin=xmin_sfc, ymin=ymin_sfc)
         if (i-1)%2==1:
@@ -156,6 +160,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         if (i-1)/2==0:
             # Remove longitude labels
             ax.set_xticklabels([])
+    # Main title
     plt.suptitle('Imposed convective regions (red)', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')
     

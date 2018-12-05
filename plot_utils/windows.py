@@ -51,12 +51,12 @@ def set_panels (key, figsize=None):
     elif key == '2x2C1':
         # Four plots arranged into two rows and two columns, with one colourbar below
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.0, right=0.97, bottom=0.12, top=0.88, wspace=0.05, hspace=0.15)
+        gs.update(left=0.05, right=0.97, bottom=0.12, top=0.88, wspace=0.05, hspace=0.15)
         cax = fig.add_axes([0.3, 0.03, 0.4, 0.03])
     elif key == '2x2C0':
         # Like 2x2C1 but no colourbar
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.0, right=0.97, bottom=0.05, top=0.88, wspace=0.05, hspace=0.15)
+        gs.update(left=0.05, right=0.97, bottom=0.05, top=0.88, wspace=0.05, hspace=0.15)
     elif key == '1x3C1':
         # Three side-by-side plots with one colourbar below
         gs = plt.GridSpec(1,3)
