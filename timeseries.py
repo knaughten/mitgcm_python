@@ -128,7 +128,7 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     # Now build the timeseries
     timeseries = []
     for t in range(data.shape[0]):
-        timeseries.append(area_integral(data[t,:], grid, gtype=gtype)
+        timeseries.append(area_integral(data[t,:], grid, gtype=gtype))
     return np.array(timeseries)
 
 
