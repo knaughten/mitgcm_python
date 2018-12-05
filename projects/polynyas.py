@@ -104,7 +104,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             if percent_diff:
                 # Also make a percent difference plot
                 data_diff_percent = []
-                for i in range(1, num_expts):
+                for i in range(num_expts-1):
                     data_diff_percent.append(data_diff[i]/data[0]*100)
                 timeseries_multi_plot(time, data_diff_percent, expt_names[1:], expt_colours[1:], title=title+' % anomaly', fig_name=fig_dir+var_name+'_percent_diff.png')
 
