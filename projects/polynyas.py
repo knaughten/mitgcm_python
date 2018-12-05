@@ -111,7 +111,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # end inner function
 
     # Now make the timeseries plots
-    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$')
+    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', percent_diff=False)
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('ewed_ismr', 'EWIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('wed_gyre_trans', 'Weddell Gyre transport', 'Sv')
