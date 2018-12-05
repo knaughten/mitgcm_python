@@ -498,7 +498,7 @@ def monthly_to_annual (data, time):
             data_accum = 0
             ndays = 0
 
-    return new_data, new_time
+    return np.array(new_data), np.array(new_time)
         
         
 
