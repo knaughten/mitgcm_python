@@ -48,14 +48,14 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
 
     # File paths
-    output_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'polynya_maud_rise_big/', 'polynya_maud_rise_small/', 'polynya_maud_rise_5y/']
-    grid_dir = output_dir[0] + 'grid/'
-    timeseries_file = 'timeseries_polynya.nc'
-    avg_file = '1979_2016_avg.nc'
+    case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'polynya_maud_rise_big/', 'polynya_maud_rise_small/', 'polynya_maud_rise_5y/']
+    grid_dir = case_dir[0] + 'grid/'
+    timeseries_file = 'output/timeseries_polynya.nc'
+    avg_file = 'output/1979_2016_avg.nc'
     # Titles etc. for plotting
     expt_names = ['Baseline', 'Maud Rise', 'Near Shelf', 'Maud Rise Big', 'Maud Rise Small', 'Maud Rise 5y']
     expt_colours = ['black', 'blue', 'green', 'red', 'cyan', 'magenta']
-    num_expts = len(output_dir)
+    num_expts = len(case_dir)
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -78,7 +78,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         # Read data
         data = []
         for i in range(i0, num_expts):
-            file_path = base_dir + output_dir[i] + timeseries_file
+            file_path = base_dir + case_dir[i] + timeseries_file
             if i==i0:
                 # Read the time axis
                 time = netcdf_time(file_path)
