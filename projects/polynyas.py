@@ -15,7 +15,9 @@ from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
+from ..plot_utils.labels import round_to_decimals
 from ..plot_latlon import latlon_plot
+from ..averaging import area_integral
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -149,11 +151,14 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     for i in range(1, num_expts-1):
         # Read polynya mask from binary
         data = read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64)
+        # Calculate its area in 10^5 km^2
+        area = round_to_decimals(area_integral(data, grid)*1e-11,1)
+        title = expt_names[i] + ' ('+str(area)+r'$\times$ 10$^5$ km$^2$)'
         # Mask out land and ice shelves
         data = mask_land_ice(data, grid)
         # Plot
         ax = plt.subplot(gs[(i-1)/2, (i-1)%2])
-        img = latlon_plot(data, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=expt_names[i], xmin=xmin_sfc, ymin=ymin_sfc)
+        img = latlon_plot(data, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=title, xmin=xmin_sfc, ymin=ymin_sfc)
         if (i-1)%2==1:
             # Remove latitude labels
             ax.set_yticklabels([])

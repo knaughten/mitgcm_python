@@ -24,6 +24,16 @@ def yearly_ticks (ax):
     ax.xaxis.set_major_formatter(dt.DateFormatter('%Y'))
 
 
+# Round the given number to the given maximum number of decimals, with no unnecessary trailing zeros.
+def round_to_decimals (x, max_decimals):
+    for d in range(max_decimals+1):
+        if round(x,d) == x or d == max_decimals:
+            fmt = '{0:.'+str(d)+'f}'
+            label = fmt.format(round(x,d))
+            break
+    return label
+
+
 # Format the latitude or longitude x as a string, rounded to max_decimals (with no unnecessary trailing zeros), and expressed as a compass direction eg 30 <degrees> W instead of -30.
 # latlon_label is the helper function, lon_label and lat_label are the APIs.
 
@@ -37,12 +47,7 @@ def latlon_label (x, suff_minus, suff_plus, max_decimals):
         suff = suff_plus
 
     # Round to the correct number of decimals, with no unnecessary trailing 0s
-    for d in range(max_decimals+1):
-        if round(x,d) == x or d == max_decimals:
-            fmt = '{0:.'+str(d)+'f}'
-            label = fmt.format(round(x,d))
-            break
-
+    label = round_to_decimals(x, max_decimals)
     return label + suff
 
 

@@ -6,6 +6,7 @@ from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary
 from utils import real_dir, fix_lon_range, mask_land_ice
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff
+from averaging import area_integral
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -392,7 +393,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     mask[index] = 1
 
     # Print the area of the polynya
-    print 'Polynya area is ' + str(np.sum(grid.dA[index])*1e-6) + ' km^2'
+    print 'Polynya area is ' + str(area_integral(mask, grid)*1e-6) + ' km^2'
     # Plot the mask
     latlon_plot(mask_land_ice(mask, grid), grid, include_shelf=False, title='Polynya mask', figsize=(10,6))
 
