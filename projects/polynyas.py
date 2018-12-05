@@ -11,7 +11,7 @@ from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
-from ..plot_utils.windows import set_panels
+from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_latlon import latlon_plot
 
 
