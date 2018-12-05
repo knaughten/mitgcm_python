@@ -91,7 +91,13 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             data_tmp = read_netcdf(file_path, var_name)
             if annual:
                 # Annually average
-                data_tmp, time = monthly_to_annual(data_tmp, time)
+                if i == num_expts-1:
+                    # This is the last one
+                    # Overwrite data_tmp and time
+                    data_tmp, time = monthly_to_annual(data_tmp, time)
+                else:
+                    # Don't overwrite time yet or it will screw up later iterations
+                    data_tmp = monthly_to_annual(data_tmp, time)[0]
             # Parcel into array
             data.append(data_tmp)
             
