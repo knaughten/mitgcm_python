@@ -78,7 +78,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         if annual:
             monthly_str = ''
         else:
-            monthly_str = '_monthly_'
+            monthly_str = '_monthly'
 
         # Read data
         data = []
