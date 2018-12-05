@@ -8,9 +8,11 @@ from ..postprocess import precompute_timeseries
 from ..utils import real_dir
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
-from ..file_io import netcdf_time, read_netcdf
+from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
+from ..plot_utils.windows import set_panels
+from ..plot_latlon import latlon_plot
 
 
 # Get longitude and latitude at the centre of the polynya
@@ -53,10 +55,15 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     grid_dir = case_dir[0] + 'grid/'
     timeseries_file = 'output/timeseries_polynya.nc'
     avg_file = 'output/1979_2016_avg.nc'
+    forcing_dir = '/work/n02/n02/shared/baspog/MITgcm/WS/WSK/'
+    polynya_file = [None, 'polynya_mask_maud_rise', 'polynya_mask_near_shelf', 'polynya_mask_maud_rise_big', 'polynya_mask_maud_rise_small', None]
     # Titles etc. for plotting
     expt_names = ['Baseline', 'Maud Rise', 'Near Shelf', 'Maud Rise Big', 'Maud Rise Small', 'Maud Rise 5y']
     expt_colours = ['black', 'blue', 'green', 'red', 'cyan', 'magenta']
     num_expts = len(case_dir)
+    # Smaller boundaries on surface plots not including ice shelves
+    xmin_sfc = -67
+    ymin_sfc = -80
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -124,7 +131,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # end inner function
 
     # Now make the timeseries plots
-    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
+    '''plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y', annual=False)
     plot_polynya_timeseries('ewed_ismr', 'EWIS basal mass loss', 'Gt/y')
@@ -132,13 +139,40 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('fris_temp', 'FRIS cavity temperature', deg_string+'C', percent_diff=False)
     plot_polynya_timeseries('fris_salt', 'FRIS cavity salinity', 'psu', percent_diff=False)
     plot_polynya_timeseries('temp_polynya', 'Temperature in polynya', deg_string+'C', use_baseline=False)
-    plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)
+    plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)'''
+
+    # 2x2 lat-lon plot of polynya masks
+    fig, gs = set_panels('2x2C0')
+    for i in range(1, num_expts-1):
+        data = read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64)
+        ax = plt.subplot(gs[(i-1)/2, (i-1)%2])
+        img = latlon_plot(data, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=expt_names[i], xmin=xmin_sfc, ymin=ymin_sfc)
+        if (i-1)%2==1:
+            # Remove latitude labels
+            ax.set_yticklabels([])
+        if (i-1)/2==0:
+            # Remove longitude labels
+            ax.set_xticklabels([])
+    plt.suptitle('Imposed convective regions (red)', fontsize=22)
+    finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')
+    
+        
+        
+        
+    
+    
+        
+    
 
 
-
+#   Polynya masks (4)
 #   Lat-lon plots, averaged over entire period (all except 5-year)
-#     Sea ice area (absolute)
+#     Absolute:
+#       Sea ice area
+#       MLD
+#       Barotropic velocity
 #     Baseline absolute and others differenced, zoomed in and out:
 #       BW temp and salt
 #       ismr
-#       Barotropic velocity
+#       Barotropic velocity (only zoomed in)
+
