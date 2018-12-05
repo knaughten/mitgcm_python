@@ -5,9 +5,9 @@
 import numpy as np
 import sys
 
-from constants import rho_ice
-from utils import z_to_xyz, add_time_dim, xy_to_xyz
-from averaging import area_integral
+from constants import rho_ice, wed_gyre_bounds
+from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max
+from averaging import area_integral, vertical_integral, indefinite_ns_integral
 
 
 # Calculate the adiabatic temperature gradient exactly like MITgcm does. This originates from section 7 of "Algorithms for computation of fundamental properties of seawater", UNESCO technical papers in marine science 44, 1983.
@@ -155,25 +155,27 @@ def find_aice_min_max (aice, grid):
     return np.argmin(total_aice), np.argmax(total_aice)
 
 
-# Calculate the barotropic transport streamfunction.
+# Calculate the barotropic transport streamfunction. u is assumed not to be time-dependent.
 def barotropic_streamfunction (u, grid):
 
-    # Get integrands and partial cell fractions
-    # hfac and dz should be 3D
-    hfac = grid.hfac_w
-    dz = z_to_xyz(grid.dz, grid)
-    # dy should be 2D
-    dy = grid.dy_w
-    if len(u.shape)==4:
-        # Time-dependent. Add a time dimension to everything.
-        num_time = u.shape[0]
-        hfac = add_time_dim(hfac, num_time)
-        dz = add_time_dim(dz, num_time)
-        dy = add_time_dim(dy, num_time)
+    if len(u.shape) == 4:
+        print 'Error (barotropic_streamfunction): u cannot be time-dependent.'
+        sys.exit()
+        
     # Vertically integrate
-    udz_int = np.sum(u*hfac*dz, axis=-3)
-    # Indefinite integral from south to north, and convert to Sv
-    return np.cumsum(udz_int*dy, axis=-2)*1e-6
+    udz_int = vertical_integral(u, grid, gtype='u')
+    # Indefinite integral from south to north
+    strf = indefinite_ns_integral(udz_int, grid, gtype='u')
+    # Convert to Sv
+    return strf*1e-6
+
+
+# Calculate the Weddell Gyre transport: absolute value of the most negative streamfunction within the Weddell Gyre bounds.
+def wed_gyre_trans (u, grid):
+
+    strf = barotropic_streamfunction(u, grid)
+    vmin, vmax = var_min_max(strf, grid, xmin=wed_gyre_bounds[0], xmax=wed_gyre_bounds[1], ymin=wed_gyre_bounds[2], ymax=wed_gyre_bounds[3], gtype='u')
+    return -1*vmin
 
 
 # Calculate seawater density for a linear equation of state.

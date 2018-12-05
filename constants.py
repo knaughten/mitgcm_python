@@ -33,6 +33,10 @@ deg_string = r'$^{\circ}$'
 fris_bounds = [-85, -29, -84, -74]
 # Bounds on Eastern Weddell ice shelves.
 ewed_bounds = [-30, 40, -77, -65]
+# Bounds on Weddell Gyre.
+wed_gyre_bounds = [-60, 30, -90, -50]
+# Bounds on location to search for grounded iceberg A-23A
+a23a_bounds = [-47, -38, -77, -75]
 
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.
@@ -43,6 +47,4 @@ bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
 bedmap_res = 1000    # Resolution (m)
 bedmap_missing_val = -9999    # Missing value for bathymetry north of 60S
 
-# Bounds on location to search for grounded iceberg A-23A
-# [xmin, xmax, ymin, ymax]
-a23a_bounds = [-47, -38, -77, -75]
+
