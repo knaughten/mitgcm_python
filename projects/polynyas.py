@@ -153,7 +153,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         data = read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64)
         # Calculate its area in 10^5 km^2
         area = round_to_decimals(area_integral(data, grid)*1e-11,1)
-        title = expt_names[i] + ' ('+str(area)+r'$\times$ 10$^5$ km$^2$)'
+        title = expt_names[i] + ' ('+str(area)+r'$\times$10$^5$ km$^2$)'
         # Mask out land and ice shelves
         data = mask_land_ice(data, grid)
         # Plot
