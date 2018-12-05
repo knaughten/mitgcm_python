@@ -96,7 +96,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             # Calculate the difference
             data_diff = []
             for i in range(1, num_expts):
-                data_diff_tmp = trim_and_diff(time, time, data[0], data[i])
+                data_diff_tmp = trim_and_diff(time, time, data[0], data[i])[1]
                 data_diff.append(data_diff_tmp)
             # Make the plot
             timeseries_multi_plot(time, data_diff, expt_names[1:], expt_colours[1:], title=title+' anomaly', units=units, fig_name=fig_dir+var_name+'_diff.png')
