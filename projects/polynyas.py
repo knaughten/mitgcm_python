@@ -3,6 +3,9 @@
 ##################################################################
 
 import sys
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from ..postprocess import precompute_timeseries
 from ..utils import real_dir
