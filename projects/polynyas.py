@@ -258,7 +258,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             label.set_visible(False)
         # Main title
         plt.suptitle(titles[j] + ', 1979-2016', fontsize=22)
-        finished_plot(fig) #, fig_name=fig_dir+var_names[j]+'.png')
+        finished_plot(fig, fig_name=fig_dir+var_names[j]+'.png')
                     
     
         
