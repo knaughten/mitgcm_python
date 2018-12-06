@@ -31,7 +31,7 @@ def set_panels (key, figsize=None):
         elif key in ['1x3C1', '1x3C3']:
             figsize = (15, 5)
         elif key in ['5C1', '5C2']:
-            figsize = (15, 10)
+            figsize = (12, 7)
         elif key == '5x8C1':
             figsize = (30, 20)
         elif key == 'CTD':
@@ -74,12 +74,12 @@ def set_panels (key, figsize=None):
     elif key in ['5C1', '5C2']:
         # Five plots arranged into two rows and three columns, with the empty space in the bottom left filled with either one or two colourbars.
         gs = plt.GridSpec(2,3)
-        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.9, wspace=0.05, hspace=0.05)
+        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.88, wspace=0.05, hspace=0.12)
         if key == '5C1':
-            cax = fig.add_axes([0.1, 0.1, 0.2, 0.02])
+            cax = fig.add_axes([0.07, 0.25, 0.25, 0.05])
         elif key == '5C2':
-            cax1 = fig.add_axes([0.1, 0.05, 0.2, 0.02])
-            cax2 = fig.add_axes([0.1, 0.15, 0.2, 0.02])
+            cax1 = fig.add_axes([0.07, 0.2, 0.25, 0.02])
+            cax2 = fig.add_axes([0.07, 0.35, 0.25, 0.02])
     elif key == '5x8C1':
         # 38 plots (one per year of observational period) arranged into 5 rows and 8 columns, with one colourbar in the empty space of the last 2 panels
         gs = plt.GridSpec(5,8)

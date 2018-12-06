@@ -8,7 +8,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir, mask_land_ice
+from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -16,6 +16,7 @@ from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals
+from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..averaging import area_integral
 
@@ -212,7 +213,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         for i in range(num_expts-1):
             # Read data
             if is_vel:
-                data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+case_dir[i]+avg_file)
+                data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+case_dir[i]+avg_file, return_vel_components=True)
                 data.append(data_tmp)
                 u.append(u_tmp)
                 v.append(v_tmp)
@@ -235,7 +236,13 @@ def prelim_plots (base_dir='./', fig_dir='./'):
                 ax = plt.subplot(gs[i/3,i%3])
             else:
                 ax = plt.subplot(gs[i/3,i%3+1])
-            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
+            if include_shelf:
+                xmin = None
+                ymin = None
+            else:
+                xmin = xmin_sfc
+                ymin = ymin_sfc
+            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, xmin=xmin, ymin=ymin, title=expt_names[i])
             if is_vel:
                 # Add velocity vectors
                 overlay_vectors(ax, u[i], v[i], grid, chunk=10, scale=0.8)
@@ -251,16 +258,12 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             label.set_visible(False)
         # Main title
         plt.suptitle(titles[j] + ', 1979-2016', fontsize=22)
-        finished_plot(fig, fig_name=fig_dir+var_names[j]+'.png')
+        finished_plot(fig) #, fig_name=fig_dir+var_names[j]+'.png')
                     
     
         
 
 #   Lat-lon plots, averaged over entire period (all except 5-year)
-#     Absolute:
-#       Sea ice area
-#       MLD
-#       Barotropic velocity
 #     Baseline absolute and others differenced, zoomed in and out:
 #       BW temp and salt
 #       ismr
