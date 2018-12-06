@@ -150,3 +150,9 @@ def check_date_string (date_string, file_path, time_index):
     if date_string is None and time_index is not None:
         date_string = parse_date(file_path=file_path, time_index=time_index)
     return date_string
+
+
+# Hide every second label on a colourbar so they're not squished.
+def reduce_cbar_labels (cbar):
+    for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+        label.set_visible(False)

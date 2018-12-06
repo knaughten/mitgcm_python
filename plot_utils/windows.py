@@ -29,7 +29,7 @@ def set_panels (key, figsize=None):
         elif key == '2x2C0':
             figsize = (10, 6.5)
         elif key in ['1x3C1', '1x3C3']:
-            figsize = (15, 5)
+            figsize = (16, 5)
         elif key in ['5C1', '5C2']:
             figsize = (12, 7)
         elif key == '5x8C1':

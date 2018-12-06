@@ -12,7 +12,7 @@ from grid import choose_grid, Grid
 from file_io import read_netcdf, find_variable, check_single_time
 from utils import mask_3d, z_to_xyz
 from plot_utils.windows import set_panels, finished_plot
-from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string
+from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax
 from diagnostics import t_minus_tf
@@ -264,8 +264,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
             ax.set_ylabel('')
         # Add a colourbar and hide every second label so they're not squished
         cbar = plt.colorbar(img, cax=cax[i], extend=extend[i], orientation='horizontal')
-        for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
-            label.set_visible(False)
+        reduce_cbar_labels(cbar)
         # Variable title
         plt.title(title[i], fontsize=18)
     if date_string is not None:

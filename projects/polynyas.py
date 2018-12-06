@@ -15,7 +15,7 @@ from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.labels import round_to_decimals
+from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..averaging import area_integral
@@ -191,7 +191,139 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
 
-    # Lat-lon plots of absolute variables
+        
+    # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
+    def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither'):
+
+        if option not in ['absolute', 'difference']:
+            print 'Error (plot_latlon_5panel): invalid option ' + option
+            sys.exit()
+
+        # Read data from each simulation, parcelled into a 5-item list
+        data = []
+        if var == 'vel':
+            # Will also need to read velocity components
+            u = []
+            v = []
+        vmin0 = 999
+        vmax0 = -999
+        if option == 'anomaly':
+            vmin0_diff = 0            
+            vmax0_diff = 0
+        for i in range(num_expts-1):
+            if var=='vel' and (option=='absolute' or i==0):
+                # Read velocity components too
+                data_tmp, u_tmp, v_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file, return_vel_components=True)
+                # Either way, will be saving absolute variable
+                data.append(data_tmp)
+                u.append(u_tmp)
+                v.append(v_tmp)
+            else:
+                data_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file)
+                if option=='absolute' or i==0:
+                    # Save absolute variable
+                    data.append(data_tmp)
+                else:
+                    # Save anomaly from baseline
+                    data.append(data_tmp-data[0])
+            # Get min and max values and update global min/max as needed
+            vmin0_tmp, vmax0_tmp = var_min_max(data[i], grid)
+            if option=='absolute' or i==0:
+                vmin0 = min(vmin0, vmin0_tmp)
+                vmax0 = max(vmax0, vmax0_tmp)
+            else:
+                vmin0_diff = min(vmin0_diff, vmin0_tmp)
+                vmax0_diff = max(vmax0_diff, vmax0_tmp)
+        # Now consider preset bounds
+        if vmin is None:
+            vmin = vmin0
+        if vmax is None:
+            vmax = vmax0
+        if vmin_diff is None:
+            vmin_diff = vmin0_diff
+        if vmax_diff is None:
+            vmax_diff = vmax0_diff
+
+        # Prepare some parameters for the plot
+        if zoom_fris:
+            figsize = (13, 5)
+            zoom_string = '_zoom'
+            chunk = 10
+        else:
+            figsize = (16, 5)
+            zoom_string = ''
+            chunk = 6
+        if include_shelf or zoom_fris:
+            xmin = None
+            ymin = None
+        else:
+            xmin = xmin_sfc
+            ymin = ymin_sfc
+
+        # Make the plot
+        if option == 'absolute':
+            fig, gs, cax = set_panels('5C1', figsize=figsize)
+        elif option == 'anomaly':
+            fig, gs, cax1, cax2 = set_panels('5C2', figsize=figsize)
+        for i in range(num_expts-1):
+            # Leave the bottom left plot empty for colourbars
+            if i < 3:
+                ax = plt.subplot(gs[i/3,i%3])
+            else:
+                ax = plt.subplot(gs[i/3,i%3+1])
+            if option=='absolute' or i==0:
+                ctype_curr = ctype
+                vmin_curr = vmin
+                vmax_curr = vmax
+            else:
+                ctype_curr = 'plusminus'
+                vmin_curr = vmin_diff
+                vmax_curr = vmax_diff
+            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf, make_cbar=False, ctype=ctype_curr, vmin=vmin_curr, vmax=vmax_curr, xmin=xmin, ymin=ymin, zoom_fris=zoom_fris, title=expt_names[i])
+            if option=='anomaly' and i==0:
+                # First colourbar
+                cbar1 = plt.colorbar(img, cax=cax1, orientation='horizontal', extend=extend)
+                reduce_cbar_labels(cbar1)
+            if var=='vel' and (option=='absolute' or i==0):
+                # Add velocity vectors
+                overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
+            if i in [1,2,4]:
+                # Remove latitude labels
+                ax.set_yticklabels([])
+            if i in [1,2]:
+                # Remove longitude labels
+                ax.set_xticklabels([])
+        if option=='anomaly':
+            # Get ready for second colourbar
+            cax = cax2
+            extend = extend_diff
+            # Text below labelling anomalies
+            plt.text(0.25, 0.1, 'anomalies from baseline', fontsize=12, transform=fig.transFigure)
+        # Colourbar
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
+        reduce_cbar_labels(cbar)
+        # Main title
+        plt.suptitle(title, fontsize=22)
+        finished_plot(fig, fig_name=fig_dir+var+zoom_string+'.png')
+
+    # end inner function
+
+    # Now make 5-panel plots of absolute variables
+    plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', include_shelf=False, vmin=0, vmax=1)
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', include_shelf=False, vmin=0)
+    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', ctype='vel', include_shelf=False, vmin=0)
+    # 5-panel plots of baseline absolute values, and anomalies for other simulations, zoomed both in and out
+    plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'), 1979-2016', option='anomaly')
+    plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', vmin=34.3, extend='min')
+    plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', zoom_fris=True, vmin=34.3, extend='min')
+    plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr')
+    plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_fris=True)
+    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
+    
+            
+
+    '''# Lat-lon plots of absolute variables
     # No need to plot the 5-year polynya
     var_names = ['aice', 'mld', 'vel']
     titles = ['Sea ice concentration', 'Mixed layer depth (m)', 'Barotropic velocity (m/s)']
@@ -259,6 +391,83 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         # Main title
         plt.suptitle(titles[j] + ', 1979-2016', fontsize=22)
         finished_plot(fig, fig_name=fig_dir+var_names[j]+'.png')
+
+    # Lat-lon plots of baseline absolute values, and anomalies for other simulations (except 5-year polynya)
+    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
+    titles = ['Bottom water temperature ('+deg_string+')', 'Bottom water salinity (psu)', 'Ice shelf melt rate (m/y)', 'Barotropic velocity (m/s)']
+    ctype = ['basic', 'basic', 'ismr', 'vel']
+    for j in range(len(var_names)):
+        print 'Plotting ' + var_names[j]
+        is_vel = var_names[j] == 'vel'
+        # Repeat for both zoomed-in and zoomed-out
+        for zoom_fris in [True, False]:
+            if zoom_fris:
+                zoom_string = '_zoom'
+            else:
+                zoom_string = ''
+            if is_vel and not zoom_fris:
+                # Don't want zoomed-out velocity plot
+                continue
+            data = []
+            if is_vel:
+                u = []
+                v = []
+            vmin = 999
+            vmax = -999
+            for i in range(num_expts-1):
+                # Read data
+                if is_vel and i==0:
+                    # Save velocity components too
+                    data_tmp, u, v = read_and_process(var_names[j], base_dir+case_dir[i]+avg_file, return_vel_components=True)
+                else:
+                    data_tmp = read_and_process(var_names[j], base_dir+case_dir[i]+avg_file)
+                if i==0:
+                    # Save absolute values for baseline
+                    data.append(data_tmp)
+                else:
+                    # Save anomalies for other simulations
+                    data.append(data_tmp-data[0])
+                vmin_tmp, vmax_tmp = var_min_max(data[i], grid)
+                vmin = min(vmin, vmin_tmp)
+                vmax = max(vmax, vmax_tmp)
+            if zoom_fris:
+                figsize = (13, 5)
+            else:
+                figsize = None
+            fig, gs, cax1, cax2 = set_panels('5C2', figsize=figsize)
+            for i in range(num_expts-1):
+                if i < 3:
+                    ax = plt.subplot(gs[i/3,i%3])
+                else:
+                    ax = plt.subplot(gs[i/3,i%3+1])
+                if i==0:
+                    ctype_tmp = ctype[j]
+                else:
+                    ctype_tmp = 'plusminus'
+                img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype_tmp, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, title=expt_names[i])
+                if i==0:
+                    # First colourbar
+                    cbar1 = plt.colorbar(img, cax=cax1, orientation='horizontal')
+                    for label in cbar1.ax.xaxis.get_ticklabels()[1::2]:
+                        label.set_visible(False)
+                if is_vel and i==0:
+                    # Add velocity vectors to baseline
+                    overlay_vectors(ax, u, v, grid, chunk=6, scale=0.8)
+                if i in [1,2,4]:
+                    # Remove latitude labels
+                    ax.set_yticklabels([])
+                if i in [1,2]:
+                    # Remove longitude labels
+                    ax.set_xticklabels([])
+            # Second colourbar
+            cbar2 = plt.colorbar(img, cax=cax2, orientation='horizontal')
+            for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+                label.set_visible(False)
+            # Main title
+            plt.suptitle(titles[j] + ', 1979-2016', fontsize=22)
+            finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'.png')
+                
+                
                     
     
         
@@ -267,5 +476,5 @@ def prelim_plots (base_dir='./', fig_dir='./'):
 #     Baseline absolute and others differenced, zoomed in and out:
 #       BW temp and salt
 #       ismr
-#       Barotropic velocity (only zoomed in)
+#       Barotropic velocity (only zoomed in)'''
 

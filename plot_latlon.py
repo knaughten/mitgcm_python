@@ -40,12 +40,14 @@ from constants import deg_string
 # return_fig: if True, return the figure and axis variables so that more work can be done on the plot (eg adding titles). Default False.
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
+# extend: 'neither', 'min', 'max', 'both', or None (will be determined automatically based on vmin and vmax)
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
-    extend = get_extend(vmin=vmin, vmax=vmax)
+    if extend is None:
+        extend = get_extend(vmin=vmin, vmax=vmax)
 
     # If we're zooming, we need to choose the correct colour bounds
     if zoom_fris or any([xmin, xmax, ymin, ymax]):
