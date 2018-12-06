@@ -469,7 +469,7 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
         return time, data_diff
 
 
-# Given a monthly timeseries (and corresponding array of Date objects), calculate the annually-averaged timeseries. Return it as well as a new Date array with dates in the midpoint of each year.
+# Given a monthly timeseries (and corresponding array of Date objects), calculate the annually-averaged timeseries. Return it as well as a new Date array with dates at the beginning of each year.
 def monthly_to_annual (data, time):
 
     # Make sure we start at the beginning of a year
@@ -490,10 +490,8 @@ def monthly_to_annual (data, time):
             # End of the year
             # Convert from integral to average
             new_data.append(data_accum/ndays)
-            # Calculate the midpoint of this year
-            year_start = datetime.date(time[t].year, 1, 1)
-            year_mid = year_start - datetime.timedelta(days=ndays/2)
-            new_time.append(year_mid)
+            # Save the date at the beginning of the year
+            new_time.append(datetime.date(time[t].year, 1, 1))
             # Reset the accumulation arrays
             data_accum = 0
             ndays = 0

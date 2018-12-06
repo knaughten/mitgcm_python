@@ -144,13 +144,12 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
     id.close()
 
     if monthly and return_date:
-        # Back up half a month
+        # Back up to previous month
         for t in range(time.size):
             # First back up one day so the year and month are correct
             time[t] = time[t] - datetime.timedelta(days=1)
-            # Now back up half a month minus one day so we're at the midpoint
-            ndays = days_per_month(time[t].month, time[t].year)
-            time[t] = time[t] - datetime.timedelta(days=ndays/2-1)
+            # Now use the timestamp from the beginning of the month
+            time[t] = datetime.date(time[t].year, time[t].month, 1)
 
     if return_units:
         return time, units
