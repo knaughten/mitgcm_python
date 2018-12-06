@@ -21,6 +21,24 @@ from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..averaging import area_integral
 
+# Global parameters
+
+# File paths
+case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'polynya_maud_rise_big/', 'polynya_maud_rise_small/', 'polynya_maud_rise_5y/']
+grid_dir = case_dir[0] + 'grid/'
+timeseries_file = 'output/timeseries_polynya.nc'
+avg_file = 'output/1979_2016_avg.nc'
+forcing_dir = '/work/n02/n02/shared/baspog/MITgcm/WS/WSK/'
+polynya_file = [None, 'polynya_mask_maud_rise', 'polynya_mask_near_shelf', 'polynya_mask_maud_rise_big', 'polynya_mask_maud_rise_small', None]
+# Titles etc. for plotting
+expt_names = ['Baseline', 'Maud Rise', 'Near Shelf', 'Maud Rise Big', 'Maud Rise Small', 'Maud Rise 5y']
+expt_colours = ['black', 'blue', 'green', 'red', 'cyan', 'magenta']
+polynya_types = [None, 'maud_rise', 'near_shelf', 'maud_rise_big', 'maud_rise_small', 'maud_rise_5y']
+num_expts = len(case_dir)
+# Smaller boundaries on surface plots not including ice shelves
+xmin_sfc = -67
+ymin_sfc = -80
+
 
 # Get longitude and latitude at the centre of the polynya
 def get_polynya_loc (polynya):
@@ -51,27 +69,11 @@ def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
     precompute_timeseries(mit_file, timeseries_file, timeseries_types=timeseries_types, lon0=lon0, lat0=lat0)
 
 
-# Make a bunch of tiled/combined plots showing all polynya simulations at once.
-def prelim_plots (base_dir='./', fig_dir='./'):
+# Make a bunch of preliminary timeseries plots.
+def prelim_timeseries (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-
-    # File paths
-    case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'polynya_maud_rise_big/', 'polynya_maud_rise_small/', 'polynya_maud_rise_5y/']
-    grid_dir = case_dir[0] + 'grid/'
-    timeseries_file = 'output/timeseries_polynya.nc'
-    avg_file = 'output/1979_2016_avg.nc'
-    forcing_dir = '/work/n02/n02/shared/baspog/MITgcm/WS/WSK/'
-    polynya_file = [None, 'polynya_mask_maud_rise', 'polynya_mask_near_shelf', 'polynya_mask_maud_rise_big', 'polynya_mask_maud_rise_small', None]
-    # Titles etc. for plotting
-    expt_names = ['Baseline', 'Maud Rise', 'Near Shelf', 'Maud Rise Big', 'Maud Rise Small', 'Maud Rise 5y']
-    expt_colours = ['black', 'blue', 'green', 'red', 'cyan', 'magenta']
-    polynya_types = [None, 'maud_rise', 'near_shelf', 'maud_rise_big', 'maud_rise_small', 'maud_rise_5y']
-    num_expts = len(case_dir)
-    # Smaller boundaries on surface plots not including ice shelves
-    xmin_sfc = -67
-    ymin_sfc = -80
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -149,6 +151,16 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('temp_polynya', 'Temperature in polynya', deg_string+'C', use_baseline=False)
     plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)
 
+
+# Make a bunch of preliminary lat-lon plots.
+def prelim_latlon (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
     # 2x2 lat-lon plot of polynya masks
     fig, gs = set_panels('2x2C0')
     for i in range(1, num_expts-1):
@@ -192,7 +204,6 @@ def prelim_plots (base_dir='./', fig_dir='./'):
                 return speed
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
-
 
     # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
     def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither'):
@@ -327,6 +338,16 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_fris=True, vmax_diff=1.5, extend_diff='max')
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
 
+
+# Make a bunch of preliminary slice plots.
+def prelim_slices (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
     # Baseline T-S slices through each polynya, in each direction
     baseline_file = base_dir+case_dir[0]+avg_file
     for i in range(1,2+1):
@@ -341,4 +362,15 @@ def prelim_plots (base_dir='./', fig_dir='./'):
         curr_file = base_dir+case_dir[i]+avg_file
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon_diff.png')
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
+
+
+# Make all the plots.
+def prelim_all_plots (base_dir='./', fig_dir='./'):
+
+    print '\nPlotting timeseries'
+    prelim_timeseries(base_dir=base_dir, fig_dir=fig_dir)
+    print '\nPlotting lat-lon plots'
+    prelim_latlon(base_dir=base_dir, fig_dir=fig_dir)
+    print '\nPlotting slices'
+    prelim_slices(base_dir=base_dir, fig_dir=fig_dir)
     
