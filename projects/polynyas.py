@@ -136,7 +136,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # end inner function
 
     # Now make the timeseries plots
-    '''plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
+    plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y', annual=False)
     plot_polynya_timeseries('ewed_ismr', 'EWIS basal mass loss', 'Gt/y')
@@ -144,7 +144,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('fris_temp', 'FRIS cavity temperature', deg_string+'C', percent_diff=False)
     plot_polynya_timeseries('fris_salt', 'FRIS cavity salinity', 'psu', percent_diff=False)
     plot_polynya_timeseries('temp_polynya', 'Temperature in polynya', deg_string+'C', use_baseline=False)
-    plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)'''
+    plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)
 
     # 2x2 lat-lon plot of polynya masks
     fig, gs = set_panels('2x2C0')
@@ -168,17 +168,94 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # Main title
     plt.suptitle('Imposed convective regions (red)', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')
-    
-        
-        
-        
-    
-    
-        
-    
 
+    # Inner function to read a lat-lon variable from a file and process appropriately
+    def read_and_process (var, file_path, return_vel_components=False):
+        if var == 'aice':
+            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=0), grid)
+        elif var == 'bwtemp':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        elif var == 'bwsalt':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+        elif var == 'ismr':
+            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid))
+        elif var == 'vel':
+            u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
+            v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+            speed, u, v = prepare_vel(u_tmp, v_tmp, grid)
+            if return_vel_components:
+                return speed, u, v
+            else:
+                return speed
+        elif var == 'mld':
+            return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
 
-#   Polynya masks (4)
+    # Lat-lon plots of absolute variables
+    # No need to plot the 5-year polynya
+    var_names = ['aice', 'mld', 'vel']
+    titles = ['Sea ice concentration', 'Mixed layer depth (m)', 'Barotropic velocity (m/s)']
+    # Colour bounds to impose
+    vmin_impose = [0, 0, None]
+    vmax_impose = [1, None, None]
+    ctype = ['basic', 'basic', 'vel']
+    include_shelf = [False, False, True]
+    for j in range(len(var_names)):
+        print 'Plotting ' + var_names[j]
+        # Special cases for velocity so save as a boolean
+        is_vel = var_names[j] == 'vel'
+        data = []
+        if is_vel:
+            u = []
+            v = []
+        vmin = 999
+        vmax = -999
+        for i in range(num_expts-1):
+            # Read data
+            if is_vel:
+                data_tmp, u_tmp, v_tmp = read_and_process(var_names[j], base_dir+case_dir[i]+avg_file)
+                data.append(data_tmp)
+                u.append(u_tmp)
+                v.append(v_tmp)
+            else:
+                data.append(read_and_process(var_names[j], base_dir+case_dir[i]+avg_file))
+            # Get min and max values and update global min/max as needed
+            vmin_tmp, vmax_tmp = var_min_max(data[i], grid)
+            vmin = min(vmin, vmin_tmp)
+            vmax = max(vmax, vmax_tmp)
+        # Overwrite with predetermined bounds if needed
+        if vmin_impose[j] is not None:
+            vmin = vmin_impose[j]
+        if vmax_impose[j] is not None:
+            vmax = vmax_impose[j]
+        # Now make the plot
+        fig, gs, cax = set_panels('5C1')
+        for i in range(num_expts-1):
+            # Leave the bottom left plot empty for colourbars
+            if i < 3:
+                ax = plt.subplot(gs[i/3,i%3])
+            else:
+                ax = plt.subplot(gs[i/3,i%3+1])
+            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf[j], make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
+            if is_vel:
+                # Add velocity vectors
+                overlay_vectors(ax, u[i], v[i], grid, chunk=10, scale=0.8)
+            if i in [1,2,4]:
+                # Remove latitude labels
+                ax.set_yticklabels([])
+            if i in [1,2]:
+                # Remove longitude labels
+                ax.set_xticklabels([])
+        # Colourbar, hiding every second label so they're not squished
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+        for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+            label.set_visible(False)
+        # Main title
+        plt.suptitle(titles[j] + ', 1979-2016', fontsize=22)
+        finished_plot(fig, fig_name=fig_dir+var_names[j]+'.png')
+                    
+    
+        
+
 #   Lat-lon plots, averaged over entire period (all except 5-year)
 #     Absolute:
 #       Sea ice area
