@@ -308,7 +308,7 @@ def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_sh
     reduce_cbar_labels(cbar)
     # Main title
     plt.suptitle(title, fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+var+zoom_string+'.png')
+    finished_plot(fig, fig_name=fig_dir+var+zoom_string+'.png')
 
     # end inner function
 
