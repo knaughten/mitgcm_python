@@ -18,6 +18,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
+from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..averaging import area_integral
 
 
@@ -66,6 +67,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     # Titles etc. for plotting
     expt_names = ['Baseline', 'Maud Rise', 'Near Shelf', 'Maud Rise Big', 'Maud Rise Small', 'Maud Rise 5y']
     expt_colours = ['black', 'blue', 'green', 'red', 'cyan', 'magenta']
+    polynya_types = [None, 'maud_rise', 'near_shelf', 'maud_rise_big', 'maud_rise_small', 'maud_rise_5y']
     num_expts = len(case_dir)
     # Smaller boundaries on surface plots not including ice shelves
     xmin_sfc = -67
@@ -324,4 +326,19 @@ def prelim_plots (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', vmax_diff=2, extend_diff='max')
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_fris=True, vmax_diff=1.5, extend_diff='max')
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
+
+    # Baseline T-S slices through each polynya, in each direction
+    baseline_file = base_dir+case_dir[0]+avg_file
+    for i in range(1,2+1):
+        ptype = polynya_types[i]
+        lon0, lat0 = get_polynya_loc(ptype)
+        read_plot_ts_slice(baseline_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon.png')
+        read_plot_ts_slice(baseline_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat.png')
+    # T-S difference slices for each polynya minus baseline, in each direction
+    for i in range(1, num_expts-1):
+        ptype = polynya_types[i]
+        lon0, lat0 = get_polynya_loc(ptype)
+        curr_file = base_dir+case_dir[i]+avg_file
+        read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon_diff.png')
+        read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
     
