@@ -192,123 +192,123 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
 
 
-# Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
-def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither'):
+    # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
+    def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither'):
 
-    if option not in ['absolute', 'anomaly']:
-        print 'Error (plot_latlon_5panel): invalid option ' + option
-        sys.exit()
+        if option not in ['absolute', 'anomaly']:
+            print 'Error (plot_latlon_5panel): invalid option ' + option
+            sys.exit()
 
-    # Read data from each simulation, parcelled into a 5-item list
-    data = []
-    if var == 'vel':
-        # Will also need to read velocity components
-        u = []
-        v = []
-    vmin0 = 999
-    vmax0 = -999
-    if option == 'anomaly':
-        vmin0_diff = 0            
-        vmax0_diff = 0
-    for i in range(num_expts-1):
-        if var=='vel' and (option=='absolute' or i==0):
-            # Read velocity components too
-            data_tmp, u_tmp, v_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file, return_vel_components=True)
-            # Either way, will be saving absolute variable
-            data.append(data_tmp)
-            u.append(u_tmp)
-            v.append(v_tmp)
-        else:
-            data_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file)
-            if option=='absolute' or i==0:
-                # Save absolute variable
+        # Read data from each simulation, parcelled into a 5-item list
+        data = []
+        if var == 'vel':
+            # Will also need to read velocity components
+            u = []
+            v = []
+        vmin0 = 999
+        vmax0 = -999
+        if option == 'anomaly':
+            vmin0_diff = 0            
+            vmax0_diff = 0
+        for i in range(num_expts-1):
+            if var=='vel' and (option=='absolute' or i==0):
+                # Read velocity components too
+                data_tmp, u_tmp, v_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file, return_vel_components=True)
+                # Either way, will be saving absolute variable
                 data.append(data_tmp)
+                u.append(u_tmp)
+                v.append(v_tmp)
             else:
-                # Save anomaly from baseline
-                data.append(data_tmp-data[0])
-        # Get min and max values and update global min/max as needed
-        vmin0_tmp, vmax0_tmp = var_min_max(data[i], grid, zoom_fris=zoom_fris)
-        if option=='absolute' or i==0:
-            vmin0 = min(vmin0, vmin0_tmp)
-            vmax0 = max(vmax0, vmax0_tmp)
-        else:
-            vmin0_diff = min(vmin0_diff, vmin0_tmp)
-            vmax0_diff = max(vmax0_diff, vmax0_tmp)
-    # Now consider preset bounds
-    if vmin is None:
-        vmin = vmin0
-    if vmax is None:
-        vmax = vmax0
-    if option == 'anomaly':
-        if vmin_diff is None:
-            vmin_diff = vmin0_diff
-        if vmax_diff is None:
-            vmax_diff = vmax0_diff
+                data_tmp = read_and_process(var, base_dir+case_dir[i]+avg_file)
+                if option=='absolute' or i==0:
+                    # Save absolute variable
+                    data.append(data_tmp)
+                else:
+                    # Save anomaly from baseline
+                    data.append(data_tmp-data[0])
+            # Get min and max values and update global min/max as needed
+            vmin0_tmp, vmax0_tmp = var_min_max(data[i], grid, zoom_fris=zoom_fris)
+            if option=='absolute' or i==0:
+                vmin0 = min(vmin0, vmin0_tmp)
+                vmax0 = max(vmax0, vmax0_tmp)
+            else:
+                vmin0_diff = min(vmin0_diff, vmin0_tmp)
+                vmax0_diff = max(vmax0_diff, vmax0_tmp)
+        # Now consider preset bounds
+        if vmin is None:
+            vmin = vmin0
+        if vmax is None:
+            vmax = vmax0
+        if option == 'anomaly':
+            if vmin_diff is None:
+                vmin_diff = vmin0_diff
+            if vmax_diff is None:
+                vmax_diff = vmax0_diff
 
-    # Prepare some parameters for the plot
-    if zoom_fris:
-        figsize = (12, 7)
-        zoom_string = '_zoom'
-        chunk = 6
-    else:
-        if include_shelf:
-            figsize = (14, 7)
+        # Prepare some parameters for the plot
+        if zoom_fris:
+            figsize = (12, 7)
+            zoom_string = '_zoom'
+            chunk = 6
         else:
-            figsize = (16, 7)
-        zoom_string = ''
-        chunk = 10
-    if include_shelf or zoom_fris:
-        xmin = None
-        ymin = None
-    else:
-        xmin = xmin_sfc
-        ymin = ymin_sfc
+            if include_shelf:
+                figsize = (14, 7)
+            else:
+                figsize = (16, 7)
+            zoom_string = ''
+            chunk = 10
+        if include_shelf or zoom_fris:
+            xmin = None
+            ymin = None
+        else:
+            xmin = xmin_sfc
+            ymin = ymin_sfc
 
-    # Make the plot
-    if option == 'absolute':
-        fig, gs, cax = set_panels('5C1', figsize=figsize)
-    elif option == 'anomaly':
-        fig, gs, cax1, cax2 = set_panels('5C2', figsize=figsize)
-    for i in range(num_expts-1):
-        # Leave the bottom left plot empty for colourbars
-        if i < 3:
-            ax = plt.subplot(gs[i/3,i%3])
-        else:
-            ax = plt.subplot(gs[i/3,i%3+1])
-        if option=='absolute' or i==0:
-            ctype_curr = ctype
-            vmin_curr = vmin
-            vmax_curr = vmax
-        else:
-            ctype_curr = 'plusminus'
-            vmin_curr = vmin_diff
-            vmax_curr = vmax_diff
-        img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf, make_cbar=False, ctype=ctype_curr, vmin=vmin_curr, vmax=vmax_curr, xmin=xmin, ymin=ymin, zoom_fris=zoom_fris, title=expt_names[i])
-        if option=='anomaly' and i==0:
-            # First colourbar
-            cbar1 = plt.colorbar(img, cax=cax1, orientation='horizontal', extend=extend)
-            reduce_cbar_labels(cbar1)
-        if var=='vel' and (option=='absolute' or i==0):
-            # Add velocity vectors
-            overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
-        if i in [1,2,4]:
-            # Remove latitude labels
-            ax.set_yticklabels([])
-        if i in [1,2]:
-            # Remove longitude labels
-            ax.set_xticklabels([])
-    if option=='anomaly':
-        # Get ready for second colourbar
-        cax = cax2
-        extend = extend_diff
-        # Text below labelling anomalies
-        plt.text(0.2, 0.1, 'anomalies from baseline', fontsize=12, va='center', ha='center', transform=fig.transFigure)
-    # Colourbar
-    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
-    reduce_cbar_labels(cbar)
-    # Main title
-    plt.suptitle(title, fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+var+zoom_string+'.png')
+        # Make the plot
+        if option == 'absolute':
+            fig, gs, cax = set_panels('5C1', figsize=figsize)
+        elif option == 'anomaly':
+            fig, gs, cax1, cax2 = set_panels('5C2', figsize=figsize)
+        for i in range(num_expts-1):
+            # Leave the bottom left plot empty for colourbars
+            if i < 3:
+                ax = plt.subplot(gs[i/3,i%3])
+            else:
+                ax = plt.subplot(gs[i/3,i%3+1])
+            if option=='absolute' or i==0:
+                ctype_curr = ctype
+                vmin_curr = vmin
+                vmax_curr = vmax
+            else:
+                ctype_curr = 'plusminus'
+                vmin_curr = vmin_diff
+                vmax_curr = vmax_diff
+            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf, make_cbar=False, ctype=ctype_curr, vmin=vmin_curr, vmax=vmax_curr, xmin=xmin, ymin=ymin, zoom_fris=zoom_fris, title=expt_names[i])
+            if option=='anomaly' and i==0:
+                # First colourbar
+                cbar1 = plt.colorbar(img, cax=cax1, orientation='horizontal', extend=extend)
+                reduce_cbar_labels(cbar1)
+            if var=='vel' and (option=='absolute' or i==0):
+                # Add velocity vectors
+                overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=0.8)
+            if i in [1,2,4]:
+                # Remove latitude labels
+                ax.set_yticklabels([])
+            if i in [1,2]:
+                # Remove longitude labels
+                ax.set_xticklabels([])
+        if option=='anomaly':
+            # Get ready for second colourbar
+            cax = cax2
+            extend = extend_diff
+            # Text below labelling anomalies
+            plt.text(0.2, 0.1, 'anomalies from baseline', fontsize=12, va='center', ha='center', transform=fig.transFigure)
+        # Colourbar
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
+        reduce_cbar_labels(cbar)
+        # Main title
+        plt.suptitle(title, fontsize=22)
+        finished_plot(fig, fig_name=fig_dir+var+zoom_string+'.png')
 
     # end inner function
 
