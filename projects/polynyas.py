@@ -115,7 +115,7 @@ def prelim_plots (base_dir='./', fig_dir='./'):
             data.append(data_tmp)
             
         # Make the plot
-        timeseries_multi_plot(time, data, expt_names[i0:], expt_colours[i0:], title=title, units=units, fig_name=fig_dir+var_name+monthly_str+'.png')
+        timeseries_multi_plot(time, data, expt_names[i0:], expt_colours[i0:], title=title, units=units, fig_name=fig_dir+'timeseries_'+var_name+monthly_str+'.png')
         
         if diff:
             # Also make a difference plot
@@ -125,14 +125,14 @@ def prelim_plots (base_dir='./', fig_dir='./'):
                 data_diff_tmp = trim_and_diff(time, time, data[0], data[i])[1]
                 data_diff.append(data_diff_tmp)
             # Make the plot
-            timeseries_multi_plot(time, data_diff, expt_names[1:], expt_colours[1:], title=title+' anomaly', units=units, fig_name=fig_dir+var_name+monthly_str+'_diff.png')
+            timeseries_multi_plot(time, data_diff, expt_names[1:], expt_colours[1:], title=title+' anomaly', units=units, fig_name=fig_dir+'timeseries_'+var_name+monthly_str+'_diff.png')
 
             if percent_diff:
                 # Also make a percent difference plot
                 data_diff_percent = []
                 for i in range(num_expts-1):
                     data_diff_percent.append(data_diff[i]/data[0]*100)
-                timeseries_multi_plot(time, data_diff_percent, expt_names[1:], expt_colours[1:], title=title+' % anomaly', fig_name=fig_dir+var_name+monthly_str+'_percent_diff.png')
+                timeseries_multi_plot(time, data_diff_percent, expt_names[1:], expt_colours[1:], title=title+' % anomaly', fig_name=fig_dir+'timeseries_'+var_name+monthly_str+'_percent_diff.png')
 
     # end inner function
 
