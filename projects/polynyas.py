@@ -381,7 +381,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         ptype = polynya_types[i]
         if ptype is None:
             ptype = 'baseline'
-        read_plot_ts_slice(base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, hmin=-77, hmax=-70, zmin=-1000, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_zoom_'+ptype+'.png')
+        read_plot_ts_slice(base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, hmin=-77, hmax=-70, zmin=-1000, tmin=-1.9, tmax=0.5, smin=34, smax=34.65, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_zoom_'+ptype+'.png')
 
 
 # Make all the plots.
