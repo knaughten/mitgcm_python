@@ -149,7 +149,7 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
             # First back up one day so the year and month are correct
             time[t] = time[t] - datetime.timedelta(days=1)
             # Now use the timestamp from the beginning of the month
-            time[t] = datetime.date(time[t].year, time[t].month, 1)
+            time[t] = datetime.datetime(time[t].year, time[t].month, 1)
 
     if return_units:
         return time, units
