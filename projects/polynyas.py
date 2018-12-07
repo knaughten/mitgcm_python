@@ -210,7 +210,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
 
     # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
-    def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither'):
+    def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither', zoom_shelf_break=False):
 
         if option not in ['absolute', 'anomaly']:
             print 'Error (plot_latlon_5panel): invalid option ' + option
@@ -263,7 +263,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 vmax_diff = vmax0_diff
 
         # Prepare some parameters for the plot
-        if zoom_fris:
+        if zoom_fris or zoom_shelf_break:
             figsize = (12, 7)
             zoom_string = '_zoom'
             chunk = 6
@@ -276,10 +276,19 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             chunk = 10
         if include_shelf or zoom_fris:
             xmin = None
+            xmax = None
             ymin = None
+            ymax = None
+        elif zoom_shelf_break:
+            xmin = xmin_sfc
+            xmax = -20
+            ymin = ymin_sfc
+            ymax = -70
         else:
             xmin = xmin_sfc
+            xmax = None
             ymin = ymin_sfc
+            ymax = None
 
         # Make the plot
         if option == 'absolute':
@@ -300,7 +309,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 ctype_curr = 'plusminus'
                 vmin_curr = vmin_diff
                 vmax_curr = vmax_diff
-            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf, make_cbar=False, ctype=ctype_curr, vmin=vmin_curr, vmax=vmax_curr, xmin=xmin, ymin=ymin, zoom_fris=zoom_fris, title=expt_names[i])
+            img = latlon_plot(data[i], grid, ax=ax, include_shelf=include_shelf, make_cbar=False, ctype=ctype_curr, vmin=vmin_curr, vmax=vmax_curr, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=expt_names[i])
             if option=='anomaly' and i==0:
                 # First colourbar
                 cbar1 = plt.colorbar(img, cax=cax1, orientation='horizontal', extend=extend)
@@ -343,6 +352,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)
 
 
 # Make a bunch of preliminary slice plots.
@@ -354,7 +364,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    '''# Baseline T-S slices through each polynya, in each direction
+    # Baseline T-S slices through each polynya, in each direction
     baseline_file = base_dir+case_dir[0]+avg_file
     for i in range(1,2+1):
         ptype = polynya_types[i]
@@ -374,7 +384,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     # T-S difference slices for each polynya
     for i in range(1, num_expts-1):
         ptype = polynya_types[i]
-        read_plot_ts_slice_diff(baseline_file, base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_'+ptype+'_diff.png')'''
+        read_plot_ts_slice_diff(baseline_file, base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_'+ptype+'_diff.png')
 
     # Now plot a zoomed-in slice of absolute values
     for i in range(num_expts-1):
