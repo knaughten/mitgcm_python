@@ -354,9 +354,9 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Baseline T-S slices through each polynya, in each direction
+    '''# Baseline T-S slices through each polynya, in each direction
     baseline_file = base_dir+case_dir[0]+avg_file
-    '''for i in range(1,2+1):
+    for i in range(1,2+1):
         ptype = polynya_types[i]
         lon0, lat0 = get_polynya_loc(ptype)
         read_plot_ts_slice(baseline_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon.png')
@@ -367,15 +367,21 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         lon0, lat0 = get_polynya_loc(ptype)
         curr_file = base_dir+case_dir[i]+avg_file
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon_diff.png')
-        read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')'''
+        read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
 
     # Baseline slice through 50W where WDW comes onto shelf
     read_plot_ts_slice(baseline_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W.png')
     # T-S difference slices for each polynya
     for i in range(1, num_expts-1):
         ptype = polynya_types[i]
-        curr_file = base_dir+case_dir[i]+avg_file
-        read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_'+ptype+'_diff.png')
+        read_plot_ts_slice_diff(baseline_file, base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_'+ptype+'_diff.png')'''
+
+    # Now plot a zoomed-in slice of absolute values
+    for i in range(num_expts-1):
+        ptype = polynya_types[i]
+        if ptype is None:
+            ptype = 'baseline'
+        read_plot_ts_slice(base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, hmin=-77, hmax=-70, zmin=-1000, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_zoom_'+ptype+'.png')
 
 
 # Make all the plots.
