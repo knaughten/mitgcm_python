@@ -192,6 +192,10 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
         elif var == 'bwsalt':
             return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+        elif var == 'sst':
+            return mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)[0,:]
+        elif var == 'sss':
+            return mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)[0,:]
         elif var == 'ismr':
             return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid))
         elif var == 'vel':
@@ -337,6 +341,8 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', vmax_diff=2, extend_diff='max')
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_fris=True, vmax_diff=1.5, extend_diff='max')
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
+    plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
+    plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
 
 
 # Make a bunch of preliminary slice plots.
