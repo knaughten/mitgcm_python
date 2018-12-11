@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_ice, wed_gyre_bounds
+from constants import rho_ice, wed_gyre_bounds, Cp_sw
 from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max
 from averaging import area_integral, vertical_integral, indefinite_ns_integral
 
@@ -182,6 +182,43 @@ def wed_gyre_trans (u, grid):
 def dens_linear (salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta):
 
     return rhoConst*(1 - tAlpha*(temp-Tref) + sBeta*(salt-Sref))
+
+
+# Calculate density for the given equation of state.
+def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    if eosType == 'MDJWF':
+        from MITgcmutils.mdjwf import densmdjwf
+        return densmdjwf(salt, temp, press)
+    elif eosType == 'JMD95':
+        from MITgcmutils.jmd95 iport densjmd95
+        return densjmd95(salt, temp, press)
+    elif eosType == 'LINEAR':
+        if None in [rhoConst, Tref, Sref, tAlpha, sBeta]:
+            print 'Error (density): for eosType LINEAR, you must set rhoConst, Tref, Sref, tAlpha, sBeta'
+            sys.exit()
+        return dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta)
+    else:
+        print 'Error (density): invalid eosType ' + eosType
+        sys.exit()
+
+
+# Calculate heat content relative to the in-situ freezing point. Just use potential temperature and density.
+def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    # Calculate freeezing point
+    z = z_to_xyz(grid.z, z)
+    Tf = tfreeze(salt, z)
+    # Calculate potential density
+    press = np.zeros(temp.shape)
+    rho = density(eosType, salt, temp, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+    # Calculate volume integrand
+    dV = xy_to_xyz(grid.dA, grid)*z_to_xyz(grid.dz, grid)*grid.hfac
+    # Now calculate heat content relative to Tf, in J
+    return (temp-Tf)*rho*Cp_sw*dV
+    
+    
+            
 
     
     
