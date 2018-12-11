@@ -20,6 +20,7 @@ from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..averaging import area_integral
+from ..diagnostics import t_minus_tf
 
 # Global parameters
 
@@ -161,7 +162,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # 2x2 lat-lon plot of polynya masks
+    '''# 2x2 lat-lon plot of polynya masks
     fig, gs = set_panels('2x2C0')
     for i in range(1, num_expts-1):
         # Read polynya mask from binary
@@ -182,7 +183,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
     # Main title
     plt.suptitle('Imposed convective regions (red)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')
+    finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')'''
 
     # Inner function to read a lat-lon variable from a file and process appropriately
     def read_and_process (var, file_path, return_vel_components=False):
@@ -208,6 +209,11 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 return speed
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
+        elif var == 'tminustf':
+            temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
+            salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+            tminustf = t_minus_tf(temp, salt, grid)
+            return np.amax(tminustf, axis=0)
 
     # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
     def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither', zoom_shelf_break=False):
@@ -339,7 +345,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     # end inner function
 
     # Now make 5-panel plots of absolute variables
-    plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', include_shelf=False, vmin=0, vmax=1)
+    '''plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', include_shelf=False, vmin=0, vmax=1)
     plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', include_shelf=False, vmin=0)
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', ctype='vel', vmin=0)
     # 5-panel plots of baseline absolute values, and anomalies for other simulations, zoomed both in and out
@@ -352,7 +358,8 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
-    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)'''
+    plot_latlon_5panel('tminustf', 'Difference from in-situ freezing point ('+deg_string+'C)\n(maximum over depth), 1979-2016', option='anomaly', vmin=0, extend='min')
 
 
 # Make a bunch of preliminary slice plots.
