@@ -362,8 +362,8 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
-    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)'''
-    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmin=0, vmax=2e18, extend='both', vmin_diff=-1.5e17, vmax_diff=1.5e17, extend_diff='both')
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)
+    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmin=0, vmax=2e18, extend='both', vmin_diff=-1.5e17, vmax_diff=1.5e17, extend_diff='both')'''
 
 
 # Make a bunch of preliminary slice plots.
