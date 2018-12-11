@@ -207,7 +207,7 @@ def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tA
 def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     # Calculate freeezing point
-    z = z_to_xyz(grid.z, z)
+    z = z_to_xyz(grid.z, grid)
     Tf = tfreeze(salt, z)
     # Calculate potential density
     press = np.zeros(temp.shape)
