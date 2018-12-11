@@ -360,7 +360,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)'''
-    plot_latlon_5panel('tminustf', 'Difference from in-situ freezing point ('+deg_string+'C) (maximum over depth), 1979-2016', option='anomaly', zoom_fris=True, vmin=0, extend='min')
+    plot_latlon_5panel('tminustf', 'Difference from in-situ freezing point ('+deg_string+'C), maximum over depth, 1979-2016', option='anomaly', zoom_fris=True, vmin=0, vmax=1.5, extend='both', vmin_diff=-0.1, extend_diff='min')
 
 
 # Make a bunch of preliminary slice plots.
