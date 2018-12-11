@@ -6,6 +6,7 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import numpy as np
 
 from ..postprocess import precompute_timeseries
 from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice
