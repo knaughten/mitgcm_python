@@ -21,7 +21,7 @@ from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from ..averaging import area_integral, vertical_integral
-from ..diagnostics import t_minus_tf
+from ..diagnostics import heat_content_freezing
 
 # Global parameters
 
