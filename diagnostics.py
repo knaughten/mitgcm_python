@@ -191,7 +191,7 @@ def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tA
         from MITgcmutils.mdjwf import densmdjwf
         return densmdjwf(salt, temp, press)
     elif eosType == 'JMD95':
-        from MITgcmutils.jmd95 iport densjmd95
+        from MITgcmutils.jmd95 import densjmd95
         return densjmd95(salt, temp, press)
     elif eosType == 'LINEAR':
         if None in [rhoConst, Tref, Sref, tAlpha, sBeta]:
