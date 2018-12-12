@@ -375,4 +375,12 @@ def days_per_month (month, year):
         return days[month-1]
 
 
+# Make sure the given field isn't time-dependent, based on the expected number of dimensions.
+def check_time_dependent (var, num_dim=3):
+
+    if len(var.shape) == num_dim+1:
+        print 'Error (check_time_dependent): variable cannot be time dependent.'
+        sys.exit()
+
+
     

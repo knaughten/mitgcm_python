@@ -6,6 +6,7 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import numpy as np
 
 from ..postprocess import precompute_timeseries
 from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice
@@ -19,7 +20,8 @@ from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from ..averaging import area_integral
+from ..averaging import area_integral, vertical_integral
+from ..diagnostics import heat_content_freezing
 
 # Global parameters
 
@@ -208,6 +210,14 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 return speed
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid)
+        elif var == 'HfC':
+            # Calculate HfC at each 3D cell; requires temp and salt
+            temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
+            salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+            hfc_3d = heat_content_freezing(temp, salt, grid)
+            # Now vertically integrate
+            return vertical_integral(hfc_3d, grid)
+            
 
     # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
     def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither', zoom_shelf_break=False):
@@ -353,6 +363,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True, vmax_diff=100, extend_diff='max')
+    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmin=0, vmax=2e18, extend='both', vmin_diff=-1.5e17, vmax_diff=1.5e17, extend_diff='both')
 
 
 # Make a bunch of preliminary slice plots.

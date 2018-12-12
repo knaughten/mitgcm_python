@@ -5,8 +5,8 @@
 import numpy as np
 import sys
 
-from constants import rho_ice, wed_gyre_bounds
-from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max
+from constants import rho_ice, wed_gyre_bounds, Cp_sw
+from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
 from averaging import area_integral, vertical_integral, indefinite_ns_integral
 
 
@@ -158,9 +158,7 @@ def find_aice_min_max (aice, grid):
 # Calculate the barotropic transport streamfunction. u is assumed not to be time-dependent.
 def barotropic_streamfunction (u, grid):
 
-    if len(u.shape) == 4:
-        print 'Error (barotropic_streamfunction): u cannot be time-dependent.'
-        sys.exit()
+    check_time_dependent(u)
         
     # Vertically integrate
     udz_int = vertical_integral(u, grid, gtype='u')
@@ -182,6 +180,54 @@ def wed_gyre_trans (u, grid):
 def dens_linear (salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta):
 
     return rhoConst*(1 - tAlpha*(temp-Tref) + sBeta*(salt-Sref))
+
+
+# Calculate density for the given equation of state.
+def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    if eosType == 'MDJWF':
+        from MITgcmutils.mdjwf import densmdjwf
+        return densmdjwf(salt, temp, press)
+    elif eosType == 'JMD95':
+        from MITgcmutils.jmd95 import densjmd95
+        return densjmd95(salt, temp, press)
+    elif eosType == 'LINEAR':
+        if None in [rhoConst, Tref, Sref, tAlpha, sBeta]:
+            print 'Error (density): for eosType LINEAR, you must set rhoConst, Tref, Sref, tAlpha, sBeta'
+            sys.exit()
+        return dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta)
+    else:
+        print 'Error (density): invalid eosType ' + eosType
+        sys.exit()
+
+
+# Wrapper for potential density.
+def potential_density (eosType, salt, temp, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    # Make a pressure array of all zeros
+    press = np.zeros(temp.shape)
+    return density(eosType, salt, temp, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+
+
+# Calculate heat content relative to the in-situ freezing point. Just use potential temperature and density.
+def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, time_dependent=False):
+
+    # Calculate volume integrand
+    dV = xy_to_xyz(grid.dA, grid)*z_to_xyz(grid.dz, grid)*grid.hfac
+    # Calculate z (for freezing point)
+    z = z_to_xyz(grid.z, grid)
+    # Add time dimensions if needed
+    if time_dependent:
+        num_time = temp.shape[0]
+        dV = add_time_dim(dV, num_time)
+        z = add_time_dim(z, num_time)
+    # Calculate freezing temperature
+    Tf = tfreeze(salt, z)
+    # Calculate potential density
+    rho = potential_density(eosType, salt, temp, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)        
+    # Now calculate heat content relative to Tf, in J
+    return (temp-Tf)*rho*Cp_sw*dV    
+            
 
     
     

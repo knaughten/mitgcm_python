@@ -24,6 +24,8 @@ Rv = 461.5
 es0 = 611
 # Coefficient for specific humidity calculation
 sh_coeff = 0.62197
+# Specific heat of seawater (J/K/kg)
+Cp_sw = 4180.
 
 # Degrees formatted nicely in a string
 deg_string = r'$^{\circ}$'

@@ -7,6 +7,7 @@ from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
 from file_io import write_binary, read_binary
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
 from constants import sec_per_year, gravity
+from diagnostics import density
 
 import numpy as np
 import os
@@ -145,20 +146,6 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 
 def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64):
 
-    # Set density functions
-    if eosType == 'MDJWF':
-        from MITgcmutils.mdjwf import densmdjwf
-    elif eosType == 'JMD95':
-        from MITgcmutils.jmd95 import densjmd95
-    elif eosType == 'LINEAR':
-        from diagnostics import dens_linear
-        if none in [tAlpha, sBeta, Tref, Sref]:
-            print 'Error (calc_load_anomaly): for eosType LINEAR, you must set tAlpha, sBeta, Tref, and Sref'
-            sys.exit()
-    else:
-        print 'Error (calc_load_anomaly): invalid eosType ' + eosType
-        sys.exit()
-
     errorTol = 1e-13  # convergence criteria
 
     # Build the grid if needed
@@ -207,12 +194,7 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
         # Save old pressure
         press_old = np.copy(press)
         # Calculate density anomaly at centres of cells
-        if eosType == 'MDJWF':
-            drho_c = densmdjwf(salt, temp, press) - rhoConst
-        elif eosType == 'JMD95':
-            drho_c = densjmd95(salt, temp, press) - rhoConst
-        elif eosType == 'LINEAR':
-            drho_c = dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta) - rhoConst
+        drho_c = density(eosType, salt, temp, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta) - rhoConst
         # Use this for both centres and edges of cells
         drho = np.zeros(dz_merged.shape)
         drho[::2,...] = drho_c
