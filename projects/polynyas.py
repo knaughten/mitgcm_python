@@ -283,7 +283,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             xmin = xmin_sfc
             xmax = -20
             ymin = ymin_sfc
-            ymax = -70
+            ymax = -72
         else:
             xmin = xmin_sfc
             xmax = None
@@ -352,7 +352,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
-    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True)
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True, vmax_diff=100, extend_diff='max')
 
 
 # Make a bunch of preliminary slice plots.
