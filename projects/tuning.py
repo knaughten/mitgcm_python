@@ -18,7 +18,7 @@ from ..constants import deg_string, gravity
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
-from ..plot_utils.labels import parse_date
+from ..plot_utils.labels import parse_date, reduce_cbar_labels
 from ..postprocess import build_file_list
 from ..interpolation import interp_bilinear
 
@@ -150,8 +150,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
                 ax.set_xticklabels([])
             cbar = plt.colorbar(img, cax=cax[j], orientation='horizontal', extend=all_extend[j])
             # Remove every second label so they're not squashed
-            for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
-                label.set_visible(False)
+            reduce_cbar_labels(cbar)
 
         plt.suptitle(str(year), fontsize=24)
         finished_plot(fig, fig_name=fig_dir+str(year)+'_conditions.png')

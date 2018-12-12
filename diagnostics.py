@@ -7,7 +7,7 @@ import sys
 
 from constants import rho_ice, wed_gyre_bounds, Cp_sw
 from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
-from averaging import area_integral, vertical_integral, indefinite_ns_integral
+from calculus import area_integral, vertical_integral, indefinite_ns_integral
 
 
 # Calculate the adiabatic temperature gradient exactly like MITgcm does. This originates from section 7 of "Algorithms for computation of fundamental properties of seawater", UNESCO technical papers in marine science 44, 1983.

@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.colors as cl
 
 from ..utils import mask_land, select_top, select_bottom
-from ..averaging import vertical_average
+from ..calculus import vertical_average
 from ..interpolation import interp_grid
 
 

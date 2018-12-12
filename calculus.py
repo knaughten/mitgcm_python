@@ -1,6 +1,6 @@
-#######################################################
-# All things averaging and integrating
-#######################################################
+###############################################################
+# All things averaging, integrating, and differentiating
+###############################################################
 
 import numpy as np
 from utils import z_to_xyz, xy_to_xyz, add_time_dim
@@ -192,3 +192,78 @@ def indefinite_ns_integral (data, grid, gtype='t', time_dependent=False):
 
     dy, mask = prepare_area_mask(data, grid, gtype=gtype, option='dy', time_dependent=time_dependent)
     return np.cumsum(data*dy*mask, axis=-2)
+
+
+# First-order derivatives (just forward difference with the last row/column copied over)
+
+
+# Helper function: assumes coordinates have same dimension as data
+def derivative (data, coordinates, axis=0):
+
+    # Forward difference
+    result = np.diff(data, axis=axis)/np.diff(coordinates, axis=axis)
+    # Just copy the last row/column/whatever
+    pad_width = [(0,0)]*len(data.shape)
+    pad_width[axis] = (0,1)
+    return np.pad(result, pad_width, 'edge')
+
+
+# Helper function to prepare spatial coordinates to match the shape of the data
+def prepare_coord (shape, grid, option, gtype='t', time_dependent=False):
+
+    if option == 'lon':
+        # Get 2D lon
+        coordinates = grid.get_lon_lat(gtype=gtype)[0]
+    elif option == 'lat':
+        # Get 2D lat
+        coordinates = grid.get_lon_lat(gtype=gtype)[1]
+    elif option == 'depth':
+        # Get 3D z
+        if gtype == 'w':
+            print 'Error (prepare_coord): w-grid not yet supported for depth derivatives'
+            sys.exit()
+        coordinates = z_to_xyz(grid.z, z)
+    if option in ['lon', 'lat'] and ((len(shape)==3 and not time_dependent) or (len(shape)==4 and time_dependent)):
+        # Add depth dimension
+        coordinates = xy_to_xyz(coordinates, grid)
+    if time_dependent:
+        # Add time dimension
+        coordinates = add_time_dim(coordinates, shape[0])
+    return coordinates
+
+
+# APIs for each dimension now. Assumes data has lat and lon dimensions, plus possibly depth and time dimensions.
+
+def lon_derivative (data, grid, gtype='t', time_dependent=False):
+
+    lon = prepare_coord(data.shape, grid, 'lon', gtype=gtype, time_dependent=time_dependent)
+    return derivative(data, lon, axis=-1)
+
+
+def lat_derivative (data, grid, gtype='t', time_dependent=False):
+
+    lat = prepare_coord(data.shape, grid, 'lat', gtype=gtype, time_dependent=time_dependent)
+    return derivative(data, lat, axis=-2)
+
+
+def depth_derivative (data, grid, gtype='t', time_dependent=False):
+
+    z = prepare_coord(data.shape, grid, 'depth', gtype=gtype, time_dependent=time_dependent)
+    return derivative(data, z, axis=-3)
+
+
+def time_derivative (data, time):
+
+    # Tile the time array in space
+    time_tiled = np.empty(data.shape)
+    for t in range(len(time)):
+        time_tiled[t,:] = time[t]
+    return derivative(data, time_tiled, axis=0)
+
+    
+    
+    
+        
+
+    
+    
