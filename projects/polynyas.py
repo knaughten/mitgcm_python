@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice
+from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -224,11 +224,11 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 rho_3d = potential_density('MDJWF', salt, temp)
                 if var == 'rho':
                     # Vertically average
-                    return vertical_average(rho_3d, grid)
+                    return mask_land(vertical_average(rho_3d, grid), grid)
                 elif var == 'drho_dlat':
                     # Take derivative and then vertically average
                     drho_dlat_3d = lat_derivative(rho_3d, grid)
-                    return vertical_average(drho_dlat_3d, grid)
+                    return mask_land(vertical_average(drho_dlat_3d, grid), grid)
             elif var == 'HfC':
                 # Calculate HfC at each point
                 hfc_3d = heat_content_freezing(temp, salt, grid)
@@ -388,10 +388,10 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_fris=True, vmin=0)
     plot_latlon_5panel('sst', 'Sea surface temperature ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
     plot_latlon_5panel('sss', 'Sea surface salinity ('+deg_string+'C), 1979-2016', option='anomaly', include_shelf=False)
-    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True, vmax_diff=100, extend_diff='max')'''
-    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('rho', r'Potential density (kg/m$^3$, vertical average), 1979-2016', option='anomaly')
-    plot_latlon_5panel('drho_dlat', r'Density gradient (kg/m$^3$/$^{\circ}$lat, vertical average), 1979-2016', option='anomaly')
+    plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True, vmax_diff=100, extend_diff='max')
+    plot_latlon_5panel('rho', r'Potential density (kg/m$^3$, vertical average), 1979-2016', option='anomaly', vmin=1027.5, extend='min', vmin_diff=-0.05, vmax_diff=0.05, extend_diff='both')
+    plot_latlon_5panel('drho_dlat', r'Density gradient (kg/m$^3$/$^{\circ}$lat, vertical average), 1979-2016', option='anomaly', vmin=-25, vmax=25, extend='min', vmin_diff=-0.1, vmax_diff=0.1, extend_diff='both')
+    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmax=8e16, extend='max', vmin_diff=-5e15, vmax_diff=5e15, extend_diff='both')'''
     plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True)
     plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', zoom_ewed=True)
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True)
