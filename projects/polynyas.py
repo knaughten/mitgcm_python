@@ -65,7 +65,7 @@ def get_polynya_loc (polynya):
 # Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
-    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt']
+    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt', 'isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None

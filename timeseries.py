@@ -379,7 +379,10 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
 #      'conv_area': total area of convection (MLD > 2000 m)
 #      'wed_gyre_trans': Weddell Gyre transport
-#      'watermass': percentage volume of the domain occupied by the watermass defined by some temperature and salinity bounds
+#      'isw_vol': volume of ISW (<-1.9 C)
+#      'hssw_vol': volume of HSSW (-1.8 to -1.9 C, >34.55 psu)
+#      'wdw_vol': volume of WDW (>0 C)
+#      'mwdw_vol': volume of MWDW (-1.5 to 0 C, 34.25-34.55 psu)
 def set_parameters (var):
 
     var_name = None
@@ -390,6 +393,10 @@ def set_parameters (var):
     shelves = None
     mass_balance = None
     threshold = None
+    tmin = None
+    tmax = None
+    smin = None
+    smax = None
 
     if var in ['fris_mass_balance', 'fris_ismr', 'ewed_ismr', 'all_ismr']:
         option = 'ismr'
@@ -474,21 +481,38 @@ def set_parameters (var):
         option = 'wed_gyre_trans'
         title = 'Weddell Gyre transport'
         units = 'Sv'
-    elif var == 'watermass':
+    elif var in ['isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']:
         option = 'watermass'
         units = '% of domain'
+        if var == 'isw_vol':
+            tmax = -1.9
+            title ='Volume of ISW'
+        elif var == 'hssw_vol':
+            tmin = -1.8
+            tmax = -1.9
+            smin = 34.55 psu
+            title = 'Volume of HSSW'
+        elif var == 'wdw_vol':
+            tmin = 0
+            title = 'Volume of WDW'
+        elif var == 'mwdw_vol':
+            tmin = -1.5
+            tmax = 0
+            smin = 34.25
+            smax = 34.55
+            title = 'Volume of MWDW'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
+def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
@@ -504,10 +528,10 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, tm
 
 
 # Interface to calc_timeseries_diff for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
+def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:
