@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude
-from constants import fris_bounds, ewed_bounds, sose_res
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 
 
 # Grid object containing lots of grid variables:
@@ -40,6 +40,7 @@ from constants import fris_bounds, ewed_bounds, sose_res
 # ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
 # ewed_mask: boolean Eastern Weddell ice shelf mask on the tracer grid (XY)
+# sws_shelf_mask: boolean Southern Weddell Sea continental shelf mask on the tracer grid (XY)
 class Grid:
 
     # Initialisation arguments:
@@ -165,6 +166,8 @@ class Grid:
         self.fris_mask_v = self.build_fris_mask(self.ice_mask_v, self.lon_2d, self.lat_corners_2d)
         # Eastern Weddell ice shelf mask
         self.ewed_mask = self.build_ewed_mask(self.ice_mask, self.lon_2d, self.lat_2d)
+        # Southern Weddell Sea continental shelf mask
+        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, self.ice_mask, self.lon_2d, self.lat_2d, self.bathy)
 
         
     # Given a 3D hfac array on any grid, create the land mask.
@@ -199,6 +202,16 @@ class Grid:
     def build_ewed_mask (self, ice_mask, lon, lat):
 
         return ice_mask*(lon >= ewed_bounds[0])*(lon <= ewed_bounds[1])*(lat >= ewed_bounds[2])*(lat <= ewed_bounds[3])
+
+
+    # Create a mask just containing continental shelf points in front of FRIS.
+    # These points must be:
+    # 1. within the rectangle given by sws_shelf_bounds,
+    # 2. bathymetry shallower than 1250 m,
+    # 3. not ice shelf or land points.
+    def build_sws_shelf_mask(self, land_mask, ice_mask, lon, lat, bathy):
+
+        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= sws_shelf_bounds[0])*(lon <= sws_shelf_bounds[1])*(lat >= sws_shelf_bounds[2])*(lat <= sws_shelf_bounds[3])
 
         
     # Return the longitude and latitude arrays for the given grid type.

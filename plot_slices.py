@@ -124,7 +124,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 #      'temp': temperature
 #      'salt': salinity
 #      'tminustf': difference from in-situ freezing point
-#      'rho': density (referenced to 2000 m)
+#      'rho': density (referenced to ref_depth)
 #      'u': zonal velocity
 #      'v': meridional velocity
 # file_path: path to NetCDF file containing the necessary variable:
@@ -146,8 +146,9 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
 # eosType, rhoConst, Tref, Sref, tAlpha, sBeta: as in function density. Default MDJWF, so none of the others matter.
+# ref_depth: reference depth for density (positive, metres)
 
-def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -186,7 +187,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Difference from in-situ freezing point ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'rho':
         # Calculate density
-        rho = mask_3d(density(eosType, salt, temp, 2000, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
+        rho = mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
         slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
@@ -198,7 +199,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
 
 
 # Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp', 'salt', or 'rho'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
@@ -215,7 +216,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
             temp = read_and_mask('THETA', file_path, check_diff_time=check_diff_time)
             salt = read_and_mask('SALT', file_path, check_diff_time=check_diff_time)
             # Calculate density
-            return mask_3d(density(eosType, salt, temp, 2000, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
+            return mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
         else:
             if check_diff_time and diff_time:
                 return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid)

@@ -37,6 +37,8 @@ fris_bounds = [-85, -29, -84, -74]
 ewed_bounds = [-30, 40, -77, -65]
 # Bounds on Weddell Gyre.
 wed_gyre_bounds = [-60, 30, -90, -50]
+# Bounds on continental shelf in front of FRIS.
+sws_shelf_bounds = [-70, -30, -79, -72]
 # Bounds on location to search for grounded iceberg A-23A
 a23a_bounds = [-47, -38, -77, -75]
 
