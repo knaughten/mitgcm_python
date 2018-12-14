@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, mask_except_fris, days_per_month
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
 from diagnostics import total_melt, wed_gyre_trans
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
@@ -132,15 +132,17 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. This can be restricted to the FRIS cavity if you set fris=True.
-def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, fris=False):
+# Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. Restrict it to the given mask (default just mask out the land).
+def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
-        # Mask everything except FRIS out of the array
-        data_tmp = mask_except_fris(data[t,:], grid, gtype=gtype, depth_dependent=True)
+        if mask is None:
+            data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
+        else:
+            data_tmp = apply_mask(data[t,:], np.invert(mask), depth_dependent=True)
         # Volume average
         timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
     return np.array(timeseries)
@@ -181,6 +183,7 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 #          'int_sfc': calculates area-integrated value over the sea surface
 #          'area_threshold': calculates area of sea surface where the variable exceeds the given threshold
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
+#          'avg_sws_shelf': calculates volume-averaged value over the Southern Weddell Sea shelf
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
 #          'wed_gyre_trans': calculates Weddell Gyre transport.
 #          'time': just returns the time array
@@ -241,7 +244,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     elif option == 'area_threshold':
         values = timeseries_area_threshold(first_file, var_name, threshold, grid, gtype=gtype)
     elif option == 'avg_fris':
-        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, fris=True)
+        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.fris_mask)
+    elif option == 'avg_sws_shelf':
+        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.sws_shelf_mask)
     elif option == 'point_vavg':
         values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
     elif option == 'wed_gyre_trans':
@@ -268,7 +273,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             elif option == 'area_threshold':
                 values_tmp = timeseries_area_threshold(file, var_name, threshold, grid, gtype=gtype)
             elif option == 'avg_fris':
-                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, fris=True)
+                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.fris_mask)
+            elif option == 'avg_sws_shelf':
+                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.sws_shelf_mask)
             elif option == 'point_vavg':
                 values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
             elif option == 'wed_gyre_trans':
@@ -333,6 +340,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'seaice_area': total sea ice area
 #      'fris_temp': volume-averaged temperature in the FRIS cavity
 #      'fris_salt': volume-averaged salinity in the FRIS cavity
+#      'sws_shelf_temp': volume-averaged temperature over the Southern Weddell Sea continental shelf
+#      'sws_shelf_salt': volume-averaged salinity over the Southern Weddell Sea continental shelf
 #      'temp_polynya': depth-averaged temperature through the centre of a polynya
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
 #      'conv_area': total area of convection (MLD > 2000 m)
@@ -401,6 +410,16 @@ def set_parameters (var):
             var_name = 'SALT'
             title = 'Volume-averaged salinity in FRIS cavity'
             units = 'psu'
+    elif var in ['sws_shelf_temp', 'sws_shelf_salt']:
+        option = 'avg_sws_shelf'
+        if var == 'sws_shelf_temp':
+            var_name = 'THETA'
+            title = 'Volume-averaged temperature over FRIS continental shelf'
+            units = deg_string+'C'
+        elif var == 'sws_shelf_salt':
+            var_name = 'SALT'
+            title = 'Volume-averaged salinity over FRIS continental shelf'
+            units = 'psu'            
     elif var in ['temp_polynya', 'salt_polynya']:
         option = 'point_vavg'
         if var == 'temp_polynya':
