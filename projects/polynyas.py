@@ -33,7 +33,7 @@ avg_file = 'output/1979_2016_avg.nc'
 start_year = 1979
 end_year = 2016
 num_years = end_year-start_year+1
-file_head = 'output/'
+file_head = 'output/annual_averages/'
 file_tail = '_avg.nc'
 forcing_dir = '/work/n02/n02/shared/baspog/MITgcm/WS/WSK/'
 polynya_file = [None, 'polynya_mask_maud_rise', 'polynya_mask_near_shelf', 'polynya_mask_maud_rise_big', 'polynya_mask_maud_rise_small', None]
@@ -397,11 +397,12 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('rho', r'Potential density (kg/m$^3$, vertical average), 1979-2016', option='anomaly', vmin=1027.5, extend='min', vmin_diff=-0.05, vmax_diff=0.05, extend_diff='both')
     plot_latlon_5panel('drho_dlat', r'Density gradient (kg/m$^3$/$^{\circ}$lat, vertical average), 1979-2016', option='anomaly', vmin=-25, vmax=25, extend='min', vmin_diff=-0.1, vmax_diff=0.1, extend_diff='both')
     plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmax=8e16, extend='max', vmin_diff=-5e15, vmax_diff=5e15, extend_diff='both')
+    # Eastern Weddell plots
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True, vmax=6, extend='max', vmax_diff=3, extend_diff='max')
-    plot_latlon_5panel('temp_avg', 'Vertically averaged temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True)
+    plot_latlon_5panel('temp_avg', 'Vertically averaged temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.3, vmax_diff=0.3, extend_diff='both')
 
 
-# Plot bwtemp and bwsalt anomalies for each year.
+# Plot vertically averaged temp and salt anomalies, as well as ice shelf melt rate anomalies, for each year.
 def prelim_peryear (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -410,17 +411,19 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Inner function to read bwtemp and bwsalt for each year of the given simulation
+    # Inner function to read vertically averaged temp and salt, and ice shelf melt rate, for each year of the given simulation
     def read_data (directory):
-        bwtemp = []
-        bwsalt = []
+        temp = []
+        salt = []
+        ismr = []
         # Loop over years
         for year in range(start_year, end_year+1):
             file_path = directory + file_head + str(year) + file_tail
             print 'Reading ' + file_path
-            bwtemp.append(select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)))
-            bwsalt.append(select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)))
-        return bwtemp, bwsalt
+            temp.append(mask_land(vertical_average(read_netcdf(file_path, 'THETA', time_index=0), grid),  grid))
+            salt.append(mask_land(vertical_average(read_netcdf(file_path, 'SALT', time_index=0), grid), grid))
+            ismr.append(convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid)))
+        return temp, salt, ismr
     
     # Inner function to find the min and max anomalies over all years of the given data (baseline and perturbation, each a list of length num_years, each element is a lat-lon array)
     def find_min_max_diff (data0, data):
@@ -433,27 +436,28 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
         return vmin_diff, vmax_diff            
 
     # Read the baseline data
-    bwtemp0, bwsalt0 = read_data(base_dir+case_dir[0])
+    temp0, salt0, ismr0 = read_data(base_dir+case_dir[0])
 
     # Loop over other simulations
-    for i in range(1, num_expts-1):
+    for i in range(1, num_expts):
         # Read data
-        bwtemp, bwsalt = read_data(base_dir+case_dir[i])
+        temp, salt, ismr = read_data(base_dir+case_dir[i])
         # Find min/max anomalies across all years
-        tmin_diff, tmax_diff = find_min_max_diff(bwtemp0, bwtemp)
-        smin_diff, smax_diff = find_min_max_diff(bwsalt0, bwsalt)
+        tmin_diff, tmax_diff = find_min_max_diff(temp0, temp)
+        smin_diff, smax_diff = find_min_max_diff(salt0, salt)
+        imin_diff, imax_diff = find_min_max_diff(ismr0, ismr)
         # Loop over years
         for year in range(start_year, end_year+1):
             t = year-start_year
-            fig, gs, cax1, cax2 = set_panels('1x2C2')
-            # Wrap some things up into lists of length 2 for easier iteration
-            data = [bwtemp[t]-bwtemp0[t], bwsalt[t]-bwsalt0[t]]
-            vmin = [tmin_diff, smin_diff]
-            vmax = [smin_diff, smax_diff]
-            cax = [cax1, cax2]
-            title = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)']
+            fig, gs, cax1, cax2, cax3 = set_panels('1x3C3')
+            # Wrap some things up into lists of length 3 for easier iteration
+            data = [temp[t]-temp0[t], salt[t]-salt0[t], ismr[t]-ismr0[t]]
+            vmin = [tmin_diff, smin_diff, imin_diff]
+            vmax = [tmax_diff, smax_diff, imax_diff]
+            cax = [cax1, cax2, cax3]
+            title = ['Vertically averaged temperature ('+deg_string+'C)', 'Vertically averaged salinity (psu)', 'Ice shelf basal melt rate (m/y)']
             # Now loop over variables
-            for j in range(2):
+            for j in range(3):
                 ax = plt.subplot(gs[0,j])
                 img = latlon_plot(data[j], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[j], vmax=vmax[j], zoom_fris=True, title=title[j])
                 if j==1:
@@ -464,7 +468,7 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
                 reduce_cbar_labels(cbar)
             # Main title
             plt.suptitle(str(year) + ' anomalies', fontsize=24)
-            finished_plot(fig, fig_name=fig_dir+polynya_types[i]+'_'+str(year)+'_ts_anom.png')
+            finished_plot(fig, fig_name=fig_dir+polynya_types[i]+'_'+str(year)+'_anom.png')
         
 
 # Make a bunch of preliminary slice plots.
