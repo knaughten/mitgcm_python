@@ -187,7 +187,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
     elif var == 'rho':
         # Calculate density
         rho = mask_3d(density(eosType, salt, temp, 2000, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
-        slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
+        slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
