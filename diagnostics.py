@@ -182,8 +182,13 @@ def dens_linear (salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta):
     return rhoConst*(1 - tAlpha*(temp-Tref) + sBeta*(salt-Sref))
 
 
-# Calculate density for the given equation of state.
+# Calculate density for the given equation of state. Pressure can be a constant scalar if you want a reference pressure.
 def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    # Check if pressure is a constant value
+    if isinstance(press, float) or isinstance(press, int):
+        # Make it an array
+        press = np.zeros(temp.shape) + press
 
     if eosType == 'MDJWF':
         from MITgcmutils.mdjwf import densmdjwf
@@ -199,14 +204,12 @@ def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tA
     else:
         print 'Error (density): invalid eosType ' + eosType
         sys.exit()
-
+        
 
 # Wrapper for potential density.
 def potential_density (eosType, salt, temp, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
-    # Make a pressure array of all zeros
-    press = np.zeros(temp.shape)
-    return density(eosType, salt, temp, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+    return density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
 
 
 # Calculate heat content relative to the in-situ freezing point. Just use potential temperature and density.
