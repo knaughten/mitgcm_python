@@ -460,7 +460,7 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
             for j in range(3):
                 ax = plt.subplot(gs[0,j])
                 img = latlon_plot(data[j], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[j], vmax=vmax[j], zoom_fris=True, title=title[j])
-                if j==1:
+                if j>0:
                     # Remove axes labels
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])

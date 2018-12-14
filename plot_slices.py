@@ -15,7 +15,7 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax
-from diagnostics import t_minus_tf
+from diagnostics import t_minus_tf, density
 from constants import deg_string
 
 
@@ -124,12 +124,14 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 #      'temp': temperature
 #      'salt': salinity
 #      'tminustf': difference from in-situ freezing point
+#      'rho': density (referenced to 2000 m)
 #      'u': zonal velocity
 #      'v': meridional velocity
 # file_path: path to NetCDF file containing the necessary variable:
 #      'temp': THETA
 #      'salt': SALT
 #      'tminustf': THETA and SALT
+#      'rho': THETA and SALT
 #      'u': 'UVEL'
 #      'v': 'VVEL'
 # If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
@@ -143,8 +145,9 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 # date_string: as in function slice_plot. If time_index is defined and date_string isn't, date_string will be automatically determined based on the calendar in file_path.
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
+# eosType, rhoConst, Tref, Sref, tAlpha, sBeta: as in function density. Default MDJWF, so none of the others matter.
 
-def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None):
+def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -165,9 +168,9 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         return data
 
     # Read necessary variables from NetCDF file and mask appropriately
-    if var in ['temp', 'tminustf']:
+    if var in ['temp', 'tminustf', 'rho']:
         temp = read_and_mask('THETA', check_second=True)
-    if var in ['salt', 'tminustf']:
+    if var in ['salt', 'tminustf', 'rho']:
         salt = read_and_mask('SALT', check_second=True)
     if var == 'u':
         u = read_and_mask('UVEL', gtype='u')
@@ -181,6 +184,12 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         slice_plot(salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Salinity (psu)', date_string=date_string, fig_name=fig_name)
     elif var == 'tminustf':
         slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Difference from in-situ freezing point ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+    elif var == 'rho':
+        # Set up pressure array of 2000 dbar (approx 2000 m depth)
+        press = np.zeros(temp.shape) + 2000
+        # Calculate density
+        rho = density(eosType, salt, temp, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+        slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
@@ -190,8 +199,8 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         sys.exit()
 
 
-# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp' or 'salt'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None):
+# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp', 'salt', or 'rho'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
@@ -214,13 +223,21 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
         data2 = read_and_mask(var_name, file_path_2, check_diff_time=True)
         return data1, data2
 
-    # Read variables and make plots
-    if var == 'temp':
+    # Read variables
+    if var in ['temp', 'rho']:
         temp_1, temp_2 = read_and_mask_both('THETA')
-        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
-    elif var == 'salt':
+    if var in ['salt', 'rho']:
         salt_1, salt_2 = read_and_mask_both('SALT')
+    # Make plots
+    if var == 'temp':
+        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+    elif var == 'salt':        
         slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
+    elif var == 'rho':
+        press = np.zeros(temp_1.shape) + 2000
+        rho_1 = density(eosType, salt_1, temp_1, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+        rho_2 = density(eosType, salt_2, temp_2, press, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)        
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
