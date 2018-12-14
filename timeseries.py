@@ -189,7 +189,6 @@ def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=Non
     # Build the timeseries
     timeseries = []
     for t in range(temp.shape[0]):
-        print t
         # Find points within these bounds
         index = (temp[t,:] >= tmin)*(temp[t,:] <= tmax)*(salt[t,:] >= smin)*(salt[t,:] <= smax)*(grid.hfac > 0)
         # Integrate volume of those cells, and get percent of total volume
@@ -487,8 +486,8 @@ def set_parameters (var):
             tmax = -1.9
             title ='Volume of ISW'
         elif var == 'hssw_vol':
-            tmin = -1.8
-            tmax = -1.9
+            tmin = -1.9
+            tmax = -1.8
             smin = 34.55
             title = 'Volume of HSSW'
         elif var == 'wdw_vol':
