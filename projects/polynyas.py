@@ -475,8 +475,9 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Baseline T-S slices through each polynya, in each direction
     baseline_file = base_dir+case_dir[0]+avg_file
+
+    # Baseline T-S slices through each polynya, in each direction    
     for i in range(1,2+1):
         ptype = polynya_types[i]
         lon0, lat0 = get_polynya_loc(ptype)
@@ -491,7 +492,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
 
     # Inner function for baseline and polynya slices (absolute or anomaly) through a given longitude, with given bounds
-    def make_slices_lon (lon0, string, hmin=None, hmax=None, zmin=None, tmin=None, tmax=None, smin=None, smax=None, option='anomaly'):
+    def make_slices_lon (lon0, string, hmin=None, hmax=None, zmin=None, tmin=None, tmax=None, smin=None, smax=None, tmin_diff=None, tmax_diff=None, smin_diff=None, smax_diff=None, option='anomaly'):
         # Baseline
         read_plot_ts_slice(baseline_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin, tmax=tmax, smin=smin, smax=smax, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'.png')
         # Each polynya
@@ -501,7 +502,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
             if option == 'absolute':
                 read_plot_ts_slice(curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin, tmax=tmax, smin=smin, smax=smax, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'.png')
             elif option == 'anomaly':
-                read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'_diff.png')
+                read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin_diff, tmax=tmax_diff, smin=smin_diff, smax=smax_diff, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'_diff.png')
             else:
                 print 'Error (make_slices_lon): invalid option ' + option
                 sys.exit()
@@ -511,7 +512,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     # Zoomed in, absolute
     make_slices_lon(-50, '50W_zoom', option='absolute', hmin=-77, hmax=-70, zmin=-1000, tmin=-1.9, tmax=0.5, smin=34, smax=34.65)
     # Fimbul
-    make_slices_lon(-1, 'fimbul', hmax=-69, zmin=-1000)
+    make_slices_lon(-1, 'fimbul', hmax=-69, zmin=-1500, option='absolute', tmin=-1.9, tmax=0.5, smin=34, smax=34.7)
     # Riiser-Larsen
     make_slices_lon(-19, 'rl', hmax=-72, zmin=-1000)
 
