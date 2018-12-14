@@ -178,16 +178,14 @@ def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=Non
     temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
     salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
     # Set any unset bounds
-    tmin_tmp, tmax_tmp = var_min_max(temp, grid)
-    smin_tmp, smax_tmp = var_min_max(salt, grid)
     if tmin is None:
-        tmin = tmin_tmp
+        tmin = np.amin(temp)
     if tmax is None:
-        tmax = tmax_tmp
+        tmax = np.amax(temp)
     if smin is None:
-        smin = smin_tmp
+        smin = np.amin(salt)
     if smax is None:
-        smax = smax_tmp
+        smax = np.amax(salt)
     # Build the timeseries
     timeseries = []
     for t in range(temp.shape[0]):
