@@ -156,7 +156,7 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
             # Calculate the difference timeseries
             time, melt_diff, freeze_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
         timeseries_multi_plot(time, [melt_diff, freeze_diff, melt_diff+freeze_diff], ['Change in melting\n(>0)', 'Change in freezing\n(<0)', 'Change in net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name)
-    else:tmin=None, tmax=None, smin=None, smax=None, 
+    else:
         if precomputed:
             time, data_diff = read_and_trim(var)
         else:
