@@ -234,6 +234,9 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 hfc_3d = heat_content_freezing(temp, salt, grid)
                 # Vertical sum
                 return np.sum(hfc_3d*grid.hfac, axis=0)
+        elif var == 'temp_avg':
+            # Vertically averaged temperature
+            return mask_land(vertical_average(read_netcdf(file_path, 'THETA', time_index=0), grid), grid)
             
 
     # Inner function to make a 5-panelled plot with data from the baseline simulation (absolute) and each polynya simulation except the 5-year polynya (absolute or anomaly from baseline).
@@ -394,10 +397,8 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('rho', r'Potential density (kg/m$^3$, vertical average), 1979-2016', option='anomaly', vmin=1027.5, extend='min', vmin_diff=-0.05, vmax_diff=0.05, extend_diff='both')
     plot_latlon_5panel('drho_dlat', r'Density gradient (kg/m$^3$/$^{\circ}$lat, vertical average), 1979-2016', option='anomaly', vmin=-25, vmax=25, extend='min', vmin_diff=-0.1, vmax_diff=0.1, extend_diff='both')
     plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmax=8e16, extend='max', vmin_diff=-5e15, vmax_diff=5e15, extend_diff='both')
-    plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.6, extend_diff='min')
-    plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', zoom_ewed=True)
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True, vmax=6, extend='max', vmax_diff=3, extend_diff='max')
-    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_ewed=True, vmax=0.02, extend='max', vmax_diff=0.01, vmin_diff=-0.01, extend_diff='both')
+    plot_latlon_5panel('temp_avg', 'Vertically averaged temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True)
 
 
 # Plot bwtemp and bwsalt anomalies for each year.
