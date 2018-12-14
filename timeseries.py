@@ -175,22 +175,22 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=None, smax=None, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read T and S
-    temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
-    salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
+    temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Set any unset bounds
     if tmin is None:
-        tmin = np.amin(temp)
+        tmin = -9999
     if tmax is None:
-        tmax = np.amax(temp)
+        tmax = 9999
     if smin is None:
-        smin = np.amin(salt)
+        smin = -9999
     if smax is None:
-        smax = np.amax(salt)
+        smax = 9999
     # Build the timeseries
     timeseries = []
     for t in range(temp.shape[0]):
         # Find points within these bounds
-        index = (temp >= tmin)*(temp <= tmax)*(salt >= smin)*(salt <= smax)
+        index = (temp[t,:] >= tmin)*(temp[t,:] <= tmax)*(salt[t,:] >= smin)*(salt[t,:] <= smax)*(grid.hfac > 0)
         # Integrate volume of those cells, and get percent of total volume
         timeseries.append(np.sum(grid.dV[index])/np.sum(grid.dV)*100)
     return np.array(timeseries)
