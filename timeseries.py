@@ -175,8 +175,8 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=None, smax=None, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read T and S
-    temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
-    salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+    temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
+    salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, time_dependent=True)
     # Set any unset bounds
     tmin_tmp, tmax_tmp = var_min_max(temp, grid)
     smin_tmp, smax_tmp = var_min_max(salt, grid)
