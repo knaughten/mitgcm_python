@@ -171,6 +171,33 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
     return np.array(timeseries)
 
 
+# Calculate timeseries of the volume (as a percentage of the entire domain, neglecting free surface changes) of the water mass between the given temperature and salinity bounds.
+def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=None, smax=None, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read T and S
+    temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+    salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+    # Set any unset bounds
+    tmin_tmp, tmax_tmp = var_min_max(temp, grid)
+    smin_tmp, smax_tmp = var_min_max(salt, grid)
+    if tmin is None:
+        tmin = tmin_tmp
+    if tmax is None:
+        tmax = tmax_tmp
+    if smin is None:
+        smin = smin_tmp
+    if smax is None:
+        smax = smax_tmp
+    # Build the timeseries
+    timeseries = []
+    for t in range(temp.shape[0]):
+        # Find points within these bounds
+        index = (temp >= tmin)*(temp <= tmax)*(salt >= smin)*(salt <= smax)
+        # Integrate volume of those cells, and get percent of total volume
+        timeseries.append(np.sum(grid.dV[index])/np.sum(grid.dV)*100)
+    return np.array(timeseries)
+
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -186,6 +213,7 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 #          'avg_sws_shelf': calculates volume-averaged value over the Southern Weddell Sea shelf
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
 #          'wed_gyre_trans': calculates Weddell Gyre transport.
+#          'watermass': calculates percentage volume of the water mass defined by any of tmin, tmax, smin, smax.
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -195,6 +223,7 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
 # threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
+# tmin, tmax, smin, smax: as in function timeseries_watermass_volume. Only matters for 'watermass'.
 # monthly: as in function netcdf_time
 
 # Output:
@@ -203,7 +232,7 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -251,6 +280,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
     elif option == 'wed_gyre_trans':
         values = timeseries_wed_gyre(first_file, grid)
+    elif option == 'watermass':
+        values = timeseries_watermass_volume(first_file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
     elif option != 'time':
         print 'Error (calc_timeseries): invalid option ' + option
         sys.exit()
@@ -280,6 +311,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
             elif option == 'wed_gyre_trans':
                 values_tmp = timeseries_wed_gyre(file, grid)
+            elif option == 'watermass':
+                values_tmp = timeseries_watermass_volume(file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'ismr' and mass_balance:
@@ -315,15 +348,15 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, monthly=True):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
@@ -346,6 +379,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
 #      'conv_area': total area of convection (MLD > 2000 m)
 #      'wed_gyre_trans': Weddell Gyre transport
+#      'watermass': percentage volume of the domain occupied by the watermass defined by some temperature and salinity bounds
 def set_parameters (var):
 
     var_name = None
@@ -440,6 +474,9 @@ def set_parameters (var):
         option = 'wed_gyre_trans'
         title = 'Weddell Gyre transport'
         units = 'Sv'
+    elif var == 'watermass':
+        option = 'watermass'
+        units = '% of domain'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
@@ -448,7 +485,7 @@ def set_parameters (var):
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
+def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
 
     # Set parameters (don't care about title or units)
     option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
@@ -459,7 +496,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
         time, melt, freeze = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -467,7 +504,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 
 
 # Interface to calc_timeseries_diff for particular timeseries variables, defined in set_parameters.
-def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
+def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
 
     # Set parameters (don't care about title or units)
     option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold = set_parameters(var)
@@ -481,7 +518,7 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, monthly=monthly)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data_diff *= 1e-12

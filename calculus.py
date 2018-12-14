@@ -8,17 +8,17 @@ from utils import z_to_xyz, xy_to_xyz, add_time_dim
 
 # Helper functions to set up integrands and masks, tiled to be the same dimension as the "data" array
 
-# Returns area or distance integrand (option='dA', 'dx', or 'dy'), and whichever mask is already applied to the MaskedArray "data".
-def prepare_area_mask (data, grid, gtype='t', option='dA', time_dependent=False):
+# Returns area, volume, or distance integrand (option='dA', 'dV', 'dx', or 'dy'), and whichever mask is already applied to the MaskedArray "data".
+def prepare_integrand_mask (option, data, grid, gtype='t', time_dependent=False):
     
-    if option == 'dA' and gtype != 't':
-        print 'Error (prepare_area_mask): non-tracer grids not yet supported'
+    if option in ['dA','dV'] and gtype != 't':
+        print 'Error (prepare_integrand_mask): non-tracer grids not yet supported'
         sys.exit()
     elif option == 'dx' and gtype == 'u':
-        print 'Error (prepare_area_mask): u-grid not yet supported for dx'
+        print 'Error (prepare_integrand_mask): u-grid not yet supported for dx'
         sys.exit()
     elif option == 'dy' and gtype == 'v':
-        print 'Error (prepare_area_mask): v-grid not yet supported for dy'
+        print 'Error (prepare_integrand_mask): v-grid not yet supported for dy'
         sys.exit()
 
     # Get the mask as 1s and 0s
@@ -30,13 +30,15 @@ def prepare_area_mask (data, grid, gtype='t', option='dA', time_dependent=False)
     # Get the integrand
     if option == 'dA':
         integrand = grid.dA
+    elif option == 'dV':
+        integrand = grid.dV
     elif option == 'dx':
         integrand = grid.dx_s
     elif option == 'dy':
         integrand = grid.dy_w
     else:
-        print 'Error (prepare_area_mask): invalid option ' + option
-    if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
+        print 'Error (prepare_integrand_mask): invalid option ' + option
+    if (len(integrand.shape)==2) and ((time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3)):
         # There's also a depth dimension; tile in z
         integrand = xy_to_xyz(integrand, grid)
     if time_dependent:
@@ -46,7 +48,7 @@ def prepare_area_mask (data, grid, gtype='t', option='dA', time_dependent=False)
 
 
 # Returns depth integrand and hfac
-def prepare_dz_mask (data, grid, gtype='t', time_dependent=False):
+def prepare_dz_hfac (data, grid, gtype='t', time_dependent=False):
 
     # Choose the correct integrand of depth
     if gtype == 'w':
@@ -68,7 +70,7 @@ def prepare_dz_mask (data, grid, gtype='t', time_dependent=False):
 
 def over_depth (option, data, grid, gtype='t', time_dependent=False):
 
-    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
+    dz, hfac = prepare_dz_hfac(data, grid, gtype=gtype, time_dependent=time_dependent)
     if option == 'average':
         return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
     elif option == 'integrate':
@@ -80,7 +82,7 @@ def over_depth (option, data, grid, gtype='t', time_dependent=False):
 
 def over_area (option, data, grid, gtype='t', time_dependent=False):
 
-    dA, mask = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
+    dA, mask = prepare_integrand_mask('dA', data, grid, gtype=gtype, time_dependent=time_dependent)
     if option == 'average':
         return np.sum(data*dA*mask, axis=(-2,-1))/np.sum(dA*mask, axis=(-2,-1))
     elif option == 'integrate':
@@ -92,16 +94,11 @@ def over_area (option, data, grid, gtype='t', time_dependent=False):
 
 def over_volume (option, data, grid, gtype='t', time_dependent=False):
 
-    # Get dz and hfac
-    dz, hfac = prepare_dz_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
-    # Get dA and mask
-    dA, mask = prepare_area_mask(data, grid, gtype=gtype, time_dependent=time_dependent)
-    # Now get the volume integrand
-    dV = dA*dz
+    dV, mask = prepare_integrand_mask('dV', data, grid, gtype=gtype, time_dependent=time_dependent)
     if option == 'average':
-        return np.sum(data*dV*hfac*mask, axis=(-3,-2,-1))/np.sum(dV*hfac*mask, axis=(-3,-2,-1))
+        return np.sum(data*dV*mask, axis=(-3,-2,-1))/np.sum(dV*mask, axis=(-3,-2,-1))
     elif option == 'integrate':
-        return np.sum(data*dV*hfac*mask, axis=(-3,-2,-1))
+        return np.sum(data*dV*mask, axis=(-3,-2,-1))
     else:
         print 'Error (over_volume): invalid option ' + option
         sys.exit()
@@ -190,7 +187,7 @@ def volume_integral (data, grid, gtype='t', time_dependent=False):
 # Indefinite integral from south to north.
 def indefinite_ns_integral (data, grid, gtype='t', time_dependent=False):
 
-    dy, mask = prepare_area_mask(data, grid, gtype=gtype, option='dy', time_dependent=time_dependent)
+    dy, mask = prepare_integrand_mask('dy', data, grid, gtype=gtype, time_dependent=time_dependent)
     return np.cumsum(data*dy*mask, axis=-2)
 
 

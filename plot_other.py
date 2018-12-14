@@ -92,8 +92,6 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
     salt_bins, salt_centres = set_bins(salt)
     # Now set up a 2D array to increment with volume of water masses
     volume = np.zeros([temp_centres.size, salt_centres.size])
-    # Calculate volume of each grid cell, taking partial cells into account
-    dV = xy_to_xyz(grid.dA, grid)*z_to_xyz(grid.dz, grid)*grid.hfac     
 
     # Loop over all cells to increment volume
     # This can't really be vectorised unfortunately
@@ -114,7 +112,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
                 temp_index = np.nonzero(temp_bins > temp[k,j,i])[0][0] - 1
                 salt_index = np.nonzero(salt_bins > salt[k,j,i])[0][0] - 1
                 # Increment volume array
-                volume[temp_index, salt_index] += dV[k,j,i]
+                volume[temp_index, salt_index] += grid.dV[k,j,i]
     # Mask bins with zero volume
     volume = np.ma.masked_where(volume==0, volume)
 

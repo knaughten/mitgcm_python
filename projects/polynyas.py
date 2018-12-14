@@ -157,6 +157,8 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('fris_salt', 'FRIS cavity salinity', 'psu', percent_diff=False)
     plot_polynya_timeseries('temp_polynya', 'Temperature in polynya', deg_string+'C', use_baseline=False)
     plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)
+    plot_polynya_timeseries('sws_shelf_temp', 'FRIS continental shelf temperature', deg_string+'C', percent_diff=False)
+    plot_polynya_timeseries('sws_shelf_salt', 'FRIS continental shelf salinity', 'psu', percent_diff=False)
 
 
 # Make a bunch of preliminary lat-lon plots.

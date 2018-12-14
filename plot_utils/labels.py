@@ -156,3 +156,33 @@ def check_date_string (date_string, file_path, time_index):
 def reduce_cbar_labels (cbar):
     for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
         label.set_visible(False)
+
+
+# Create a string expressing bounds which may or may not be set.
+# For example:
+# '>vmin units' (if only vmin is set)
+# '<vmax units' (if only vmax is set)
+# 'vmin-vmax units' (if both are set)
+# '' (if neither is set)
+def bound_string (vmin, vmax, units):
+    if vmin is not None and vmax is not None:
+        return str(vmin) + '-' + str(vmax) + units
+    elif vmin is not None:
+        return '>' + str(vmin) + units
+    elif vmax is not None:
+        return '<' + str(vmax) + units
+
+
+# Create a title for the given water mass timeseries.
+def watermass_title (wm_name, tmin=None, tmax=None, smin=None, smax=None):
+
+    if wm_name is not None:
+        return 'Volume of ' + wm_name
+    title = 'Volume of water'
+    temp_string = bound_string(tmin, tmax, deg_string+'C')
+    if len(temp_string) > 0:
+        title += ' ' + temp_string
+    salt_string = bound_string(smin, smax, 'psu')
+    if len(salt_string) > 0:
+        title += ', ' + salt_string
+    return title

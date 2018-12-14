@@ -215,9 +215,8 @@ def potential_density (eosType, salt, temp, rhoConst=None, Tref=None, Sref=None,
 # Calculate heat content relative to the in-situ freezing point. Just use potential temperature and density.
 def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, time_dependent=False):
 
-    # Calculate volume integrand
-    dV = xy_to_xyz(grid.dA, grid)*z_to_xyz(grid.dz, grid)*grid.hfac
-    # Calculate z (for freezing point)
+    dV = grid.dV
+    # Get 3D z (for freezing point)
     z = z_to_xyz(grid.z, grid)
     # Add time dimensions if needed
     if time_dependent:

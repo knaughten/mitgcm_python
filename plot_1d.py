@@ -9,7 +9,7 @@ import numpy as np
 import sys
 
 from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff
-from plot_utils.labels import monthly_ticks, yearly_ticks
+from plot_utils.labels import monthly_ticks, yearly_ticks, watermass_title
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
 
@@ -83,7 +83,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
     # Make legend
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     
-    finished_plot(fig, fig_name=fig_name)
+    finished_plot(fig, fig_name=fig_name)    
     
 
 # User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot.
@@ -96,13 +96,17 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
 # precomputed: indicates that the timeseries have been precomputed (by function precompute_timeseries in postprocess.py) and saved in file_path
 # grid: as in function read_plot_latlon
 # lon0, lat0: point to interpolate to for var='temp_polynya' or 'salt_polynya'
+# tmin, tmax, smin, smax: bounds on water mass for var='watermass'
+# wm_name: name of water mass for var='watermass'
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
+def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, wm_name=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
+    if var == 'watermass':
+        title = watermass_title(wm_name, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
 
     if precomputed:
         # Read the time array
@@ -121,17 +125,19 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
         if precomputed:
             data = read_netcdf(file_path, var)
         else:
-            time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+            time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name)
 
 
 
 # User interface for difference timeseries. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
 # Arguments are the same as in read_plot_timeseries, but two file paths/lists are supplied. It is assumed the two simulations start at the same time, but it's okay if one is longer than the other.
-def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
+def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, wm_name=None, fig_name=None, monthly=True):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
+    if var == 'watermass':
+        title = watermass_title(wm_name, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
     # Edit the title to show it's a difference plot
     title = 'Change in ' + title[0].lower() + title[1:]
 
@@ -159,5 +165,5 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
         if precomputed:
             time, data_diff = read_and_trim(var)
         else:
-            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, monthly=monthly)
         make_timeseries_plot(time, data_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)

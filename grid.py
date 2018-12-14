@@ -12,7 +12,7 @@ import sys
 import os
 
 from file_io import read_netcdf
-from utils import fix_lon_range, real_dir, split_longitude
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz
 from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 
 
@@ -33,6 +33,7 @@ from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 # hfac: partial cell fraction (XYZ)
 # hfac_w: partial cell fraction at u-points (XYZ)
 # hfac_s: partial cell fraction at v-points (XYZ)
+# dV: volume of cell considering partial cells (m^3, XYZ)
 # bathy: bathymetry (negative, m, XY)
 # draft: ice shelf draft (negative, m, XY)
 # wct: water column thickness (m, XYZ)
@@ -134,6 +135,9 @@ class Grid:
         self.nx = self.lon_1d.size
         self.ny = self.lat_1d.size
         self.nz = self.z.size
+
+        # Calculate volume
+        self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
 
         # Calculate ice shelf draft
         self.draft = np.zeros([self.ny, self.nx])
