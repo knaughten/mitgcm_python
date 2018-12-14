@@ -397,7 +397,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.6, extend_diff='min')
     plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', zoom_ewed=True)
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True, vmax=6, extend='max', vmax_diff=3, extend_diff='max')
-    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_ewed=True, vmax=0.03, extend='max', vmax_diff=0.03, vmin_diff=-0.03, extend_diff='both')
+    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_ewed=True, vmax=0.02, extend='max', vmax_diff=0.01, vmin_diff=-0.01, extend_diff='both')
 
 
 # Plot bwtemp and bwsalt anomalies for each year.
@@ -490,20 +490,32 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon_diff.png')
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
 
-    # Baseline slice through 50W where WDW comes onto shelf
-    read_plot_ts_slice(baseline_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W.png')
-    # T-S difference slices for each polynya
-    for i in range(1, num_expts-1):
-        ptype = polynya_types[i]
-        read_plot_ts_slice_diff(baseline_file, base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_'+ptype+'_diff.png')
+    # Inner function for baseline and polynya slices (absolute or anomaly) through a given longitude, with given bounds
+    def make_slices_lon (lon0, string, hmin=None, hmax=None, zmin=None, tmin=None, tmax=None, smin=None, smax=None, option='anomaly'):
+        # Baseline
+        read_plot_ts_slice(baseline_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin, tmax=tmax, smin=smin, smax=smax, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'.png')
+        # Each polynya
+        for i in range(1, num_expts-1):
+            ptype = polynya_types[i]
+            curr_file = base_dir+case_dir[i]+avg_file
+            if option == 'absolute':
+                read_plot_ts_slice(curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin, tmax=tmax, smin=smin, smax=smax, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'.png')
+            elif option == 'anomaly':
+                read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'_diff.png')
+            else:
+                print 'Error (make_slices_lon): invalid option ' + option
+                sys.exit()
 
-    # Now plot a zoomed-in slice of absolute values
-    for i in range(num_expts-1):
-        ptype = polynya_types[i]
-        if ptype is None:
-            ptype = 'baseline'
-        read_plot_ts_slice(base_dir+case_dir[i]+avg_file, grid=grid, lon0=-50, hmin=-77, hmax=-70, zmin=-1000, tmin=-1.9, tmax=0.5, smin=34, smax=34.65, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_50W_zoom_'+ptype+'.png')
+    # 50W, where WDW comes onto shelf
+    make_slices_lon(-50, '50W')
+    # Zoomed in, absolute
+    make_slices_lon(-50, '50W_zoom', option='absolute', hmin=-77, hmax=-70, zmin=-1000, tmin=-1.9, tmax=0.5, smin=34, smax=34.65)
+    # Fimbul
+    make_slices_lon(-1, 'fimbul', hmax=-69, zmin=-1000)
+    # Riiser-Larsen
+    make_slices_lon(-19, 'rl', hmax=-72, zmin=-1000)
 
+    
 
 # Make all the plots.
 def prelim_all_plots (base_dir='./', fig_dir='./'):
