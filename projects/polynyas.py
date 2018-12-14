@@ -169,7 +169,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     grid = Grid(base_dir+grid_dir)
 
     # 2x2 lat-lon plot of polynya masks
-    '''fig, gs = set_panels('2x2C0')
+    fig, gs = set_panels('2x2C0')
     for i in range(1, num_expts-1):
         # Read polynya mask from binary
         data = read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64)
@@ -189,7 +189,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
     # Main title
     plt.suptitle('Imposed convective regions (red)', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')'''
+    finished_plot(fig, fig_name=fig_dir+'polynya_masks.png')
 
     # Inner function to read a lat-lon variable from a file and process appropriately
     def read_and_process (var, file_path, return_vel_components=False):
@@ -243,6 +243,28 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
             print 'Error (plot_latlon_5panel): invalid option ' + option
             sys.exit()
 
+        # Get bounds
+        if zoom_shelf_break:
+            xmin = xmin_sfc
+            xmax = -20
+            ymin = ymin_sfc
+            ymax = -72
+        elif zoom_ewed:
+            xmin = -30
+            xmax = 5
+            ymin = -77
+            ymax = -68
+        elif include_shelf or zoom_fris:
+            xmin = None
+            xmax = None
+            ymin = None
+            ymax = None
+        else:
+            xmin = xmin_sfc
+            xmax = None
+            ymin = ymin_sfc
+            ymax = None
+
         # Read data from each simulation, parcelled into a 5-item list
         data = []
         if var == 'vel':
@@ -271,7 +293,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                     # Save anomaly from baseline
                     data.append(data_tmp-data[0])
             # Get min and max values and update global min/max as needed
-            vmin0_tmp, vmax0_tmp = var_min_max(data[i], grid, zoom_fris=zoom_fris)
+            vmin0_tmp, vmax0_tmp = var_min_max(data[i], grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             if option=='absolute' or i==0:
                 vmin0 = min(vmin0, vmin0_tmp)
                 vmax0 = max(vmax0, vmax0_tmp)
@@ -305,26 +327,6 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
                 figsize = (16, 7)
             zoom_string = ''
             chunk = 10
-        if include_shelf or zoom_fris:
-            xmin = None
-            xmax = None
-            ymin = None
-            ymax = None
-        elif zoom_shelf_break:
-            xmin = xmin_sfc
-            xmax = -20
-            ymin = ymin_sfc
-            ymax = -72
-        elif zoom_ewed:
-            xmin = -30
-            xmax = 10
-            ymin = -77
-            ymax = -65
-        else:
-            xmin = xmin_sfc
-            xmax = None
-            ymin = ymin_sfc
-            ymax = None
 
         # Make the plot
         if option == 'absolute':
@@ -375,7 +377,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     # end inner function
 
     # Now make 5-panel plots of absolute variables
-    '''plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', include_shelf=False, vmin=0, vmax=1)
+    plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', include_shelf=False, vmin=0, vmax=1)
     plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', include_shelf=False, vmin=0)
     plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', ctype='vel', vmin=0)
     # 5-panel plots of baseline absolute values, and anomalies for other simulations, zoomed both in and out
@@ -391,11 +393,11 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('mld', 'Mixed layer depth (m), 1979-2016', option='anomaly', include_shelf=False, zoom_shelf_break=True, vmax_diff=100, extend_diff='max')
     plot_latlon_5panel('rho', r'Potential density (kg/m$^3$, vertical average), 1979-2016', option='anomaly', vmin=1027.5, extend='min', vmin_diff=-0.05, vmax_diff=0.05, extend_diff='both')
     plot_latlon_5panel('drho_dlat', r'Density gradient (kg/m$^3$/$^{\circ}$lat, vertical average), 1979-2016', option='anomaly', vmin=-25, vmax=25, extend='min', vmin_diff=-0.1, vmax_diff=0.1, extend_diff='both')
-    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmax=8e16, extend='max', vmin_diff=-5e15, vmax_diff=5e15, extend_diff='both')'''
-    plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True)
+    plot_latlon_5panel('HfC', 'Heat content relative to in-situ freezing point (J), 1979-2016', option='anomaly', zoom_fris=True, vmax=8e16, extend='max', vmin_diff=-5e15, vmax_diff=5e15, extend_diff='both')
+    plot_latlon_5panel('bwtemp', 'Bottom water temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.6, extend_diff='min')
     plot_latlon_5panel('bwsalt', 'Bottom water salinity (psu), 1979-2016', option='anomaly', zoom_ewed=True)
-    plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True)
-    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_ewed=True)
+    plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True, vmax=6, extend='max', vmax_diff=3, extend_diff='max')
+    plot_latlon_5panel('vel', 'Barotropic velocity (m/s), 1979-2016', option='anomaly', ctype='vel', zoom_ewed=True, vmax=0.03, extend='max', vmax_diff=0.03, vmin_diff=-0.03, extend_diff='both')
 
 
 # Plot bwtemp and bwsalt anomalies for each year.
