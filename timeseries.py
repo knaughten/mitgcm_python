@@ -490,7 +490,7 @@ def set_parameters (var):
         elif var == 'hssw_vol':
             tmin = -1.8
             tmax = -1.9
-            smin = 34.55 psu
+            smin = 34.55
             title = 'Volume of HSSW'
         elif var == 'wdw_vol':
             tmin = 0
