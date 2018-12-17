@@ -16,7 +16,7 @@ from plot_utils.labels import latlon_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf, find_aice_min_max
-from constants import deg_string
+from constants import deg_string, sec_per_year
 
 
 # Basic lat-lon plot of any variable.
@@ -172,8 +172,8 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface, surface salt flux.
 
 # Arguments:
-# var: 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx'
-# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, snow thickness, mixed layer depth, free surface (all m), or surface salt flux (kg/m^2/s) already masked with the land and ice shelf
+# var: 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'iceprod'
+# data: 2D (lat x lon) array of sea ice concentration (fraction), sea ice thickness, snow thickness, mixed layer depth, free surface (all m), surface salt flux (kg/m^2/s), or sea ice production (m/y) already masked with the land and ice shelf
 # grid: Grid object
 
 # Optional keyword arguments:
@@ -199,6 +199,8 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
         title = 'Free surface (m)'
     elif var == 'saltflx':
         title = r'Surface salt flux (kg/m$^2$/s)'
+    elif var == 'iceprod':
+        title = 'Sea ice production (m/y)'
     latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
 
 
@@ -320,6 +322,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 #      'vel': horizontal velocity: magnitude overlaid with vectors
 #      'velice': sea ice velocity: magnitude overlaid with vectors
 #      'psi': horizontal velocity streamfunction
+#      'iceprod': sea ice production
 # file_path: path to NetCDF file containing the necessary variable:
 #            'ismr': SHIfwFlx
 #            'bwtemp': THETA
@@ -336,6 +339,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 #            'vel': UVEL and VVEL
 #            'velice': SIuice and SIvice
 #            'psi': PsiVEL
+#            'iceprod': SIdHbOCN, SIdHbATC, SIdHbATO, SIdHbFLO
 #            If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
 
 # There are three ways to deal with the Grid object:
@@ -415,6 +419,10 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         vice = read_and_mask('SIvice', 'land_ice', check_second=True, gtype='v')
     if var == 'psi':
         psi = read_and_mask('PsiVEL', '3d')
+    if var == 'iceprod':
+        iceprod = read_and_mask('SIdHbOCN', 'land_ice', check_second=True) + read_and_mask('SIdHbATC', 'land_ice', check_second=True) + read_and_mask('SIdHbATO', 'land_ice', check_second=True) + read_and_mask('SIdHbFLO', 'land_ice', check_second=True)
+        # Convert from m/s to m/y
+        iceprod *= sec_per_year
         
     # Plot
     if var == 'ismr':
@@ -447,6 +455,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     elif var == 'psi':
         plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+    elif var == 'iceprod':
+        plot_2d_noshelf('iceprod', iceprod, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
         sys.exit()
@@ -455,7 +465,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 # NetCDF interface for difference plots. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
 
 # Arguments are largely the same as read_plot_latlon, here are the exceptions:
-# var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice'
+# var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod'
 # file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice').
 # It is assumed they cover the same period of time. If they don't, you can set time_index_2, etc. for the corresponding timesteps in file_path_2 which match time_index, etc. for file_path_1.
 
@@ -524,6 +534,14 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
     if var == 'velice':
         uice_1, uice_2 = read_and_mask_both('SIuice', 'land_ice', check_second=True)
         vice_1, vice_2 = read_and_mask_both('SIvice', 'land_ice', check_second=True)
+    elif var == 'iceprod':
+        iceprod_1a, iceprod_2a = read_and_mask_both('SIdHbOCN', 'land_ice', check_second=True)
+        iceprod_1b, iceprod_2b = read_and_mask_both('SIdHbATC', 'land_ice', check_second=True)
+        iceprod_1c, iceprod_2c = read_and_mask_both('SIdHbATO', 'land_ice', check_second=True)
+        iceprod_1d, iceprod_2d = read_and_mask_both('SIdHbFLO', 'land_ice', check_second=True)
+        # Add the terms and convert to m/y
+        iceprod_1 = (iceprod_1a + iceprod_1b + iceprod_1c + iceprod_1d)*sec_per_year
+        iceprod_2 = (iceprod_2a + iceprod_2b + iceprod_2c + iceprod_2d)*sec_per_year
 
     # Do necessary conversions and get final difference field; also set title
     if var == 'ismr':
@@ -573,6 +591,9 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         speed_2 = prepare_vel(uice_2, vice_2, grid, vel_option='ice')[0]
         data_diff = speed_2 - speed_1
         title = 'Change in sea ice speed (m/s)'
+    elif var == 'iceprod':
+        data_diff = iceprod_2 - iceprod_1
+        title = 'Change in sea ice production (m/y)'
     else:
         print 'Error (read_plot_latlon_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
@@ -580,7 +601,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
     # Choose value for include_shelf
     if var in ['ismr', 'bwtemp', 'bwsalt', 'vel']:
         include_shelf = True
-    elif var in ['sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'velice']:
+    elif var in ['sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'velice', 'iceprod']:
         include_shelf = False
 
     # Plot
