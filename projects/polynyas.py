@@ -159,6 +159,10 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('salt_polynya', 'Salinity in polynya', 'psu', use_baseline=False)
     plot_polynya_timeseries('sws_shelf_temp', 'FRIS continental shelf temperature', deg_string+'C', percent_diff=False)
     plot_polynya_timeseries('sws_shelf_salt', 'FRIS continental shelf salinity', 'psu', percent_diff=False)
+    plot_polynya_timeseries('isw_vol', 'Volume of ISW', '% of domain')
+    plot_polynya_timeseries('hssw_vol', 'Volume of HSSW', '% of domain')
+    plot_polynya_timeseries('wdw_vol', 'Volume of WDW', '% of domain')
+    plot_polynya_timeseries('mwdw_vol', 'Volume of MWDW', '% of domain')
 
 
 # Make a bunch of preliminary lat-lon plots.
