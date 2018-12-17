@@ -69,11 +69,17 @@ def get_gridded (values, grid, lon0=None, lat0=None, gtype='t'):
     lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
     # Figure out which direction we're in
     if lon0 is not None:
-        haxis = lat
-        nh = grid.ny
+        if gtype in ['t', 'u']:
+            haxis = lat[:-1]
+        elif gtype in ['v', 'psi']:
+            haxis = lat[1:]
+        nh = grid.ny-1
     elif lat0 is not None:
-        haxis = lon
-        nh = grid.nx
+        if gtype in ['t', 'v']:
+            haxis = lon[:-1]
+        elif gtype in ['u', 'psi']:
+            haxis = lon[1:]
+        nh = grid.nx-1
     return values.reshape([grid.nz, nh]), haxis, grid.z
 
 
