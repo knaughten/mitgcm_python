@@ -532,7 +532,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         for i in range(num_expts-1):
             ptype = polynya_types[i]
             if ptype is None:
-                ptype = ''
+                ptype = 'baseline'
             curr_file = base_dir+case_dir[i]+avg_file
             read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+0.025,vmax,0.025), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
 
