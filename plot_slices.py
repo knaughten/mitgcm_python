@@ -183,7 +183,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 # eosType, rhoConst, Tref, Sref, tAlpha, sBeta: as in function density. Default MDJWF, so none of the others matter.
 # ref_depth: reference depth for density (positive, metres - assumed equal to dbar)
 
-def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
+def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=0):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -234,7 +234,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
 
 
 # Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp', 'salt', or 'rho'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=0):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
