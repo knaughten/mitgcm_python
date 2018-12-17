@@ -74,7 +74,7 @@ def get_gridded (values, grid, lon0=None, lat0=None, gtype='t'):
     elif lat0 is not None:
         haxis = lon
         nh = grid.nx
-    return values.reshape([grid.nz, grid.nh]), haxis, grid.z
+    return values.reshape([grid.nz, nh]), haxis, grid.z
 
 
 # Basic slice plot of any variable.
