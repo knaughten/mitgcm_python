@@ -19,7 +19,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
-from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
+from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing
 
@@ -502,7 +502,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lon_diff.png')
         read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lat0=lat0, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_polynya_'+ptype+'_lat_diff.png')
 
-    # Inner function for baseline and polynya slices (absolute or anomaly) through a given longitude, with given bounds
+    # Inner function for baseline and polynya T-S slices (absolute or anomaly) through a given longitude, with given bounds
     def make_slices_lon (lon0, string, hmin=None, hmax=None, zmin=None, tmin=None, tmax=None, smin=None, smax=None, tmin_diff=None, tmax_diff=None, smin_diff=None, smax_diff=None, option='anomaly'):
         # Baseline
         read_plot_ts_slice(baseline_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin, tmax=tmax, smin=smin, smax=smax, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'.png')
@@ -526,6 +526,24 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     make_slices_lon(-1, 'fimbul', hmax=-69, zmin=-1500, option='absolute', tmin=-1.9, tmax=0.5, smin=34, smax=34.7)
     # Riiser-Larsen
     make_slices_lon(-19, 'rl', hmax=-72, zmin=-1000)
+
+    # Inner function for density slices, with isopycnals contoured at 0.025 kg/m^3 intervals, and given colour bounds. Repeat for each simulation with absolute values.
+    def density_slices (lon0, string, hmin=None, hmax=None, zmin=None, vmin=None, vmax=None):
+        for i in range(num_expts-1):
+            ptype = polynya_types[i]
+            if ptype is None:
+                ptype = ''
+            curr_file = base_dir+case_dir[i]+avg_file
+            read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+0.025,vmax,0.025), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
+
+    density_slices(0, '0E', hmax=-65, zmin=-2000, vmin=1027.3, vmax=1027.85)
+    density_slices(-20, '20W', hmax=-70, zmin=-1000, vmin=1027.3, vmax=1027.8)
+    density_slices(-30, '30W', hmin=-78, hmax=-70, zmin=-1500, vmin=1027.5, vmax=1027.82)
+    density_slices(-39, '39W', hmax=-65, zmin=-2000, vmin=1027.6, vmax=1027.85)
+    density_slices(-45, '45W', hmin=-78.5, hmax=-65, zmin=-2000, vmin=1027.6, vmax=1027.85)
+    density_slices(-48, '48W', hmin=-79, hmax=-65, zmin=-1500, vmin=1027.6, vmax=1027.85)
+    density_slices(-50, '50W', hmin=-79, hmax=-65, zmin=-1500, vmin=1027.6, vmax=1027.85)
+    density_slices(-52, '52W', hmin=-80.5, hmax=-65, zmin=-2000, vmin=1027.6, vmax=1027.85)
 
     
 
