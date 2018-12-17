@@ -106,8 +106,8 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
     title, units = set_parameters(var)[2:4]
 
     if precomputed:
-        # Read the time array
-        time = netcdf_time(file_path)
+        # Read the time array; don't need to back up one month
+        time = netcdf_time(file_path, monthly=False)
 
     if var == 'fris_mass_balance':
         if precomputed:
@@ -138,8 +138,8 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
 
     if precomputed:
         # Read the time arrays
-        time_1 = netcdf_time(file_path_1)
-        time_2 = netcdf_time(file_path_2)
+        time_1 = netcdf_time(file_path_1, monthly=False)
+        time_2 = netcdf_time(file_path_2, monthly=False)
 
     # Inner function to read a timeseries from both files and calculate the differences, trimming if needed. Only useful if precomputed=True.
     def read_and_trim (var_name):

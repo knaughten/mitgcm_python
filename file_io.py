@@ -108,7 +108,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 # var_name: name of time axis. Default 'time'.
 # t_start, t_end: as in function read_netcdf
 # return_date: boolean indicating to return the time axis as Date objects (so you can easily get year, month, day as attributes). Default True. If False, will just return the axis as scalars.
-# monthly: indicates that the output is monthly averaged, so everything will be stamped with the first day of the next month. If True, the function will subtract half a month from each timestamp, so it's in the midpoint of the correct month.
+# monthly: indicates that the output is monthly averaged, so everything will be stamped with the first day of the next month. If True, the function will subtract one month from each timestamp, so it's at the beginning of the correct month.
 
 # Output: 1D numpy array containing the time values (either scalars or Date objects)
 

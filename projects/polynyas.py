@@ -109,8 +109,8 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
         for i in range(i0, num_expts):
             file_path = base_dir + case_dir[i] + timeseries_file
             if i==i0:
-                # Read the time axis
-                time = netcdf_time(file_path)
+                # Read the time axis; don't need to back up one month as that was already done during precomputation
+                time = netcdf_time(file_path, monthly=False)
             # Read the variable
             data_tmp = read_netcdf(file_path, var_name)
             if annual:
