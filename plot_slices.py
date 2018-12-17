@@ -33,7 +33,7 @@ def get_loc (loc0, lon0=None, lat0=None):
 
 # Helper function to make a basic slice plot.
 # Reduces duplicated code between slice_plot and slice_plot_diff.
-def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
+def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
 
     # Set colour map
     cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
@@ -45,6 +45,12 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
     fig, ax = plt.subplots()
     # Add patches
     img = plot_slice_patches(ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax, cmap=cmap)
+    if contours is not None:
+        # Overlay contours
+        if None in [data_grid, haxis, zaxis]:
+            print 'Error (make_slice_plot): need to specify data_grid, haxis, and zaxis to do contours'
+            sys.exit()
+        plt.contour(haxis, zaxis, data_grid, levels=contours, colors='black')
     # Make nice axis labels
     slice_axes(ax, h_axis=h_axis)
     # Add a colourbar
@@ -55,6 +61,20 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Given a list of values output by slice_patches, restructure them back into the grid, and choose the correct axes. This is required for overlaying contours.
+def get_gridded (values, grid, lon0=None, lat0=None, gtype='t'):
+
+    lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
+    # Figure out which direction we're in
+    if lon0 is not None:
+        haxis = lat
+        nh = grid.ny
+    elif lat0 is not None:
+        haxis = lon
+        nh = grid.nx
+    return values.reshape([grid.nz, grid.nh]), haxis, grid.z
 
 
 # Basic slice plot of any variable.
@@ -68,12 +88,13 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
 # lon0, lat0: as in function slice_patches
 # hmin, hmax, zmin, zmax: as in function slice_patches
 # vmin, vmax: desired min and max values for colour map
+# contours: list of values for which to overlay black contours
 # ctype: 'basic' or 'plusminus', as in function set_colours
 # title: a title to add to the plot (not including lon0 or lat0, this will be added)
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, ctype='basic', title='', date_string=None, fig_name=None):
+def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, ctype='basic', title='', date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
@@ -86,12 +107,19 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
     if vmax is None:
         vmax = vmax_tmp
 
+    data_grid = None
+    haxis = None
+    zaxis = None
+    if contours is not None:
+        # Will need gridded data and axes too
+        data_grid, haxis, zaxis = get_gridded(values, grid, lon0=lon0, lat0=lat0, gtype=gtype)
+        
     # Plot
-    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
+    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
 
 
 # Slice plot showing difference between two simulations (2 minus 1). It is assumed the corresponding data arrays cover the same period of time.
-def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, title=None, date_string=None, fig_name=None):
+def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, title=None, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
@@ -113,8 +141,14 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
     if vmax is None:
         vmax = vmax_tmp
 
+    data_grid = None
+    haxis = None
+    zaxis = None
+    if contours is not None:
+        data_grid, haxis, zaxis = get_gridded(values_diff, grid, lon0=lon0, lat0=lat0, gtype=gtype)
+
     # Plot
-    make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, ctype='plusminus', extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
+    make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype='plusminus', extend=extend, title=title, date_string=date_string, fig_name=fig_name)    
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice slice plot.
@@ -142,13 +176,14 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
 # hmin, hmax, zmin, zmax: as in function slice_patches
 # vmin, vmax: as in function slice_plot
+# contours: list of values for which to overlay black contours
 # date_string: as in function slice_plot. If time_index is defined and date_string isn't, date_string will be automatically determined based on the calendar in file_path.
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a second variable which is necessary and not contained in file_path. It doesn't matter which is which.
 # eosType, rhoConst, Tref, Sref, tAlpha, sBeta: as in function density. Default MDJWF, so none of the others matter.
-# ref_depth: reference depth for density (positive, metres)
+# ref_depth: reference depth for density (positive, metres - assumed equal to dbar)
 
-def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
+def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, second_file_path=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -180,26 +215,26 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
 
     # Plot
     if var == 'temp':
-        slice_plot(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+        slice_plot(temp, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
-        slice_plot(salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Salinity (psu)', date_string=date_string, fig_name=fig_name)
+        slice_plot(salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Salinity (psu)', date_string=date_string, fig_name=fig_name)
     elif var == 'tminustf':
-        slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Difference from in-situ freezing point ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+        slice_plot(t_minus_tf(temp, salt, grid), grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, ctype='plusminus', title='Difference from in-situ freezing point ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'rho':
         # Calculate density
         rho = mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
-        slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
+        slice_plot(rho, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
-        slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
-        slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
 
 
 # Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp', 'salt', or 'rho'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=2000):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
@@ -232,20 +267,20 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     # Read variables and make plots
     if var == 'temp':
         temp_1, temp_2 = read_and_mask_both('THETA')
-        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
         salt_1, salt_2 = read_and_mask_both('SALT')     
-        slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
     elif var == 'rho':
         rho_1, rho_2 = read_and_mask_both('rho')
-        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)        
+        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)        
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
 
 
 # Similar to make_slice_plot, but creates a 2x1 plot containing temperature and salinity.
-def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=None, lat0=None, extend=['neither', 'neither'], diff=False, date_string=None, fig_name=None):
+def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=None, lat0=None, tcontours=None, scontours=None, temp_grid=None, salt_grid=None, haxis=None, zaxis=None, extend=['neither', 'neither'], diff=False, date_string=None, fig_name=None):
 
     # Set colour map
     if diff:
@@ -266,6 +301,8 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
     vmax = [tmax, smax]
     cmap = [cmap_t, cmap_s]
     cax = [cax_t, cax_s]
+    contours = [tcontours, scontours]
+    data_grid = [temp_grid, salt_grid]
     if diff:
         title = ['Change in temperature ('+deg_string+'C)', 'Change in salinity (psu)']
     else:
@@ -274,6 +311,12 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
         ax = plt.subplot(gs[0,i])
         # Plot patches
         img = plot_slice_patches(ax, patches, values[i], hmin, hmax, zmin, zmax, vmin[i], vmax[i], cmap=cmap[i])
+        if contours[i] is not None:
+            # Overlay contours
+            if None in [data_grid[i], haxis, zaxis]:
+                print 'Error (make_ts_slice_plot): need to specify temp_grid/salt_grid, haxis, and zaxis to do tcontours/scontours'
+                sys.exit()
+            plt.contour(haxis, zaxis, data_grid[i], levels=contours[i], colors='black')
         # Nice axes
         slice_axes(ax, h_axis=h_axis)
         if i == 1:
@@ -294,7 +337,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
 
 
 # Similar to slice_plot, but creates a 2x1 plot containing temperature and salinity.        
-def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None):
+def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbars should do
     extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
@@ -313,12 +356,22 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, hmin=None, hmax=None,
     if smax is None:
         smax = smax_tmp
 
+    temp_grid = None
+    salt_grid = None
+    haxis = None
+    zaxis = None
+    if tcontours is not None:
+        temp_grid, haxis, zaxis = get_gridded(temp_values, grid, lon0=lon0, lat0=lat0)
+    if scontours is not None:
+        salt_grid, haxis, zaxis = get_gridded(salt_values, grid, lon0=lon0, lat0=lat0)
+        
+
     # Make the plot
-    make_ts_slice_plot(patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, date_string=date_string, fig_name=fig_name)
+    make_ts_slice_plot(patches, temp_values, salt_values, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, tcontours=tcontours, scontours=scontours, temp_grid=temp_grid, salt_grid=salt_grid, haxis=haxis, zaxis=zaxis, extend=extend, date_string=date_string, fig_name=fig_name)
 
 
 # Difference plot for temperature and salinity, between two simulations (2 minus 1).
-def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None):
+def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbars should do
     extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
@@ -347,8 +400,17 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
     if smax is None:
         smax = smax_tmp
 
+    temp_grid = None
+    salt_grid = None
+    haxis = None
+    zaxis = None
+    if tcontours is not None:
+        temp_grid, haxis, zaxis = get_gridded(temp_values_diff, grid, lon0=lon0, lat0=lat0)
+    if scontours is not None:
+        salt_grid, haxis, zaxis = get_gridded(salt_values_diff, grid, lon0=lon0, lat0=lat0)
+
     # Plot
-    make_ts_slice_plot(patches, temp_values_diff, salt_values_diff, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, extend=extend, diff=True, date_string=date_string, fig_name=fig_name)
+    make_ts_slice_plot(patches, temp_values_diff, salt_values_diff, loc0, hmin, hmax, zmin, zmax, tmin, tmax, smin, smax, lon0=lon0, lat0=lat0, tcontours=tcontours, scontours=scontours, temp_grid=temp_grid, salt_grid=salt_grid, haxis=haxis, zaxis=zaxis, extend=extend, diff=True, date_string=date_string, fig_name=fig_name)
     
 
 # Similar to read_plot_slice, but creates a 2x1 plot containing temperature and salinity.
@@ -362,11 +424,12 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
 # hmin, hmax, zmin, zmax: as in function slice_patches
 # tmin, tmax, smin, smax: bounds on temperature and salinity, for the colourbars
+# tcontours, scontours: lists of temperature/salinity values for which to overlay contours
 # date_string: as in function slice_plot. If time_index is defined and date_string isn't, date_string will be automatically determined based on the calendar in file_path.
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a THETA or SALT if this is not contained in file_path. It doesn't matter which is which.
 
-def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path=None):
+def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path=None):
 
     grid = choose_grid(grid, file_path)
     check_single_time(time_index, time_average)
@@ -388,11 +451,11 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, time_index=N
     salt = read_and_mask('SALT')
 
     # Plot
-    ts_slice_plot(temp, salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, date_string=date_string, fig_name=fig_name)
+    ts_slice_plot(temp, salt, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, tcontours=tcontours, scontours=scontours, date_string=date_string, fig_name=fig_name)
 
 
 # Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period. Otherwise you can set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
+def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
 
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
@@ -425,7 +488,7 @@ def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat
     salt_1, salt_2 = read_and_mask_both('SALT')
 
     # Plot
-    ts_slice_plot_diff(temp_1, temp_2, salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, date_string=date_string, fig_name=fig_name)    
+    ts_slice_plot_diff(temp_1, temp_2, salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, tcontours=tcontours, scontours=scontours, date_string=date_string, fig_name=fig_name)    
     
 
 # Plot a slice of vertical resolution (dz).
