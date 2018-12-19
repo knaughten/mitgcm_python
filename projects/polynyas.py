@@ -519,7 +519,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
                 sys.exit()
 
     # 50W, where WDW comes onto shelf
-    make_slices_lon(-50, '50W')
+    make_slices_lon(-50, '50W', hmin=-79, hmax=-65, zmin=-1500)
     # Zoomed in, absolute
     make_slices_lon(-50, '50W_zoom', option='absolute', hmin=-77, hmax=-70, zmin=-1000, tmin=-1.9, tmax=0.5, smin=34, smax=34.65)
     # Fimbul
