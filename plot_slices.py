@@ -206,8 +206,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
         else:
             file_path_use = file_path
         # Read and mask the data
-        data = mask_3d(read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype=gtype)
-        return data
+        return mask_3d(read_netcdf(file_path_use, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype=gtype)
 
     # Read necessary variables from NetCDF file and mask appropriately
     if var in ['temp', 'tminustf', 'rho']:
@@ -233,13 +232,13 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, time_index
     elif var == 'u':
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
-        slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
 
 
-# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). Only works for var='temp', 'salt', or 'rho'. If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
+# Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
 def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=0):
 
     # Figure out if the two files use different time indices
@@ -251,23 +250,25 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from a NetCDF file and mask appropriately
-    def read_and_mask (var_name, file_path, check_diff_time=False):
-        if var_name == 'rho':
-            # For density, need to read 2 variables
+    def read_and_mask (var_name, file_path, check_diff_time=False, gtype='t'):
+        if var_name in ['tminustf', 'rho']:
+            # Need to read 2 variables
             temp = read_and_mask('THETA', file_path, check_diff_time=check_diff_time)
             salt = read_and_mask('SALT', file_path, check_diff_time=check_diff_time)
-            # Calculate density
-            return mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
+            if var_name == 'rho':
+                return mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
+            elif var_name == 'tminustf':
+                return t_minus_tf(temp, salt, grid)        
         else:
             if check_diff_time and diff_time:
-                return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid)
+                return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid, gtype=gtype)
             else:
-                return mask_3d(read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid)
+                return mask_3d(read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype=gtype)
 
     # Interface to call read_and_mask for each variable
-    def read_and_mask_both (var_name):
-        data1 = read_and_mask(var_name, file_path_1)
-        data2 = read_and_mask(var_name, file_path_2, check_diff_time=True)
+    def read_and_mask_both (var_name, gtype='t'):
+        data1 = read_and_mask(var_name, file_path_1, gtype=gtype)
+        data2 = read_and_mask(var_name, file_path_2, check_diff_time=True, gtype=gtype)
         return data1, data2
 
     # Read variables and make plots
@@ -277,9 +278,18 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     elif var == 'salt':
         salt_1, salt_2 = read_and_mask_both('SALT')     
         slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
+    elif var == 'tminustf':
+        tmtf_1, tmtf_2 = read_and_mask_both('tminustf')
+        slice_plot_diff(tmtf_1, tmtf_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in difference from in-situ freezing point ('+deg_string+')', date_string=date_string, fig_name=fig_name)
     elif var == 'rho':
         rho_1, rho_2 = read_and_mask_both('rho')
-        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)        
+        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
+    elif var == 'u':
+        u_1, u_2 = read_and_mask_both('UVEL', gtype='u')
+        slice_plot_diff(u_1, u_2, grid, gtype='u', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'v':
+        v_1, v_2 = read_and_mask_both('VVEL', gtype='v')
+        slice_plot_diff(v_1, v_2, grid, gtype='v', lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()

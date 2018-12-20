@@ -548,9 +548,12 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     density_slices(-30, 'polynya_30W', vmin=1027.6, vmax=1027.86, contour_step=0.01)
 
     # Density slices through Maud Rise polynya each year
+    vmin = 1027.7
+    vmax = 1027.87
+    contour_step = 0.01
     for year in range(start_year, end_year+1):
         file_path = base_dir + case_dir[1] + file_head + str(year) + file_tail
-        read_plot_slice('rho', file_path, grid=grid, lon0=0, time_index=0, vmin=1027.7, vmax=1027.87, contours=np.arange(vmin+0.01, vmax, 0.01), fig_name=fig_dir+'rho_slice_maud_rise_'+str(year)+'.png')
+        read_plot_slice('rho', file_path, grid=grid, lon0=0, time_index=0, vmin=vmin, vmax=vmax, contours=np.arange(vmin+contour_step, vmax, contour_step), fig_name=fig_dir+'rho_slice_maud_rise_'+str(year)+'.png')
 
     
 
