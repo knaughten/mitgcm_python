@@ -528,13 +528,13 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     make_slices_lon(-19, 'rl', hmax=-72, zmin=-1000)
 
     # Inner function for density slices, with isopycnals contoured at 0.025 kg/m^3 intervals, and given colour bounds. Repeat for each simulation with absolute values.
-    def density_slices (lon0, string, hmin=None, hmax=None, zmin=None, vmin=None, vmax=None):
+    def density_slices (lon0, string, hmin=None, hmax=None, zmin=None, vmin=None, vmax=None, contour_step=0.025):
         for i in range(num_expts-1):
             ptype = polynya_types[i]
             if ptype is None:
                 ptype = 'baseline'
             curr_file = base_dir+case_dir[i]+avg_file
-            read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+0.025,vmax,0.025), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
+            read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+0.025,vmax,contour_step), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
 
     density_slices(0, '0E', hmax=-65, zmin=-2000, vmin=1027.3, vmax=1027.85)
     density_slices(-20, '20W', hmax=-70, zmin=-1000, vmin=1027.3, vmax=1027.8)
@@ -544,6 +544,8 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     density_slices(-48, '48W', hmin=-79, hmax=-65, zmin=-1500, vmin=1027.6, vmax=1027.85)
     density_slices(-50, '50W', hmin=-79, hmax=-65, zmin=-1500, vmin=1027.6, vmax=1027.85)
     density_slices(-52, '52W', hmin=-80.5, hmax=-65, zmin=-2000, vmin=1027.6, vmax=1027.85)
+    density_slices(0, 'polynya_0E', vmin=1027.7, vmax=1027.87, contour_step=0.01)
+    density_slices(-30, 'polynya_30W', vmin=1027.6, vmax=1027.86, contour_step=0.01)
 
     
 
