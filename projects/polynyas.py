@@ -534,7 +534,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
             if ptype is None:
                 ptype = 'baseline'
             curr_file = base_dir+case_dir[i]+avg_file
-            read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+0.025,vmax,contour_step), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
+            read_plot_slice('rho', curr_file, grid=grid, lon0=lon0, time_index=0, hmin=hmin, hmax=hmax, zmin=zmin, vmin=vmin, vmax=vmax, contours=np.arange(vmin+contour_step,vmax,contour_step), fig_name=fig_dir+'rho_slice_'+string+'_'+ptype+'.png')
 
     density_slices(0, '0E', hmax=-65, zmin=-2000, vmin=1027.3, vmax=1027.85)
     density_slices(-20, '20W', hmax=-70, zmin=-1000, vmin=1027.3, vmax=1027.8)
@@ -546,6 +546,11 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     density_slices(-52, '52W', hmin=-80.5, hmax=-65, zmin=-2000, vmin=1027.6, vmax=1027.85)
     density_slices(0, 'polynya_0E', vmin=1027.7, vmax=1027.87, contour_step=0.01)
     density_slices(-30, 'polynya_30W', vmin=1027.6, vmax=1027.86, contour_step=0.01)
+
+    # Density slices through Maud Rise polynya each year
+    for year in range(start_year, end_year+1):
+        file_path = base_dir + case_dir[1] + file_head + str(year) + file_tail
+        read_plot_slice('rho', file_path, grid=grid, lon0=0, time_index=0, vmin=1027.7, vmax=1027.87, contours=np.arange(vmin+0.01, vmax, 0.01), fig_name=fig_dir+'rho_slice_maud_rise_'+str(year)+'.png')
 
     
 
