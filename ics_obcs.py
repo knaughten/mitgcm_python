@@ -127,24 +127,26 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         ncfile.close()
 
 
-# Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are two different assumptions we could make:
+# Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are three different assumptions we could make:
 # 1. Assume the displaced water has a constant temperature and salinity (default)
 # 2. Use nearest-neighbour extrapolation within the cavity to set the temperature and salinity of the displaced water. This is equivalent to finding the temperature and salinity of the surface layer immediately beneath the ice base, and extrapolating it up vertically at every point.
+# 3. The user did something else ahead of time, and their initial temperature and salinity files already have the mask filled in.
 
 # Arguments:
 # grid: Grid object OR path to grid directory OR path to NetCDF file
 # out_file: path to desired output file
 
 # Optional keyword arguments:
-# option: 'constant' or 'nearest' as described above
+# option: 'constant', 'nearest', or 'precomputed' as described above
 # constant_t, constant_s: if option='constant', temperature and salinity to use
 # ini_temp_file, ini_salt_file: if option='nearest', paths to initial conditions files (binary) for temperature and salinity
 # eosType: 'MDJWF', 'JMD95', or 'LINEAR'. Must match value in "data" namelist.
 # rhoConst: reference density as in MITgcm's "data" namelist
 # tAlpha, sBeta, Tref, Sref: if eosType='LINEAR', set these to match your "data" namelist.
 # prec: as in function sose_ics
+# check_grid: boolean indicating that grid might be a file/directory path rather than a Grid object. Switch this off if you're using a dummy grid which has all the necessary variables but is not a Grid object.
 
-def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64):
+def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64, check_grid=True):
 
     errorTol = 1e-13  # convergence criteria
 
@@ -156,19 +158,20 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
         # 1D arrays: only varies over depth
         temp = np.zeros(grid.nz) + constant_t
         salt = np.zeros(grid.nz) + constant_s
-    elif option == 'nearest':
+    elif option in ['nearest', 'precomputed']:
         # 3D arrays read from file
         temp = read_binary(ini_temp_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
         salt = read_binary(ini_salt_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
-        # Now fill in the ice shelves
-        # Select the layer immediately below the ice shelves and tile to make it 3D
-        temp_top = xy_to_xyz(select_top(temp, masked=False, grid=grid), grid)
-        salt_top = xy_to_xyz(select_top(salt, masked=False, grid=grid), grid)
-        # Fill the 3D mask with these values
-        # It doesn't matter that the bathymetry gets filled too, because pressure is integrated from the top down
-        index = grid.hfac==0
-        temp[index] = temp_top[index]
-        salt[index] = salt_top[index]
+        if option == 'nearest':
+            # Now fill in the ice shelves
+            # Select the layer immediately below the ice shelves and tile to make it 3D
+            temp_top = xy_to_xyz(select_top(temp, masked=False, grid=grid), grid)
+            salt_top = xy_to_xyz(select_top(salt, masked=False, grid=grid), grid)
+            # Fill the 3D mask with these values
+            # It doesn't matter that the bathymetry gets filled too, because pressure is integrated from the top down
+            index = grid.hfac==0
+            temp[index] = temp_top[index]
+            salt[index] = salt_top[index]
     else:
         print 'Error (calc_load_anomaly): invalid option ' + option
         sys.exit()
@@ -179,7 +182,7 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
     dz_merged[1::2] = abs(grid.z_edges[1:] - grid.z)  # dz of bottom half of each cell
 
     z = grid.z
-    if option == 'nearest':
+    if option in ['nearest', 'precomputed']:
         # Need 3D tiled depth arrays
         z = z_to_xyz(z, grid)
         dz_merged = z_to_xyz(dz_merged, grid)
