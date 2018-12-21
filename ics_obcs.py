@@ -151,7 +151,8 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
     errorTol = 1e-13  # convergence criteria
 
     # Build the grid if needed
-    grid = choose_grid(grid, None)
+    if check_grid:
+        grid = choose_grid(grid, None)
 
     # Set temperature and salinity
     if option == 'constant':
