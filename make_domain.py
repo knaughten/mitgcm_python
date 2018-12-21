@@ -741,14 +741,10 @@ def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
     # Calculate a few grid variables
     z_above = z_edges[:-1]
     z_below = z_edges[1:]
-    dz = z_edges[1:] - z_edges[:-1]    
+    dz = np.abs(z_edges[1:] - z_edges[:-1])
     nz = dz.size
     ny = bathy.shape[0]
     nx = bathy.shape[1]    
-    
-    # Figure out what the bathymetry and ice shelf draft will actually be, given  hFac limitations
-    bathy = model_bdry(bathy, dz, z_edges, option='bathy', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
-    draft = model_bdry(draft, dz, z_edges, option='draft', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     
     # Tile all arrays to be 3D
     bathy = xy_to_xyz(bathy, [nx, ny, nz])
@@ -760,24 +756,24 @@ def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
     # Start out with all cells closed
     hfac = np.zeros([nz, ny, nx])
     # Find fully open cells
-    index = z_below >= bathy and z_above <= draft
+    index = (z_below >= bathy)*(z_above <= draft)
     hfac[index] = 1
     # Find partial cells due to bathymetry alone
-    index = z_below < bathy and z_above <= draft
+    index = (z_below < bathy)*(z_above <= draft)
     hfac[index] = (z_above[index] - bathy[index])/dz[index]
     # Find partial cells due to ice shelf draft alone
-    index = z_below >= bathy and z_above > draft
+    index = (z_below >= bathy)*(z_above > draft)
     hfac[index] = (draft[index] - z_below[index])/dz[index]
     # Find partial cells which are intersected by both
-    index = z_below < bathy and z_above > draft
+    index = (z_below < bathy)*(z_above > draft)
     hfac[index] = (draft[index] - bathy[index])/dz[index]
 
     # Now apply hFac limitations
     hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz, 1))    
     index = hfac < hfac_limit/2
     hfac[index] = 0
-    index = hfac >= hfac_limit/2 and hfac < hfac_limit
-    hfac[index] = hfac_limit
+    index = (hfac >= hfac_limit/2)*(hfac < hfac_limit)
+    hfac[index] = hfac_limit[index]
 
     return hfac
     
