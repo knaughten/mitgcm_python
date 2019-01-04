@@ -67,7 +67,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'vel', 'velice', 'psi']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'vel', 'velice', 'psi', 'bwage', 'iceprod']
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
@@ -78,6 +78,8 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
             vmax = 1
         if var == 'bwsalt':
             vmin = 34.3
+        if var == 'bwage':
+            vmin = 0
         if var == 'eta':
             vmin = -2.5
         if var == 'hice':
@@ -85,6 +87,9 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         if var == 'saltflx':
             vmin = -0.001
             vmax = 0.001
+        if var == 'iceprod':
+            vmin = 0
+            vmax = 5
         if not zoom_fris and key=='WSK':
             figsize = (10,6)
         else:
@@ -92,12 +97,14 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         # Plot
         read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
         # Make additional plots if needed
-        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi']:
+        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
             # Make another plot zoomed into FRIS
             figsize = (8,6)
             # First adjust bounds
             if var == 'bwtemp':
                 vmax = -1.5
+            if var == 'bwage':
+                vmax = 10
             if var == 'psi':
                 vmax = 0.5
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
