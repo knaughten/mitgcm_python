@@ -121,10 +121,10 @@ def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None,
     latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', fig_name=fig_name, figsize=figsize)
 
 
-# Plot bottom water temperature or salinity.
+# Plot bottom water temperature, salinity, or age.
 
 # Arguments:
-# var: 'temp' or 'salt'
+# var: 'temp', 'salt', or 'age'.
 # data: 3D (depth x lat x lon) array of temperature in degC or salinity in psu, already masked with hfac
 # grid: Grid object
 
@@ -142,6 +142,8 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
         title = 'Bottom water temperature (' + deg_string + 'C)'
     elif var == 'salt':
         title = 'Bottom water salinity (psu)'
+    elif var == 'age':
+        title = 'Bottom water age (years)'
     latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
 
 
@@ -310,6 +312,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 #      'ismr': ice shelf melt rate
 #      'bwtemp': bottom water temperature
 #      'bwsalt': bottom water salinity
+#      'bwage': bottom water age
 #      'sst': surface temperature
 #      'sss': surface salinity
 #      'aice': sea ice concentration
@@ -326,6 +329,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # file_path: path to NetCDF file containing the necessary variable:
 #            'ismr': SHIfwFlx
 #            'bwtemp': THETA
+#            'bwage': TRAC01 with appropriate edits to the code
 #            'bwsalt': SALT
 #            'sst': THETA
 #            'sss': SALT
@@ -399,6 +403,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         temp = read_and_mask('THETA', '3d', check_second=True)
     if var in ['bwsalt', 'sss', 'tminustf']:
         salt = read_and_mask('SALT', '3d', check_second=True)
+    if var == 'bwage':
+        age = read_and_mask('TRAC01', '3d')
     if var == 'aice':
         aice = read_and_mask('SIarea', 'land_ice')
     if var == 'hice':
@@ -431,6 +437,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'bwsalt':
         plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+    elif var == 'bwage':
+        plot_bw('age', age, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'sst':
         plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'sss':
@@ -465,7 +473,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 # NetCDF interface for difference plots. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
 
 # Arguments are largely the same as read_plot_latlon, here are the exceptions:
-# var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod'
+# var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'bwage', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod'
 # file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice').
 # It is assumed they cover the same period of time. If they don't, you can set time_index_2, etc. for the corresponding timesteps in file_path_2 which match time_index, etc. for file_path_1.
 
@@ -518,6 +526,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         temp_1, temp_2 = read_and_mask_both('THETA', '3d')
     if var in ['bwsalt', 'sss']:
         salt_1, salt_2 = read_and_mask_both('SALT', '3d')
+    if var == 'bwage':
+        age_1, age_2 = read_and_mask_both('TRAC01', '3d')
     if var == 'aice':
         aice_1, aice_2 = read_and_mask_both('SIarea', 'land_ice')
     if var == 'hice':
@@ -553,6 +563,9 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
     elif var == 'bwsalt':
         data_diff = select_bottom(salt_2 - salt_1)
         title = 'Change in bottom water salinity (psu)'
+    elif var == 'bwage':
+        data_diff = select_bottom(age_2 - age_1)
+        title = 'Change in bottom water age (years)'
     elif var == 'sst':
         data_diff = temp_2[0,:] - temp_1[0,:]
         title = r'Change in sea surface temperature ('+deg_string+'C)'
@@ -599,7 +612,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         sys.exit()
 
     # Choose value for include_shelf
-    if var in ['ismr', 'bwtemp', 'bwsalt', 'vel']:
+    if var in ['ismr', 'bwtemp', 'bwsalt', 'bwage', 'vel']:
         include_shelf = True
     elif var in ['sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'velice', 'iceprod']:
         include_shelf = False
