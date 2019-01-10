@@ -593,9 +593,9 @@ def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
     data = [bwage, speed, bwtemp, bwsalt, ismr]
     ctype = ['basic', 'vel', 'basic', 'basic', 'ismr']
     vmin = [0, 0, -2.5, 34.3, None]
-    vmax = [15, None, -1.5, None, None]
+    vmax = [12, None, -1.5, None, None]
     extend = ['max', 'neither', 'both', 'min', 'neither']
-    title = ['Bottom water age (years)', 'Barotropic velocity (m/s)', 'Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Ice shelf melt rate (m/y)']    
+    title = ['a) Bottom water age (years)', 'b) Barotropic velocity (m/s)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
     fig, gs = set_panels('5C0')
     for i in range(len(data)):
         # Leave the top left plot empty for title
@@ -603,15 +603,15 @@ def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
         img = latlon_plot(data[i], grid, ax=ax, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i])
         if ctype[i] == 'vel':
             # Overlay velocity vectors
-            overlay_vectors(ax, u, v, grid, chunk=6, scale=0.8)
+            overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if i in [1,3,4]:
             # Remove latitude labels
             ax.set_yticklabels([])
         if i in [0,1]:
             # Remove longitude labels
             ax.set_xticklabels([])
-    # Main title in top left plot
-    plt.text(0.2, 0.6, 'Baseline conditions\n1979-2016 mean', fontsize=20, va='center', ha='center', transform=fig.transFigure)
+    # Main title in top left space
+    plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
         
         
