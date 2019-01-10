@@ -557,7 +557,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
 
     
 
-# Make all the plots.
+# Make all the preliminary plots.
 def prelim_all_plots (base_dir='./', fig_dir='./'):
 
     print '\nPlotting timeseries'
@@ -568,4 +568,51 @@ def prelim_all_plots (base_dir='./', fig_dir='./'):
     prelim_peryear(base_dir=base_dir, fig_dir=fig_dir)
     print '\nPlotting slices'
     prelim_slices(base_dir=base_dir, fig_dir=fig_dir)
+
+
+# Plot 5 lat-lon panels showing the baseline mean state in the FRIS cavity: bottom water age, barotropic circulation, bottom water temperature and salinity, ice shelf melt rate.
+def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
+
+    if input_file is None:
+        input_file = base_dir + case_dir[0] + avg_file
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
+    print 'Processing fields'
+    bwage = select_bottom(mask_3d(read_netcdf(input_file, 'TRAC01', time_index=0), grid))
+    u_tmp = mask_3d(read_netcdf(input_file, 'UVEL', time_index=0), grid, gtype='u')
+    v_tmp = mask_3d(read_netcdf(input_file, 'VVEL', time_index=0), grid, gtype='v')
+    speed, u, v = prepare_vel(u_tmp, v_tmp, grid)
+    bwtemp = select_bottom(mask_3d(read_netcdf(input_file, 'THETA', time_index=0), grid))
+    bwsalt = select_bottom(mask_3d(read_netcdf(input_file, 'SALT', time_index=0), grid))
+    ismr = convert_ismr(mask_except_ice(read_netcdf(input_file, 'SHIfwFlx', time_index=0), grid))
+
+    print 'Plotting'
+    # Wrap some things up into lists for easier iteration
+    data = [bwage, speed, bwtemp, bwsalt, ismr]
+    ctype = ['basic', 'vel', 'basic', 'basic', 'ismr']
+    vmin = [0, 0, -2.5, 34.3, None]
+    vmax = [15, None, -1.5, None, None]
+    extend = ['max', 'neither', 'both', 'min', 'neither']
+    title = ['Bottom water age (years)', 'Barotropic velocity (m/s)', 'Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Ice shelf melt rate (m/y)']    
+    fig, gs = set_panels('5C0')
+    for i in range(len(data)):
+        # Leave the top left plot empty for title
+        ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
+        img = latlon_plot(data[i], grid, ax=ax, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i])
+        if ctype[i] == 'vel':
+            # Overlay velocity vectors
+            overlay_vectors(ax, u, v, grid, chunk=6, scale=0.8)
+        if i in [1,3,4]:
+            # Remove latitude labels
+            ax.set_yticklabels([])
+        if i in [0,1]:
+            # Remove longitude labels
+            ax.set_xticklabels([])
+    # Main title in top left plot
+    plt.text(0.2, 0.6, 'Baseline conditions\n1979-2016 mean', fontsize=20, va='center', ha='center', transform=fig.transFigure)
+    finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
+        
+        
     
