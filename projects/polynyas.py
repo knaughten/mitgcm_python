@@ -604,6 +604,13 @@ def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
         if ctype[i] == 'vel':
             # Overlay velocity vectors
             overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
+        if ctype[i] == 'ismr':
+            # Overlay location labels
+            lon = [-58, -47, -47, -38]
+            lat = [-74.5, -77, -79, -77.5]
+            label = ['RD', 'BB', 'BI', 'FT']
+            for j in range(len(label)):
+                plt.text(lon[j], lat[j], label[j], fontsize=14, va='center', ha='center')
         if i in [1,3,4]:
             # Remove latitude labels
             ax.set_yticklabels([])
