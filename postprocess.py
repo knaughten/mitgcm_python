@@ -222,9 +222,15 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     else:
         figsize = (8,6)
     for var in var_names:
-        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=figsize)
+        if var == 'iceprod':
+            vmin = 2
+            vmax = 2
+        else:
+            vmin = None
+            vmax = None
+        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
         # Zoom into some variables
-        if var in ['ismr', 'bwtemp', 'bwsalt', 'vel']:
+        if var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
             read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, zoom_fris=True, date_string=date_string, fig_name=fig_dir+var+'_zoom_diff.png')
         if var == 'vel':
             # Call the other options for vertical transformations
