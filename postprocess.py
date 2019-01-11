@@ -216,7 +216,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
 
     # Now make lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'bwage', 'iceprod']
     if key == 'WSK':
         figsize = (10,6)
     else:
