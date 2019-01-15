@@ -776,6 +776,17 @@ def calc_polynya_ts_anom (base_dir='./'):
     print 'Change in temperature: ' + str(temp_polynya[-1]-temp_polynya[0]) + ' degC'
     print 'Change in salinity: ' + str(salt_polynya[-1]-salt_polynya[0]) + ' psu'
 
+# Calculate the Weddell Gyre transport in the given simulation, either averaged over the entire simulation or just the last year.
+def calc_wed_gyre_trans (timeseries_path, last_year=False):
+
+    time = netcdf_time(timeseries_path, monthly=False)
+    wed_gyre_trans = read_netcdf(timeseries_path, 'wed_gyre_trans')
+    wed_gyre_trans, time = monthly_to_annual(wed_gyre_trans, time)
+    if last_year:
+        print 'Weddell Gyre transport over last year: ' + str(wed_gyre_trans[-1]) + ' Sv'
+    else:
+        print 'Weddell Gyre transport over entire simulation: ' + str(np.mean(wed_gyre_trans))
+
     
 
     
