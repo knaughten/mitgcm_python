@@ -65,7 +65,7 @@ def get_polynya_loc (polynya):
 # Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
-    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt', 'isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']
+    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans'] #, 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt', 'isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None
@@ -627,6 +627,8 @@ def aice_simulations (base_dir='./', fig_dir='./'):
 
     # For now overwrite files with temporary files
     in_files = ['WSK_002/output/1979_2016_avg.nc', 'WSK_003/output/1979_2016_avg.nc', 'WSK_004/output/avg_to_jan06.nc', 'WSK_005/output/avg_to_mar07.nc', 'WSK_006/output/avg_to_feb98.nc']
+    # Also need letters before each subplot
+    title_prefix = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ']
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -636,18 +638,24 @@ def aice_simulations (base_dir='./', fig_dir='./'):
 
     print 'Reading data'
     data = []
+    mask = [None]
     for i in range(num_expts-1):
         data.append(mask_land_ice(read_netcdf(base_dir+in_files[i], 'SIarea', time_index=0), grid))
+        if i > 0:
+            mask.append(read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64))
 
     print 'Plotting'
-    fig, gs, cax = set_panels('5C1', figsize=(11,5))
+    fig, gs, cax = set_panels('5C1', figsize=(13,6.5))
     for i in range(num_expts-1):
         # Leave the bottom left plot empty for colourbar
         if i < 3:
             ax = plt.subplot(gs[i/3,i%3])
         else:
             ax = plt.subplot(gs[i/3,i%3+1])
-        img = latlon_plot(data[i], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
+        img = latlon_plot(data[i], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=title_prefix[i]+expt_names[i])
+        if mask[i] is not None:
+            # Contour imposed polynya in white
+            ax.contour(grid.lon_2d, grid.lat_2d, mask[i], levels=[0.99], colors=('white'), linestyles='solid')
         if i in [1,2,4]:
             ax.set_yticklabels([])
         if i in [1,2]:
@@ -655,7 +663,7 @@ def aice_simulations (base_dir='./', fig_dir='./'):
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
     reduce_cbar_labels(cbar)
     plt.suptitle('Sea ice concentration, 1979-2016', fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'aice_simulations.png')
+    finished_plot(fig, fig_name=fig_dir+'aice_simulations.png')
 
 
 # Plot a 2-part timeseries showing (a) convective area and (b) Weddell Gyre strength in each simulation.
@@ -663,7 +671,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
 
     # For now overwrite case directories
     tmp_cases = ['WSK_002/', 'WSK_003/', 'WSK_004/', 'WSK_005/', 'WSK_006/', 'WSK_007/']
-    
+
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)    
 
@@ -677,7 +685,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
         # Convert convective area to 10^5 km^2
         conv_area.append(read_netcdf(file_path, 'conv_area')*10)
         wed_gyre.append(read_netcdf(file_path, 'wed_gyre_trans'))
-        
+
     # Wrap things up in lists for easier iteration
     data = [conv_area, wed_gyre]
     title = ['Convective area', 'Weddell Gyre transport']
@@ -694,7 +702,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
         plt.ylabel(units[j])
     # Make horizontal legend
     ax.legend(bbox_to_anchor=(0.5,-0.2), ncol=num_expts)
-    finished_plot(fig, fig_name=fig_dir+'deep_ocean_timeseries.png')
+    finished_plot(fig) #, fig_name=fig_dir+'deep_ocean_timeseries.png')
     
 
     
