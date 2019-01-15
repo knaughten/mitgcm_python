@@ -756,6 +756,28 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
         rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
 
+
+# Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
+def calc_polynya_ts_anom (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    # Update this later
+    file_path = base_dir + 'WSK_003/output/timeseries_polynya.nc'
+
+    # Read the timeseries
+    time = netcdf_time(file_path, monthly=False)
+    temp_polynya = read_netcdf(file_path, 'temp_polynya')
+    salt_polynya = read_netcdf(file_path, 'salt_polynya')
+
+    # Annually average
+    temp_polynya, time_tmp = monthly_to_annual(temp_polynya, time)
+    salt_polynya, time_tmp = monthly_to_annual(salt_polynya, time)
+
+    print 'Change in temperature: ' + str(temp_polynya[-1]-temp_polynya[0]) + ' degC'
+    print 'Change in salinity: ' + str(salt_polynya[-1]-salt_polynya[0]) + ' psu'
+
+    
+
     
 
     
