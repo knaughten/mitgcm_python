@@ -21,7 +21,8 @@ from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice
 from ..calculus import area_integral, vertical_average, lat_derivative
-from ..diagnostics import potential_density, heat_content_freezing
+from ..diagnostics import potential_density, heat_content_freezing, density
+from ..plot_utils.slices import slice_patches, slice_values
 
 # Global parameters
 
@@ -688,7 +689,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
 
     # Wrap things up in lists for easier iteration
     data = [conv_area, wed_gyre]
-    title = ['Convective area', 'Weddell Gyre transport']
+    title = ['a) Convective area', 'b) Weddell Gyre transport']
     units = ['10$^5$ km$^2$', 'Sv']
 
     print 'Plotting'
@@ -696,13 +697,69 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     for j in range(2):
         ax = plt.subplot(gs[0,j])
         for i in range(num_expts):
-            ax.plot_date(time[i], data[j][i], '-', color=expt_colours[i], label=expt_names[i])
+            # Annually average
+            data_tmp, time_tmp = monthly_to_annual(data[j][i], time[i])
+            ax.plot_date(time_tmp, data_tmp, '-', color=expt_colours[i], label=expt_names[i], linewidth=1.25)
         ax.grid(True)
-        plt.title(title[j])
-        plt.ylabel(units[j])
+        plt.title(title[j], fontsize=18)
+        plt.ylabel(units[j], fontsize=14)
     # Make horizontal legend
-    ax.legend(bbox_to_anchor=(0.5,-0.2), ncol=num_expts)
-    finished_plot(fig) #, fig_name=fig_dir+'deep_ocean_timeseries.png')
+    ax.legend(bbox_to_anchor=(0.99,-0.07), ncol=num_expts, fontsize=12)
+    finished_plot(fig, fig_name=fig_dir+'deep_ocean_timeseries.png')
+
+
+# Plot slices through 50W for the baseline and Maud Rise simulations, showing (a) temperature, (b) salinity, and (c) density.
+def mwdw_slices (base_dir='./', fig_dir='./'):
+
+    # For now overwrite case directories
+    tmp_cases = ['WSK_002/', 'WSK_003/']
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    # Slice parameters
+    lon0 = -50
+    hmin = -79
+    hmax = -65
+    zmin = -1500
+    tmin = -1.9
+    tmax = 1
+    smin = 34
+    smax = 34.8
+    rmin = 0
+    rmax = 33
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
+    print 'Reading data'
+    temp = []
+    salt = []
+    rho = []
+    for i in range(2):
+        file_path = base_dir + tmp_cases[i] + avg_file
+        temp.append(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        salt.append(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+        rho.append(mask_3d(density('MDJWF', salt[i], temp[i], 1000), grid)-1000)
+
+    print 'Building patches'
+    temp_values = []
+    salt_values = []
+    rho_values = []
+    for i in range(2):
+        if i == 0:
+            # The first time, build the patches
+            patches, temp_values_tmp, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(temp[i], grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, return_bdry=True)
+            temp_values.append(temp_values_tmp)
+        else:
+            temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
+        salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
+        rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
+
+    
+
+    
+    
     
 
     
