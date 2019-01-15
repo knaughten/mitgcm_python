@@ -38,6 +38,8 @@ def set_panels (key, figsize=None):
             figsize = (30, 20)
         elif key == 'CTD':
             figsize = (15, 6)
+        elif key == '2TS0':
+            figsize = (10, 6)
 
     fig = plt.figure(figsize=figsize)
     
@@ -97,15 +99,19 @@ def set_panels (key, figsize=None):
         gs_1.update(left=0.05, right=0.7, bottom=0.1, top=0.85, wspace=0.12)
         gs_2 = plt.GridSpec(1,1)
         gs_2.update(left=0.75, right=0.95, bottom=0.3, top=0.8)
-
+    elif key == '2TS':
+        # Two axes suitable for side-by-side timeseries, room for legend below
+        gs = plt.GridSpec(1,2)
+        gs.update(left=0.1, right=0.95, bottom=0.2, top=0.85, wspace=0.1)
+        
     if key == 'CTD':
         return fig, gs_1, gs_2
-    elif key[-1] == '0':
+    elif key.endswith('C0') or key.endswith('TS'):
         return fig, gs
-    elif key[-1] == '1':        
+    elif key.endswith('C1'):
         return fig, gs, cax
-    elif key[-1] == '2':
+    elif key.endswith('C2'):
         return fig, gs, cax1, cax2
-    elif key[-1] == '3':
+    elif key.endswith('C3'):
         return fig, gs, cax1, cax2, cax3
 

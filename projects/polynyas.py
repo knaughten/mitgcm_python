@@ -620,6 +620,84 @@ def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
+
+
+# Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.
+def aice_simulations (base_dir='./', fig_dir='./'):
+
+    # For now overwrite files with temporary files
+    in_files = ['WSK_002/output/1979_2016_avg.nc', 'WSK_003/output/1979_2016_avg.nc', 'WSK_004/output/avg_to_jan06.nc', 'WSK_005/output/avg_to_mar07.nc', 'WSK_006/output/avg_to_feb98.nc']
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
+    print 'Reading data'
+    data = []
+    for i in range(num_expts-1):
+        data.append(mask_land_ice(read_netcdf(base_dir+in_files[i], 'SIarea', time_index=0), grid))
+
+    print 'Plotting'
+    fig, gs, cax = set_panels('5C1', figsize=(11,5))
+    for i in range(num_expts-1):
+        # Leave the bottom left plot empty for colourbar
+        if i < 3:
+            ax = plt.subplot(gs[i/3,i%3])
+        else:
+            ax = plt.subplot(gs[i/3,i%3+1])
+        img = latlon_plot(data[i], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=expt_names[i])
+        if i in [1,2,4]:
+            ax.set_yticklabels([])
+        if i in [1,2]:
+            ax.set_xticklabels([])
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+    reduce_cbar_labels(cbar)
+    plt.suptitle('Sea ice concentration, 1979-2016', fontsize=22)
+    finished_plot(fig) #, fig_name=fig_dir+'aice_simulations.png')
+
+
+# Plot a 2-part timeseries showing (a) convective area and (b) Weddell Gyre strength in each simulation.
+def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
+
+    # For now overwrite case directories
+    tmp_cases = ['WSK_002/', 'WSK_003/', 'WSK_004/', 'WSK_005/', 'WSK_006/', 'WSK_007/']
+    
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)    
+
+    print 'Reading data'
+    time = []
+    conv_area = []
+    wed_gyre = []
+    for i in range(num_expts):
+        file_path = base_dir + tmp_cases[i] + timeseries_file
+        time.append(netcdf_time(file_path, monthly=False))
+        # Convert convective area to 10^5 km^2
+        conv_area.append(read_netcdf(file_path, 'conv_area')*10)
+        wed_gyre.append(read_netcdf(file_path, 'wed_gyre_trans'))
         
+    # Wrap things up in lists for easier iteration
+    data = [conv_area, wed_gyre]
+    title = ['Convective area', 'Weddell Gyre transport']
+    units = ['10$^5$ km$^2$', 'Sv']
+
+    print 'Plotting'
+    fig, gs = set_panels('2TS')
+    for j in range(2):
+        ax = plt.subplot(gs[0,j])
+        for i in range(num_expts):
+            ax.plot_date(time[i], data[j][i], '-', color=expt_colours[i], label=expt_names[i])
+        ax.grid(True)
+        plt.title(title[j])
+        plt.ylabel(units[j])
+    # Make horizontal legend
+    ax.legend(bbox_to_anchor=(0.5,-0.2), ncol=num_expts)
+    finished_plot(fig, fig_name=fig_dir+'deep_ocean_timeseries.png')
+    
+
+    
+    
         
     
