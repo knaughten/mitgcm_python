@@ -19,7 +19,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
-from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice
+from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_gridded
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
 from ..plot_utils.slices import slice_patches, slice_values, plot_slice_patches
@@ -708,7 +708,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'deep_ocean_timeseries.png')
 
 
-# Plot slices through 50W for the baseline and Maud Rise simulations, showing (a) temperature, (b) salinity, and (c) density.
+# Plot slices through 50W for the baseline and Maud Rise simulations as well as the anomaly, showing (a) temperature, (b) salinity, and (c) density.
 def mwdw_slices (base_dir='./', fig_dir='./'):
 
     # For now overwrite case directories
@@ -718,16 +718,30 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
 
     # Slice parameters
+    # Location
     lon0 = -50
     hmin = -79
     hmax = -65
     zmin = -1500
+    # Colour bounds
     tmin = -2
     tmax = 0.6
     smin = 34.3
     smax = 34.7
     rmin = 32.4
     rmax = 32.6
+    # Difference bounds
+    tmin_diff = -1
+    tmax_diff = 1
+    smin_diff = -0.1
+    smax_diff = 0.1
+    rmin_diff = -0.05
+    rmax_diff = 0.05
+    # Contours
+    t_contours = [-1.5]
+    s_contours = [34.42]
+    r_contours = np.arange(32.45, 32.57, 0.02)
+
     lon0_label = lon_label(lon0, 0)
 
     print 'Building grid'
@@ -747,30 +761,48 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     temp_values = []
     salt_values = []
     rho_values = []
+    temp_gridded = []
+    salt_gridded = []
+    rho_gridded = []
     for i in range(2):
         if i == 0:
             # The first time, build the patches
             patches, temp_values_tmp, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(temp[i], grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, return_bdry=True)
             temp_values.append(temp_values_tmp)
+            # Also get gridded version for contours
+            temp_gridded_tmp, haxis, zaxis = get_gridded(temp_values_tmp, grid, lon0=lon0)
+            temp_gridded.append(temp_gridded_tmp)
         else:
             temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
+            temp_gridded.append(get_gridded(temp_values[i], grid, lon0=lon0)[0])
         salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
+        salt_gridded.append(get_gridded(salt_values[i], grid, lon0=lon0)[0])
         rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
+        rho_gridded.append(get_gridded(rho_values[i], grid, lon0=lon0)[0])
 
     print 'Plotting'
-    fig, gs, cax_t, cax_s, cax_r, titles_y = set_panels('3x2C3+T3')
+    fig, gs, cax_t, cax_t_diff, cax_s, cax_s_diff, cax_r, cax_r_diff, titles_y = set_panels('3x3C6+T3')
     # Wrap some things up for easier iteration
     values = [temp_values, salt_values, rho_values]
+    gridded = [temp_gridded, salt_gridded, rho_gridded]
+    contours = [t_contours, s_contours, r_contours]
+    cax = [cax_t, cax_s, cax_r]
+    cax_diff = [cax_t_diff, cax_s_diff, cax_r_diff]
     vmin = [tmin, smin, rmin]
     vmax = [tmax, smax, rmax]
-    cax = [cax_t, cax_s, cax_r]
+    vmin_diff = [tmin_diff, smin_diff, rmin_diff]
+    vmax_diff = [tmax_diff, smax_diff, rmax_diff]
     var_names = ['a) Temperature ('+deg_string+'C) at '+lon0_label, 'b) Salinity (psu) at '+lon0_label, r'c) Density (kg/m$^3$) at '+lon0_label]
     # Loop over variables (rows)
     for j in range(3):
         # Loop over experiments (columns)
         for i in range(2):
             ax = plt.subplot(gs[j,i])
+            # Make the plot
             img = plot_slice_patches(ax, patches, values[j][i], hmin, hmax, zmin, zmax, vmin[j], vmax[j])
+            # Add contours
+            plt.contour(haxis, zaxis, gridded[j][i], levels=contours[j], colors='black', linestyles='solid')
+            # Make nice axes
             slice_axes(ax)
             # Remove depth labels on right plot
             if i==1:
@@ -778,9 +810,19 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
                 ax.set_ylabel('')
             # Add experiment title
             plt.title(expt_names[i], fontsize=18)
-        # Add a colourbar on the right and hide every second label
-        cbar = plt.colorbar(img, cax=cax[j], extend='both')
+        # Add a colourbar on the left and hide every second label
+        cbar = plt.colorbar(img, extend='both', cax=cax[j])
         reduce_cbar_labels(cbar)
+        # Now plot the anomaly
+        values_diff = values[j][1] - values[j][0]
+        cmap = set_colours(values_diff, ctype='plusminus', vmin=vmin_diff[j], vmax=vmax_diff[j])[0]    
+        ax = plt.subplot(gs[j,2])
+        img = plot_slice_patches(ax, patches, values_diff, hmin, hmax, zmin, zmax, vmin_diff[j], vmax_diff[j])
+        slices_axes(ax)
+        ax.set_yticklabels([])
+        ax.set_ylabel('')
+        plt.title('Anomaly', fontsize=18)
+        cbar = plt.colorbar(img, extend='both', cax=cax_diff[j])
         # Add variable title
         plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig) #, fig_name=fig_dir+'mwdw_slices.png')
