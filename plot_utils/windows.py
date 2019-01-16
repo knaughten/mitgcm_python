@@ -31,7 +31,7 @@ def set_panels (key, figsize=None):
         elif key in ['1x3C1', '1x3C3']:
             figsize = (16, 5)
         elif key == '3x2C3+T3':
-            figsize = (10, 20)
+            figsize = (10, 12)
         elif key in ['5C1', '5C2']:
             figsize = (12, 7)
         elif key == '5C0':
@@ -78,13 +78,13 @@ def set_panels (key, figsize=None):
         cax2 = fig.add_axes([0.395, 0.05, 0.25, 0.04])
         cax3 = fig.add_axes([0.71, 0.05, 0.25, 0.04])
     elif key == '3x2C3+T3':
-        # Six plots arranged into three rows and two columns, with one colourbar to the right of each row, and space for titles in between.
+        # Six plots arranged into three rows and two columns, with one colourbar to the right of each row, and a title above each row
         gs = plt.GridSpec(3,2)
-        gs.update(left=0.02, right=0.8, bottom=0.02, top=0.9, wspace=0.05, hspace=0.1)
+        gs.update(left=0.1, right=0.9, bottom=0.02, top=0.93, wspace=0.05, hspace=0.35)
         cax1 = fig.add_axes([0.82, 0.7, 0.02, 0.1])
         cax2 = fig.add_axes([0.82, 0.4, 0.02, 0.1])
         cax3 = fig.add_axes([0.82, 0.1, 0.02, 0.1])
-        titles_y = [0.8, 0.5, 0.2]
+        titles_y = [0.97, 0.64, 0.31]
     elif key in ['5C1', '5C2']:
         # Five plots arranged into two rows and three columns, with the empty space in the bottom left filled with either one or two colourbars.
         gs = plt.GridSpec(2,3)

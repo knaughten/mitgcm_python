@@ -722,12 +722,12 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     hmin = -79
     hmax = -65
     zmin = -1500
-    tmin = -1.9
-    tmax = 1
-    smin = 34
-    smax = 34.8
-    rmin = 0
-    rmax = 33
+    tmin = -2
+    tmax = 0.6
+    smin = 34.3
+    smax = 34.7
+    rmin = 32.4
+    rmax = 32.6
     lon0_label = lon_label(lon0, 0)
 
     print 'Building grid'
@@ -753,13 +753,12 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
             patches, temp_values_tmp, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(temp[i], grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, return_bdry=True)
             temp_values.append(temp_values_tmp)
         else:
-            temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
-        salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
-        rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
+            temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
+        salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
+        rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
 
     print 'Plotting'
     fig, gs, cax_t, cax_s, cax_r, titles_y = set_panels('3x2C3+T3')
-
     # Wrap some things up for easier iteration
     values = [temp_values, salt_values, rho_values]
     vmin = [tmin, smin, rmin]
