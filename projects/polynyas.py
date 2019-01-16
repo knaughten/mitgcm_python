@@ -16,13 +16,13 @@ from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels
+from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
-from ..plot_utils.slices import slice_patches, slice_values
+from ..plot_utils.slices import slice_patches, slice_values, plot_slice_patches
 
 # Global parameters
 
@@ -728,6 +728,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     smax = 34.8
     rmin = 0
     rmax = 33
+    lon0_label = lon_label(lon0, 0)
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -755,6 +756,37 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
             temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
         salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
         rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmin, lon0=lon0)[0])
+
+    print 'Plotting'
+    fig, gs, cax_t, cax_s, cax_r, titles_y = set_panels('3x2C3+T3')
+
+    # Wrap some things up for easier iteration
+    values = [temp_values, salt_values, rho_values]
+    vmin = [tmin, smin, rmin]
+    vmax = [tmax, smax, rmax]
+    cax = [cax_t, cax_s, cax_r]
+    var_names = ['a) Temperature ('+deg_string+'C) at '+lon0_label, 'b) Salinity (psu) at '+lon0_label, r'c) Density (kg/m$^3$) at '+lon0_label]
+    # Loop over variables (rows)
+    for j in range(3):
+        # Loop over experiments (columns)
+        for i in range(2):
+            ax = plt.subplot(gs[j,i])
+            img = plot_slice_patches(ax, patches, values[j][i], hmin, hmax, zmin, zmax, vmin[j], vmax[j])
+            slice_axes(ax)
+            # Remove depth labels on right plot
+            if i==1:
+                ax.set_yticklabels([])
+                ax.set_ylabel('')
+            # Add experiment title
+            plt.title(expt_names[i], fontsize=18)
+        # Add a colourbar on the right and hide every second label
+        cbar = plt.colorbar(img, cax=cax[j], extend='both')
+        reduce_cbar_labels(cbar)
+        # Add variable title
+        plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
+    finished_plot(fig) #, fig_name=fig_dir+'mwdw_slices.png')
+        
+    
 
 
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
