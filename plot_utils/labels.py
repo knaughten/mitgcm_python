@@ -154,5 +154,9 @@ def check_date_string (date_string, file_path, time_index):
 
 # Hide every second label on a colourbar so they're not squished.
 def reduce_cbar_labels (cbar):
-    for label in cbar.ax.xaxis.get_ticklabels()[1::2]:
+    if cbar.orientation == 'horizontal':
+        labels = cbar.ax.xaxis.get_ticklabels()
+    else:
+        labels = cbar.ax.yaxis.get_ticklabels()
+    for label in labels[1::2]:
         label.set_visible(False)

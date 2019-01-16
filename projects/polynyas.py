@@ -18,6 +18,7 @@ from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
+from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_gridded
 from ..calculus import area_integral, vertical_average, lat_derivative
@@ -731,11 +732,11 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     rmin = 32.4
     rmax = 32.6
     # Difference bounds
-    tmin_diff = -1
-    tmax_diff = 1
-    smin_diff = -0.1
+    tmin_diff = -0.6
+    tmax_diff = 0.6
+    smin_diff = -0.02
     smax_diff = 0.1
-    rmin_diff = -0.05
+    rmin_diff = -0.005
     rmax_diff = 0.05
     # Contours
     t_contours = [-1.5]
@@ -792,7 +793,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     vmax = [tmax, smax, rmax]
     vmin_diff = [tmin_diff, smin_diff, rmin_diff]
     vmax_diff = [tmax_diff, smax_diff, rmax_diff]
-    var_names = ['a) Temperature ('+deg_string+'C) at '+lon0_label, 'b) Salinity (psu) at '+lon0_label, r'c) Density (kg/m$^3$) at '+lon0_label]
+    var_names = ['a) Temperature ('+deg_string+'C) at '+lon0_label, 'b) Salinity (psu) at '+lon0_label, r'c) Density (kg/m$^3$-1000) at '+lon0_label]
     # Loop over variables (rows)
     for j in range(3):
         # Loop over experiments (columns)
@@ -817,18 +818,17 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         values_diff = values[j][1] - values[j][0]
         cmap = set_colours(values_diff, ctype='plusminus', vmin=vmin_diff[j], vmax=vmax_diff[j])[0]    
         ax = plt.subplot(gs[j,2])
-        img = plot_slice_patches(ax, patches, values_diff, hmin, hmax, zmin, zmax, vmin_diff[j], vmax_diff[j])
-        slices_axes(ax)
+        img = plot_slice_patches(ax, patches, values_diff, hmin, hmax, zmin, zmax, vmin_diff[j], vmax_diff[j], cmap=cmap)
+        slice_axes(ax)
         ax.set_yticklabels([])
         ax.set_ylabel('')
         plt.title('Anomaly', fontsize=18)
         cbar = plt.colorbar(img, extend='both', cax=cax_diff[j])
+        reduce_cbar_labels(cbar)
         # Add variable title
         plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'mwdw_slices.png')
+    finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
         
-    
-
 
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
 def calc_polynya_ts_anom (base_dir='./'):
