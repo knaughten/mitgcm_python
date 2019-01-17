@@ -938,7 +938,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
 
     # Print the maximum changes
     for i in range(1, num_expts):
-        print expt_names[i] + ': FRIS increases by up to ' + np.amax(fris_diff_percent[i]) + ', EWIS by up to ' + np.amax(ewed_diff_percent[i])
+        print expt_names[i] + ': FRIS increases by up to ' + str(np.amax(fris_diff_percent[i])) + ', EWIS by up to ' + str(np.amax(ewed_diff_percent[i]))
 
     # Wrap things up in lists
     data = [fris_diff_percent, ewed_diff_percent]
