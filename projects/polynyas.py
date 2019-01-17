@@ -935,11 +935,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
         ewed_diff_percent.append(ewed_diff/ewed_ismr[0][:len(ewed_diff)]*100)
         times_new.append(time)
     times = times_new
-
-    # Print the maximum changes
-    for i in range(1, num_expts):
-        print expt_names[i] + ': FRIS increases by up to ' + str(np.amax(fris_diff_percent[i])) + ', EWIS by up to ' + str(np.amax(ewed_diff_percent[i]))
-
+    
     # Wrap things up in lists
     data = [fris_diff_percent, ewed_diff_percent]
     title = ['a) FRIS basal mass loss % anomaly', 'b) EWIS basal mass loss % anomaly']
@@ -953,6 +949,8 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
         for i in range(1, num_expts):
             # Annually average
             data_tmp, time_tmp = monthly_to_annual(data[j][i], times[i])
+            # Print the maximum changes
+            print expt_names[i] + ' increases by up to ' + str(np.amax(data_tmp)) + '%'
             ax.plot_date(time_tmp, data_tmp, '-', color=expt_colours[i], label=expt_names[i], linewidth=1.25)
         ax.grid(True)
         ax.set_ylim([vmin[j], vmax[j]])
