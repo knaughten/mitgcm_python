@@ -867,12 +867,16 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     # Inner function to read and calculate anomalies
     def read_anomaly (var):
-        return read_field(var, base_dir+tmp_cases[1]+avg_file) - read_field(var, base_dir+tmp_cases[0]+avg_file)
+        if var == 'iceprod':
+            file_path = ice_prod_file
+        else:
+            file_path = avg_file
+        return read_field(var, base_dir+tmp_cases[1]+file_path) - read_field(var, base_dir+tmp_cases[0]+file_path)
 
     # Now call the functions for each variable
     print 'Processing fields'
     bwtemp_diff = read_anomaly('bwtemp')
-    iceprod_diff = read_anomaly('ice_prod')
+    iceprod_diff = read_anomaly('iceprod')
     bwsalt_diff = read_anomaly('bwsalt')
     bwage_diff = read_anomaly('bwage')
     speed_diff = read_anomaly('speed')
@@ -881,18 +885,18 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     print 'Plotting'
     # Wrap things into lists
     data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -1, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 1, 0.04, 1, 0.01, 0.5]
+    vmin_diff = [-0.2, -0.75, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 0.75, 0.04, 1, 0.01, 0.5]
     include_shelf = [True, False, True, True, True, True]
     title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
-        ax = plt.subplots(gs[i/3, i%3])
-        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i], include_shelf=include_shelf[i])
-        if i in [1,3,4]:
+        ax = plt.subplot(gs[i/3,i%3])
+        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
+        if i%3 != 0:
             # Remove latitude labels
             ax.set_yticklabels([])
-        if i in [0,1]:
+        if i/3 == 0:
             # Remove longitude labels
             ax.set_xticklabels([])
     # Main title
