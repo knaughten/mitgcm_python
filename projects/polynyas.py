@@ -876,8 +876,8 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     print 'Plotting'
     # Wrap things into lists
     data = [bwtemp_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-1, -0.25, -10, -0.1, -5]
-    vmax_diff = [1, 0.25, 10, 0.1, 5]
+    vmin_diff = [-0.2, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 0.04, 1, 0.01, 0.5]
     title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Bottom water salinity (psu)', 'c) Bottom water age (years)', 'd) Barotropic velocity (m/s)', 'e) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('5C0')
     for i in range(len(data)):
@@ -892,8 +892,63 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
     # Main title in top left space
     plt.text(0.18, 0.78, 'Maud Rise\nminus baseline\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'anomaly_panels.png')
-    
+    finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')
+
+
+# Plot a 2-part timeseries showing percent changes in basal mass loss for (a) FRIS and (b) EWIS.
+def massloss_timeseries (base_dir='./', fig_dir='./'):
+
+    # For now overwrite case directories
+    tmp_cases = ['WSK_002/', 'WSK_003/', 'WSK_004/', 'WSK_005/', 'WSK_006/', 'WSK_007/']
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    print 'Reading data'
+    times = []
+    fris_ismr = []
+    ewed_ismr = []
+    for i in range(num_expts):
+        file_path = base_dir + tmp_cases[i] + timeseries_file
+        times.append(netcdf_time(file_path, monthly=False))
+        fris_ismr.append(read_netcdf(file_path, 'fris_ismr'))
+        ewed_ismr.append(read_netcdf(file_path, 'ewed_ismr'))
+
+    # Now calculate percent differences
+    # Dummy value in spot 0 so indices line up
+    times_new = [None]
+    fris_diff_percent = [None]
+    ewed_diff_percent = [None]
+    for i in range(1, num_expts):
+        time, fris_diff = trim_and_diff(times[0], times[i], fris_ismr[0], fris_ismr[i])
+        fris_diff_percent.append(fris_diff/fris_ismr[0][:len(fris_diff)]*100)
+        time, ewed_diff = trim_and_diff(times[0], times[i], ewed_ismr[0], ewed_ismr[i])
+        ewed_diff_percent.append(ewed_diff/ewed_ismr[0][:len(ewed_diff)]*100)
+        times_new.append(time)
+    times = times_new
+
+    # Wrap things up in lists
+    data = [fris_diff_percent, ewed_diff_percent]
+    title = ['a) FRIS basal mass loss % anomaly', 'b) EWIS basal mass loss % anomaly']
+    vmin = [-2, -4]
+    vmax = [42, 95]
+
+    print 'Plotting'
+    fig, gs = set_panels('2TS')
+    for j in range(2):
+        ax = plt.subplot(gs[0,j])
+        for i in range(1, num_expts):
+            # Annually average
+            data_tmp, time_tmp = monthly_to_annual(data[j][i], times[i])
+            ax.plot_date(time_tmp, data_tmp, '-', color=expt_colours[i], label=expt_names[i], linewidth=1.25)
+        ax.grid(True)
+        ax.set_ylim([vmin[j], vmax[j]])
+        ax.axhline(color='black')
+        plt.title(title[j], fontsize=18)
+        plt.ylabel('%', fontsize=14)
+    # Make horizontal legend
+    ax.legend(bbox_to_anchor=(0.85,-0.07), ncol=num_expts-1, fontsize=12)
+    finished_plot(fig, fig_name=fig_dir+'massloss_timeseries.png')
     
         
 

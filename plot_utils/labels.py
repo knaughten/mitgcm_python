@@ -5,6 +5,9 @@
 import matplotlib.dates as dt
 import numpy as np
 import sys
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from ..file_io import netcdf_time
 from ..constants import fris_bounds, deg_string
