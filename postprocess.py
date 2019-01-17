@@ -661,6 +661,26 @@ def make_climatology (start_year, end_year, output_file, directory='./'):
 
     id_out.close()
 
+
+# Calculate sea ice production and save the result in a new file. This selects all the positive values and sets all the negative values to zero. So it is gross sea ice production calculated monthly from net sea ice production.
+def calc_ice_prod (file_path, out_file):
+
+    # Build the grid from the file
+    grid = Grid(file_path)
+
+    # Add up all the terms to get sea ice production at each time index
+    ice_prod = read_netcdf(file_path, 'SIdHbOCN') + read_netcdf(file_path, 'SIdHbATC') + read_netcdf(file_path, 'SIdHbATO') + read_netcdf(file_path, 'SIdHbFLO')
+
+    # Set negative values to 0
+    ice_prod = np.maximum(ice_prod, 0)
+
+    # Write a new file
+    ncfile = NCfile(out_file, grid, 'xyt')
+    ncfile.add_variable('ice_prod', ice_prod, 'xyt', long_name='Net sea ice production', units='m/s')
+    ncfile.close()
+
+    
+
     
 
     
