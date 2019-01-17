@@ -36,6 +36,8 @@ def set_panels (key, figsize=None):
             figsize = (12, 7)
         elif key == '5C0':
             figsize = (14, 7.5)
+        elif key == '2x3C0':
+            figsize = (14, 8)
         elif key == '5x8C1':
             figsize = (30, 20)
         elif key == 'CTD':
@@ -101,6 +103,10 @@ def set_panels (key, figsize=None):
         # Five plots arranged into two rows and three columns, with no special colourbars (each subplot will get its own automatically), and the empty space in the top left.
         gs = plt.GridSpec(2,3)
         gs.update(left=0.05, right=0.98, bottom=0.05, top=0.95, wspace=0.07, hspace=0.15)
+    elif key == '2x3C0':
+        # Six plots arranged into two rows and three columns, with no special colourbars
+        gs = plt.GridSpec(2,3)
+        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.85, wspace=0.07, hspace=0.15)
     elif key == '5x8C1':
         # 38 plots (one per year of observational period) arranged into 5 rows and 8 columns, with one colourbar in the empty space of the last 2 panels
         gs = plt.GridSpec(5,8)

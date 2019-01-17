@@ -13,7 +13,7 @@ from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
-from ..constants import deg_string
+from ..constants import deg_string, sec_per_year
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes
@@ -32,6 +32,7 @@ case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'p
 grid_dir = case_dir[0] + 'grid/'
 timeseries_file = 'output/timeseries_polynya.nc'
 avg_file = 'output/1979_2016_avg.nc'
+ice_prod_file = 'output/ice_prod_1979_2016_avg.nc'
 start_year = 1979
 end_year = 2016
 num_years = end_year-start_year+1
@@ -849,6 +850,9 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     def read_field (var, file_path):
         if var == 'bwtemp':
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        elif var == 'iceprod':
+            # Convert from m/s to m/y
+            return mask_land_ice(read_netcdf(file_path, 'ice_prod', time_index=0)*sec_per_year, grid)
         elif var == 'bwsalt':
             return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
         elif var == 'bwage':
@@ -868,6 +872,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     # Now call the functions for each variable
     print 'Processing fields'
     bwtemp_diff = read_anomaly('bwtemp')
+    iceprod_diff = read_anomaly('ice_prod')
     bwsalt_diff = read_anomaly('bwsalt')
     bwage_diff = read_anomaly('bwage')
     speed_diff = read_anomaly('speed')
@@ -875,24 +880,24 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     print 'Plotting'
     # Wrap things into lists
-    data = [bwtemp_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 0.04, 1, 0.01, 0.5]
-    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Bottom water salinity (psu)', 'c) Bottom water age (years)', 'd) Barotropic velocity (m/s)', 'e) Ice shelf melt rate (m/y)']
-    fig, gs = set_panels('5C0')
+    data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
+    vmin_diff = [-0.2, -1, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 1, 0.04, 1, 0.01, 0.5]
+    include_shelf = [True, False, True, True, True, True]
+    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
+    fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
-        # Leave the top left plot empty for title
-        ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
-        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
+        ax = plt.subplots(gs[i/3, i%3])
+        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i], include_shelf=include_shelf[i])
         if i in [1,3,4]:
             # Remove latitude labels
             ax.set_yticklabels([])
         if i in [0,1]:
             # Remove longitude labels
             ax.set_xticklabels([])
-    # Main title in top left space
-    plt.text(0.18, 0.78, 'Maud Rise\nminus baseline\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')
+    # Main title
+    plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
+    finished_plot(fig) #, fig_name=fig_dir+'anomaly_panels.png')
 
 
 # Plot a 2-part timeseries showing percent changes in basal mass loss for (a) FRIS and (b) EWIS.
