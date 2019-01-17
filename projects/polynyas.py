@@ -575,6 +575,9 @@ def prelim_all_plots (base_dir='./', fig_dir='./'):
 # Plot 5 lat-lon panels showing the baseline mean state in the FRIS cavity: bottom water age, barotropic circulation, bottom water temperature and salinity, ice shelf melt rate.
 def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
 
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
     if input_file is None:
         input_file = base_dir + case_dir[0] + avg_file
 
@@ -828,6 +831,70 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         # Add variable title
         plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
+
+
+# Plot 5 lat-lon panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, salinity, and age; barotropic circulation; and ice shelf melt rate.
+def anomaly_panels (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    # Overwrite case directories for now
+    tmp_cases = ['WSK_002/', 'WSK_003/']
+
+    print 'Building grid'
+    grid = Grid(base_dir+grid_dir)
+
+    # Inner function to read and process field from a single simulation
+    def read_field (var, file_path):
+        if var == 'bwtemp':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        elif var == 'bwsalt':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+        elif var == 'bwage':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=0), grid))
+        elif var == 'speed':
+            u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
+            v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+            speed, u, v = prepare_vel(u_tmp, v_tmp, grid)#
+            return speed
+        elif var == 'ismr':
+            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid))
+
+    # Inner function to read and calculate anomalies
+    def read_anomaly (var):
+        return read_field(var, base_dir+tmp_cases[1]+avg_file) - read_field(var, base_dir+tmp_cases[0]+avg_file)
+
+    # Now call the functions for each variable
+    print 'Processing fields'
+    bwtemp_diff = read_anomaly('bwtemp')
+    bwsalt_diff = read_anomaly('bwsalt')
+    bwage_diff = read_anomaly('bwage')
+    speed_diff = read_anomaly('speed')
+    ismr_diff = read_anomaly('ismr')
+
+    print 'Plotting'
+    # Wrap things into lists
+    data = [bwtemp_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
+    vmin_diff = [-1, -0.25, -10, -0.1, -5]
+    vmax_diff = [1, 0.25, 10, 0.1, 5]
+    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Bottom water salinity (psu)', 'c) Bottom water age (years)', 'd) Barotropic velocity (m/s)', 'e) Ice shelf melt rate (m/y)']
+    fig, gs = set_panels('5C0')
+    for i in range(len(data)):
+        # Leave the top left plot empty for title
+        ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
+        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
+        if i in [1,3,4]:
+            # Remove latitude labels
+            ax.set_yticklabels([])
+        if i in [0,1]:
+            # Remove longitude labels
+            ax.set_xticklabels([])
+    # Main title in top left space
+    plt.text(0.18, 0.78, 'Maud Rise\nminus baseline\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
+    finished_plot(fig) #, fig_name=fig_dir+'anomaly_panels.png')
+    
+    
         
 
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
