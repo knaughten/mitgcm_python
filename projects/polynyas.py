@@ -974,6 +974,58 @@ def calc_wed_gyre_trans (timeseries_path, last_year=False):
     else:
         print 'Weddell Gyre transport over entire simulation: ' + str(np.mean(wed_gyre_trans))
 
+
+def calc_recovery_time (base_dir='./'):
+
+    window = 5  # Must be odd
+    n = (window-1)/2
+    base_dir = real_dir(base_dir)
+
+    # Paths to timeseries files for the baseline and Maud Rise 5y simulations
+    file1 = base_dir + case_dir[0] + timeseries_file
+    file2 = base_dir + case_dir[-1] + timeseries_file
+
+    for var in ['fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt']:
+        
+        # Read baseline timeseries
+        time1 = netcdf_time(file1, 'time')
+        data1 = read_netcdf(file1, var)
+        # Read Maud Rise 5y timeseries
+        time2 = netcdf_time(file2, 'time')
+        data2 = read_netcdf(file2, var)
+        # Get difference
+        time, data = trim_and_diff(time1, time2, data1, data2)
+        # Annually average
+        data, time = monthly_to_annual(data, time)
+
+        # Now calculate signal-to-noise in chunks of <window> years
+        data_s2n = []
+        time_s2n = []
+        for t in range(n, len(data)-n):
+            data_chunk = data[t-n:t+n+1]
+            data_s2n.append(np.mean(data_chunk)/np.std(data_chunk))
+            time_s2n.append(time[t])
+
+        # Find the first index where it falls below 1
+        t0 = np.where(data_s2n < 1)[0][0]
+        print var + ' recovers in ' + str(time_s2n[t0].year)
+
+        # Plot
+        fig, ax = plt.subplots()
+        ax.plot_date(time_s2n, data_s2n, '-', linewidth=1.5)
+        ax.axhline(y=1, color='black')
+        ax.grid(True)
+        plt.title(var, fontsize=18)
+        finished_plot(fig)
+        
+        
+        
+        
+
+        
+    
+    
+
     
 
     
