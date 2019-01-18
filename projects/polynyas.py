@@ -31,6 +31,7 @@ from ..plot_utils.slices import slice_patches, slice_values, plot_slice_patches
 case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'polynya_maud_rise_big/', 'polynya_maud_rise_small/', 'polynya_maud_rise_5y/']
 grid_dir = case_dir[0] + 'grid/'
 timeseries_file = 'output/timeseries_polynya.nc'
+timeseries_age_file = 'output/timeseries_age.nc'
 avg_file = 'output/1979_2016_avg.nc'
 ice_prod_file = 'output/ice_prod_1979_2016_avg.nc'
 start_year = 1979
@@ -90,6 +91,11 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
 
     # Inner function to plot timeseries on the same axes, plus potentially a difference plot and/or a percent difference plot.
     def plot_polynya_timeseries (var_name, title, units, use_baseline=True, diff=None, percent_diff=None, annual=True):
+
+        if var_name == 'fris_age':
+            ts_file = timeseries_age_file
+        else:
+            ts_file = timeseries_file
         
         if use_baseline:
             i0 = 0
@@ -110,7 +116,7 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
         # Read data
         data = []
         for i in range(i0, num_expts):
-            file_path = base_dir + case_dir[i] + timeseries_file
+            file_path = base_dir + case_dir[i] + ts_file
             if i==i0:
                 # Read the time axis; don't need to back up one month as that was already done during precomputation
                 time = netcdf_time(file_path, monthly=False)
@@ -166,6 +172,7 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
     plot_polynya_timeseries('hssw_vol', 'Volume of HSSW', '% of domain')
     plot_polynya_timeseries('wdw_vol', 'Volume of WDW', '% of domain')
     plot_polynya_timeseries('mwdw_vol', 'Volume of MWDW', '% of domain')
+    plot_polynya_timeseries('fris_age', 'FRIS cavity age', 'years')
 
 
 # Make a bunch of preliminary lat-lon plots.
@@ -984,11 +991,15 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Paths to timeseries files for the baseline and Maud Rise 5y simulations
-    file1 = base_dir + case_dir[0] + timeseries_file
-    file2 = base_dir + case_dir[-1] + timeseries_file
+    for var in ['fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'fris_age', 'sws_shelf_temp', 'sws_shelf_salt']:
 
-    for var in ['fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt']:
+        # Paths to timeseries files for the baseline and Maud Rise 5y simulations
+        if var == 'fris_age':
+            ts_file = timeseries_age_file
+        else:
+            ts_file = timeseries_file
+        file1 = base_dir + case_dir[0] + ts_file
+        file2 = base_dir + case_dir[-1] + ts_file
 
         # Set up plot
         fig, gs = set_panels('2TS')
@@ -1021,8 +1032,12 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
         data_s2n = np.array(data_s2n)
 
         # Find the first index where it falls below 1
-        t0 = np.where(np.abs(data_s2n) < 1)[0][0]
-        year0 = str(time_s2n[t0].year)
+        if np.all(np.abs(data_s2n) > 1):
+            # This never happens
+            year0 = '-'
+        else:
+            t0 = np.where(np.abs(data_s2n) < 1)[0][0]
+            year0 = str(time_s2n[t0].year)
 
         # Plot signal to noise
         ax = plt.subplot(gs[0,1])
