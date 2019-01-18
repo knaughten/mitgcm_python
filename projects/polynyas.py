@@ -11,7 +11,7 @@ import numpy as np
 from ..postprocess import precompute_timeseries
 from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land
 from ..grid import Grid
-from ..plot_1d import timeseries_multi_plot
+from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string, sec_per_year
 from ..timeseries import trim_and_diff, monthly_to_annual
@@ -68,7 +68,7 @@ def get_polynya_loc (polynya):
 # Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
-    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt', 'isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']
+    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'fris_age', 'sws_shelf_temp', 'sws_shelf_salt', 'isw_vol', 'hssw_vol', 'wdw_vol', 'mwdw_vol']
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None
@@ -975,50 +975,68 @@ def calc_wed_gyre_trans (timeseries_path, last_year=False):
         print 'Weddell Gyre transport over entire simulation: ' + str(np.mean(wed_gyre_trans))
 
 
-def calc_recovery_time (base_dir='./'):
+# Use signal-to-noise analysis to determine when the Maud Rise 5y experiment has "recovered", based on various timeseries.
+def calc_recovery_time (base_dir='./', fig_dir='./'):
 
+    perturb_years = 5
     window = 5  # Must be odd
-    n = (window-1)/2
+    n = (window-1)/2 # Must be < perturb_years
     base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     # Paths to timeseries files for the baseline and Maud Rise 5y simulations
     file1 = base_dir + case_dir[0] + timeseries_file
     file2 = base_dir + case_dir[-1] + timeseries_file
 
     for var in ['fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'sws_shelf_temp', 'sws_shelf_salt']:
-        
+
+        # Set up plot
+        fig, gs = set_panels('2TS')
+
         # Read baseline timeseries
-        time1 = netcdf_time(file1, 'time')
+        time1 = netcdf_time(file1, 'time', monthly=False)
         data1 = read_netcdf(file1, var)
         # Read Maud Rise 5y timeseries
-        time2 = netcdf_time(file2, 'time')
+        time2 = netcdf_time(file2, 'time', monthly=False)
         data2 = read_netcdf(file2, var)
         # Get difference
         time, data = trim_and_diff(time1, time2, data1, data2)
         # Annually average
         data, time = monthly_to_annual(data, time)
 
+        # Plot difference
+        ax = plt.subplot(gs[0,0])
+        ax.plot_date(time, data, '-', linewidth=1.25)
+        ax.grid(True)
+        ax.axhline(color='black')
+        plt.title(var+ ' anomaly', fontsize=18)
+
         # Now calculate signal-to-noise in chunks of <window> years
         data_s2n = []
         time_s2n = []
-        for t in range(n, len(data)-n):
+        for t in range(perturb_years, len(data)-n):
             data_chunk = data[t-n:t+n+1]
             data_s2n.append(np.mean(data_chunk)/np.std(data_chunk))
             time_s2n.append(time[t])
+        data_s2n = np.array(data_s2n)
 
         # Find the first index where it falls below 1
-        t0 = np.where(data_s2n < 1)[0][0]
-        print var + ' recovers in ' + str(time_s2n[t0].year)
+        t0 = np.where(np.abs(data_s2n) < 1)[0][0]
+        year0 = str(time_s2n[t0].year)
 
-        # Plot
-        fig, ax = plt.subplots()
+        # Plot signal to noise
+        ax = plt.subplot(gs[0,1])
         ax.plot_date(time_s2n, data_s2n, '-', linewidth=1.5)
-        ax.axhline(y=1, color='black')
+        if np.amax(data_s2n) > 1:
+            ax.axhline(y=1, color='black')
+        if np.amin(data_s2n) < -1:
+            ax.axhline(y=-1, color='black')
         ax.grid(True)
-        plt.title(var, fontsize=18)
-        finished_plot(fig)
-        
-        
+        plt.title(var + ' signal/noise', fontsize=18)
+        plt.text(0.5, 0.05, 'Recovers in '+str(year0), fontsize=18, ha='center', va='center', transform=fig.transFigure)
+        finished_plot(fig, fig_name=fig_dir+'s2n_'+var+'.png')
+
+
         
         
 

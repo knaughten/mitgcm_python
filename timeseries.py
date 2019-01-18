@@ -371,6 +371,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'seaice_area': total sea ice area
 #      'fris_temp': volume-averaged temperature in the FRIS cavity
 #      'fris_salt': volume-averaged salinity in the FRIS cavity
+#      'fris_age': volume-averaged age tracer in the FRIS cavity
 #      'sws_shelf_temp': volume-averaged temperature over the Southern Weddell Sea continental shelf
 #      'sws_shelf_salt': volume-averaged salinity over the Southern Weddell Sea continental shelf
 #      'temp_polynya': depth-averaged temperature through the centre of a polynya
@@ -439,7 +440,7 @@ def set_parameters (var):
         var_name = 'SIarea'
         title = 'Total sea ice area'
         units = r'million km$^2$'
-    elif var in ['fris_temp', 'fris_salt']:
+    elif var in ['fris_temp', 'fris_salt', 'fris_age']:
         option = 'avg_fris'
         if var == 'fris_temp':
             var_name = 'THETA'
@@ -449,6 +450,10 @@ def set_parameters (var):
             var_name = 'SALT'
             title = 'Volume-averaged salinity in FRIS cavity'
             units = 'psu'
+        elif var == 'fris_age':
+            var_name = 'TRAC01':
+            title = 'Volume-averaged age tracer in FRIS cavity'
+            units = 'years'
     elif var in ['sws_shelf_temp', 'sws_shelf_salt']:
         option = 'avg_sws_shelf'
         if var == 'sws_shelf_temp':
