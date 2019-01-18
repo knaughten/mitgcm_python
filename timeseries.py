@@ -451,7 +451,7 @@ def set_parameters (var):
             title = 'Volume-averaged salinity in FRIS cavity'
             units = 'psu'
         elif var == 'fris_age':
-            var_name = 'TRAC01':
+            var_name = 'TRAC01'
             title = 'Volume-averaged age tracer in FRIS cavity'
             units = 'years'
     elif var in ['sws_shelf_temp', 'sws_shelf_salt']:
