@@ -574,13 +574,11 @@ def prelim_all_plots (base_dir='./', fig_dir='./'):
 
 
 # Plot 5 lat-lon panels showing the baseline mean state in the FRIS cavity: bottom water age, barotropic circulation, bottom water temperature and salinity, ice shelf melt rate.
-def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
+def baseline_panels (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-
-    if input_file is None:
-        input_file = base_dir + case_dir[0] + avg_file
+    input_file = base_dir + case_dir[0] + avg_file
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -631,9 +629,6 @@ def baseline_panels (base_dir='./', fig_dir='./', input_file=None):
 # Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.
 def aice_simulations (base_dir='./', fig_dir='./'):
 
-    # For now overwrite files with temporary files
-    in_files = ['WSK_002/output/1979_2016_avg.nc', 'WSK_003/output/1979_2016_avg.nc', 'WSK_004/output/avg_to_jan06.nc', 'WSK_005/output/avg_to_mar07.nc', 'WSK_006/output/avg_to_feb98.nc']
-    # Also need letters before each subplot
     title_prefix = ['a) ', 'b) ', 'c) ', 'd) ', 'e) ']
 
     base_dir = real_dir(base_dir)
@@ -646,7 +641,7 @@ def aice_simulations (base_dir='./', fig_dir='./'):
     data = []
     mask = [None]
     for i in range(num_expts-1):
-        data.append(mask_land_ice(read_netcdf(base_dir+in_files[i], 'SIarea', time_index=0), grid))
+        data.append(mask_land_ice(read_netcdf(base_dir+case_dir[i]+avg_file, 'SIarea', time_index=0), grid))
         if i > 0:
             mask.append(read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64))
 
@@ -675,9 +670,6 @@ def aice_simulations (base_dir='./', fig_dir='./'):
 # Plot a 2-part timeseries showing (a) convective area and (b) Weddell Gyre strength in each simulation.
 def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
 
-    # For now overwrite case directories
-    tmp_cases = ['WSK_002/', 'WSK_003/', 'WSK_004/', 'WSK_005/', 'WSK_006/', 'WSK_007/']
-
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)    
 
@@ -686,7 +678,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     conv_area = []
     wed_gyre = []
     for i in range(num_expts):
-        file_path = base_dir + tmp_cases[i] + timeseries_file
+        file_path = base_dir + case_dir[i] + timeseries_file
         time.append(netcdf_time(file_path, monthly=False))
         # Convert convective area to 10^5 km^2
         conv_area.append(read_netcdf(file_path, 'conv_area')*10)
@@ -715,9 +707,6 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
 
 # Plot slices through 50W for the baseline and Maud Rise simulations as well as the anomaly, showing (a) temperature, (b) salinity, and (c) density.
 def mwdw_slices (base_dir='./', fig_dir='./'):
-
-    # For now overwrite case directories
-    tmp_cases = ['WSK_002/', 'WSK_003/']
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -757,7 +746,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     salt = []
     rho = []
     for i in range(2):
-        file_path = base_dir + tmp_cases[i] + avg_file
+        file_path = base_dir + case_dir[i] + avg_file
         temp.append(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
         salt.append(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
         rho.append(mask_3d(density('MDJWF', salt[i], temp[i], 1000), grid)-1000)
@@ -840,9 +829,6 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Overwrite case directories for now
-    tmp_cases = ['WSK_002/', 'WSK_003/']
-
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
@@ -871,7 +857,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
             file_path = ice_prod_file
         else:
             file_path = avg_file
-        return read_field(var, base_dir+tmp_cases[1]+file_path) - read_field(var, base_dir+tmp_cases[0]+file_path)
+        return read_field(var, base_dir+case_dir[1]+file_path) - read_field(var, base_dir+case_dir[0]+file_path)
 
     # Now call the functions for each variable
     print 'Processing fields'
@@ -907,9 +893,6 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 # Plot a 2-part timeseries showing percent changes in basal mass loss for (a) FRIS and (b) EWIS.
 def massloss_timeseries (base_dir='./', fig_dir='./'):
 
-    # For now overwrite case directories
-    tmp_cases = ['WSK_002/', 'WSK_003/', 'WSK_004/', 'WSK_005/', 'WSK_006/', 'WSK_007/']
-
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
@@ -918,7 +901,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     fris_ismr = []
     ewed_ismr = []
     for i in range(num_expts):
-        file_path = base_dir + tmp_cases[i] + timeseries_file
+        file_path = base_dir + case_dir[i] + timeseries_file
         times.append(netcdf_time(file_path, monthly=False))
         fris_ismr.append(read_netcdf(file_path, 'fris_ismr'))
         ewed_ismr.append(read_netcdf(file_path, 'ewed_ismr'))
@@ -962,13 +945,11 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'massloss_timeseries.png')
     
         
-
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
 def calc_polynya_ts_anom (base_dir='./'):
 
     base_dir = real_dir(base_dir)
-    # Update this later
-    file_path = base_dir + 'WSK_003/output/timeseries_polynya.nc'
+    file_path = base_dir + case_dir[1] + timeseries_file
 
     # Read the timeseries
     time = netcdf_time(file_path, monthly=False)
