@@ -460,4 +460,11 @@ def bdry_from_hfac (option, hfac, z_edges):
     return bdry
 
 
+# Modify the given bathymetry or ice shelf draft to make it reflect what the model will actually see, based on hFac constraints.
+def model_bdry (option, bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
+
+    # First calculate the hFacC
+    hfac = calc_hfac(bathy, draft, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    # Now calculate the new boundary
+    return bdry_from_hfac(option, hfac, z_edges)
     
