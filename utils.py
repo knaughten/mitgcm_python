@@ -429,9 +429,9 @@ def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
 # Calculate bathymetry or ice shelf draft from hFacC.
 def bdry_from_hfac (option, hfac, z_edges):
 
-    nz = hfac.size[0]
-    ny = hfac.size[1]
-    nx = hfac.size[2]
+    nz = hfac.shape[0]
+    ny = hfac.shape[1]
+    nx = hfac.shape[2]
     dz = z_edges[:-1]-z_edges[1:]
 
     bdry = np.zeros([ny, nx])
