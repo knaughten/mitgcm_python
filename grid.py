@@ -153,7 +153,19 @@ class Grid:
         self.draft[index] = 0
 
         # Calculate bathymetry
-        self.bathy = self.draft - self.wct
+        self.bathy = np.zeros([self.ny, self.nx])
+        self.bathy[:,:] = np.nan
+        # Loop from bottom to top
+        for k in range(self.nz-1,-1,-1):
+            hfac_tmp = self.hfac[k,:]
+            # Identify wet cells with no bathymetry assigned yet
+            index = (hfac_tmp!=0)*np.isnan(self.bathy)
+            self.bathy[index] = self.z_edges[k] - self.dz[k]*hfac_tmp[index]
+        # Anything still NaN is land mask and should have zero bathymetry
+        index = np.isnan(self.bathy)
+        self.bathy[index] = 0
+        
+        #self.bathy = self.draft - self.wct
 
         # Create masks on the t, u, and v grids
         # Land masks
