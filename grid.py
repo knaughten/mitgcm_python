@@ -12,7 +12,7 @@ import sys
 import os
 
 from file_io import read_netcdf
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
 from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 
 
@@ -36,7 +36,6 @@ from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 # dV: volume of cell considering partial cells (m^3, XYZ)
 # bathy: bathymetry (negative, m, XY)
 # draft: ice shelf draft (negative, m, XY)
-# wct: water column thickness (m, XYZ)
 # land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY). True means it is masked.
 # ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
@@ -77,7 +76,6 @@ class Grid:
             self.hfac = read_netcdf(path, 'hFacC')
             self.hfac_w = read_netcdf(path, 'hFacW')
             self.hfac_s = read_netcdf(path, 'hFacS')
-            self.wct = read_netcdf(path, 'Depth')
         else:
             self.lon_2d = rdmds(path+'XC')
             self.lat_2d = rdmds(path+'YC')
@@ -94,7 +92,6 @@ class Grid:
             self.hfac = rdmds(path+'hFacC')
             self.hfac_w = rdmds(path+'hFacW')
             self.hfac_s = rdmds(path+'hFacS')
-            self.wct = rdmds(path+'Depth')
 
         # Make 1D versions of latitude and longitude arrays (only useful for regular lat-lon grids)
         if len(self.lon_2d.shape) == 2:
@@ -139,33 +136,9 @@ class Grid:
         # Calculate volume
         self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
 
-        # Calculate ice shelf draft
-        self.draft = np.zeros([self.ny, self.nx])
-        self.draft[:,:] = np.nan
-        # Loop from top to bottom
-        for k in range(self.nz):
-            hfac_tmp = self.hfac[k,:]
-            # Identify wet cells with no draft assigned yet
-            index = (hfac_tmp!=0)*np.isnan(self.draft)
-            self.draft[index] = self.z_edges[k] - self.dz[k]*(1-hfac_tmp[index])
-        # Anything still NaN is land mask and should have zero draft
-        index = np.isnan(self.draft)
-        self.draft[index] = 0
-
-        # Calculate bathymetry
-        self.bathy = np.zeros([self.ny, self.nx])
-        self.bathy[:,:] = np.nan
-        # Loop from bottom to top
-        for k in range(self.nz-1,-1,-1):
-            hfac_tmp = self.hfac[k,:]
-            # Identify wet cells with no bathymetry assigned yet
-            index = (hfac_tmp!=0)*np.isnan(self.bathy)
-            self.bathy[index] = self.z_edges[k] - self.dz[k]*hfac_tmp[index]
-        # Anything still NaN is land mask and should have zero bathymetry
-        index = np.isnan(self.bathy)
-        self.bathy[index] = 0
-        
-        #self.bathy = self.draft - self.wct
+        # Calculate bathymetry and ice shelf draft
+        self.bathy = bdry_from_hfac('bathy', self.hfac, self.z_edges)
+        self.draft = bdry_from_hfac('draft', self.hfac, self.z_edges)
 
         # Create masks on the t, u, and v grids
         # Land masks

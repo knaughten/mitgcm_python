@@ -735,47 +735,7 @@ def merge_bedmap2_changes (orig_file, updated_files, out_file):
     write_binary(data_final, out_file, prec=32, endian='little')
 
 
-# Calculate hFacC without knowing the full grid, i.e. just from the bathymetry and ice shelf draft.
-def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
 
-    # Calculate a few grid variables
-    z_above = z_edges[:-1]
-    z_below = z_edges[1:]
-    dz = np.abs(z_edges[1:] - z_edges[:-1])
-    nz = dz.size
-    ny = bathy.shape[0]
-    nx = bathy.shape[1]    
-    
-    # Tile all arrays to be 3D
-    bathy = xy_to_xyz(bathy, [nx, ny, nz])
-    draft = xy_to_xyz(draft, [nx, ny, nz])
-    dz = z_to_xyz(dz, [nx, ny, ny])
-    z_above = z_to_xyz(z_above, [nx, ny, nz])
-    z_below = z_to_xyz(z_below, [nx, ny, nz])
-    
-    # Start out with all cells closed
-    hfac = np.zeros([nz, ny, nx])
-    # Find fully open cells
-    index = (z_below >= bathy)*(z_above <= draft)
-    hfac[index] = 1
-    # Find partial cells due to bathymetry alone
-    index = (z_below < bathy)*(z_above <= draft)
-    hfac[index] = (z_above[index] - bathy[index])/dz[index]
-    # Find partial cells due to ice shelf draft alone
-    index = (z_below >= bathy)*(z_above > draft)
-    hfac[index] = (draft[index] - z_below[index])/dz[index]
-    # Find partial cells which are intersected by both
-    index = (z_below < bathy)*(z_above > draft)
-    hfac[index] = (draft[index] - bathy[index])/dz[index]
-
-    # Now apply hFac limitations
-    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz, 1))    
-    index = hfac < hfac_limit/2
-    hfac[index] = 0
-    index = (hfac >= hfac_limit/2)*(hfac < hfac_limit)
-    hfac[index] = hfac_limit[index]
-
-    return hfac
     
     
     

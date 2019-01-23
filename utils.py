@@ -383,4 +383,81 @@ def check_time_dependent (var, num_dim=3):
         sys.exit()
 
 
+# Calculate hFacC without knowing the full grid, i.e. just from the bathymetry and ice shelf draft.
+def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
+
+    # Calculate a few grid variables
+    z_above = z_edges[:-1]
+    z_below = z_edges[1:]
+    dz = np.abs(z_edges[1:] - z_edges[:-1])
+    nz = dz.size
+    ny = bathy.shape[0]
+    nx = bathy.shape[1]    
+    
+    # Tile all arrays to be 3D
+    bathy = xy_to_xyz(bathy, [nx, ny, nz])
+    draft = xy_to_xyz(draft, [nx, ny, nz])
+    dz = z_to_xyz(dz, [nx, ny, ny])
+    z_above = z_to_xyz(z_above, [nx, ny, nz])
+    z_below = z_to_xyz(z_below, [nx, ny, nz])
+    
+    # Start out with all cells closed
+    hfac = np.zeros([nz, ny, nx])
+    # Find fully open cells
+    index = (z_below >= bathy)*(z_above <= draft)
+    hfac[index] = 1
+    # Find partial cells due to bathymetry alone
+    index = (z_below < bathy)*(z_above <= draft)
+    hfac[index] = (z_above[index] - bathy[index])/dz[index]
+    # Find partial cells due to ice shelf draft alone
+    index = (z_below >= bathy)*(z_above > draft)
+    hfac[index] = (draft[index] - z_below[index])/dz[index]
+    # Find partial cells which are intersected by both
+    index = (z_below < bathy)*(z_above > draft)
+    hfac[index] = (draft[index] - bathy[index])/dz[index]
+
+    # Now apply hFac limitations
+    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz, 1))    
+    index = hfac < hfac_limit/2
+    hfac[index] = 0
+    index = (hfac >= hfac_limit/2)*(hfac < hfac_limit)
+    hfac[index] = hfac_limit[index]
+
+    return hfac
+
+
+# Calculate bathymetry or ice shelf draft from hFacC.
+def bdry_from_hfac (option, hfac, z_edges):
+
+    nz = hfac.size[0]
+    ny = hfac.size[1]
+    nx = hfac.size[2]
+    dz = z_edges[:-1]-z_edges[1:]
+
+    bdry = np.zeros([ny, nx])
+    bdry[:,:] = np.nan
+    if option == 'bathy':
+        # Loop from bottom to top
+        k_vals = range(nz-1, -1, -1)
+    elif option == 'draft':
+        # Loop from top to bottom
+        k_vals = range(nz)
+    else:
+        print 'Error (bdry_from_hfac): invalid option ' + option
+        sys.exit()
+    for k in k_vals:
+        hfac_tmp = hfac[k,:]
+        # Identify wet cells with no boundary assigned yet
+        index = (hfac_tmp!=0)*np.isnan(bdry)
+        if option == 'bathy':
+            bdry[index] = z_edges[k] - dz[k]*hfac_tmp[index]
+        elif option == 'draft':
+            bdry[index] = z_edges[k] - dz[k]*(1-hfac_tmp[index])
+    # Anything still NaN is land mask and should be zero
+    index = np.isnan(bdry)
+    bdry[index] = 0
+
+    return bdry
+
+
     
