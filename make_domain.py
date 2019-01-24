@@ -8,7 +8,7 @@ import shutil
 
 from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
-from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz, model_bdry
+from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
 from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
 from grid import Grid
 
@@ -425,6 +425,42 @@ def level_vars (A, dz, z_edges, include_edge='top'):
     return layer_number, level_above, level_below, dz_layer, dz_layer_above, dz_layer_below
 
 
+# Helper function to calculate the actual bathymetry or ice shelf draft as seen by the model, based on hFac constraints, but WITHOUT considering the case where the water column is so thin that it will be closed. (These cases will be taken care of by digging later.) Instead, calculate the bathymetry as if the ice shelf draft is infinitely thin, and calculate the ice shelf draft as if the bathymetry is infinitely deep.
+def single_model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20.):
+
+    if option == 'bathy':
+        include_edge = 'bottom'
+    elif option == 'draft':
+        include_edge = 'top'
+    else:
+        print 'Error (single_model_bdry): invalid option ' + option
+        sys.exit()
+
+    # Get some intermediate variables
+    level_above, level_below, dz_layer = level_vars(A, dz, z_edges, include_edge=include_edge)[1:4]
+    # Determine which is the open edge and which is the closed ege
+    if option == 'bathy':
+        open_edge = level_above
+        closed_edge = level_below
+    elif option == 'draft':
+        open_edge = level_below
+        closed_edge = level_above
+    # Calculate the hFac of the partial cell
+    hfac = np.abs(A - open_edge)/dz_layer
+    # Find the minimum acceptable hFac
+    hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_layer, 1))
+    # Update A; start with a deep copy
+    model_A = np.copy(A)
+    # Find cells which should be fully closed
+    index = hfac < hfac_limit/2
+    model_A[index] = open_edge[index]
+    # Find cells which should be fully open
+    index = (hfac < hfac_limit)*(hfac >= hfac_limit/2)
+    model_A[index] = closed_edge[index]
+
+    return model_A
+
+
 # Deal with three problems which can result with z-levels:
 # (1) Cells on the bottom can become isolated, with no horizontal neighbours (i.e. adjacent open cells), just one vertical neighbour above. Dense water tends to pool in these cells and can't mix out very easily. Fix this by raising the bathymetry until the bottom cell has at least one horizontal neighbour. We call it "filling".
 # (2) Subglacial lakes can form beneath the ice shelves, whereby two cells which should have connected water columns (based on the masks we interpolated from BEDMAP2) are disconnected, i.e. the ice shelf draft at one cell is deeper than the bathymetry at a neighbouring cell (due to interpolation). Fix this by deepening the bathymetry where needed, so there are a minimum of 2 (at least partially) open faces between the neighbouring cells, ensuring that both tracers and velocities are connected. This preserves the BEDMAP2 grounding line locations, even if the bathymetry is somewhat compromised. We call it "digging".
@@ -436,10 +472,10 @@ def level_vars (A, dz, z_edges, include_edge='top'):
 
 
 # Fix problem (1) above.
-def do_filling (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
+def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
 
     # Find the actual bathymetry as the model will see it (based on hFac constraints)
-    model_bathy = model_bdry('bathy', bathy, draft, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    model_bathy = single_model_bdry(bathy, dz, z_edges, option='bathy', hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Find the depth of the z-level below each bathymetry point
     level_below = level_vars(model_bathy, dz, z_edges, include_edge='bottom')[2]
     # Also find this value at the deepest horizontal neighbour for every point
@@ -461,11 +497,13 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     if dig_option == 'bathy':
         field = bathy
         other_option = 'draft'
+        other_field = draft
         include_edge = 'top'
         direction_flag = -1
     elif dig_option == 'draft':
         field = draft
         other_option = 'bathy'
+        other_field = bathy
         include_edge = 'bottom'
         direction_flag = 1
     else:
@@ -473,7 +511,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         sys.exit()
 
     # Find the other field as the model will see it (based on hFac constraints)
-    model_other_field = model_bdry(other_option, bathy, draft, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    model_other_field = single_model_bdry(other_field, dz, z_edges, option=other_option, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Get some variables about the vertical grid
     layer_number, level_above, level_below, dz_layer, dz_layer_above, dz_layer_below = level_vars(model_other_field, dz, z_edges, include_edge=include_edge)
     # Figure out which ones we care about
