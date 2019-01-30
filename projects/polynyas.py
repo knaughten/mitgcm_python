@@ -211,6 +211,30 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     def read_and_process (var, file_path, return_vel_components=False):
         if var == 'aice':
             return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=0), grid)
+        elif var == 'hice':
+            return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=0), grid)
+        elif var == 'hsnow':
+            return mask_land_ice(read_netcdf(file_path, 'SIhsnow', time_index=0), grid)
+        elif var == 'saltflx':
+            return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)
+        elif var == 'dh_atm_ice':
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbATC', time_index=0), grid)*sec_per_year
+        elif var == 'dh_atm_ocn':
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbATO', time_index=0), grid)*sec_per_year
+        elif var == 'dh_ocn':
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0), grid)*sec_per_year
+        elif var == 'dh_flo':
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year
+        elif var == 'ice_strength':
+            return mask_land_ice(read_netcdf(file_path, 'SIpress', time_index=0), grid)
+        elif var == 'ice_stress':
+            tx_tmp = mask_land_ice(read_netcdf(file_path, 'SItaux', time_index=0), grid, gtype='u')
+            ty_tmp = mask_land_ice(read_netcdf(file_path, 'SItauy', time_index=0), grid, gtype='v')
+            return prepare_vel(tx_tmp, ty_tmp, grid, vel_option='ice')[0]
+        elif var == 'ice_vel':
+            uice_tmp = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=0), grid, gtype='u')
+            vice_tmp = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=0), grid, gtype='v')
+            return prepare_vel(uice_tmp, vice_tmp, grid, vel_option='ice')[0]
         elif var == 'bwtemp':
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
         elif var == 'bwsalt':
@@ -416,6 +440,18 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     # Eastern Weddell plots
     plot_latlon_5panel('ismr', 'Ice shelf melt rate (m/y), 1979-2016', option='anomaly', ctype='ismr', zoom_ewed=True, vmax=6, extend='max', vmax_diff=3, extend_diff='max')
     plot_latlon_5panel('temp_avg', 'Vertically averaged temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.3, vmax_diff=0.3, extend_diff='both')
+    # Sea ice plots
+    plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('hice', 'Sea ice effective thickness (m), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('hsnow', 'Snow effective thickness (m), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('saltflx', r'Surface salt flux (kg/m$^2$/s), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_atm_ice', r'$\Delta$h from atmosphere flux over ice (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_atm_ocn', r'$\Delta$h from atmosphere flux over ocean (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_ocn', r'$\Delta$h from ocean flux (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_flo', r'$\Delta$h from snow flooding (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('ice_strength', 'Sea ice strength (N/m), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('ice_stress', r'Sea ice surface stress (N/m$^2$, 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('ice_vel', 'Sea ice velocity (m/s), 1979-2016', option='anomaly', zoom_fris=True)
 
 
 # Plot vertically averaged temp and salt anomalies, as well as ice shelf melt rate anomalies, for each year.
