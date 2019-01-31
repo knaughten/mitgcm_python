@@ -216,7 +216,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
         elif var == 'hsnow':
             return mask_land_ice(read_netcdf(file_path, 'SIhsnow', time_index=0), grid)
         elif var == 'saltflx':
-            return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)
+            return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)*1e6
         elif var == 'dh_atm_ice':
             return mask_land_ice(read_netcdf(file_path, 'SIdHbATC', time_index=0), grid)*sec_per_year
         elif var == 'dh_atm_ocn':
@@ -442,16 +442,15 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     plot_latlon_5panel('temp_avg', 'Vertically averaged temperature ('+deg_string+'C), 1979-2016', option='anomaly', zoom_ewed=True, vmin_diff=-0.3, vmax_diff=0.3, extend_diff='both')
     # Sea ice plots
     plot_latlon_5panel('aice', 'Sea ice concentration, 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('hice', 'Sea ice effective thickness (m), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('hice', 'Sea ice effective thickness (m), 1979-2016', option='anomaly', zoom_fris=True, vmax=3, vmax_diff=1, extend='max', extend_diff='max')
     plot_latlon_5panel('hsnow', 'Snow effective thickness (m), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('saltflx', r'Surface salt flux (kg/m$^2$/s), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('dh_atm_ice', r'$\Delta$h from atmosphere flux over ice (m/y), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('dh_atm_ocn', r'$\Delta$h from atmosphere flux over ocean (m/y), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('dh_ocn', r'$\Delta$h from ocean flux (m/y), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('dh_flo', r'$\Delta$h from snow flooding (m/y), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('ice_strength', 'Sea ice strength (N/m), 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('ice_stress', r'Sea ice surface stress (N/m$^2$, 1979-2016', option='anomaly', zoom_fris=True)
-    plot_latlon_5panel('ice_vel', 'Sea ice velocity (m/s), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('saltflx', r'Surface salt flux (10$^{-6}$ kg/m$^2$/s), 1979-2016', option='anomaly', zoom_fris=True, ctype='plusminus', vmax=200, vmin_diff=-50, vmax_diff=50, extend='max', extend_diff='both')
+    plot_latlon_5panel('dh_atm_ice', 'Net sea ice production from atmosphere flux over ice (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_atm_ocn', 'Net sea ice production from atmosphere flux over ocean (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('dh_ocn', 'Net sea ice production from ocean flux (m/y), 1979-2016', option='anomaly', zoom_fris=True, vmin=-3, vmax=3, vmin_diff=-2, vmax_diff=2, ctype='plusminus', extend='both', extend_diff='both')
+    plot_latlon_5panel('dh_flo', 'Net sea ice production from snow flooding (m/y), 1979-2016', option='anomaly', zoom_fris=True)
+    plot_latlon_5panel('ice_strength', 'Sea ice strength (N/m), 1979-2016', option='anomaly', zoom_fris=True, vmax=30000, vmax_diff=10000, extend='max', extend_diff='max')
+    plot_latlon_5panel('ice_vel', 'Sea ice velocity (m/s), 1979-2016', option='anomaly', zoom_fris=True, vmax_diff=0.02, extend_diff='max')
 
 
 # Plot vertically averaged temp and salt anomalies, as well as ice shelf melt rate anomalies, for each year.
