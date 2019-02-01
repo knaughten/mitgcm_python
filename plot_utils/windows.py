@@ -44,6 +44,8 @@ def set_panels (key, figsize=None):
             figsize = (15, 6)
         elif key == '2TS':
             figsize = (12, 5)
+        elif key == 'MISO_C1':
+            figsize = (13, 4)
 
     fig = plt.figure(figsize=figsize)
     
@@ -122,6 +124,11 @@ def set_panels (key, figsize=None):
         # Two axes suitable for side-by-side timeseries, room for legend below
         gs = plt.GridSpec(1,2)
         gs.update(left=0.06, right=0.98, bottom=0.15, top=0.93, wspace=0.18)
+    elif key == 'MISO_C1':
+        # One axis in the MISOMIP shape, with a colourbar to the right
+        gs = plt.GridSpec(1,1)
+        gs.update(left=0.05, right=0.9, bottom=0.05, top=0.8)
+        cax = fig.add_axes([0.93, 0.15, 0.02, 0.6])
         
     if key == 'CTD':
         return fig, gs_1, gs_2

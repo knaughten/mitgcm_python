@@ -10,10 +10,41 @@ from ..calculus import vertical_average
 from ..interpolation import interp_grid
 
 
-# Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and throw away one row and one column of the given data field so that every remaining point has latitude and longitude boundaries defined on 4 sides. This is needed for pcolormesh so that the coordinates of the quadrilateral patches are correctly defined.
+# Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and do one of two things:
+# (1) if extrapolate=True, extrapolate one row and one column of the latitude and longitude
+# (2) if extrapolate=False, throw away one row and one column of the given data field
+# Either way, each data point will then have latitude and longitude boundaries defined on 4 sides. This is needed for pcolormesh so that the coordinates of the quadrilateral patches are correctly defined.
 # The data array can have more than 2 dimensions, as long as the second last dimension is latitude (size M), and the last dimension is longitude (size N).
-# Outputs longitude and latitude at the boundary of each cell (size MxN) and the modified data (size ...x(M-1)x(N-1)).
-def cell_boundaries (data, grid, gtype='t'):
+# Outputs longitude and latitude at the boundary of each cell (size (M+1)x(N+1), or MxN) and the data (size ...xMxN, or ...x(M-1)x(N-1)).
+def cell_boundaries (data, grid, gtype='t', extrapolate=True):
+
+    # Inner function to pad the given array in the given direction(s), either extrapolating or copying.
+    def extend_array (A, south=None, north=None, west=None, east=None):
+        if south is not None:
+            if south == 'extrapolate':
+                s_bdry = 2*A[0,:]-A[1,:]
+            elif south == 'copy':
+                s_bdry = A[0,:]
+            A = np.concatenate((s_bdry[None,:], A), axis=0)
+        if north is not None:
+            if north == 'extrapolate':
+                n_bdry = 2*A[-1,:]-A[-2,:]
+            elif north == 'copy':
+                n_bdry = A[-1,:]
+            A = np.concatenate((A, n_bdry[None,:]), axis=0)
+        if west is not None:
+            if west == 'extrapolate':
+                w_bdry = 2*A[:,0]-A[:,1]
+            elif west == 'copy':
+                w_bdry = A[:,0]
+            A = np.concatenate((w_bdry[:,None], A), axis=1)
+        if east is not None:
+            if east == 'extrapolate':
+                e_bdry = 2*A[:,-1]-A[:,-2]
+            elif east == 'copy':
+                e_bdry = A[:,-1]
+            A = np.concatenate((A, e_bdry[:,None]), axis=1)
+        return A
 
     if gtype in ['t', 'w']:
         # Tracer grid: at centres of cells
