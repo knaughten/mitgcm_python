@@ -83,13 +83,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
-    if label_latlon:
-        # Make nice axes
-        latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    else:
-        # No axes labels
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
+    latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)

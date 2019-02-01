@@ -66,7 +66,7 @@ def lat_label (x, max_decimals):
 
 # Set the limits of the longitude and latitude axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.
 # Setting zoom_fris=True will zoom into the FRIS cavity (bounds set in constants.py). You can also set specific limits on longitude and latitude (xmin etc.)
-def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None):
+def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True):
     
     # Set limits on axes
     if zoom_fris:
@@ -96,16 +96,22 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
         lon_ticks = lon_ticks[1::2]        
         ax.set_xticks(lon_ticks)
 
-    # Set nice tick labels
-    lon_labels = []
-    for x in lon_ticks:
-        lon_labels.append(lon_label(x,2))
-    ax.set_xticklabels(lon_labels)
-    # Repeat for latitude
-    lat_labels = []
-    for y in lat_ticks:
-        lat_labels.append(lat_label(y,2))
-    ax.set_yticklabels(lat_labels)
+    if label:
+        # Set nice tick labels
+        lon_labels = []
+        for x in lon_ticks:
+            lon_labels.append(lon_label(x,2))
+        ax.set_xticklabels(lon_labels)
+        # Repeat for latitude
+        lat_labels = []
+        for y in lat_ticks:
+            lat_labels.append(lat_label(y,2))
+        ax.set_yticklabels(lat_labels)
+    else:
+        # No tick labels
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+            
 
 
 # Give the axes on a slice plot nice labels. Set h_axis to 'lat' (default) or 'lon' to indicate what the horizontal axis is.
