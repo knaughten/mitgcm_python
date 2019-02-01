@@ -75,10 +75,12 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
             data = read_process_data(file_path, 'SALT', grid, lev_option='bottom')
             title = 'Bottom water salinity (psu)'
         elif var == 'bdry_temp':
-            data = read_process_data(file_path, 'THETA', grid, mask_option='except_ice', lev_option='top')
+            data = read_process_data(file_path, 'THETA', grid, lev_option='top')
+            data = mask_except_ice(data, grid, time_dependent=True)
             title = 'Boundary layer temperature ('+deg_string+'C)'
         elif var == 'bdry_salt':
-            data = read_process_data(file_path, 'SALT', grid, mask_option='except_ice', lev_option='top')
+            data = read_process_data(file_path, 'SALT', grid, lev_option='top')
+            data = mask_except_ice(data, grid, time_dependent=True)
             title = 'Boundary layer salinity (psu)'
         else:
             print 'Error (animate_latlon): invalid var ' + var
