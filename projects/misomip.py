@@ -8,7 +8,7 @@ import os
 
 from ..grid import Grid
 from ..plot_latlon import latlon_plot
-from ..utils import str_is_int, real_dir, convert_ismr, mask_except_ice, mask_land, select_top, select_bottom
+from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom
 from ..constants import deg_string
 from ..file_io import read_netcdf
 from ..plot_utils.windows import set_panels
