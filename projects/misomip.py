@@ -82,15 +82,23 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
             data = read_process_data(file_path, 'SALT', grid, lev_option='top')
             data = mask_except_ice(data, grid, time_dependent=True)
             title = 'Boundary layer salinity (psu)'
+        elif var == 'draft':
+            data = mask_except_ice(grid.draft, grid)
+            title = 'Ice shelf draft (m)'
         else:
             print 'Error (animate_latlon): invalid var ' + var
             sys.exit()
         # Loop over timesteps
-        for t in range(data.shape[0]):
-            # Extract the data from this timestep
-            # Save it and the grid to the long lists
-            all_data.append(data[t,:])
+        if var == 'draft':
+            # Just one timestep
+            all_data.append(draft)
             all_grids.append(grid)
+        else:
+            for t in range(data.shape[0]):
+                # Extract the data from this timestep
+                # Save it and the grid to the long lists
+                all_data.append(data[t,:])
+                all_grids.append(grid)
 
     extend = get_extend(vmin=vmin, vmax=vmax)
     if vmin is None:
