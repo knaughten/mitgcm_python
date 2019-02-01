@@ -91,7 +91,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         # Loop over timesteps
         if var == 'draft':
             # Just one timestep
-            all_data.append(draft)
+            all_data.append(data)
             all_grids.append(grid)
         else:
             for t in range(data.shape[0]):
