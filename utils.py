@@ -105,12 +105,12 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
 # If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d).
 # The only assumption about the input array dimensions is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
 def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False):
-    select_level('top', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
+    return select_level('top', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
 
     
 # Select the bottom layer from the given array of data. See select_top for more documentation.
 def select_bottom (data, masked=True, grid=None, gtype='t', time_dependent=False):
-    select_level('bottom', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
+    return select_level('bottom', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
 
 
 # Helper function for masking functions below
