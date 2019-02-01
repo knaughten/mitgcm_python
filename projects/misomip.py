@@ -98,8 +98,6 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
     num_frames = len(all_data)
 
-    # TODO: Extrapolate cell boundaries
-
     # Make the initial figure
     fig, gs, cax = set_panels('MISO_C1')
     ax = plt.subplot(gs[0,0])

@@ -49,23 +49,51 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True):
     if gtype in ['t', 'w']:
         # Tracer grid: at centres of cells
         # Boundaries are corners of cells
-        # Throw away eastern and northern edges
-        return grid.lon_corners_2d, grid.lat_corners_2d, data[...,:-1,:-1]
+        lon = grid.lon_corners_2d
+        lat = grid.lat_corners_2d
+        # Care about eastern and northern edges
+        if extrapolate:
+            lon_ex = extend_array(lon, north='copy', east='extrapolate')
+            lat_ex = extend_array(lat, north='extrapolate', east='copy')
+            return lon_ex, lat_ex, data
+        else:
+            return lon, lat, data[...,:-1,:-1]
     elif gtype == 'u':
         # U-grid: on left edges of cells
         # Boundaries are centres of cells in X, corners of cells in Y
-        # Throw away western and northern edges
-        return grid.lon_2d, grid.lat_corners_2d, data[...,:-1,1:]
+        lon = grid.lon_2d
+        lat = grid.lat_corners_2d
+        # Care about western and northern edges
+        if extrapolate:
+            lon_ex = extend_array(lon, north='copy', west='extrapolate')
+            lat_ex = extend_array(lat, north='extrapolate', west='copy')
+            return lon_ex, lat_ex, data
+        else:
+            return lon, lat, data[...,:-1,1:]
     elif gtype == 'v':
         # V-grid: on bottom edges of cells
         # Boundaries are corners of cells in X, centres of cells in Y
-        # Throw away eastern and southern edges
-        return grid.lon_corners_2d, grid.lat_2d, data[...,1:,:-1]
+        lon = grid.lon_corners_2d
+        lat = grid.lat_2d
+        # Care about eastern and southern edges
+        if extrapolate:
+            lon_ex = extend_array(lon, south='copy', east='extrapolate')
+            lat_ex = extend_array(lat, south='extrapolate', east='copy')
+            return lon_ex, lat_ex, data
+        else:
+            return lon, lat, data[...,1:,:-1]
     elif gtype == 'psi':
         # Psi-grid: on southwest corners of cells
         # Boundaries are centres of cells
-        # Throw away western and southern edges
-        return grid.lon_2d, grid.lat_2d, data[...,1:,1:]
+        lon = grid.lon_2d
+        lat = grid.lat_2d
+        # Care about western and southern edges
+        if extrapolate:
+            lon_ex = extend_array(lon, south='copy', west='extrapolate')
+            lat_ex = extend_array(lat, south='extrapolate', west='copy')
+            return lon_ex, lat_ex, data
+        else:
+            return lon, lat, data[...,1:,1:]
 
 
 # Shade various masks in grey on the plot: just the land mask, or the land and ice shelves.
