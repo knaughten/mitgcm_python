@@ -100,22 +100,22 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
     # TODO: Extrapolate cell boundaries
 
-# Make the initial figure
-fig, gs, cax = set_panels('MISO_C1')
-ax = plt.subplot(gs[0,0])
-img = latlon_plot(all_data[0], all_grids[0], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', 1/'+str(num_frames), label_latlon=False, make_cbar=False)
-plt.colorbar(img, cax=cax, extend=extend)
+    # Make the initial figure
+    fig, gs, cax = set_panels('MISO_C1')
+    ax = plt.subplot(gs[0,0])
+    img = latlon_plot(all_data[0], all_grids[0], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', 1/'+str(num_frames), label_latlon=False, make_cbar=False)
+    plt.colorbar(img, cax=cax, extend=extend)
 
-# Function to update figure with the given frame
-def animate(i):
-    print 'Frame ' + str(i+1) + ' of ' + str(num_frames)
-    ax.cla()
-    latlon_plot(all_data[i], all_grids[i], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', '+str(i+1)+'/'+str(num_frames), label_latlon=False, make_cbar=False)
+    # Function to update figure with the given frame
+    def animate(i):
+        print 'Frame ' + str(i+1) + ' of ' + str(num_frames)
+        ax.cla()
+        latlon_plot(all_data[i], all_grids[i], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', '+str(i+1)+'/'+str(num_frames), label_latlon=False, make_cbar=False)
 
-# Call this for each frame
-anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=300)
-if mov_name is not None:
-    print 'Saving ' + mov_name
-    anim.save(mov_name)
-else:
-    plt.show()
+    # Call this for each frame
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=300)
+    if mov_name is not None:
+        print 'Saving ' + mov_name
+        anim.save(mov_name)
+    else:
+        plt.show()
