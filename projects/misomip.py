@@ -92,9 +92,13 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
     extend = get_extend(vmin=vmin, vmax=vmax)
     if vmin is None:
-        vmin = np.amin(all_data)
+        vmin = np.amax(data)
+        for elm in all_data:
+            vmin = min(vmin, np.amin(elm))
     if vmax is None:
-        vmax = np.amax(all_data)
+        vmax = np.amin(data)
+        for elm in all_data:
+            vmax = max(vmax, np.amax(elm))
 
     num_frames = len(all_data)
 
