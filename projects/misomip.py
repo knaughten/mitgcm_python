@@ -112,7 +112,6 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
     # Function to update figure with the given frame
     def animate(i):
-        print 'Frame ' + str(i+1) + ' of ' + str(num_frames)
         ax.cla()
         latlon_plot(all_data[i], all_grids[i], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', '+str(i+1)+'/'+str(num_frames), label_latlon=False, make_cbar=False)
 
