@@ -59,56 +59,58 @@ def add_time_dim (data, num_time):
     return np.tile(data, shape)
 
 
+# Helper function for select_top and select_bottom
+def select_level (option, data, masked=True, grid=None, gtype='t', time_dependent=False):
+
+    if not masked:
+        if grid is None:
+            print 'Error (select_level): need to supply grid if masked=False'
+            sys.exit()
+        data_masked = mask_3d(np.copy(data), grid, gtype=gtype, time_dependent=time_dependent)
+    else:
+        data_masked = data
+
+    # Figure out the dimensions of the data when the vertical dimension is removed
+    collapsed_shape = data_masked.shape[:-3] + data_masked.shape[-2:]
+    # Array which will hold values at the given level, initialised to NaN
+    data_lev = np.zeros(collapsed_shape)
+    data_lev[:] = np.nan
+    if option == 'top':
+        # Loop from surface to bottom
+        k_vals = range(data_masked.shape[-3])
+    elif option == 'bottom':
+        # Loop from bottom to top
+        k_vals = range(data.shape[-3]-1, -1, -1)
+    else:
+        print 'Error (select_level): invalid option ' + option
+        sys.exit()
+    for k in k_vals:
+        curr_data = data_masked[...,k,:,:]
+        # Find points which are unmasked at this vertical level, and which
+        # haven't already been assigned a top level
+        index = np.nonzero(np.invert(curr_data.mask)*np.isnan(data_lev))
+        data_lev[index] = curr_data[index]
+    # Anything still NaN is land; mask it out
+    data_lev = np.ma.masked_where(np.isnan(data_lev), data_lev)
+
+    if not masked:
+        # Fill the mask with zeros
+        data_lev[data_lev.mask] = 0
+        data_lev = data_lev.data
+
+    return data_lev
+
+
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
 # If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d).
 # The only assumption about the input array dimensions is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
 def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False):
+    select_level('top', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
 
-    if not masked:
-        if grid is None:
-            print 'Error (select_top): need to supply grid if masked=False'
-            sys.exit()
-        data_masked = mask_3d(np.copy(data), grid, gtype=gtype, time_dependent=time_dependent)
-    else:
-        data_masked = data            
-
-    # Figure out the dimensions of the data when the vertical dimension is removed
-    collapsed_shape = data_masked.shape[:-3] + data_masked.shape[-2:]
-    # Array which will hold values at the top level, initialised to NaN
-    data_top = np.zeros(collapsed_shape)
-    data_top[:] = np.nan
-    # Loop from surface to bottom
-    for k in range(data_masked.shape[-3]):
-        curr_data = data_masked[...,k,:,:]
-        # Find points which are unmasked at this vertical level, and which
-        # haven't already been assigned a top level
-        index = np.nonzero(np.invert(curr_data.mask)*np.isnan(data_top))
-        data_top[index] = curr_data[index]
-    # Anything still NaN is land; mask it out
-    data_top = np.ma.masked_where(np.isnan(data_top), data_top)
-
-    if not masked:
-        # Fill the mask with zeros
-        data_top[data_top.mask] = 0
-        data_top = data_top.data
-
-    return data_top
-
-
+    
 # Select the bottom layer from the given array of data. See select_top for more documentation.
-def select_bottom (data):
-
-    # Same as select_top, but loop from bottom to top.
-    collapsed_shape = data.shape[:-3] + data.shape[-2:]
-    data_bottom = np.zeros(collapsed_shape)
-    data_bottom[:] = np.nan
-    for k in range(data.shape[-3]-1, -1, -1):
-        curr_data = data[...,k,:,:]
-        index = np.nonzero(np.invert(curr_data.mask)*np.isnan(data_bottom))
-        data_bottom[index] = curr_data[index]
-    data_bottom = np.ma.masked_where(np.isnan(data_bottom), data_bottom)
-
-    return data_bottom
+def select_bottom (data, masked=True, grid=None, gtype='t', time_dependent=False):
+    select_level('bottom', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
 
 
 # Helper function for masking functions below
@@ -467,4 +469,13 @@ def model_bdry (option, bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
     hfac = calc_hfac(bathy, draft, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Now calculate the new boundary
     return bdry_from_hfac(option, hfac, z_edges)
+
+
+# Determine if a string is an integer.
+def str_is_int (s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
     

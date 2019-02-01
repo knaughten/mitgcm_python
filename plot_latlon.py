@@ -41,9 +41,10 @@ from constants import deg_string, sec_per_year
 # fig_name: as in function finished_plot
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 # extend: 'neither', 'min', 'max', 'both', or None (will be determined automatically based on vmin and vmax)
+# label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -82,8 +83,13 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
-    # Make nice axes
-    latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    if label_latlon:
+        # Make nice axes
+        latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    else:
+        # No axes labels
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
