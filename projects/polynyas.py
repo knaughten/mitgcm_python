@@ -912,8 +912,8 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     print 'Plotting'
     # Wrap things into lists
     data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -1, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 1, 0.04, 1, 0.01, 0.5]
+    vmin_diff = [-0.2, -0.6, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 0.7, 0.04, 1, 0.01, 0.5]
     include_shelf = [True, False, True, True, True, True]
     title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Net sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
@@ -928,7 +928,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
     # Main title
     plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
-    finished_plot(fig) #, fig_name=fig_dir+'anomaly_panels.png')
+    finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')
 
 
 # Plot a 2-part timeseries showing percent changes in basal mass loss for (a) FRIS and (b) EWIS.
