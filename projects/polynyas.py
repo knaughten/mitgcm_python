@@ -865,7 +865,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
 
 
-# Plot 5 lat-lon panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, salinity, and age; barotropic circulation; and ice shelf melt rate.
+# Plot 6 lat-lon panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.
 def anomaly_panels (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -878,9 +878,9 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     def read_field (var, file_path):
         if var == 'bwtemp':
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
-        elif var == 'iceprod':
-            # Convert from m/s to m/y
-            return mask_land_ice(read_netcdf(file_path, 'ice_prod', time_index=0)*sec_per_year, grid)
+        elif var == 'saltflx':
+            # Multiply by 1e6 for nicer colourbar
+            return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)*1e6
         elif var == 'bwsalt':
             return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
         elif var == 'bwage':
@@ -895,16 +895,12 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     # Inner function to read and calculate anomalies
     def read_anomaly (var):
-        if var == 'iceprod':
-            file_path = ice_prod_file
-        else:
-            file_path = avg_file
-        return read_field(var, base_dir+case_dir[1]+file_path) - read_field(var, base_dir+case_dir[0]+file_path)
+        return read_field(var, base_dir+case_dir[1]+avg_file) - read_field(var, base_dir+case_dir[0]+avg_file)
 
     # Now call the functions for each variable
     print 'Processing fields'
     bwtemp_diff = read_anomaly('bwtemp')
-    iceprod_diff = read_anomaly('iceprod')
+    saltflx_diff = read_anomaly('saltflx')
     bwsalt_diff = read_anomaly('bwsalt')
     bwage_diff = read_anomaly('bwage')
     speed_diff = read_anomaly('speed')
@@ -912,11 +908,11 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     print 'Plotting'
     # Wrap things into lists
-    data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -0.6, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 0.75, 0.04, 1, 0.01, 0.5]
+    data = [bwtemp_diff, saltflx_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
+    vmin_diff = [-0.2, -20, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 20, 0.04, 1, 0.01, 0.5]
     include_shelf = [True, False, True, True, True, True]
-    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
+    title = ['a) Bottom water temperature ('+deg_string+'C)', r'b) Surface salt flux (10$^{-6}$ kg/m$^2$/s)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
         ax = plt.subplot(gs[i/3,i%3])
