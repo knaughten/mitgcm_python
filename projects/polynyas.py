@@ -878,6 +878,9 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     def read_field (var, file_path):
         if var == 'bwtemp':
             return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        elif var == 'iceprod':
+            # Convert from m/s to m/y
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year
         elif var == 'saltflx':
             # Multiply by 1e6 for nicer colourbar
             return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)*1e6
@@ -900,7 +903,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     # Now call the functions for each variable
     print 'Processing fields'
     bwtemp_diff = read_anomaly('bwtemp')
-    saltflx_diff = read_anomaly('saltflx')
+    iceprod_diff = read_anomaly('iceprod')
     bwsalt_diff = read_anomaly('bwsalt')
     bwage_diff = read_anomaly('bwage')
     speed_diff = read_anomaly('speed')
@@ -908,11 +911,11 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     print 'Plotting'
     # Wrap things into lists
-    data = [bwtemp_diff, saltflx_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -20, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 20, 0.04, 1, 0.01, 0.5]
+    data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
+    vmin_diff = [-0.2, -1, -0.04, -2, -0.005, -0.2]
+    vmax_diff = [0.2, 1, 0.04, 1, 0.01, 0.5]
     include_shelf = [True, False, True, True, True, True]
-    title = ['a) Bottom water temperature ('+deg_string+'C)', r'b) Surface salt flux (10$^{-6}$ kg/m$^2$/s)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
+    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Net sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
         ax = plt.subplot(gs[i/3,i%3])
@@ -925,7 +928,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
     # Main title
     plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
-    finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')
+    finished_plot(fig) #, fig_name=fig_dir+'anomaly_panels.png')
 
 
 # Plot a 2-part timeseries showing percent changes in basal mass loss for (a) FRIS and (b) EWIS.
