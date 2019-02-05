@@ -121,10 +121,10 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     print 'Reading data'
     # Have to flip it vertically so lon0=0 in polar stereographic projection
     # Otherwise, lon0=180 which makes x_interp and y_interp strictly decreasing when we call polar_stereo later, and the interpolation chokes
-    bathy = np.flipud(np.fromfile(topo_dir+bed_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
-    surf = np.flipud(np.fromfile(topo_dir+surface_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
-    thick = np.flipud(np.fromfile(topo_dir+thickness_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
-    mask = np.flipud(np.fromfile(topo_dir+mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    bathy = np.flipud(np.fromfile(bed_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    surf = np.flipud(np.fromfile(surface_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    thick = np.flipud(np.fromfile(thickness_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    mask = np.flipud(np.fromfile(mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
 
     if np.amax(lat_b) > -61:
         print 'Extending bathymetry slightly past 60S'
@@ -159,7 +159,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         print 'Filling in section north of 60S with GEBCO data'
 
         print 'Reading data'
-        id = nc.Dataset(topo_dir+gebco_file, 'r')
+        id = nc.Dataset(gebco_file, 'r')
         lat_gebco_grid = id.variables['lat'][:]
         lon_gebco_grid = id.variables['lon'][:]
         # Figure out which indices we actually care about - buffer zone of 5 cells so the splines have room to breathe
@@ -239,7 +239,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         print 'Adding grounded iceberg A-23A'
 
         print 'Reading data'
-        id = nc.Dataset(topo_dir+rtopo_file, 'r')
+        id = nc.Dataset(rtopo_file, 'r')
         lon_rtopo = id.variables['lon'][:]
         lat_rtopo = id.variables['lat'][:]
         # Select the region we care about
