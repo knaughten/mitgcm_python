@@ -122,7 +122,7 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
         lon_min = np.amin(grid.lon_corners_2d)
     if lon_max is None:
         # Set to the highest possible value
-        lat_max = np.amax(grid.lon_2d)
+        lon_max = np.amax(grid.lon_2d)
     if lat_min is None:
         lat_min = np.amin(grid.lat_corners_2d)
     if lat_max is None:
