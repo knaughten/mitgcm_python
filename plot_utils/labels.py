@@ -10,8 +10,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..file_io import netcdf_time
-from ..constants import fris_bounds, deg_string
-from ..utils import polar_stereo
+from ..constants import fris_bounds, fris_bounds_pster, deg_string
 
 
 # On a timeseries plot with axes ax, label every month (monthly_ticks) or every year (yearly_ticks)

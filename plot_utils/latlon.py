@@ -6,19 +6,9 @@ import numpy as np
 import matplotlib.colors as cl
 import sys
 
-from ..utils import mask_land, select_top, select_bottom, polar_stereo
+from ..utils import mask_land, select_top, select_bottom, get_x_y
 from ..calculus import vertical_average
 from ..interpolation import interp_grid
-
-
-# Determine the x and y coordinates based on whether the user wants polar stereographic or not.
-def get_x_y (lon, lat, pster=False):
-    if pster:
-        x, y = polar_stereo(lon, lat)
-    else:
-        x = lon
-        y = lat
-    return x, y
 
 
 # Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and do one of two things:

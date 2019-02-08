@@ -33,6 +33,8 @@ deg_string = r'$^{\circ}$'
 # Bounds on FRIS (a few bits of Eastern Weddell ice shelves are included too - use Grid.fris_mask to get just FRIS. These bounds are for plotting.)
 # lon_min, lon_max, lat_min, lat_max
 fris_bounds = [-85, -29, -84, -74]
+# Polar stereographic version
+fris_bounds_pster = [-1742712, -316332, 56868, 1530032]
 # Bounds on Eastern Weddell ice shelves.
 ewed_bounds = [-30, 40, -77, -65]
 # Bounds on Weddell Gyre.

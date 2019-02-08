@@ -208,43 +208,6 @@ def select_year (time, year):
     return t_start, t_end
 
 
-# Find the minimum and maximum values of a 2D (lat x lon) array in the given region.
-def var_min_max (data, grid, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
-
-    # Choose the correct longitude and latitude arrays
-    lon, lat = grid.get_lon_lat(gtype=gtype)
-
-    # Set limits on axes
-    if zoom_fris:
-        xmin = fris_bounds[0]
-        xmax = fris_bounds[1]
-        ymin = fris_bounds[2]
-        ymax = fris_bounds[3]
-    if xmin is None:
-        xmin = np.amin(lon)
-    if xmax is None:
-        xmax = np.amax(lon)
-    if ymin is None:
-        ymin = np.amin(lon)
-    if ymax is None:
-        ymax = np.amax(lon)
-
-    # Select the correct indices
-    loc = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-    # Find the min and max values
-    return np.amin(data[loc]), np.amax(data[loc])
-
-
-# Find all the factors of the integer n.
-def factors (n):
-
-    factors = []
-    for i in range(1, n+1):
-        if n % i == 0:
-            factors.append(i)
-    return factors
-
-
 # Convert longitude and latitude to polar stereographic projection used by BEDMAP2. Adapted from polarstereo_fwd.m in the MITgcm Matlab toolbox.
 def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
 
@@ -274,6 +237,55 @@ def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     y = -pm*rho*np.cos(lon - lon0)
 
     return x, y
+
+
+# Determine the x and y coordinates based on whether the user wants polar stereographic or not.
+def get_x_y (lon, lat, pster=False):
+    if pster:
+        x, y = polar_stereo(lon, lat)
+    else:
+        x = lon
+        y = lat
+    return x, y
+
+
+# Find the minimum and maximum values of a 2D (lat x lon) array in the given region.
+def var_min_max (data, grid, pster=False, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
+
+    # Choose the correct longitude and latitude arrays
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+    # Convert to polar stereographic if needed
+    x, y = get_x_y(lon, lat, pster=pster)
+
+    # Set limits on axes
+    if zoom_fris:
+        if pster:
+            [xmin, xmax, ymin, ymax] = fris_bounds_pster
+        else:
+            [xmin, xmax, ymin, ymax] = fris_bounds
+    if xmin is None:
+        xmin = np.amin(x)
+    if xmax is None:
+        xmax = np.amax(x)
+    if ymin is None:
+        ymin = np.amin(y)
+    if ymax is None:
+        ymax = np.amax(y)
+
+    # Select the correct indices
+    loc = (x >= xmin)*(x <= xmax)*(y >= ymin)*(y <= ymax)
+    # Find the min and max values
+    return np.amin(data[loc]), np.amax(data[loc])
+
+
+# Find all the factors of the integer n.
+def factors (n):
+
+    factors = []
+    for i in range(1, n+1):
+        if n % i == 0:
+            factors.append(i)
+    return factors
 
 
 # Given a path to a directory, make sure it ends with /

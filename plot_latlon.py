@@ -54,7 +54,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
 
     # If we're zooming, we need to choose the correct colour bounds
     if zoom_fris or any([xmin, xmax, ymin, ymax]):
-        vmin_tmp, vmax_tmp = var_min_max(data, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
+        vmin_tmp, vmax_tmp = var_min_max(data, grid, pster=pster, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
         # Don't override manually set bounds
         if vmin is None:
             vmin = vmin_tmp
