@@ -615,7 +615,7 @@ def prelim_all_plots (base_dir='./', fig_dir='./'):
     prelim_slices(base_dir=base_dir, fig_dir=fig_dir)
 
 
-# Plot 5 lat-lon panels showing the baseline mean state in the FRIS cavity: bottom water age, barotropic circulation, bottom water temperature and salinity, ice shelf melt rate.
+# Plot 5 polar stereographic panels showing the baseline mean state in the FRIS cavity: bottom water age, barotropic circulation, bottom water temperature and salinity, ice shelf melt rate.
 def baseline_panels (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -646,7 +646,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     for i in range(len(data)):
         # Leave the top left plot empty for title
         ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
-        img = latlon_plot(data[i], grid, ax=ax, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
+        img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
         if ctype[i] == 'vel':
             # Overlay velocity vectors
             overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
@@ -657,12 +657,12 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT']
             for j in range(len(label)):
                 plt.text(lon[j], lat[j], label[j], fontsize=14, va='center', ha='center')
-        if i in [1,3,4]:
+        '''if i in [1,3,4]:
             # Remove latitude labels
             ax.set_yticklabels([])
         if i in [0,1]:
             # Remove longitude labels
-            ax.set_xticklabels([])
+            ax.set_xticklabels([])'''
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
@@ -865,7 +865,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
 
 
-# Plot 6 lat-lon panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.
+# Plot 6 polar stereographic panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.
 def anomaly_panels (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -919,13 +919,13 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
         ax = plt.subplot(gs[i/3,i%3])
-        img = latlon_plot(data[i], grid, ax=ax, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
-        if i%3 != 0:
+        img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
+        '''if i%3 != 0:
             # Remove latitude labels
             ax.set_yticklabels([])
         if i/3 == 0:
             # Remove longitude labels
-            ax.set_xticklabels([])
+            ax.set_xticklabels([])'''
     # Main title
     plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
     finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')

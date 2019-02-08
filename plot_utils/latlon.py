@@ -4,6 +4,7 @@
 
 import numpy as np
 import matplotlib.colors as cl
+import sys
 
 from ..utils import mask_land, select_top, select_bottom, polar_stereo
 from ..calculus import vertical_average
@@ -120,6 +121,9 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
         rgb = (0.6, 0.6, 0.6)
     elif colour == 'white':
         rgb = (1, 1, 1)
+    else:
+        print 'Error (shade_mask): invalid colour ' + colour
+        sys.exit()
     # Add to plot        
     ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]))
 
