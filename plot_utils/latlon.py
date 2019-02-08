@@ -107,32 +107,38 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True, pster=False):
     return x, y, data
 
 
-# Fill the background of the plot with grey.
-def shade_background (ax):
-    ax.patch.set_facecolor((0.6, 0.6, 0.6))
-
-
-# Shade various masks in grey on the plot: just the land mask, or the land and ice shelves.
+# Shade various masks on the plot: just the land mask, the land and ice shelves, or the ocean. Default is to shade in grey, can also do white.
 # shade_mask is the helper function; shade_land and shade_land_ice are the APIs.
 
-def shade_mask (ax, mask, grid, gtype='t', pster=False):
+def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
 
     # Properly mask all the False values, so that only True values are unmasked
     mask_plot = np.ma.masked_where(np.invert(mask), mask)
     # Prepare quadrilateral patches
     x, y, mask_plot = cell_boundaries(mask_plot, grid, gtype=gtype, pster=pster)
-    # Add to plot
-    ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+    if colour == 'grey':
+        rgb = (0.6, 0.6, 0.6)
+    elif colour == 'white':
+        rgb = (1, 1, 1)
+    # Add to plot        
+    ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]))
 
     
 def shade_land (ax, grid, gtype='t', pster=False):
-    
     shade_mask(ax, grid.get_land_mask(gtype=gtype), grid, gtype=gtype, pster=pster)
 
     
 def shade_land_ice (ax, grid, gtype='t', pster=False):
-    
     shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), grid, gtype=gtype, pster=pster)
+
+
+def clear_ocean (ax, grid, gtype='t', pster=False):
+    shade_mask(ax, np.invert(grid.get_land_mask(gtype=gtype), grid, gtype=gtype, pster=pster, colour='white')
+
+
+# Fill the background of the plot with grey.
+def shade_background (ax):
+    ax.patch.set_facecolor((0.6, 0.6, 0.6))
 
 
 # Contour the ice shelf front in black.

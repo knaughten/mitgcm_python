@@ -14,7 +14,7 @@ from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_la
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, pster_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background
+from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background, clear_ocean
 from diagnostics import t_minus_tf, find_aice_min_max
 from constants import deg_string, sec_per_year
 
@@ -34,7 +34,8 @@ from constants import deg_string, sec_per_year
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
-# pster: plot polar stereographic projection instead of regular lat/lon (default False)
+# pster: plot polar stereographic projection instead of regular lat/lon (default False).
+# fill_gap: if pster=True, fill any missing bits of plot with land (default True)
 # date_string: something to write on the bottom of the plot about the date
 # title: a title to add to the plot
 # titlesize: font size for title
@@ -73,6 +74,8 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     if pster and fill_gap:
         # Shade the background in grey
         shade_background(ax)
+        # Clear the ocean back to white
+        clear_ocean(ax, grid, gtype=gtype, pster=pster)
     else:
         if include_shelf:
             # Shade land in grey
@@ -90,7 +93,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         plt.colorbar(img, extend=extend)
     # Set axes limits etc.
     if pster:
-        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax, keep_box=fill_gap)
+        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax)
     else:
         latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
