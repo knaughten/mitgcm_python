@@ -112,7 +112,7 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
 
 
 # Set the limits on polar stereographic axes.
-def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat_min=None, lat_max=None):
+def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat_min=None, lat_max=None, keep_box=True):
 
     # First find limits on lat and lon
     if zoom_fris:
@@ -145,9 +145,13 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
     # Set these limits
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
-    # For now, remove ticks
-    ax.set_xticks([])
-    ax.set_yticks([])
+    if not keep_box:
+        # Remove the axis
+        plt.axis('off')
+    else:
+        # For now, remove ticks
+        ax.set_xticks([])
+        ax.set_yticks([])
 
 
 # Give the axes on a slice plot nice labels. Set h_axis to 'lat' (default) or 'lon' to indicate what the horizontal axis is.

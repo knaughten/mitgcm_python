@@ -45,7 +45,7 @@ from constants import deg_string, sec_per_year
 # label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -70,7 +70,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
 
-    if pster:
+    if pster and fill_gap:
         # Shade the background in grey
         shade_background(ax)
     else:
@@ -90,7 +90,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         plt.colorbar(img, extend=extend)
     # Set axes limits etc.
     if pster:
-        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax)
+        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax, keep_box=fill_gap)
     else:
         latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
