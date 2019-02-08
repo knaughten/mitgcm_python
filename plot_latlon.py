@@ -93,7 +93,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         plt.colorbar(img, extend=extend)
     # Set axes limits etc.
     if pster:
-        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax)
+        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmax, lat_min=ymin, lat_max=ymax)
     else:
         latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
