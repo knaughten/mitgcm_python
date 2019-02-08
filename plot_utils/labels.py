@@ -99,9 +99,11 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
             x_data, y_data = polar_stereo(lon_data, lat_data)
             # Overlay longitude
             if lon_lines is not None:
+                lon_lines.sort()
                 ax.contour(x_data, y_data, lon_data, lon_lines, colors='black', linestyles='dotted')
             # Overlay latitude
             if lat_lines is not None:
+                lat_lines.sort()
                 ax.contour(x_data, y_data, lat_data, lat_lines, colors='black', linestyles='dotted')            
     else:
         # Check location of ticks
