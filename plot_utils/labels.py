@@ -146,8 +146,9 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
     if not keep_box:
-        # Remove the axis
-        plt.axis('off')
+        # Remove the axes
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
     else:
         # For now, remove ticks
         ax.set_xticks([])
