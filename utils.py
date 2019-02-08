@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year, fris_bounds, deg2rad
+from constants import rho_fw, sec_per_year, fris_bounds, fris_bounds_pster, deg2rad
 
 
 # Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180). If max_lon is None, nothing will be done to the array.
