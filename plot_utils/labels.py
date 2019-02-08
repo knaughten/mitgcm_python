@@ -144,7 +144,7 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
     xmax = min(xmax, np.amax(x))
     ymin = max(ymin, np.amin(y))
     ymax = min(ymax, np.amax(y))
-    print xmin, xymax, ymin, ymax
+    print xmin, xmax, ymin, ymax
     # Set these limits
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
