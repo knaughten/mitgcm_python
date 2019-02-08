@@ -127,6 +127,7 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
         lat_min = np.amin(grid.lat_corners_2d)
     if lat_max is None:
         lat_max = np.amax(grid.lat_2d)
+    print lon_min, lon_max, lat_min, lat_max
     # Now convert these four corners to polar stereographic
     x_sw, y_sw = polar_stereo(lon_min, lat_min)
     x_nw, y_nw = polar_stereo(lon_min, lat_max)
@@ -137,11 +138,13 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
     xmax = max(x_ne, x_se)
     ymin = min(y_sw, y_se)
     ymax = max(y_nw, y_ne)
+    print xmin, xmax, ymin, ymax
     # Overwrite if we've gone past the edge of the true grid
     xmin = max(xmin, np.amin(x))
     xmax = min(xmax, np.amax(x))
     ymin = max(ymin, np.amin(y))
     ymax = min(ymax, np.amax(y))
+    print xmin, xymax, ymin, ymax
     # Set these limits
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
