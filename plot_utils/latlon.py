@@ -133,7 +133,7 @@ def shade_land_ice (ax, grid, gtype='t', pster=False):
 
 
 def clear_ocean (ax, grid, gtype='t', pster=False):
-    shade_mask(ax, np.invert(grid.get_land_mask(gtype=gtype), grid, gtype=gtype, pster=pster, colour='white'))
+    shade_mask(ax, np.invert(grid.get_land_mask(gtype=gtype)), grid, gtype=gtype, pster=pster, colour='white')
 
 
 # Fill the background of the plot with grey.
