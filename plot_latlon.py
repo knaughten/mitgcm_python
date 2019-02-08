@@ -36,6 +36,7 @@ from constants import deg_string, sec_per_year
 # xmin, xmax, ymin, ymax: as in function latlon_axes or pster_axes, depending on value of pster (see below).
 # pster: plot polar stereographic projection instead of regular lat/lon (default False).
 # fill_gap: if pster=True, fill any missing bits of plot with land (default True)
+# lon_lines, lat_lines: if pster=True, longitude and/or latitude values to overlay with dotted lines. 
 # date_string: something to write on the bottom of the plot about the date
 # title: a title to add to the plot
 # titlesize: font size for title
@@ -46,7 +47,7 @@ from constants import deg_string, sec_per_year
 # label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -92,7 +93,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         # Add a colourbar
         plt.colorbar(img, extend=extend)
     # Set axes limits etc.
-    latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=pster, label=label_latlon)
+    latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon, pster=pster, lon_lines=lon_lines, lat_lines=lat_lines, grid=grid)
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)

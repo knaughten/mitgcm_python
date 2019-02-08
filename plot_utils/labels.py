@@ -11,18 +11,17 @@ import matplotlib.pyplot as plt
 
 from ..file_io import netcdf_time
 from ..constants import fris_bounds, fris_bounds_pster, deg_string
+from ..utils import polar_stereo
 
 
 # On a timeseries plot with axes ax, label every month (monthly_ticks) or every year (yearly_ticks)
 
 def monthly_ticks (ax):
-
     ax.xaxis.set_major_locator(dt.MonthLocator())
     ax.xaxis.set_major_formatter(dt.DateFormatter("%b '%y"))
 
     
 def yearly_ticks (ax):
-
     ax.xaxis.set_major_locator(dt.YearLocator())
     ax.xaxis.set_major_formatter(dt.DateFormatter('%Y'))
 
@@ -64,10 +63,10 @@ def lat_label (x, max_decimals):
     return latlon_label(x, deg_string+'S', deg_string+'N', max_decimals)
 
 
-# Set the limits of the longitude and latitude axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.
+# Set the limits of the x and y axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.
 # Setting zoom_fris=True will zoom into the FRIS cavity (bounds set in constants.py). You can also set specific limits on longitude and latitude (xmin etc.)
 # If pster=True, xmin etc. are assumed to be in polar stereographic units.
-def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True, pster=False):
+def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True, pster=False, lon_lines=None, lat_lines=None, grid=None):
     
     # Set limits on axes
     if zoom_fris:
@@ -76,13 +75,13 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
         else:
             [xmin, xmax, ymin, ymax] = fris_bounds
     if xmin is None:
-        xmin = np.amin(lon)
+        xmin = np.amin(x)
     if xmax is None:
-        xmax = np.amax(lon)
+        xmax = np.amax(x)
     if ymin is None:
-        ymin = np.amin(lat)
+        ymin = np.amin(y)
     if ymax is None:
-        ymax = np.amax(lat)
+        ymax = np.amax(y)
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
 
@@ -90,6 +89,20 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
         # Remove all ticks
         ax.set_xticks([])
         ax.set_yticks([])
+        if lon_lines is not None or lat_lines is not None:
+            # Overlay latitude and/or longitude contours
+            if grid is None:
+                print 'Error (latlon_axes): need to supply grid if lon_lines and/or lat_lines is set'
+                sys.exit()
+            # Get the coordinates in both formats
+            lon_data, lat_data = grid.get_lon_lat()
+            x_data, y_data = polar_stereo(lon_data, lat_data)
+            # Overlay longitude
+            if lon_lines is not None:
+                ax.contour(x_data, y_data, lon_data, lon_lines, colors='black', linestyles='dotted')
+            # Overlay latitude
+            if lat_lines is not None:
+                ax.contour(x_data, y_data, lat_data, lat_lines, colors='black', linestyles='dotted')            
     else:
         # Check location of ticks
         lon_ticks = ax.get_xticks()
