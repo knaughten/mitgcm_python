@@ -76,10 +76,10 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     else:
         if include_shelf:
             # Shade land in grey
-            shade_land(ax, grid, gtype=gtype)
+            shade_land(ax, grid, gtype=gtype, pster=pster)
         else:
             # Shade land and ice shelves in grey
-            shade_land_ice(ax, grid, gtype=gtype)
+            shade_land_ice(ax, grid, gtype=gtype, pster=pster)
     # Plot the data    
     img = ax.pcolormesh(x, y, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
     if include_shelf:
