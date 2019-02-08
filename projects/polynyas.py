@@ -658,13 +658,13 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if ctype[i] == 'ismr':
             # Overlay location labels
-            lon = [-60, -39, -58, -47, -47, -38, -79, -60, -39, -45]
-            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84, -83, -74.5]
-            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lon_label(-40), lat_label(-75)]
+            lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33]
+            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5]
+            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75)]
             fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
             x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
-                plt.text(x[j], y[j], label[j], fontsize=fs[i], va='center', ha='center')
+                plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
