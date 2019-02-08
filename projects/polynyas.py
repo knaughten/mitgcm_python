@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land
+from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land, polar_stereo
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -649,20 +649,15 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
         if ctype[i] == 'vel':
             # Overlay velocity vectors
-            overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
+            #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if ctype[i] == 'ismr':
             # Overlay location labels
             lon = [-60, -39, -58, -47, -47, -38]
             lat = [-77, -80, -74.5, -77, -79, -77.5]
+            x, y = polar_stereo(lon, lat)
             label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT']
             for j in range(len(label)):
-                plt.text(lon[j], lat[j], label[j], fontsize=14, va='center', ha='center')
-        '''if i in [1,3,4]:
-            # Remove latitude labels
-            ax.set_yticklabels([])
-        if i in [0,1]:
-            # Remove longitude labels
-            ax.set_xticklabels([])'''
+                plt.text(x[j], y[j], label[j], fontsize=14, va='center', ha='center')
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
@@ -920,12 +915,6 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     for i in range(len(data)):
         ax = plt.subplot(gs[i/3,i%3])
         img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
-        '''if i%3 != 0:
-            # Remove latitude labels
-            ax.set_yticklabels([])
-        if i/3 == 0:
-            # Remove longitude labels
-            ax.set_xticklabels([])'''
     # Main title
     plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
     finished_plot(fig, fig_name=fig_dir+'anomaly_panels.png')
