@@ -89,8 +89,6 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
         # Remove all ticks
         ax.set_xticks([])
         ax.set_yticks([])
-        print lon_lines
-        print lat_lines
         if lon_lines is not None or lat_lines is not None:
             # Overlay latitude and/or longitude contours
             if grid is None:
@@ -101,11 +99,9 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
             x_data, y_data = polar_stereo(lon_data, lat_data)
             # Overlay longitude
             if lon_lines is not None:
-                print 'Should be contouring'
                 ax.contour(x_data, y_data, lon_data, lon_lines, colors='black', linestyles='dotted')
             # Overlay latitude
             if lat_lines is not None:
-                print 'Should be contouring'
                 ax.contour(x_data, y_data, lat_data, lat_lines, colors='black', linestyles='dotted')            
     else:
         # Check location of ticks

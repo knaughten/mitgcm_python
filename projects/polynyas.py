@@ -649,7 +649,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         # Just overlay lat/lon lines in last plot
         lon_lines = None
         lat_lines = None
-        if ctype == 'ismr':
+        if ctype[i] == 'ismr':
             lon_lines = [-40, -60, -80]
             lat_lines = [-75]
         img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
