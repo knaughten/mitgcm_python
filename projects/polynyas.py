@@ -16,7 +16,7 @@ from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string, sec_per_year
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes
+from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
@@ -646,7 +646,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     for i in range(len(data)):
         # Leave the top left plot empty for title
         ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
-        # Just overlay lat/lon lines in last plot
+        # Just overlay lat/lon lines in one plot
         lon_lines = None
         lat_lines = None
         if ctype[i] == 'ismr':
@@ -658,12 +658,13 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if ctype[i] == 'ismr':
             # Overlay location labels
-            lon = [-60, -39, -58, -47, -47, -38]
-            lat = [-77, -80, -74.5, -77, -79, -77.5]
-            x, y = polar_stereo(lon, lat)
-            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT']
+            lon = [-60, -39, -58, -47, -47, -38, -79, -60, -39, -45]
+            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84, -83, -74.5]
+            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lon_label(-40), lat_label(-75)]
+            fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
+            x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
-                plt.text(x[j], y[j], label[j], fontsize=14, va='center', ha='center')
+                plt.text(x[j], y[j], label[j], fontsize=fs[i], va='center', ha='center')
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')

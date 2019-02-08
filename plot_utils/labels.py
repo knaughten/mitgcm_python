@@ -53,12 +53,12 @@ def latlon_label (x, suff_minus, suff_plus, max_decimals):
     return label + suff
 
 
-def lon_label (x, max_decimals):
+def lon_label (x, max_decimals=0):
 
     return latlon_label(x, deg_string+'W', deg_string+'E', max_decimals)
 
 
-def lat_label (x, max_decimals):
+def lat_label (x, max_decimals=0):
 
     return latlon_label(x, deg_string+'S', deg_string+'N', max_decimals)
 
