@@ -107,6 +107,11 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True, pster=False):
     return x, y, data
 
 
+# Fill the background of the plot with grey.
+def shade_background (ax):
+    ax.set_facecolor((0.6, 0.6, 0.6))
+
+
 # Shade various masks in grey on the plot: just the land mask, or the land and ice shelves.
 # shade_mask is the helper function; shade_land and shade_land_ice are the APIs.
 

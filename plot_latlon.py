@@ -14,7 +14,7 @@ from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_la
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, pster_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
+from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background
 from diagnostics import t_minus_tf, find_aice_min_max
 from constants import deg_string, sec_per_year
 
@@ -69,13 +69,17 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     existing_ax = ax is not None
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
-        
-    if include_shelf:
-        # Shade land in grey
-        shade_land(ax, grid, gtype=gtype, pster=pster)
+
+    if pster:
+        # Shade the background in grey
+        shade_background(ax)
     else:
-        # Shade land and ice shelves in grey
-        shade_land_ice(ax, grid, gtype=gtype, pster=pster)
+        if include_shelf:
+            # Shade land in grey
+            shade_land(ax, grid, gtype=gtype)
+        else:
+            # Shade land and ice shelves in grey
+            shade_land_ice(ax, grid, gtype=gtype)
     # Plot the data    
     img = ax.pcolormesh(x, y, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
     if include_shelf:
