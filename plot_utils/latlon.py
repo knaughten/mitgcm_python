@@ -5,9 +5,19 @@
 import numpy as np
 import matplotlib.colors as cl
 
-from ..utils import mask_land, select_top, select_bottom
+from ..utils import mask_land, select_top, select_bottom, polar_stereo
 from ..calculus import vertical_average
 from ..interpolation import interp_grid
+
+
+# Determine the x and y coordinates based on whether the user wants polar stereographic or not.
+def get_x_y (lon, lat, pster=False):
+    if pster:
+        x, y = polar_stereo(lon, lat)
+    else:
+        x = lon
+        y = lat
+    return x, y
 
 
 # Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and do one of two things:
@@ -16,7 +26,8 @@ from ..interpolation import interp_grid
 # Either way, each data point will then have latitude and longitude boundaries defined on 4 sides. This is needed for pcolormesh so that the coordinates of the quadrilateral patches are correctly defined.
 # The data array can have more than 2 dimensions, as long as the second last dimension is latitude (size M), and the last dimension is longitude (size N).
 # Outputs longitude and latitude at the boundary of each cell (size (M+1)x(N+1), or MxN) and the data (size ...xMxN, or ...x(M-1)x(N-1)).
-def cell_boundaries (data, grid, gtype='t', extrapolate=True):
+# If you want a polar stereographic project, set pster=True. It will return x and y instead of lon and lat.
+def cell_boundaries (data, grid, gtype='t', extrapolate=True, pster=False):
 
     # Inner function to pad the given array in the given direction(s), either extrapolating or copying.
     def extend_array (A, south=None, north=None, west=None, east=None):
@@ -53,11 +64,10 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True):
         lat = grid.lat_corners_2d
         # Care about eastern and northern edges
         if extrapolate:
-            lon_ex = extend_array(lon, north='copy', east='extrapolate')
-            lat_ex = extend_array(lat, north='extrapolate', east='copy')
-            return lon_ex, lat_ex, data
+            lon = extend_array(lon, north='copy', east='extrapolate')
+            lat = extend_array(lat, north='extrapolate', east='copy')
         else:
-            return lon, lat, data[...,:-1,:-1]
+            data = data[...,:-1,:-1]
     elif gtype == 'u':
         # U-grid: on left edges of cells
         # Boundaries are centres of cells in X, corners of cells in Y
@@ -65,11 +75,10 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True):
         lat = grid.lat_corners_2d
         # Care about western and northern edges
         if extrapolate:
-            lon_ex = extend_array(lon, north='copy', west='extrapolate')
-            lat_ex = extend_array(lat, north='extrapolate', west='copy')
-            return lon_ex, lat_ex, data
+            lon = extend_array(lon, north='copy', west='extrapolate')
+            lat = extend_array(lat, north='extrapolate', west='copy')
         else:
-            return lon, lat, data[...,:-1,1:]
+            data = data[...,:-1,1:]
     elif gtype == 'v':
         # V-grid: on bottom edges of cells
         # Boundaries are corners of cells in X, centres of cells in Y
@@ -77,11 +86,10 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True):
         lat = grid.lat_2d
         # Care about eastern and southern edges
         if extrapolate:
-            lon_ex = extend_array(lon, south='copy', east='extrapolate')
-            lat_ex = extend_array(lat, south='extrapolate', east='copy')
-            return lon_ex, lat_ex, data
+            lon = extend_array(lon, south='copy', east='extrapolate')
+            lat = extend_array(lat, south='extrapolate', east='copy')
         else:
-            return lon, lat, data[...,1:,:-1]
+            data = data[...,1:,:-1]
     elif gtype == 'psi':
         # Psi-grid: on southwest corners of cells
         # Boundaries are centres of cells
@@ -89,45 +97,50 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True):
         lat = grid.lat_2d
         # Care about western and southern edges
         if extrapolate:
-            lon_ex = extend_array(lon, south='copy', west='extrapolate')
-            lat_ex = extend_array(lat, south='extrapolate', west='copy')
-            return lon_ex, lat_ex, data
+            lon = extend_array(lon, south='copy', west='extrapolate')
+            lat = extend_array(lat, south='extrapolate', west='copy')
         else:
-            return lon, lat, data[...,1:,1:]
+            data = data[...,1:,1:]
+
+    # Convert to polar stereographic if needed
+    x, y = get_x_y(lon, lat, pster=pster)
+    return x, y, data
 
 
 # Shade various masks in grey on the plot: just the land mask, or the land and ice shelves.
 # shade_mask is the helper function; shade_land and shade_land_ice are the APIs.
 
-def shade_mask (ax, mask, grid, gtype='t'):
+def shade_mask (ax, mask, grid, gtype='t', pster=False):
 
     # Properly mask all the False values, so that only True values are unmasked
     mask_plot = np.ma.masked_where(np.invert(mask), mask)
     # Prepare quadrilateral patches
-    lon, lat, mask_plot = cell_boundaries(mask_plot, grid, gtype=gtype)
+    x, y, mask_plot = cell_boundaries(mask_plot, grid, gtype=gtype, pster=pster)
     # Add to plot
-    ax.pcolormesh(lon, lat, mask_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+    ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
 
     
-def shade_land (ax, grid, gtype='t'):
+def shade_land (ax, grid, gtype='t', pster=False):
     
-    shade_mask(ax, grid.get_land_mask(gtype=gtype), grid, gtype=gtype)
+    shade_mask(ax, grid.get_land_mask(gtype=gtype), grid, gtype=gtype, pster=pster)
 
     
-def shade_land_ice (ax, grid, gtype='t'):
+def shade_land_ice (ax, grid, gtype='t', pster=False):
     
-    shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), grid, gtype=gtype)
+    shade_mask(ax, grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype), grid, gtype=gtype, pster=pster)
 
 
 # Contour the ice shelf front in black.
-def contour_iceshelf_front (ax, grid):
+def contour_iceshelf_front (ax, grid, pster=False):
 
     # Mask land out of ice shelf draft, so that grounding line isn't contoured
     draft = mask_land(grid.draft, grid)
     # Find the shallowest non-zero ice shelf draft
     draft0 = np.amax(draft[draft!=0])
+    # Convert to polar stereographic if needed
+    x, y = get_x_y(grid.lon_2d, grid.lat_2d, pster=pster)
     # Add to plot
-    ax.contour(grid.lon_2d, grid.lat_2d, draft, levels=[draft0], colors=('black'), linestyles='solid')
+    ax.contour(x, y, draft, levels=[draft0], colors=('black'), linestyles='solid')
 
 
 # Prepare the velocity vectors for plotting: given 3D arrays of u and v on their original grids, and already masked, do a vertical transformation vel_option and interpolate to the tracer grid. Options for vel_option are:

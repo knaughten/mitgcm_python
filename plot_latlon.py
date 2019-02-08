@@ -34,6 +34,7 @@ from constants import deg_string, sec_per_year
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
+# pster: plot polar stereographic projection instead of regular lat/lon (default False)
 # date_string: something to write on the bottom of the plot about the date
 # title: a title to add to the plot
 # titlesize: font size for title
@@ -44,7 +45,7 @@ from constants import deg_string, sec_per_year
 # label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -62,7 +63,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
 
     # Prepare quadrilateral patches
-    lon, lat, data_plot = cell_boundaries(data, grid, gtype=gtype)
+    x, y, data_plot = cell_boundaries(data, grid, gtype=gtype, pster=pster)
 
     # Make the figure and axes, if needed
     existing_ax = ax is not None
@@ -71,19 +72,20 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         
     if include_shelf:
         # Shade land in grey
-        shade_land(ax, grid, gtype=gtype)
+        shade_land(ax, grid, gtype=gtype, pster=pster)
     else:
         # Shade land and ice shelves in grey
-        shade_land_ice(ax, grid, gtype=gtype)
+        shade_land_ice(ax, grid, gtype=gtype, pster=pster)
     # Plot the data    
-    img = ax.pcolormesh(lon, lat, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
     if include_shelf:
         # Contour ice shelf front
-        contour_iceshelf_front(ax, grid)
+        contour_iceshelf_front(ax, grid, pster=pster)
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
-    latlon_axes(ax, lon, lat, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
+    if not pster:
+        latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
