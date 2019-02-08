@@ -89,6 +89,8 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
         # Remove all ticks
         ax.set_xticks([])
         ax.set_yticks([])
+        print lon_lines
+        print lat_lines
         if lon_lines is not None or lat_lines is not None:
             # Overlay latitude and/or longitude contours
             if grid is None:
