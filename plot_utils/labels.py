@@ -67,11 +67,15 @@ def lat_label (x, max_decimals):
 
 # Set the limits of the longitude and latitude axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.
 # Setting zoom_fris=True will zoom into the FRIS cavity (bounds set in constants.py). You can also set specific limits on longitude and latitude (xmin etc.)
-def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True):
+# If pster=True, xmin etc. are assumed to be in polar stereographic units.
+def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True, pster=False):
     
     # Set limits on axes
     if zoom_fris:
-        [xmin, xmax, ymin, ymax] = fris_bounds
+        if pster:
+            [xmin, xmax, ymin, ymax] = fris_bounds_pster
+        else:
+            [xmin, xmax, ymin, ymax] = fris_bounds
     if xmin is None:
         xmin = np.amin(lon)
     if xmax is None:
@@ -83,71 +87,36 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
 
-    # Check location of ticks
-    lon_ticks = ax.get_xticks()
-    lat_ticks = ax.get_yticks()
-    # Often there are way more longitude ticks than latitude ticks
-    if float(len(lon_ticks))/float(len(lat_ticks)) > 1.5:
-        # Automatic tick locations can disagree with limits of axes, but this doesn't change the axes limits unless you get and then set the tick locations. So make sure there are no disagreements now.
-        lon_ticks = lon_ticks[(lon_ticks >= ax.get_xlim()[0])*(lon_ticks <= ax.get_xlim()[1])]
-        # Remove every second one
-        lon_ticks = lon_ticks[1::2]        
-        ax.set_xticks(lon_ticks)
-
-    if label:
-        # Set nice tick labels
-        lon_labels = []
-        for x in lon_ticks:
-            lon_labels.append(lon_label(x,2))
-        ax.set_xticklabels(lon_labels)
-        # Repeat for latitude
-        lat_labels = []
-        for y in lat_ticks:
-            lat_labels.append(lat_label(y,2))
-        ax.set_yticklabels(lat_labels)
+    if pster:
+        # Remove all ticks
+        ax.set_xticks([])
+        ax.set_yticks([])
     else:
-        # No tick labels
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-
-
-# Set the limits on polar stereographic axes.
-def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat_min=None, lat_max=None):
-
-    # First find limits on lat and lon
-    if zoom_fris:
-        [lon_min, lon_max, lat_min, lat_max] = fris_bounds
-    if lon_min is None:
-        # Set to the lowest possible value in the grid
-        lon_min = np.amin(grid.lon_corners_2d)
-    if lon_max is None:
-        # Set to the highest possible value
-        lon_max = np.amax(grid.lon_2d)
-    if lat_min is None:
-        lat_min = np.amin(grid.lat_corners_2d)
-    if lat_max is None:
-        lat_max = np.amax(grid.lat_2d)
-    # Now convert these four corners to polar stereographic
-    x_sw, y_sw = polar_stereo(lon_min, lat_min)
-    x_nw, y_nw = polar_stereo(lon_min, lat_max)
-    x_ne, y_ne = polar_stereo(lon_max, lat_max)
-    x_se, y_se = polar_stereo(lon_max, lat_min)
-    # Now find min/max polar stereo coordinates
-    xmin = min(x_sw, x_nw)
-    xmax = max(x_ne, x_se)
-    ymin = min(y_sw, y_se)
-    ymax = max(y_nw, y_ne)
-    # Overwrite if we've gone past the edge of the true grid
-    xmin = max(xmin, np.amin(x))
-    xmax = min(xmax, np.amax(x))
-    ymin = max(ymin, np.amin(y))
-    ymax = min(ymax, np.amax(y))
-    # Set these limits
-    ax.set_xlim([xmin, xmax])
-    ax.set_ylim([ymin, ymax])
-    # Remove ticks
-    ax.set_xticks([])
-    ax.set_yticks([])
+        # Check location of ticks
+        lon_ticks = ax.get_xticks()
+        lat_ticks = ax.get_yticks()
+        # Often there are way more longitude ticks than latitude ticks
+        if float(len(lon_ticks))/float(len(lat_ticks)) > 1.5:
+            # Automatic tick locations can disagree with limits of axes, but this doesn't change the axes limits unless you get and then set the tick locations. So make sure there are no disagreements now.
+            lon_ticks = lon_ticks[(lon_ticks >= ax.get_xlim()[0])*(lon_ticks <= ax.get_xlim()[1])]
+            # Remove every second one
+            lon_ticks = lon_ticks[1::2]        
+            ax.set_xticks(lon_ticks)
+        if label:
+            # Set nice tick labels
+            lon_labels = []
+            for x in lon_ticks:
+                lon_labels.append(lon_label(x,2))
+            ax.set_xticklabels(lon_labels)
+            # Repeat for latitude
+            lat_labels = []
+            for y in lat_ticks:
+                lat_labels.append(lat_label(y,2))
+            ax.set_yticklabels(lat_labels)
+        else:
+            # No tick labels
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
 
 
 # Give the axes on a slice plot nice labels. Set h_axis to 'lat' (default) or 'lon' to indicate what the horizontal axis is.
