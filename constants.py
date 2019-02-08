@@ -34,7 +34,7 @@ deg_string = r'$^{\circ}$'
 # lon_min, lon_max, lat_min, lat_max
 fris_bounds = [-85, -29, -84, -74]
 # Polar stereographic version
-fris_bounds_pster = [-1742712, -316332, 56868, 1530032]
+fris_bounds_pster = [-1.6e6, -5e5, 1.2e5, 1.365e6]
 # Bounds on Eastern Weddell ice shelves.
 ewed_bounds = [-30, 40, -77, -65]
 # Bounds on Weddell Gyre.
