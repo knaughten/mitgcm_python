@@ -116,7 +116,7 @@ def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat
 
     # First find limits on lat and lon
     if zoom_fris:
-        [lon_min, lon_max, lat_min, lat_max]
+        [lon_min, lon_max, lat_min, lat_max] = fris_bounds
     if lon_min is None:
         # Set to the lowest possible value in the grid
         lon_min = np.amin(grid.lon_corners_2d)
