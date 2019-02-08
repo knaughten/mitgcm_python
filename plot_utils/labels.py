@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 from ..file_io import netcdf_time
 from ..constants import fris_bounds, deg_string
+from ..utils import polar_stereo
 
 
 # On a timeseries plot with axes ax, label every month (monthly_ticks) or every year (yearly_ticks)
@@ -70,10 +71,7 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
     
     # Set limits on axes
     if zoom_fris:
-        xmin = fris_bounds[0]
-        xmax = fris_bounds[1]
-        ymin = fris_bounds[2]
-        ymax = fris_bounds[3]
+        [xmin, xmax, ymin, ymax] = fris_bounds
     if xmin is None:
         xmin = np.amin(lon)
     if xmax is None:
@@ -111,7 +109,45 @@ def latlon_axes (ax, lon, lat, zoom_fris=False, xmin=None, xmax=None, ymin=None,
         # No tick labels
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-            
+
+
+# Set the limits on polar stereographic axes.
+def pster_axes (ax, x, y, grid, zoom_fris=False, lon_min=None, lon_max=None, lat_min=None, lat_max=None):
+
+    # First find limits on lat and lon
+    if zoom_fris:
+        [lon_min, lon_max, lat_min, lat_max]
+    if lon_min is None:
+        # Set to the lowest possible value in the grid
+        lon_min = np.amin(grid.lon_corners_2d)
+    if lon_max is None:
+        # Set to the highest possible value
+        lat_max = np.amax(grid.lon_2d)
+    if lat_min is None:
+        lat_min = np.amin(grid.lat_corners_2d)
+    if lat_max is None:
+        lat_max = np.amax(grid.lat_2d)
+    # Now convert these four corners to polar stereographic
+    x_sw, y_sw = polar_stereo(lon_min, lat_min)
+    x_nw, y_nw = polar_stereo(lon_min, lat_max)
+    x_ne, y_ne = polar_stereo(lon_max, lat_max)
+    x_se, y_se = polar_stereo(lon_max, lat_min)
+    # Now find min/max polar stereo coordinates
+    xmin = min(x_sw, x_nw)
+    xmax = max(x_ne, x_se)
+    ymin = min(y_sw, y_se)
+    ymax = max(y_nw, y_ne)
+    # Overwrite if we've gone past the edge of the true grid
+    xmin = max(xmin, np.amin(x))
+    xmax = min(xmax, np.amax(x))
+    ymin = max(ymin, np.amin(y))
+    ymax = min(ymax, np.amax(y))
+    # Set these limits
+    ax.set_xlim([xmin, xmax])
+    ax.set_ylim([ymin, ymax])
+    # For now, remove ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
 
 
 # Give the axes on a slice plot nice labels. Set h_axis to 'lat' (default) or 'lon' to indicate what the horizontal axis is.

@@ -12,7 +12,7 @@ from grid import Grid, choose_grid
 from file_io import read_netcdf, find_variable, netcdf_time, check_single_time
 from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max
 from plot_utils.windows import set_panels, finished_plot
-from plot_utils.labels import latlon_axes, check_date_string, parse_date
+from plot_utils.labels import latlon_axes, pster_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors
 from diagnostics import t_minus_tf, find_aice_min_max
@@ -84,7 +84,10 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
-    if not pster:
+    # Set axes limits etc.
+    if pster:
+        pster_axes(ax, x, y, grid, zoom_fris=zoom_fris, lon_min=xmin, lon_max=xmin, lat_min=ymin, lat_max=ymax)
+    else:
         latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon)
     if date_string is not None:
         # Add the date in the bottom right corner
