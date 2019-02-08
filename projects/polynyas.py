@@ -647,7 +647,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         # Leave the top left plot empty for title
         ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
         img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
-        if ctype[i] == 'vel':
+        #if ctype[i] == 'vel':
             # Overlay velocity vectors
             #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if ctype[i] == 'ismr':
