@@ -264,7 +264,7 @@ def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax,
 
 
 # Extract the data and boundaries along a general transect between two (lon,lat) points. This replaces get_slice_values and get_slice_boundaries.
-def get_transect (data, grid, gtype='t', point0, point1):
+def get_transect (data, grid, point0, point1, gtype='t'):
 
     # Extract the coordinates from the start and end points, so that we start at the southernmost point
     if point0[1] < point1[1]:
@@ -282,6 +282,9 @@ def get_transect (data, grid, gtype='t', point0, point1):
         sys.exit()
     if min(lon0, lon1) < np.amin(grid.lon_corners_1d) or max(lon0, lon1) > np.amax(grid.lon_1d) or lat0 < np.amin(grid.lat_corners_1d) or lat1 > np.amax(grid.lat_1d):
         print 'Error (get_transect): This line falls outside of the domain.'
+        sys.exit()
+    if gtype != 't':
+        print 'Error (get_transect): gtypes other than t are not yet supported.'
         sys.exit()
     # Save the slope of the line
     slope = (lat1-lat0)/(lon1-lon0)
