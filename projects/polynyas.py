@@ -779,7 +779,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     s_contours = [34.42]
     r_contours = np.arange(32.45, 32.57, 0.02)
 
-    loc_label = 'from ' + get_loc(None, point0=point0, point1=point1)
+    loc_label = 'from ' + get_loc(None, point0=point0, point1=point1)[-1]
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -807,13 +807,13 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
             patches, temp_values_tmp, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_gridded_tmp, haxis, zaxis = transect_patches(temp[i], grid, point0, point1, zmin=zmin, return_bdry=True, return_gridded=True)
             
         else:
-            temp_values_tmp, tmp1, tmp2, temp, temp_gridded_tmp = transect_values(temp[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+            temp_values_tmp, tmp1, tmp2, temp_gridded_tmp = transect_values(temp[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         temp_values.append(temp_values_tmp)
         temp_gridded.append(temp_gridded_tmp)
-        salt_values_tmp, tmp1, tmp2, salt, salt_gridded_tmp = transect_values(salt[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        salt_values_tmp, tmp1, tmp2, salt_gridded_tmp = transect_values(salt[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         salt_values.append(salt_values_tmp)
         salt_gridded.append(salt_gridded_tmp)
-        rho_values_tmp, tmp1, tmp2, rho, rho_gridded_tmp = transect_values(rho[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        rho_values_tmp, tmp1, tmp2, rho_gridded_tmp = transect_values(rho[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         rho_values.append(rho_values_tmp)
         rho_gridded.append(rho_gridded_tmp)
 
@@ -840,11 +840,14 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
             # Add contours
             plt.contour(haxis, zaxis, gridded[j][i], levels=contours[j], colors='black', linestyles='solid')
             # Make nice axes
-            slice_axes(ax)
-            # Remove depth labels on right plot
-            if i==1:
+            slice_axes(ax, h_axis='trans')
+            # Remove depth values from right plots
+            if i == 1:
                 ax.set_yticklabels([])
+            # Remove axes labels on all but top left plot
+            if i!=0 or j!=0:
                 ax.set_ylabel('')
+                ax.set_xlabel('')
             # Add experiment title
             plt.title(expt_names[i], fontsize=18)
         # Add a colourbar on the left and hide every second label
@@ -855,15 +858,16 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         cmap = set_colours(values_diff, ctype='plusminus', vmin=vmin_diff[j], vmax=vmax_diff[j])[0]    
         ax = plt.subplot(gs[j,2])
         img = plot_slice_patches(ax, patches, values_diff, hmin, hmax, zmin, zmax, vmin_diff[j], vmax_diff[j], cmap=cmap)
-        slice_axes(ax)
+        slice_axes(ax, h_axis='trans')
         ax.set_yticklabels([])
         ax.set_ylabel('')
+        ax.set_xlabel('')
         plt.title('Anomaly', fontsize=18)
         cbar = plt.colorbar(img, extend='both', cax=cax_diff[j])
         reduce_cbar_labels(cbar)
         # Add variable title
         plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'mwdw_slices.png')
+    finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
 
 
 # Plot 6 polar stereographic panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.

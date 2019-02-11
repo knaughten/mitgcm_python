@@ -137,7 +137,7 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
 def slice_axes (ax, h_axis='lat'):
 
     # Set horizontal tick labels
-    h_ticks = ax.get_xticks()   
+    h_ticks = ax.get_xticks()
     h_labels = []
     for x in h_ticks:
         if h_axis == 'lat':
@@ -147,6 +147,11 @@ def slice_axes (ax, h_axis='lat'):
         elif h_axis == 'trans':
             h_labels.append(str(int(round(x))))
     ax.set_xticklabels(h_labels)
+    if h_axis == 'trans':
+        # Remove every second label
+        labels = ax.get_xticklabels()
+        for label in labels[::2]:
+            label.set_visible(False)
 
     # Set vertical tick labels
     z_ticks = ax.get_yticks()
