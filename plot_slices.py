@@ -15,7 +15,7 @@ from utils import mask_3d, z_to_xyz
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_slices, transect_values
+from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
 from diagnostics import t_minus_tf, density
 from constants import deg_string
 
