@@ -242,12 +242,12 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
 
     if return_bdry:
         if return_gridded:
-            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above, data_slice, haxis, grid.nz
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above, data_slice, haxis, grid.z
         else:
             return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above
     else:
         if return_gridded:
-            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, data_slice, haxis, grid.nz
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, data_slice, haxis, grid.z
         else:
             return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax            
 
@@ -411,16 +411,24 @@ def transect_patches (data, grid, point0, point1, gtype='t', zmin=None, zmax=Non
     patches = get_slice_patches(data_trans, left, right, below, above)
 
     if return_gridded:
-        haxis = (left+right)/2.
-        return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax, data.trans, haxis, grid.nz
+        haxis = (left+right)/2
+
+    if return_bdry:
+        if return_gridded:
+            return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above, data_trans, haxis, grid.z
+        else:
+            return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above
     else:
-        return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax
+        if return_gridded:
+            return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax, data_trans, haxis, grid.z
+        else:
+            return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax
 
 
 # API to get values for already-known patches along a transect. Equivalent to slice_values.
 def transect_values (data, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype='t', return_gridded=False):
 
-    data_trans = get_transect(data, grid, point0, poin1, gtype=gtype, return_grid_vars=False)
+    data_trans = get_transect(data, grid, point0, point1, gtype=gtype, return_grid_vars=False)
     vmin, vmax = get_slice_minmax(data_trans, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
     if return_gridded:
         return data_trans.ravel(), vmin, vmax, data_trans

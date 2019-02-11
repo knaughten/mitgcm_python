@@ -145,7 +145,7 @@ def slice_axes (ax, h_axis='lat'):
         elif h_axis == 'lon':
             h_labels.append(lon_label(x,2))
         elif h_axis == 'trans':
-            h_labels.append(str(x))
+            h_labels.append(str(int(round(x))))
     ax.set_xticklabels(h_labels)
 
     # Set vertical tick labels
@@ -156,6 +156,8 @@ def slice_axes (ax, h_axis='lat'):
         z_labels.append(str(int(round(-z))))
     ax.set_yticklabels(z_labels)
     ax.set_ylabel('Depth (m)', fontsize=14)
+    if h_axis == 'trans':
+        ax.set_xlabel('Distance (km)', fontsize=14)
 
 
 # Given a date, return a nice string that can be added to plots.
