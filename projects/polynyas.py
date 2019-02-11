@@ -20,7 +20,7 @@ from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
-from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_gridded, get_loc
+from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_loc
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
