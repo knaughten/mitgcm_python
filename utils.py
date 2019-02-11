@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year, fris_bounds, fris_bounds_pster, deg2rad
+from constants import rho_fw, sec_per_year, fris_bounds, fris_bounds_pster, deg2rad, rEarth
 
 
 # Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180). If max_lon is None, nothing will be done to the array.
@@ -490,4 +490,13 @@ def str_is_int (s):
         return True
     except ValueError:
         return False
+
+
+# Find the Cartesian distance between two lon-lat points.
+def dist_btw_points (point0, point1):
+    [lon0, lat0] = point0
+    [lon1, lat1] = point1
+    dx = rEarth*np.cos((lat0+lat1)/2*deg2rad)*(lon1-lon0)*deg2rad
+    dy = rEarth*(lat1-lat0)*deg2rad
+    return np.sqrt(dx**2 + dy**2)
     

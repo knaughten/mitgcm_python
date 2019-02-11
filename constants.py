@@ -14,6 +14,8 @@ rho_ice = 917.
 sec_per_year = 365.25*24*60*60
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
+# Radius of Earth
+rEarth = 6.371e6
 # Celsius to Kelvins intercept
 temp_C2K = 273.15
 # Latent heat of vapourisation (J/kg)

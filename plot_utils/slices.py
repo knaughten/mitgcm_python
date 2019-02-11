@@ -1,11 +1,14 @@
 #############################################################
 # Utilities specific to slice plots (lat-depth or lon-depth).
+# Also general transect between two points (scroll down)
 #############################################################
 
 import numpy as np
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import sys
+
+from utils import dist_btw_points
 
 
 # Create the rectangular Polygon patches for plotting a slice (necessary to properly represent partial cells) and the corresponding data values. This is done with 4 helper functions:
@@ -258,4 +261,137 @@ def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax,
     ax.set_xlim([hmin, hmax])
     ax.set_ylim([zmin, zmax])    
     return img
+
+
+# Extract the data and boundaries along a general transect between two (lon,lat) points. This replaces get_slice_values and get_slice_boundaries.
+def get_transect (data, grid, gtype='t', point0, point1):
+
+    # Extract the coordinates from the start and end points, so that we start at the southernmost point
+    if point0[1] < point1[1]:
+        [lon0, lat0] = point0
+        [lon1, lat1] = point1
+    else:
+        [lon0, lat0] = point1
+        [lon1, lat1] = point0
+    # Some error checking
+    if lon0 == lon1:
+        print 'Error (get_transect): This is a line of constant longitude. Use the regular slice scripts instead.'
+        sys.exit()
+    if lat0 == lat1:
+        print 'Error (get_transect): This is a line of constant latitude. Use the regular slice scripts instead.'
+        sys.exit()
+    if min(lon0, lon1) < np.amin(grid.lon_corners_1d) or max(lon0, lon1) > np.amax(grid.lon_1d) or lat0 < np.amin(grid.lat_corners_1d) or lat1 > np.amax(grid.lat_1d):
+        print 'Error (get_transect): This line falls outside of the domain.'
+        sys.exit()
+    # Save the slope of the line
+    slope = (lat1-lat0)/(lon1-lon0)
+
+    # Find the limits on latitude to search
+    # Last edge latitude south of the line
+    j_start = np.nonzero(grid.lat_corners_1d > lat0)[0][0] - 1
+    # First edge latitude north of the line
+    j_end = np.nonzero(grid.lat_corners_1d > lat1)[0][0]
+    # Consider edge cases
+    j_start = max(j_start, 0)
+    j_end = min(j_end, grid.ny-1)
+
+    # Make a list of indices for cells that are intersected by the line.
+    cells_intersect = []
+    for j in range(j_start, j_end+1):
+        # Find the longitude of intersection between the line and this latitude
+        lon_star = (grid.lat_corners_1d[j]-lat0)/slope + lon0
+        # Find the longitude index of the cell this intersects: last lon_corners west of lon_star, considering the edge case
+        i = max(np.nonzero(grid.lon_corners_1d > lon_star)[0][0] - 1, 0)
+        if j > j_start:
+            # Save the cell south of this, if it's not already there
+            if (j-1, i) not in cells_intersect:
+                cells.append((j-1, i))
+        if j < j_end:
+            # Save the cell itself (this order makes sure we're going south to north)
+            cells_intersect.append((j,i))
+
+    # Set up array to save the extracted slices
+    data_slice = np.ma.empty([grid.nz, len(cells_intersect)])
+    # Also their horizontal boundaries (distance from lon0, lat0) and hfac
+    left = np.ma.empty(data_slice.shape)
+    right = np.ma.empty(data_slice.shape)
+    hfac_slice = np.ma.empty(data_slice.shape)
+    # Finally, a counter for the position in axis 1, because we might not keep all the intersected cells
+    posn = 0
+    for cell in cell_intersect:
+        [j, i] = cell
+        # Find the intersections between the line and the cell boundaries.
+        intersections = []
+        lon_left = grid.lon_corners_1d[i]
+        lat_bottom = grid.lat_corners_1d[j]
+        if i < grid.nx:
+            lon_right = grid.lon_corners_1d[i+1]
+        else:
+            # Extrapolate the boundary
+            lon_right = 2*grid.lon_corners_1d[i] - grid.lon_corners_1d[i-1]
+        if j < grid.ny:
+            lat_top = grid.lat_corners_1d[j+1]
+        else:
+            lat_top = 2*grid.lat_corners_1d[j] - grid.lat_corners_1d[j-1]
+        # Check if the line intersects the bottom
+        lon_star = (lat_bottom-lat0)/slope + lon0
+        if lon_star >= lon_left and lon_star <= lon_right:
+            intersections.append((lat_bottom, lon_star))
+        # Check the top
+        lon_star = (lat_top-lat0)/slope + lon0
+        if lon_star >= lon_left and lon_star <= lon_right:
+            intersections.append((lat_top, lon_star))
+        # Check the left
+        lat_star = (lon_left-lon0)*slope + lat0
+        if lat_star >= lat_bottom and lat_star <= lat_top:
+            intersections.append((lat_star, lon_left))
+        # Check the right
+        lat_star = (lon_right-lon0)*slope + lat0
+        if lat_star >= lat_bottom and lat_star <= lat_top:
+            intersections.append((lat_star, lon_right))
+        # We expect there to be 2 items in the list. Check the other cases:
+        if len(intersections) == 1:
+            # The line just skimmed the corner of the cell. Discard this cell, as its two diagonal neighbours will be picked up.
+            continue
+        elif len(intersections) in [0,3,4]:
+            # This should never happen.
+            print 'Error (get_transect): ' + str(len(intersections)) + ' intersections. Something went wrong.'
+            sys.exit()
+        # Calculate the distance from each intersection to the start of the line
+        dist_a = dist_btw_points(intersections[0], [lon0, lat0])
+        dist_b = dist_btw_points(intersections[1], [lon0, lat0])
+        # Choose the left and right boundaries
+        left_dist = min(dist_a, dist_b)
+        right_dist = max(dist_a, dist_b)
+        # Now save data from this water column to the slices
+        data_slice[:,posn] = data[:,j,i]
+        left[:,posn] = np.zeros(grid.nz)+left_dist
+        right[:,posn] = np.zeros(grid.nz)+right_dist
+        hfac_slice[:,posn] = grid.hfac[:,j,i]
+        posn += 1
+
+    # Trim the slices in case we didn't use all the cells
+    data_slice = data_slice[:,:posn]
+    left = left[:,:posn]
+    right = right[:,:posn]
+    hfac_slice = hfac_slice[:,:posn]
+    # Now calculate the top and bottom boundaries
+    below, above = get_slice_boundaries(data_slice, grid, left, hfac_slice)[2:]
+
+    return data_slice, left, right, below, above
+    
+                
+        
+            
+            
+
+        
+        
+        
+        
+        
+        
+            
+            
+
 
