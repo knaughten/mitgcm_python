@@ -57,7 +57,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
         if None in [data_grid, haxis, zaxis]:
             print 'Error (make_slice_plot): need to specify data_grid, haxis, and zaxis to do contours'
             sys.exit()
-        plt.contour(haxis, zaxis, data_grid, levels=contours, colors='black')
+        plt.contour(haxis, zaxis, data_grid, levels=contours, colors='black', linestyles='solid')
     # Make nice axis labels
     slice_axes(ax, h_axis=h_axis)
     # Add a colourbar
@@ -330,7 +330,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
             if None in [data_grid[i], haxis, zaxis]:
                 print 'Error (make_ts_slice_plot): need to specify temp_grid/salt_grid, haxis, and zaxis to do tcontours/scontours'
                 sys.exit()
-            plt.contour(haxis, zaxis, data_grid[i], levels=contours[i], colors='black')
+            plt.contour(haxis, zaxis, data_grid[i], levels=contours[i], colors='black', linestyles='solid')
         # Nice axes
         slice_axes(ax, h_axis=h_axis)
         if i == 1:
