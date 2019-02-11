@@ -405,7 +405,7 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
     elif point0 is not None and point1 is not None:
         # Transect
         loc0 = None
-        patches, temp_values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_grid_1, haxis, zaxis = transect_patches(temp_1, grid, point0, point1, zmin=zmin, zmax=zmax, return_gridded=True)
+        patches, temp_values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_grid_1, haxis, zaxis = transect_patches(temp_1, grid, point0, point1, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         temp_values_2, tmp3, tmp4, temp_grid_2 = transect_values(temp_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         salt_values_1, tmp5, tmp6, salt_grid_1 = transect_values(salt_1, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         salt_values_2, tmp7, tmp8, salt_grid_2 = transect_values(salt_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
