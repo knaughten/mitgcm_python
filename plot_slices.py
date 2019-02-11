@@ -478,7 +478,7 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, point0=None,
 
 
 # Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period. Otherwise you can set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=point0, point1=point1, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
+def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
 
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
