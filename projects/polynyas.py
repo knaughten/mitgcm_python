@@ -20,10 +20,10 @@ from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
 from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
-from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_gridded
+from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_gridded, get_loc
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
-from ..plot_utils.slices import slice_patches, slice_values, plot_slice_patches
+from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 
 # Global parameters
 
@@ -749,7 +749,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'deep_ocean_timeseries.png')
 
 
-# Plot slices through 50W for the baseline and Maud Rise simulations as well as the anomaly, showing (a) temperature, (b) salinity, and (c) density.
+# Plot a transect on the continental shelf for the baseline and Maud Rise simulations as well as the anomaly, showing (a) temperature, (b) salinity, and (c) density.
 def mwdw_slices (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -757,9 +757,8 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
 
     # Slice parameters
     # Location
-    lon0 = -50
-    hmin = -79
-    hmax = -65
+    point0 = (-56, -79)
+    point1 = (-42, -65)
     zmin = -1500
     # Colour bounds
     tmin = -2
@@ -780,7 +779,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     s_contours = [34.42]
     r_contours = np.arange(32.45, 32.57, 0.02)
 
-    lon0_label = lon_label(lon0, 0)
+    loc_label = 'from ' + get_loc(None, point0=point0, point1=point1)
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -805,18 +804,18 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     for i in range(2):
         if i == 0:
             # The first time, build the patches
-            patches, temp_values_tmp, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(temp[i], grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, return_bdry=True)
-            temp_values.append(temp_values_tmp)
-            # Also get gridded version for contours
-            temp_gridded_tmp, haxis, zaxis = get_gridded(temp_values_tmp, grid, lon0=lon0)
-            temp_gridded.append(temp_gridded_tmp)
+            patches, temp_values_tmp, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_gridded_tmp, haxis, zaxis = transect_patches(temp[i], grid, point0, point1, zmin=zmin, return_bdry=True, return_gridded=True)
+            
         else:
-            temp_values.append(slice_values(temp[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
-            temp_gridded.append(get_gridded(temp_values[i], grid, lon0=lon0)[0])
-        salt_values.append(slice_values(salt[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
-        salt_gridded.append(get_gridded(salt_values[i], grid, lon0=lon0)[0])
-        rho_values.append(slice_values(rho[i], grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0)[0])
-        rho_gridded.append(get_gridded(rho_values[i], grid, lon0=lon0)[0])
+            temp_values_tmp, tmp1, tmp2, temp, temp_gridded_tmp = transect_values(temp[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        temp_values.append(temp_values_tmp)
+        temp_gridded.append(temp_gridded_tmp)
+        salt_values_tmp, tmp1, tmp2, salt, salt_gridded_tmp = transect_values(salt[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        salt_values.append(salt_values_tmp)
+        salt_gridded.append(salt_gridded_tmp)
+        rho_values_tmp, tmp1, tmp2, rho, rho_gridded_tmp = transect_values(rho[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        rho_values.append(rho_values_tmp)
+        rho_gridded.append(rho_gridded_tmp)
 
     print 'Plotting'
     fig, gs, cax_t, cax_t_diff, cax_s, cax_s_diff, cax_r, cax_r_diff, titles_y = set_panels('3x3C6+T3')
@@ -830,7 +829,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     vmax = [tmax, smax, rmax]
     vmin_diff = [tmin_diff, smin_diff, rmin_diff]
     vmax_diff = [tmax_diff, smax_diff, rmax_diff]
-    var_names = ['a) Temperature ('+deg_string+'C) at '+lon0_label, 'b) Salinity (psu) at '+lon0_label, r'c) Density (kg/m$^3$-1000) at '+lon0_label]
+    var_names = ['a) Temperature ('+deg_string+'C) '+loc_label, 'b) Salinity (psu)', r'c) Density (kg/m$^3$-1000)']
     # Loop over variables (rows)
     for j in range(3):
         # Loop over experiments (columns)
@@ -864,7 +863,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         reduce_cbar_labels(cbar)
         # Add variable title
         plt.text(0.5, titles_y[j], var_names[j], fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
+    finished_plot(fig) #, fig_name=fig_dir+'mwdw_slices.png')
 
 
 # Plot 6 polar stereographic panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.
