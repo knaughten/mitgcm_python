@@ -365,7 +365,7 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, point0=None, point1=N
     elif point0 is not None and point1 is not None:
         # Transect
         loc0 = None
-        patches, temp_values, hmin, hmax, zmin, zmax, tmin_tmp, tmax_tmp, left, right, below, above, temp_grid, haxis, zaxis = transect_patches(temp, grid, point0, point1, zmin=zmin, zmax=zmax, return_gridded=True)
+        patches, temp_values, hmin, hmax, zmin, zmax, tmin_tmp, tmax_tmp, left, right, below, above, temp_grid, haxis, zaxis = transect_patches(temp, grid, point0, point1, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         salt_values, smin_tmp, smax_tmp, salt_grid = transect_values(salt, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
     else:
         print 'Error (ts_slice_plot): must specify either lon0, lat0, or point0 and point1'
