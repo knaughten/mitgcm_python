@@ -452,7 +452,7 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
 # fig_name: as in function finished_plot
 # second_file_path: path to NetCDF file containing a THETA or SALT if this is not contained in file_path. It doesn't matter which is which.
 
-def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, point0=point0, point1=point1, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path=None):
+def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path=None):
 
     grid = choose_grid(grid, file_path)
     check_single_time(time_index, time_average)
