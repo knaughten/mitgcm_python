@@ -131,7 +131,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
     elif point0 is not None and point1 is not None:
         # Transect
         loc0 = None
-        patches, values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = transect_patches(data_1, grid, point0, point1, gtype=gtype, zmin=zmin, zmax=zmax, return_gridded=True)
+        patches, values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = transect_patches(data_1, grid, point0, point1, gtype=gtype, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         values_2, data_grid_2 = transect_values(data_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype=gtype, return_gridded=True)[0,-1]
     else:
         print 'Error (slice_plot_diff): must specify either lon0, lat0, or point0 and point1'
