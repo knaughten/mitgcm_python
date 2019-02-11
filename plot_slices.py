@@ -351,7 +351,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
 
 
 # Similar to slice_plot, but creates a 2x1 plot containing temperature and salinity.        
-def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, point0=point0, point1=point1, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None):
+def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbars should do
     extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
