@@ -238,7 +238,7 @@ def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=
     patches = get_slice_patches(data_slice, left, right, below, above)
 
     if return_gridded:
-        haxis = (left+right)/2.
+        haxis = (left[0,:]+right[0,:])/2.
 
     if return_bdry:
         if return_gridded:
@@ -411,7 +411,7 @@ def transect_patches (data, grid, point0, point1, gtype='t', zmin=None, zmax=Non
     patches = get_slice_patches(data_trans, left, right, below, above)
 
     if return_gridded:
-        haxis = (left+right)/2
+        haxis = (left[0,:]+right[0,:])/2
 
     if return_bdry:
         if return_gridded:
