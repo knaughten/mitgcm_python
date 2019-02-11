@@ -768,8 +768,8 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     rmin = 32.4
     rmax = 32.6
     # Difference bounds
-    tmin_diff = -0.6
-    tmax_diff = 0.6
+    tmin_diff = -0.75
+    tmax_diff = 0.75
     smin_diff = -0.02
     smax_diff = 0.1
     rmin_diff = -0.005
