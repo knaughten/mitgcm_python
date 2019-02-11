@@ -127,12 +127,12 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
         # Lat-lon slices
         # Get gridded data and axes just in case
         patches, values_1, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = slice_patches(data_1, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
-        values_2, data_grid_2 = slice_values(data_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)[0,-1]
+        values_2, tmp3, tmp4, data_grid_2 = slice_values(data_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)
     elif point0 is not None and point1 is not None:
         # Transect
         loc0 = None
         patches, values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = transect_patches(data_1, grid, point0, point1, gtype=gtype, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
-        values_2, data_grid_2 = transect_values(data_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype=gtype, return_gridded=True)[0,-1]
+        values_2, tmp3, tmp4, data_grid_2 = transect_values(data_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype=gtype, return_gridded=True)
     else:
         print 'Error (slice_plot_diff): must specify either lon0, lat0, or point0 and point1'
         sys.exit()
@@ -398,17 +398,17 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
         # Get gridded data and axes just in case
         patches, temp_values_1, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_grid_1, haxis, zaxis = slice_patches(temp_1, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         # Get the temperature values for the second simulation on the same patches
-        temp_values_2, temp_grid_2 = slice_values(temp_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)[0,-1]
+        temp_values_2, tmp3, tmp4, temp_grid_2 = slice_values(temp_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)
         # Get the salinity values for both simulations
-        salt_values_1, salt_grid_1 = slice_values(salt_1, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)[0,-1]
-        salt_values_2, salt_grid_2 = slice_values(salt_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)[0,-1]
+        salt_values_1, tmp5, tmp6, salt_grid_1 = slice_values(salt_1, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)
+        salt_values_2, tmp7, tmp8, salt_grid_2 = slice_values(salt_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)
     elif point0 is not None and point1 is not None:
         # Transect
         loc0 = None
         patches, temp_values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_grid_1, haxis, zaxis = transect_patches(temp_1, grid, point0, point1, zmin=zmin, zmax=zmax, return_gridded=True)
-        temp_values_2, temp_grid_2 = transect_values(temp_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)[0,-1]
-        salt_values_1, salt_grid_1 = transect_values(salt_1, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)[0,-1]
-        salt_values_2, salt_grid_2 = transect_values(salt_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)[0,-1]
+        temp_values_2, tmp3, tmp4, temp_grid_2 = transect_values(temp_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        salt_values_1, tmp5, tmp6, salt_grid_1 = transect_values(salt_1, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
+        salt_values_2, tmp7, tmp8, salt_grid_2 = transect_values(salt_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
     else:
         print 'Error (ts_slice_plot_diff): must specify either lon0, lat0, or point0 and point1'
         sys.exit()
