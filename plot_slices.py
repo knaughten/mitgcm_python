@@ -1,5 +1,6 @@
 #######################################################
 # Zonal or meridional slices (lat-depth or lon-depth)
+# or general transects between points!
 #######################################################
 
 import matplotlib
@@ -14,13 +15,13 @@ from utils import mask_3d, z_to_xyz
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax
+from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_slices, transect_values
 from diagnostics import t_minus_tf, density
 from constants import deg_string
 
 
-# Helper function to determine whether this is a slice along latitude or along longitude, and format the string describing the slice.
-def get_loc (loc0, lon0=None, lat0=None):
+# Helper function to determine whether this is a slice along latitude, longitude, or a general transect, and format the string describing the slice.
+def get_loc (loc0, lon0=None, lat0=None, point0=None, point1=None):
 
     if lon0 is not None:
         h_axis = 'lat'
@@ -28,19 +29,25 @@ def get_loc (loc0, lon0=None, lat0=None):
     elif lat0 is not None:
         h_axis = 'lon'
         loc_string = lat_label(loc0, 3)
+    elif point0 is not None and point1 is not None:
+        h_axis = 'trans'
+        loc_string = '('+lon_label(point0[0],0)+', '+lat_label(point0[1],0)+') to ('+lon_label(point1[0],0)+', '+lat_label(point1[1],0)+')'
     return h_axis, loc_string
 
 
 # Helper function to make a basic slice plot.
 # Reduces duplicated code between slice_plot and slice_plot_diff.
-def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
+def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, point0=None, point1=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
 
     # Set colour map
     cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
     # Figure out orientation and format slice location
-    h_axis, loc_string = get_loc(loc0, lon0=lon0, lat0=lat0)
+    h_axis, loc_string = get_loc(loc0, lon0=lon0, lat0=lat0, point0=point0, point1=point1)
     # Set up the title
-    title += ' at ' + loc_string
+    if h_axis in ['lat', 'lon']:
+        title += ' at ' + loc_string
+    elif h_axis == 'trans':
+        title += ' from ' + loc_string
     # Plot
     fig, ax = plt.subplots()
     # Add patches
@@ -61,26 +68,6 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
-
-
-# Given a list of values output by slice_patches, restructure them back into the grid, and choose the correct axes. This is required for overlaying contours.
-def get_gridded (values, grid, lon0=None, lat0=None, gtype='t'):
-
-    lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
-    # Figure out which direction we're in
-    if lon0 is not None:
-        if gtype in ['t', 'u']:
-            haxis = lat[:-1]
-        elif gtype in ['v', 'psi']:
-            haxis = lat[1:]
-        nh = grid.ny-1
-    elif lat0 is not None:
-        if gtype in ['t', 'v']:
-            haxis = lon[:-1]
-        elif gtype in ['u', 'psi']:
-            haxis = lon[1:]
-        nh = grid.nx-1
-    return values.reshape([grid.nz, nh]), haxis, grid.z
 
 
 # Basic slice plot of any variable.
@@ -106,19 +93,19 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=Non
     extend = get_extend(vmin=vmin, vmax=vmax)
 
     # Build the patches and get the bounds
-    patches, values, loc0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)  
+    if contours is not None:
+        # Will need gridded data and axes too
+        patches, values, loc0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, data_grid, haxis, zaxis = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_gridded=True)
+    else:
+        patches, values, loc0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp = slice_patches(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
+        data_grid = None
+        haxis = None
+        zaxis = None
     # Update any colour bounds which aren't already set
     if vmin is None:
         vmin = vmin_tmp
     if vmax is None:
         vmax = vmax_tmp
-
-    data_grid = None
-    haxis = None
-    zaxis = None
-    if contours is not None:
-        # Will need gridded data and axes too
-        data_grid, haxis, zaxis = get_gridded(values, grid, lon0=lon0, lat0=lat0, gtype=gtype)
         
     # Plot
     make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
@@ -132,11 +119,24 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
 
     # Build the patches for the first array
     # vmin and vmax don't matter, so just store them as temporary variables
-    patches, values_1, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(data_1, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True)
+    if contours is not None:
+        patches, values_1, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = slice_patches(data_1, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
+    else:
+        patches, values_1, loc0, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above = slice_patches(data_1, grid, gtype=gtype, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_bdry=True)
+        haxis = None
+        zaxis = None
+        
     # Get the values for the second array on the same patches
-    values_2 = slice_values(data_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0)[0]
+    if contours is not None:
+        values_2, data_grid_2 = slice_values(data_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0, return_gridded=True)[0,-1]
+    else:
+        values_2 = slice_values(data_2, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, lat0=lat0)[0]
     # Calculate the difference
     values_diff = values_2 - values_1
+    if contours is not None:
+        data_grid = data_grid_2 - data_grid_1
+    else:
+        data_grid = None
     
     # Now figure out the colour bounds
     # Note we need to reshape the values array to be 2D again
@@ -146,12 +146,6 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, hmin
         vmin = vmin_tmp
     if vmax is None:
         vmax = vmax_tmp
-
-    data_grid = None
-    haxis = None
-    zaxis = None
-    if contours is not None:
-        data_grid, haxis, zaxis = get_gridded(values_diff, grid, lon0=lon0, lat0=lat0, gtype=gtype)
 
     # Plot
     make_slice_plot(patches, values_diff, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype='plusminus', extend=extend, title=title, date_string=date_string, fig_name=fig_name)    

@@ -230,24 +230,36 @@ def get_slice_patches (data_slice, left, right, below, above):
     return patches
 
 
-def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, return_bdry=False):
+def slice_patches (data, grid, gtype='t', lon0=None, lat0=None, hmin=None, hmax=None, zmin=None, zmax=None, return_bdry=False, return_gridded=False):
 
     data_slice, h_bdry, hfac, loc0 = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0)
     left, right, below, above = get_slice_boundaries(data_slice, grid, h_bdry, hfac)
     vmin, vmax, hmin, hmax, zmin, zmax = get_slice_minmax(data_slice, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax)
     patches = get_slice_patches(data_slice, left, right, below, above)
 
+    if return_gridded:
+        haxis = (left+right)/2.
+
     if return_bdry:
-        return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above
+        if return_gridded:
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above, data_slice, haxis, grid.nz
+        else:
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, left, right, below, above
     else:
-        return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax
+        if return_gridded:
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax, data_slice, haxis, grid.nz
+        else:
+            return patches, data_slice.ravel(), loc0, hmin, hmax, zmin, zmax, vmin, vmax            
 
 
-def slice_values (data, grid, left, right, below, above, hmin, hmax, zmin, zmax, gtype='t', lon0=None, lat0=None):
+def slice_values (data, grid, left, right, below, above, hmin, hmax, zmin, zmax, gtype='t', lon0=None, lat0=None, return_gridded=False):
 
     data_slice = get_slice_values(data, grid, gtype=gtype, lon0=lon0, lat0=lat0, return_grid_vars=False)
     vmin, vmax = get_slice_minmax(data_slice, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
-    return data_slice.ravel(), vmin, vmax
+    if return_gridded:
+        return data_slice.ravel(), vmin, vmax, data_slice
+    else:
+        return data_slice.ravel(), vmin, vmax
 
 
 # Add Polygon patches to a slice plot. Outputs the image returned by PatchCollection, which can be used to make a colourbar later.
@@ -264,7 +276,7 @@ def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax,
 
 
 # Extract the data and boundaries along a general transect between two (lon,lat) points. This replaces get_slice_values and get_slice_boundaries.
-def get_transect (data, grid, point0, point1, gtype='t'):
+def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
 
     # Extract the coordinates from the start and end points, so that we start at the southernmost point
     if point0[1] < point1[1]:
@@ -287,7 +299,7 @@ def get_transect (data, grid, point0, point1, gtype='t'):
         print 'Error (get_transect): gtypes other than t are not yet supported.'
         sys.exit()
     # Save the slope of the line
-    slope = (lat1-lat0)/(lon1-lon0)
+    slope = float((lat1-lat0))/(lon1-lon0)
 
     # Find the limits on latitude to search
     # Last edge latitude south of the line
@@ -308,20 +320,21 @@ def get_transect (data, grid, point0, point1, gtype='t'):
         if j > j_start:
             # Save the cell south of this, if it's not already there
             if (j-1, i) not in cells_intersect:
-                cells.append((j-1, i))
+                cells_intersect.append((j-1, i))
         if j < j_end:
             # Save the cell itself (this order makes sure we're going south to north)
             cells_intersect.append((j,i))
 
-    # Set up array to save the extracted slices
-    data_slice = np.ma.empty([grid.nz, len(cells_intersect)])
-    # Also their horizontal boundaries (distance from lon0, lat0) and hfac
-    left = np.ma.empty(data_slice.shape)
-    right = np.ma.empty(data_slice.shape)
-    hfac_slice = np.ma.empty(data_slice.shape)
+    # Set up array to save the extracted transects
+    data_trans = np.ma.empty([grid.nz, len(cells_intersect)])
+    if return_grid_vars:
+        # Also their horizontal boundaries (distance from lon0, lat0) and hfac
+        left = np.ma.empty(data_trans.shape)
+        right = np.ma.empty(data_trans.shape)
+        hfac_trans = np.ma.empty(data_trans.shape)
     # Finally, a counter for the position in axis 1, because we might not keep all the intersected cells
     posn = 0
-    for cell in cell_intersect:
+    for cell in cells_intersect:
         [j, i] = cell
         # Find the intersections between the line and the cell boundaries.
         intersections = []
@@ -339,19 +352,19 @@ def get_transect (data, grid, point0, point1, gtype='t'):
         # Check if the line intersects the bottom
         lon_star = (lat_bottom-lat0)/slope + lon0
         if lon_star >= lon_left and lon_star <= lon_right:
-            intersections.append((lat_bottom, lon_star))
+            intersections.append((lon_star, lat_bottom))
         # Check the top
         lon_star = (lat_top-lat0)/slope + lon0
         if lon_star >= lon_left and lon_star <= lon_right:
-            intersections.append((lat_top, lon_star))
+            intersections.append((lon_star, lat_top))
         # Check the left
         lat_star = (lon_left-lon0)*slope + lat0
         if lat_star >= lat_bottom and lat_star <= lat_top:
-            intersections.append((lat_star, lon_left))
+            intersections.append((lon_left, lat_star))
         # Check the right
         lat_star = (lon_right-lon0)*slope + lat0
         if lat_star >= lat_bottom and lat_star <= lat_top:
-            intersections.append((lat_star, lon_right))
+            intersections.append((lon_right, lat_star))
         # We expect there to be 2 items in the list. Check the other cases:
         if len(intersections) == 1:
             # The line just skimmed the corner of the cell. Discard this cell, as its two diagonal neighbours will be picked up.
@@ -360,29 +373,59 @@ def get_transect (data, grid, point0, point1, gtype='t'):
             # This should never happen.
             print 'Error (get_transect): ' + str(len(intersections)) + ' intersections. Something went wrong.'
             sys.exit()
-        # Calculate the distance from each intersection to the start of the line
-        dist_a = dist_btw_points(intersections[0], [lon0, lat0])
-        dist_b = dist_btw_points(intersections[1], [lon0, lat0])
-        # Choose the left and right boundaries
-        left_dist = min(dist_a, dist_b)
-        right_dist = max(dist_a, dist_b)
-        # Now save data from this water column to the slices
-        data_slice[:,posn] = data[:,j,i]
-        left[:,posn] = np.zeros(grid.nz)+left_dist
-        right[:,posn] = np.zeros(grid.nz)+right_dist
-        hfac_slice[:,posn] = grid.hfac[:,j,i]
+        # Now save data from this water column to the transect
+        data_trans[:,posn] = data[:,j,i]
+        if return_grid_vars:
+            # Calculate the distance from each intersection to the start of the line
+            dist_a = dist_btw_points(intersections[0], [lon0, lat0])
+            dist_b = dist_btw_points(intersections[1], [lon0, lat0])
+            # Choose the left and right boundaries and convert to km
+            left_dist = min(dist_a, dist_b)*1e-3
+            right_dist = max(dist_a, dist_b)*1e-3
+            # Now save the boundaries and hfac
+            left[:,posn] = np.zeros(grid.nz)+left_dist
+            right[:,posn] = np.zeros(grid.nz)+right_dist
+            hfac_trans[:,posn] = grid.hfac[:,j,i]        
         posn += 1
 
-    # Trim the slices in case we didn't use all the cells
-    data_slice = data_slice[:,:posn]
-    left = left[:,:posn]
-    right = right[:,:posn]
-    hfac_slice = hfac_slice[:,:posn]
-    # Now calculate the top and bottom boundaries
-    below, above = get_slice_boundaries(data_slice, grid, left, hfac_slice)[2:]
+    # Trim the transects in case we didn't use all the cells
+    data_trans = data_trans[:,:posn]
+    if not return_grid_vars:
+        return data_trans
+    else:
+        left = left[:,:posn]
+        right = right[:,:posn]
+        hfac_trans = hfac_trans[:,:posn]
+        # Now calculate the top and bottom boundaries
+        below, above = get_slice_boundaries(data_trans, grid, left, hfac_trans)[2:]
+        return data_trans, left, right, below, above
 
-    return data_slice, left, right, below, above
-    
+
+# API to build everything for a transect. Equivalent to slice_patches.
+def transect_patches (data, grid, point0, point1, gtype='t', zmin=None, zmax=None, return_gridded=False):
+
+    data_trans, left, right, below, above = get_transect(data, grid, point0, point1, gtype=gtype)
+    vmin, vmax, hmin, hmax, zmin, zmax = get_slice_minmax(data_trans, left, right, below, above, zmin=zmin, zmax=zmax)
+    # We don't want hmin to be padded on the left, so set it back to zero if needed
+    hmin = max(hmin, 0)
+    patches = get_slice_patches(data_trans, left, right, below, above)
+
+    if return_gridded:
+        haxis = (left+right)/2.
+        return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax, data.trans, haxis, grid.nz
+    else:
+        return patches, data_trans.ravel(), hmin, hmax, zmin, zmax, vmin, vmax
+
+
+# API to get values for already-known patches along a transect. Equivalent to slice_values.
+def transect_values (data, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype='t', return_gridded=False):
+
+    data_trans = get_transect(data, grid, point0, poin1, gtype=gtype, return_grid_vars=False)
+    vmin, vmax = get_slice_minmax(data_trans, left, right, below, above, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, return_spatial=False)
+    if return_gridded:
+        return data_trans.ravel(), vmin, vmax, data_trans
+    else:
+        return data_trans.ravel(), vmin, vmax
                 
         
             

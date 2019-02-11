@@ -144,6 +144,8 @@ def slice_axes (ax, h_axis='lat'):
             h_labels.append(lat_label(x,2))
         elif h_axis == 'lon':
             h_labels.append(lon_label(x,2))
+        elif h_axis == 'trans':
+            h_labels.append(str(x))
     ax.set_xticklabels(h_labels)
 
     # Set vertical tick labels
