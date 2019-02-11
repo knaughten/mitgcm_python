@@ -402,7 +402,7 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
 
 
 # API to build everything for a transect. Equivalent to slice_patches.
-def transect_patches (data, grid, point0, point1, gtype='t', zmin=None, zmax=None, return_gridded=False):
+def transect_patches (data, grid, point0, point1, gtype='t', zmin=None, zmax=None, return_bdry=False, return_gridded=False):
 
     data_trans, left, right, below, above = get_transect(data, grid, point0, point1, gtype=gtype)
     vmin, vmax, hmin, hmax, zmin, zmax = get_slice_minmax(data_trans, left, right, below, above, zmin=zmin, zmax=zmax)
