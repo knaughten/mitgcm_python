@@ -665,6 +665,12 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
                 plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
+        if i==0:
+            # Overlay transect from (56W, 79S) to (42W, 65S)
+            lat = np.linspace(-79, -65)
+            lon = lat - 23
+            x, y = polar_stereo(lon, lat)
+            ax.plot(x, y, color='white', linestyle='dashed')
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
