@@ -320,18 +320,19 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         lon_star = (grid.lat_corners_1d[j]-lat0)/slope + lon0
         # Find the longitude index of the cell this intersects: last lon_corners west of lon_star, considering the edge case
         i_new = max(np.nonzero(grid.lon_corners_1d > lon_star)[0][0] - 1, 0)
-        # Get the cell most recently saved
-        [j_old, i_old] = cells_intersect[-1]
-        if j_old != j-1:
-            print 'Error: j_old is not j-1'
-            sys.exit()
-        # Add the cells between it and the new one, in the right order
-        if pos_slope:
-            i_range = range(i_old+1, i_new+1)
-        else:
-            i_range = range(i_old-1, i_new-1, -1)
-        for i in i_range:
-            cells_intersect.append((j-1,i))
+        if j > j_start:
+            # Get the cell most recently saved
+            [j_old, i_old] = cells_intersect[-1]
+            if j_old != j-1:
+                print 'Error: j_old is not j-1'
+                sys.exit()
+            # Add the cells between it and the new one, in the right order
+            if pos_slope:
+                i_range = range(i_old+1, i_new+1)
+            else:
+                i_range = range(i_old-1, i_new-1, -1)
+            for i in i_range:
+                cells_intersect.append((j-1,i))
         # Add the new cell
         if j < j_end:
             cells_intersect.append((j,i_new))
