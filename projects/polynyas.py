@@ -651,16 +651,16 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         lat_lines = None
         if ctype[i] == 'ismr':
             lon_lines = [-40, -60, -80]
-            lat_lines = [-75]
+            lat_lines = [-75, -80]
         img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
         #if ctype[i] == 'vel':
             # Overlay velocity vectors
             #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
         if ctype[i] == 'ismr':
             # Overlay location labels
-            lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33]
-            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5]
-            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75)]
+            lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
+            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
+            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)]
             fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
             x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
@@ -668,9 +668,9 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         if i==0:
             # Overlay transect from (56W, 79S) to (42W, 65S)
             lat = np.linspace(-79, -65)
-            lon = lat - 23
+            lon = lat + 23        
             x, y = polar_stereo(lon, lat)
-            ax.plot(x, y, color='white', linestyle='dashed')
+            ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
