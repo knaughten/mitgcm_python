@@ -689,7 +689,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    fig.savefig(fig_dir+'baseline_panels.png', dpi=600)
+    fig.savefig(fig_dir+'baseline_panels.png', dpi=300)
     #finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
 
 
