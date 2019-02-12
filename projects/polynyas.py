@@ -633,62 +633,62 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     bwsalt = select_bottom(mask_3d(read_netcdf(input_file, 'SALT', time_index=0), grid))
     ismr = convert_ismr(mask_except_ice(read_netcdf(input_file, 'SHIfwFlx', time_index=0), grid))
 
-print 'Plotting'
-# Wrap some things up into lists for easier iteration
-data = [bwage, psi, bwtemp, bwsalt, ismr]
-ctype = ['basic', 'psi', 'basic', 'basic', 'ismr']
-vmin = [0, -0.6, -2.5, 34.3, None]
-vmax = [12, 6, -1.5, None, None]
-extend = ['max', None, 'both', 'min', 'neither']
-title = ['a) Bottom water age (years)', 'b) Velocity streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
-fig, gs = set_panels('5C0')
-for i in range(len(data)):
-    # Leave the top left plot empty for title
-    ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
-    # Just overlay lat/lon lines in one plot
-    lon_lines = None
-    lat_lines = None
-    if ctype[i] == 'ismr':
-        lon_lines = [-40, -60, -80]
-        lat_lines = [-75, -80]
-    if ctype[i] == 'psi':
-        # Special procedure for streamfunction        
-        cmap = set_colours(data[i], ctype='psi', vmin=vmin[i], vmax=vmax[i], change_points=[-0.025, 0.025, 0.5])[0]
-        shade_background(ax)
-        clear_ocean(ax, grid, pster=True)
-        x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
-        img = ax.contour(x, y, data[i], levels=np.arange(vmin[i], vmax[i], 0.025), cmap=cmap, linestyles='solid')
-        ## Positive values in red
-        #ax.contour(x, y, data[i], levels=np.arange(0.025, 6, 0.025), colors='red', linestyles='solid')
-        # Negative values in blue
-        #img = ax.contour(x, y, data[i], levels=np.arange(-0.6, 0, 0.025), colors='blue', linestyles='solid')
-        # Draw colourbar and then remove it so plot sizes match
-        cbar = plt.colorbar(img)
-        #cbar.remove()
-        contour_iceshelf_front(ax, grid, pster=True)    
-        latlon_axes(ax, x, y, zoom_fris=True, pster=True)
-        plt.title(title[i], fontsize=18)
-    else:
-        # Plot as normal
-        img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
-    if ctype[i] == 'ismr':
-        # Overlay location labels
-        lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
-        lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
-        label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)]
-        fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
-        x, y = polar_stereo(lon, lat)            
-        for j in range(len(label)):
-            plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
-    if i==0:
-        # Overlay transect from (56W, 79S) to (42W, 65S)
-        lat = np.linspace(-79, -65)
-        lon = lat + 23        
-        x, y = polar_stereo(lon, lat)
-        ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
-# Main title in top left space
-plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-finished_plot(fig) #, fig_name=fig_dir+'baseline_panels.png')
+    print 'Plotting'
+    # Wrap some things up into lists for easier iteration
+    data = [bwage, psi, bwtemp, bwsalt, ismr]
+    ctype = ['basic', 'psi', 'basic', 'basic', 'ismr']
+    vmin = [0, -0.6, -2.5, 34.3, None]
+    vmax = [12, 6, -1.5, None, None]
+    extend = ['max', None, 'both', 'min', 'neither']
+    title = ['a) Bottom water age (years)', 'b) Velocity streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
+    fig, gs = set_panels('5C0')
+    for i in range(len(data)):
+        # Leave the top left plot empty for title
+        ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
+        # Just overlay lat/lon lines in one plot
+        lon_lines = None
+        lat_lines = None
+        if ctype[i] == 'ismr':
+            lon_lines = [-40, -60, -80]
+            lat_lines = [-75, -80]
+        if ctype[i] == 'psi':
+            # Special procedure for streamfunction        
+            cmap = set_colours(data[i], ctype='psi', vmin=vmin[i], vmax=vmax[i], change_points=[-0.025, 0.025, 0.5])[0]
+            shade_background(ax)
+            clear_ocean(ax, grid, pster=True)
+            x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
+            img = ax.contour(x, y, data[i], levels=np.arange(vmin[i], vmax[i], 0.025), cmap=cmap, linestyles='solid')
+            ## Positive values in red
+            #ax.contour(x, y, data[i], levels=np.arange(0.025, 6, 0.025), colors='red', linestyles='solid')
+            # Negative values in blue
+            #img = ax.contour(x, y, data[i], levels=np.arange(-0.6, 0, 0.025), colors='blue', linestyles='solid')
+            # Draw colourbar and then remove it so plot sizes match
+            cbar = plt.colorbar(img)
+            #cbar.remove()
+            contour_iceshelf_front(ax, grid, pster=True)    
+            latlon_axes(ax, x, y, zoom_fris=True, pster=True)
+            plt.title(title[i], fontsize=18)
+        else:
+            # Plot as normal
+            img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
+        if ctype[i] == 'ismr':
+            # Overlay location labels
+            lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
+            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
+            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)]
+            fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
+            x, y = polar_stereo(lon, lat)            
+            for j in range(len(label)):
+                plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
+        if i==0:
+            # Overlay transect from (56W, 79S) to (42W, 65S)
+            lat = np.linspace(-79, -65)
+            lon = lat + 23        
+            x, y = polar_stereo(lon, lat)
+            ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
+    # Main title in top left space
+    plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
+    finished_plot(fig) #, fig_name=fig_dir+'baseline_panels.png')
 
 
 # Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.
