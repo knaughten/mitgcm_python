@@ -15,11 +15,12 @@ import sys
 # 'plusminus': a red/blue colour map where 0 is white
 # 'vel': the 'cool' colourmap starting at 0; good for plotting velocity
 # 'ismr': a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink.
+# 'psi': a special colour map for streamfunction contours, with negative values in blue and positive values in red, but small values more visible than regular plus-minus.
 # Other keyword arguments:
 # vmin, vmax: min and max values to enforce for the colourmap. Sometimes they will be modified (to make sure 'vel' starts at 0, and 'ismr' includes 0). If you don't specify them, they will be determined based on the entire array of data. If your plot is zooming into this array, you should use get_colour_bounds (../utils.py) to determine the correct bounds in the plotted region.
-# change_points: only matters for 'ismr'. List of size 3 containing values where the 'ismr' colourmap should hit the colours yellow, orange, and red. It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
+# change_points: only matters for 'ismr' or 'psi'. List of size 3 containing values where the colourmap should hit the colours yellow, orange, and red (for 'ismr') or medium blue, medium red, and dark red (for 'psi'). It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
 
-# truncate_colourmap, plusminus_cmap, and ismr_cmap are helper functions; set_colours is the API. It returns a colourmap and the minimum and maximum values.
+# truncate_colourmap, plusminus_cmap, ismr_cmap, and psi_cmap are helper functions; set_colours is the API. It returns a colourmap and the minimum and maximum values.
 
 def truncate_colourmap (cmap, minval=0.0, maxval=1.0, n=-1):
     
@@ -42,6 +43,17 @@ def plusminus_cmap (vmin, vmax):
     return truncate_colourmap(plt.get_cmap('RdBu_r'), min_colour, max_colour)
 
 
+# Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
+def special_cmap (cmap_vals, cmap_colours, vmin, vmax, name):
+
+    cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
+    cmap_vals_norm[-1] = 1
+    cmap_list = []
+    for i in range(cmap_vals.size):
+        cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
+    return cl.LinearSegmentedColormap.from_list(name, cmap_list)
+
+
 def ismr_cmap (vmin, vmax, change_points=None):
 
     # First define the colours we'll use
@@ -62,19 +74,36 @@ def ismr_cmap (vmin, vmax, change_points=None):
     if vmin < 0:
         # There is refreezing here; include blue for elements < 0
         cmap_vals = np.concatenate(([vmin], [0], change_points, [vmax]))
-        cmap_colours = [ismr_blue, ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]            
-        cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
+        cmap_colours = [ismr_blue, ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
+        return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ismr')
     else:
         # No refreezing; start at 0
         cmap_vals = np.concatenate(([0], change_points, [vmax]))
         cmap_colours = [ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
-        cmap_vals_norm = cmap_vals/vmax
-    cmap_vals_norm[-1] = 1
-    cmap_list = []
-    for i in range(cmap_vals.size):
-        cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
+        return special_cmap(cmap_vals, cmap_colours, 0, vmax, 'ismr')
 
-    return cl.LinearSegmentedColormap.from_list('ismr', cmap_list)
+
+def psi_cmap (vmin, vmax, change_points=None):
+
+    # Note this assumes vmin < 0 and vmax > 0
+
+    psi_dkblue = (0, 0, 0.3)
+    psi_medblue = (0, 0, 1)
+    psi_white = (1, 1, 1)
+    psi_medred = (1, 0, 0)
+    psi_dkred = (0.3, 0, 0)
+    psi_black = (0, 0, 0)
+
+    if change_points is None:
+        # Set change points to yield a linear transition between colours
+        change_points = [vmin/2, vmax/3, 2*vmax/3]
+    if len(change_points) != 3:
+        print 'Error (psi_cmap): wrong size for change_points list'
+        sys.exit()
+
+    cmap_vals = np.concatenate(([vmin], [change_points[0]], 0, change_points[1:], vmax))
+    cmap_colours = [psi_dkblue, psi_medblue, psi_white, psi_medred, psi_dkred, psi_black]
+    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'psi')
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
@@ -102,7 +131,17 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
     elif ctype == 'ismr':
         # Make sure vmin isn't larger than 0
-        return ismr_cmap(vmin, vmax, change_points=change_points), min(vmin,0), vmax        
+        return ismr_cmap(vmin, vmax, change_points=change_points), min(vmin,0), vmax
+
+    elif ctype == 'psi':
+        if vmin >= 0 or vmax <= 0:
+            print 'Error (set_colours): streamfunction limits do not cross 0.'
+            sys.exit()
+        return psi_cmap(vmin, vmax, change_points=change_points), vmin, vmax
+
+    else:
+        print 'Error (set_colours): invalid ctype ' + ctype
+        sys.exit()            
 
     
 # Choose what the endpoints of the colourbar should do. If they're manually set, they should extend. The output can be passed to plt.colorbar with the keyword argument 'extend'.
