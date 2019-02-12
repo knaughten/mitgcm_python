@@ -689,7 +689,8 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
+    fig.savefig(fig_dir+'baseline_panels.pdf', dpi=600)
+    #finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
 
 
 # Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.
