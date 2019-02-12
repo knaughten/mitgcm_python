@@ -285,6 +285,9 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
     else:
         [lon0, lat0] = point1
         [lon1, lat1] = point0
+    # Boolean indicating direction of slope
+    pos_slope = lon0 < lon1
+    
     # Some error checking
     if lon0 == lon1:
         print 'Error (get_transect): This is a line of constant longitude. Use the regular slice scripts instead.'
@@ -316,14 +319,22 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         # Find the longitude of intersection between the line and this latitude
         lon_star = (grid.lat_corners_1d[j]-lat0)/slope + lon0
         # Find the longitude index of the cell this intersects: last lon_corners west of lon_star, considering the edge case
-        i = max(np.nonzero(grid.lon_corners_1d > lon_star)[0][0] - 1, 0)
-        if j > j_start:
-            # Save the cell south of this, if it's not already there
-            if (j-1, i) not in cells_intersect:
-                cells_intersect.append((j-1, i))
+        i_new = max(np.nonzero(grid.lon_corners_1d > lon_star)[0][0] - 1, 0)
+        # Get the cell most recently saved
+        [j_old, i_old] = cells_intersect[-1]
+        if j_old != j-1:
+            print 'Error: j_old is not j-1'
+            sys.exit()
+        # Add the cells between it and the new one, in the right order
+        if pos_slope:
+            i_range = range(i_old+1, i_new+1)
+        else:
+            i_range = range(i_old-1, i_new-1, -1)
+        for i in i_range:
+            cells_intersect.append((j-1,i))
+        # Add the new cell
         if j < j_end:
-            # Save the cell itself (this order makes sure we're going south to north)
-            cells_intersect.append((j,i))
+            cells_intersect.append((j,i_new))
 
     # Set up array to save the extracted transects
     data_trans = np.ma.empty([grid.nz, len(cells_intersect)])
