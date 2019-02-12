@@ -652,19 +652,20 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             lon_lines = [-40, -60, -80]
             lat_lines = [-75, -80]
         if ctype[i] == 'psi':
-            # Special procedure for streamfunction        
-            cmap = set_colours(data[i], ctype='psi', vmin=vmin[i], vmax=vmax[i], change_points=[-0.025, 0.025, 0.5])[0]
+            # Special procedure for streamfunction
+            x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
+            cmap = set_colours(data[i], ctype='psi', vmin=vmin[i], vmax=vmax[i], change_points=[-0.1, -0.025, 0.025, 0.1, 0.5])[0]
+            # First make a dummy plot so we have the image to give to the colourbar
+            # Otherwise the saved figure has horizontal lines
+            img = ax.contourf(x, y, data[i], levels=np.concatenate((np.arange(vmin[i], 0, 0.025), np.arange(0.025, vmax[i], 0.025))), cmap=cmap, linestyles='solid')
+            # Now get rid of it
+            plt.cla()
+            # Now make the real plot
             shade_background(ax)
             clear_ocean(ax, grid, pster=True)
-            x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
-            img = ax.contour(x, y, data[i], levels=np.arange(vmin[i], vmax[i], 0.025), cmap=cmap, linestyles='solid')
-            ## Positive values in red
-            #ax.contour(x, y, data[i], levels=np.arange(0.025, 6, 0.025), colors='red', linestyles='solid')
-            # Negative values in blue
-            #img = ax.contour(x, y, data[i], levels=np.arange(-0.6, 0, 0.025), colors='blue', linestyles='solid')
-            # Draw colourbar and then remove it so plot sizes match
-            cbar = plt.colorbar(img)
-            #cbar.remove()
+            # Careful contour levels so we don't contour 0
+            ax.contour(x, y, data[i], levels=np.concatenate((np.arange(vmin[i], 0, 0.025), np.arange(0.025, vmax[i], 0.025))), cmap=cmap, linestyles='solid')
+            cbar = plt.colorbar(img, ticks=np.arange(-0.5, 5.5+1, 1))
             contour_iceshelf_front(ax, grid, pster=True)    
             latlon_axes(ax, x, y, zoom_fris=True, pster=True)
             plt.title(title[i], fontsize=18)
@@ -688,7 +689,8 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'baseline_panels.png')
+    fig.savefig(fig_dir+'baseline_panels.png', dpi=300)
+    #finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
 
 
 # Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.

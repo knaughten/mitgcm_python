@@ -18,7 +18,7 @@ import sys
 # 'psi': a special colour map for streamfunction contours, with negative values in blue and positive values in red, but small values more visible than regular plus-minus.
 # Other keyword arguments:
 # vmin, vmax: min and max values to enforce for the colourmap. Sometimes they will be modified (to make sure 'vel' starts at 0, and 'ismr' includes 0). If you don't specify them, they will be determined based on the entire array of data. If your plot is zooming into this array, you should use get_colour_bounds (../utils.py) to determine the correct bounds in the plotted region.
-# change_points: only matters for 'ismr' or 'psi'. List of size 3 containing values where the colourmap should hit the colours yellow, orange, and red (for 'ismr') or medium blue, medium red, and dark red (for 'psi'). It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
+# change_points: only matters for 'ismr' or 'psi'. List of size 3 (for 'ismr') or 5 (for 'psi') containing values where the colourmap should hit the colours yellow, orange, and red (for 'ismr') or medium blue, light blue, light red, medium red, and dark red (for 'psi'). It should not include the minimum value, 0, or the maximum value. Setting these parameters allows for a nonlinear transition between colours, and enhanced visibility of the melt rate. If it is not defined, the change points will be determined linearly.
 
 # truncate_colourmap, plusminus_cmap, ismr_cmap, and psi_cmap are helper functions; set_colours is the API. It returns a colourmap and the minimum and maximum values.
 
@@ -89,20 +89,22 @@ def psi_cmap (vmin, vmax, change_points=None):
 
     psi_dkblue = (0, 0, 0.3)
     psi_medblue = (0, 0, 1)
+    psi_ltblue = (0.6, 0.6, 1)
     psi_white = (1, 1, 1)
+    psi_ltred = (1, 0.6, 0.6)
     psi_medred = (1, 0, 0)
     psi_dkred = (0.3, 0, 0)
     psi_black = (0, 0, 0)
 
     if change_points is None:
         # Set change points to yield a linear transition between colours
-        change_points = [vmin/2, vmax/3, 2*vmax/3]
-    if len(change_points) != 3:
+        change_points = [vmin/3, 2*vmin/3, vmax/4, vmax/2, 3*vmax/4]
+    if len(change_points) != 5:
         print 'Error (psi_cmap): wrong size for change_points list'
         sys.exit()
 
-    cmap_vals = np.concatenate(([vmin], [change_points[0]], 0, change_points[1:], vmax))
-    cmap_colours = [psi_dkblue, psi_medblue, psi_white, psi_medred, psi_dkred, psi_black]
+    cmap_vals = np.concatenate(([vmin], change_points[:2], [0], change_points[2:], [vmax]))
+    cmap_colours = [psi_dkblue, psi_medblue, psi_ltblue, psi_white, psi_ltred, psi_medred, psi_dkred, psi_black]
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'psi')
 
 
