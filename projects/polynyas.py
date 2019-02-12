@@ -17,7 +17,7 @@ from ..constants import deg_string, sec_per_year
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label
-from ..plot_utils.latlon import prepare_vel, overlay_vectors
+from ..plot_utils.latlon import prepare_vel, overlay_vectors, shade_background, clear_ocean
 from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_loc
@@ -627,21 +627,20 @@ def baseline_panels (base_dir='./', fig_dir='./'):
 
     print 'Processing fields'
     bwage = select_bottom(mask_3d(read_netcdf(input_file, 'TRAC01', time_index=0), grid))
-    u_tmp = mask_3d(read_netcdf(input_file, 'UVEL', time_index=0), grid, gtype='u')
-    v_tmp = mask_3d(read_netcdf(input_file, 'VVEL', time_index=0), grid, gtype='v')
-    speed, u, v = prepare_vel(u_tmp, v_tmp, grid)
+    # Vertically integrate streamfunction and convert to Sv
+    psi = np.sum(mask_3d(read_netcdf(input_file, 'PsiVEL', time_index=0), grid), axis=0)*1e-6
     bwtemp = select_bottom(mask_3d(read_netcdf(input_file, 'THETA', time_index=0), grid))
     bwsalt = select_bottom(mask_3d(read_netcdf(input_file, 'SALT', time_index=0), grid))
     ismr = convert_ismr(mask_except_ice(read_netcdf(input_file, 'SHIfwFlx', time_index=0), grid))
 
     print 'Plotting'
     # Wrap some things up into lists for easier iteration
-    data = [bwage, speed, bwtemp, bwsalt, ismr]
-    ctype = ['basic', 'vel', 'basic', 'basic', 'ismr']
-    vmin = [0, 0, -2.5, 34.3, None]
+    data = [bwage, psi, bwtemp, bwsalt, ismr]
+    ctype = ['basic', 'psi', 'basic', 'basic', 'ismr']
+    vmin = [0, None, -2.5, 34.3, None]
     vmax = [12, None, -1.5, None, None]
-    extend = ['max', 'neither', 'both', 'min', 'neither']
-    title = ['a) Bottom water age (years)', 'b) Barotropic velocity (m/s)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
+    extend = ['max', None, 'both', 'min', 'neither']
+    title = ['a) Bottom water age (years)', 'b) Velocity streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
     fig, gs = set_panels('5C0')
     for i in range(len(data)):
         # Leave the top left plot empty for title
@@ -652,10 +651,20 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         if ctype[i] == 'ismr':
             lon_lines = [-40, -60, -80]
             lat_lines = [-75, -80]
-        img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
-        #if ctype[i] == 'vel':
-            # Overlay velocity vectors
-            #overlay_vectors(ax, u, v, grid, chunk=7, scale=0.6)
+        if ctype[i] == 'psi':
+            # Special procedure for streamfunction
+            shade_background(ax)
+            clear_ocean(ax, grid, pster=True)
+            x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
+            # Positive values in red
+            ax.contour(x, y, data[i], levels=np.arange(0.05, 1, 0.05), colours='red', linestyles='solid')
+            # Negative values in blue
+            ax.contour(x, y, data[i], levels=np.arange(-0.45, 0, 0.05), colours='blue', linestyles='solid')
+            latlon_axes(ax, x, y, zoom_fris=True, pster=True)
+            plt.title(title[i], fontsize=18)
+        else:
+            # Plot as normal
+            img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
         if ctype[i] == 'ismr':
             # Overlay location labels
             lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
