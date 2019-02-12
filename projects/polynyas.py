@@ -16,8 +16,8 @@ from ..file_io import netcdf_time, read_netcdf, read_binary
 from ..constants import deg_string, sec_per_year
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label
-from ..plot_utils.latlon import prepare_vel, overlay_vectors, shade_background, clear_ocean
+from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label, latlon_axes
+from ..plot_utils.latlon import prepare_vel, overlay_vectors, shade_background, clear_ocean, contour_iceshelf_front
 from ..plot_utils.colours import set_colours
 from ..plot_latlon import latlon_plot
 from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot_slice, get_loc
@@ -657,9 +657,13 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             clear_ocean(ax, grid, pster=True)
             x, y = polar_stereo(grid.lon_corners_2d, grid.lat_corners_2d)
             # Positive values in red
-            ax.contour(x, y, data[i], levels=np.arange(0.05, 1, 0.05), colours='red', linestyles='solid')
+            ax.contour(x, y, data[i], levels=np.arange(0.025, 6, 0.025), colors='red', linestyles='solid')
             # Negative values in blue
-            ax.contour(x, y, data[i], levels=np.arange(-0.45, 0, 0.05), colours='blue', linestyles='solid')
+            img = ax.contour(x, y, data[i], levels=np.arange(-0.6, 0, 0.025), colors='blue', linestyles='solid')
+            # Draw colourbar and then remove it so plot sizes match
+            cbar = plt.colorbar(img)
+            cbar.remove()
+            contour_iceshelf_front(ax, grid, pster=True)    
             latlon_axes(ax, x, y, zoom_fris=True, pster=True)
             plt.title(title[i], fontsize=18)
         else:
