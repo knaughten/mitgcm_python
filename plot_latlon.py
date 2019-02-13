@@ -791,7 +791,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     extend0 = [extend, None, extend_diff]    
     for i in range(3):
         ax = plt.subplot(gs[0,i])
-        img = latlon_plot(data[i], grid, ax=ax, gtype=gtype, include_shelf=include_shelf, make_cbar=False, ctype=ctype0[i], vmin=vmin0[i], vmax=vmax0[i], zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title[i], titlesize=titlesize, change_points=change_points)
+        img = latlon_plot(data[i], grid, ax=ax, gtype=gtype, include_shelf=include_shelf, make_cbar=False, ctype=ctype0[i], vmin=vmin0[i], vmax=vmax0[i], zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title[i], titlesize=titlesize, change_points=change_points)
         if cax[i] is not None:
             # Colourbar
             cbar = plt.colorbar(img, cax=cax[i], extend=extend0[i])
@@ -799,6 +799,8 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
             # Overlay vectors
             overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=scale)
     plt.suptitle(suptitle, fontsize=22)
+    if date_string is not None:
+        plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
 
 
