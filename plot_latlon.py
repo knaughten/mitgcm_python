@@ -775,6 +775,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     vmin_2, vmax_2 = var_min_max(data2, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
     if vmin is None:
         vmin = min(vmin_1, vmin_2)
+    if vmax is None:
         vmax = max(vmax_1, vmax_2)
 
     # Set up the plot
