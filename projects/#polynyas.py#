@@ -13,7 +13,7 @@ from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
-from ..constants import deg_string, sec_per_year
+from ..constants import deg_string, sec_per_year, deg2rad
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label, latlon_axes
@@ -672,7 +672,12 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             # Add arrows (hand-positioned in another program)
             x_arrow = np.array([83.13, 76.78, 81.6, 78.64, 84.35, 82.71, 84.66, 76.94, 76.36, 79.85, 77.05, 81.6, 78.84, 84.82, 85.83, 69.85, 69.85, 71.6, 73.08, 71.91, 74.87])/97.9
             y_arrow = 1 - np.array([2.91, 4.5, 6.56, 7.78, 8.31, 9.79, 10.95, 9.74, 12.65, 12.12, 14.66, 15.03, 16.3, 14.79, 16.84, 9.52, 12.38, 13.12, 15.35, 16.72, 18.79])/52.3
-            angle_arrow = np.array([120, -100, -60, 120, 135, 135, -30, -100, 180, -50, 5, -45, 210, 50, -120, 135, 135, -45, -60, 120, -45])
+            angle_arrow = np.array([120, -100, -60, 120, 135, 135, -30, -100, 180, -50, 5, -45, 210, 50, -120, 135, 135, -45, -60, 120, -45])*deg2rad
+            arrow_length = 1e-3
+            arrow_dx = arrow_length*np.cos(angle_arrow)
+            arrow_dy = arrow_length*np.sin(angle_arrow)
+            for j in range(len(x_arrow)):
+                plt.arrow(x_arrow[j], y_arrow[j], arrow_dx[j], arrow_dy[j], t
         else:
             # Plot as normal
             img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])

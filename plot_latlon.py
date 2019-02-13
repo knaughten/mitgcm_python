@@ -835,7 +835,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         elif var == 'hice':
             return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=0), grid), 'Sea ice thickness'
         elif var == 'iceprod':
-            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year, 'Sea ice production (m/y'
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year, 'Net sea ice production (m/y)'
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid), 'Mixed layer depth (m)'
         elif var == 'vel':
