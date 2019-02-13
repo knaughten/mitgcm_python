@@ -94,7 +94,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         plt.colorbar(img, extend=extend)
     # Set axes limits etc.
     latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, label=label_latlon, pster=pster, lon_lines=lon_lines, lat_lines=lat_lines, grid=grid)
-    if date_string is not None:
+    if date_string is not None and not existing_ax:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     if title is not None:
@@ -758,12 +758,12 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 
 # Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
-def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, titlesize=18, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8):
+def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8):
 
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
     if extend_diff is None:
-        extend = get_extend(vmin=vmin_diff, vmax=vmax_diff)
+        extend_diff = get_extend(vmin=vmin_diff, vmax=vmax_diff)
         
     if zoom_fris:
         chunk = 6
@@ -788,10 +788,11 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     ctype0 = [ctype, ctype, 'plusminus']
     title = [title1, title2, 'Anomaly']
     cax = [cax1, None, cax2]
-    extend0 = [extend, None, extend_diff]    
+    extend0 = [extend, None, extend_diff]
+    label_latlon = [True, False, False]
     for i in range(3):
         ax = plt.subplot(gs[0,i])
-        img = latlon_plot(data[i], grid, ax=ax, gtype=gtype, include_shelf=include_shelf, make_cbar=False, ctype=ctype0[i], vmin=vmin0[i], vmax=vmax0[i], zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title[i], titlesize=titlesize, change_points=change_points)
+        img = latlon_plot(data[i], grid, ax=ax, gtype=gtype, include_shelf=include_shelf, make_cbar=False, ctype=ctype0[i], vmin=vmin0[i], vmax=vmax0[i], zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title[i], titlesize=20, change_points=change_points, label_latlon=label_latlon[i])
         if cax[i] is not None:
             # Colourbar
             cbar = plt.colorbar(img, cax=cax[i], extend=extend0[i])
@@ -800,7 +801,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
             overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=scale)
     plt.suptitle(suptitle, fontsize=22)
     if date_string is not None:
-        plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
+        plt.text(.99, .99, date_string, fontsize=18, ha='right', va='top', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
 
 
