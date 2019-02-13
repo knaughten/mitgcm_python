@@ -107,7 +107,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         return img
     else:
         finished_plot(fig, fig_name=fig_name)
-
+        
 
 # Plot ice shelf melt rate field.
 
@@ -755,6 +755,119 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
     res = mask_land(np.sqrt(grid.dA)*1e-3, grid)
 
     latlon_plot(res, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Horizontal resolution (km)', fig_name=fig_name, figsize=figsize)
+
+
+# Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
+def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, titlesize=18, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8):
+
+    if extend is None:
+        extend = get_extend(vmin=vmin, vmax=vmax)
+    if extend_diff is None:
+        extend = get_extend(vmin=vmin_diff, vmax=vmax_diff)
+        
+    if zoom_fris:
+        chunk = 6
+    else:
+        chunk = 10
+
+    # Get the bounds
+    vmin_1, vmax_1 = var_min_max(data1, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
+    vmin_2, vmax_2 = var_min_max(data2, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype)
+    if vmin is None:
+        vmin = min(vmin_1, vmin_2)
+        vmax = max(vmax_1, vmax_2)
+
+    # Set up the plot
+    fig, gs, cax1, cax2 = set_panels('1x3C2')
+    # Wrap things up in lists for easier iteration
+    data = [data1, data2, data2-data1]
+    u = [u_1, u_2, None]
+    v = [v_1, v_2, None]
+    vmin0 = [vmin, vmin, vmin_diff]
+    vmax0 = [vmax, vmax, vmax_diff]
+    ctype0 = [ctype, ctype, 'plusminus']
+    title = [title1, title2, 'Anomaly']
+    cax = [cax1, None, cax2]
+    extend0 = [extend, None, extend_diff]    
+    for i in range(3):
+        ax = plt.subplot(gs[0,i])
+        img = latlon_plot(data[i], grid, ax=ax, gtype=gtype, include_shelf=include_shelf, make_cbar=False, ctype=ctype0[i], vmin=vmin0[i], vmax=vmax0[i], zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title[i], titlesize=titlesize, change_points=change_points)
+        if cax[i] is not None:
+            # Colourbar
+            cbar = plt.colorbar(img, cax=cax[i], extend=extend0[i])
+        if u[i] is not None and v[i] is not None:
+            # Overlay vectors
+            overlay_vectors(ax, u[i], v[i], grid, chunk=chunk, scale=scale)
+    plt.suptitle(suptitle, fontsize=22)
+    finished_plot(fig, fig_name=fig_name)
+
+
+# NetCDF interface to latlon_comparison_plot.
+# Assumes the two simulations have the same output filename with a single time record.
+def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None):
+
+    directory1 = real_dir(directory1)
+    directory2 = real_dir(directory2)
+
+    # Build the grid if needed
+    grid = choose_grid(grid, directory1+fname)
+
+    # Inner function to read and process the variable from the given NetCDF file, and also return the variable title.
+    def read_and_process (file_path):
+        if var == 'ismr':
+            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid)), 'Ice shelf melt rate (m/y)'
+        elif var == 'bwtemp':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)), 'Bottom water temperature ('+deg_string+'C)'
+        elif var == 'bwsalt':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)), 'Bottom water salinity (psu)'
+        elif var == 'bwage':
+            return select_bottom(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=0), grid)), 'Bottom water age (years)'
+        elif var == 'sst':
+            return mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)[0], 'Sea surface temperature ('+deg_string+'C)'
+        elif var == 'sss':
+            return mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)[0], 'Sea surface salinity (psu)'
+        elif var == 'aice':
+            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=0), grid), 'Sea ice concentration'
+        elif var == 'hice':
+            return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=0), grid), 'Sea ice thickness'
+        elif var == 'iceprod':
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year, 'Sea ice production (m/y'
+        elif var == 'mld':
+            return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid), 'Mixed layer depth (m)'
+        elif var == 'vel':
+            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
+            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+            speed, u, v = prepare_vel(u, v, grid, vel_option='avg')
+            return speed, u, v, 'Barotropic velocity (m/s)'
+        elif var == 'psi':
+            return np.sum(mask_3d(read_netcdf(file_path, 'PsiVEL', time_index=0), grid), axis=0)*1e-6, 'Velocity streamfunction (Sv)'
+
+    # Call this for each simulation
+    if var == 'vel':
+        data_1, u_1, v_1, title = read_and_process(directory1+fname)
+        data_2, u_2, v_2 = read_and_process(directory2+fname)[:3]
+    else:
+        data_1, title = read_and_process(directory1+fname)
+        data_2 = read_and_process(directory2+fname)[0]
+        u_1 = None
+        v_1 = None
+        u_2 = None
+        v_2 = None
+        
+    ctype = 'basic'
+    if var in ['iceprod', 'psi']:
+        ctype = 'plusminus'
+    if var in ['ismr', 'vel']:
+        ctype = var
+    include_shelf = True
+    if var in ['sst', 'sss', 'aice', 'hice', 'iceprod', 'mld']:
+        include_shelf = False
+
+    # Make the plot
+    latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2)
+    
+    
+        
     
     
     
