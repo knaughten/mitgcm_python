@@ -15,8 +15,9 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background, clear_ocean
-from diagnostics import t_minus_tf, find_aice_min_max
+from diagnostics import t_minus_tf, find_aice_min_max, potential_density
 from constants import deg_string, sec_per_year
+from calculus import vertical_average
 
 
 # Basic lat-lon plot of any variable.
@@ -845,6 +846,12 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
             return speed, u, v, 'Barotropic velocity (m/s)'
         elif var == 'psi':
             return np.sum(mask_3d(read_netcdf(file_path, 'PsiVEL', time_index=0), grid), axis=0)*1e-6, 'Velocity streamfunction (Sv)'
+        elif var == 'rho_vavg':
+            # Assumes MDJWF density
+            temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
+            salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+            rho_3d = potential_density('MDJWF', salt, temp)-1000
+            return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
 
     # Call this for each simulation
     if var == 'vel':
