@@ -846,12 +846,15 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
             return speed, u, v, 'Barotropic velocity (m/s)'
         elif var == 'psi':
             return np.sum(mask_3d(read_netcdf(file_path, 'PsiVEL', time_index=0), grid), axis=0)*1e-6, 'Velocity streamfunction (Sv)'
-        elif var == 'rho_vavg':
+        elif var in ['rho_vavg', 'bwrho']:
             # Assumes MDJWF density
             temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
             salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
             rho_3d = potential_density('MDJWF', salt, temp)-1000
-            return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
+            if var == 'rho_vavg':
+                return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
+            elif var == 'bwrho':
+                return select_bottom(rho_3d), r'Bottom density (kg/m$^3$-1000)'
 
     # Call this for each simulation
     if var == 'vel':
