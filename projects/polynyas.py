@@ -670,9 +670,9 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             latlon_axes(ax, x, y, zoom_fris=True, pster=True)
             plt.title(title[i], fontsize=18)
             # Add arrows (hand-positioned in another program)
-            x_arrow = np.array([83.13, 76.78, 81.6, 78.64, 84.35, 82.71, 84.66, 76.94, 76.36, 79.85, 77.05, 81.6, 78.84, 84.82, 85.83, 69.85, 69.85, 71.6, 73.08, 71.91, 74.87])/97.9
-            y_arrow = 1 - np.array([2.91, 4.5, 6.56, 7.78, 8.31, 9.79, 10.95, 9.74, 12.65, 12.12, 14.66, 15.03, 16.3, 14.79, 16.84, 9.52, 12.38, 13.12, 15.35, 16.72, 18.79])/52.3
-            angle_arrow = np.array([120, -100, -60, 120, 135, 135, -30, -100, 180, -50, 5, -45, 210, 50, -120, 135, 135, -45, -60, 120, -45])*deg2rad
+            x_arrow = np.array([0.84913177+0.003, 0.78426966+0.002, 0.83350358, 0.80326864, 0.86159346+0.01, 0.84484168+0.01, 0.86475996+0.005, 0.78590398+0.005, 0.77997957+0.015, 0.81562819, 0.78702758-0.01, 0.83350358, 0.80531154+0.02, 0.86639428, 0.87671093+0.002, 0.71348315+0.005, 0.71348315+0.01, 0.73135853, 0.746476, 0.73452503, 0.76475996])
+            y_arrow = np.array([0.94435946-0.025, 0.91395793, 0.87456979, 0.85124283-0.02, 0.84110899-0.03, 0.81281071-0.03, 0.79063098-0.005, 0.81376673, 0.7581262, 0.76826004, 0.71969407, 0.7126195, 0.68833652, 0.71720841-0.01, 0.67801147+0.01, 0.81797323-0.02, 0.76328872-0.025, 0.74913958, 0.70650096-0.02, 0.68030593, 0.64072658])
+            angle_arrow = np.array([100, -100, -85, 100, 110, 120, -55, -105, 170, -70, 15, -60, 200, 75, -105, 110, 120, -60, -80, 100, -70])*deg2rad
             arrow_length = 0.025
             arrow_dx = arrow_length*np.cos(angle_arrow)
             arrow_dy = arrow_length*np.sin(angle_arrow)
@@ -698,8 +698,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
-    #fig.savefig(fig_dir+'baseline_panels.png', dpi=300)
-    finished_plot(fig) #, fig_name=fig_dir+'baseline_panels.png')
+    finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
 
 
 # Plot 5 lat-lon panels showing sea ice concentration averaged over each simulation.
