@@ -854,7 +854,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
             if var == 'rho_vavg':
                 return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
             elif var == 'bwrho':
-                return select_bottom(rho_3d), r'Bottom density (kg/m$^3$-1000)'
+                return select_bottom(mask_3d(rho_3d,grid)), r'Bottom density (kg/m$^3$-1000)'
 
     # Call this for each simulation
     if var == 'vel':
