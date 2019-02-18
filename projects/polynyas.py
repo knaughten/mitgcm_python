@@ -1136,6 +1136,7 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
     rho_vavg = []
     grad_rho_vavg = []
     for expt in range(num_expts-1):
+        print 'Reading ' + expt_names[expt]
         # Read temperature and salinity
         file_path = base_dir + case_dir[expt] + avg_file
         temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
@@ -1172,7 +1173,7 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
         ax.grid(True)
         plt.xlabel('Distance along transect (km)', fontsize=16)
         plt.ylabel(units, fontsize=16)
-        plt.title(title+', 'str(-zmax)+'-'+str(-zmin)+' m average', fontsize=18)
+        plt.title(title+', '+str(-zmax)+'-'+str(-zmin)+' m average', fontsize=18)
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
