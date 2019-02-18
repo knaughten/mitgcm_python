@@ -7,10 +7,9 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import minimize_scalar
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land, polar_stereo, dist_btw_points
+from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land, polar_stereo
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -25,7 +24,6 @@ from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
-from ..interpolation import interp_bilinear
 
 # Global parameters
 
@@ -1120,112 +1118,77 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
         finished_plot(fig, fig_name=fig_dir+'s2n_'+var+'.png')
 
 
-def density_profiles (base_dir='./', fig_dir='./'):
+def rho_shelf_break (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Endpoints of transect from mwdw_slices
-    [lon0, lat0] = [-56, -79]
-    [lon1, lat1] = [-42, -65]
-    # Distances along transect we want to select (km)
-    transect_dist = [400, 700, 1000]
-    num_pts = len(transect_dist)
-    # Reference depth for density
+    point0 = (-56, -79)
+    point1 = (-42, -65)
+    zmin = -400
+    zmax = -100
     ref_depth = 1000
-    # Colours and labels for plotting
-    colours = ['red', 'green', 'blue']
-    labels = ['On shelf', 'Crossing shelf', 'Off shelf']
-    # Deepest depth to plot
-    zmin = -1500
 
-    # Inner function to calculate latitude of point on the transect at lon0
-    def lat_on_line (lon_star):
-        if lon_star < lon0 or lon_star > lon1:
-            print 'Error (lat_on_line): outside endpoints of transect'
-            sys.exit()
-        return (lat1-lat0)/float(lon1-lon0)*(lon_star-lon0) + lat0
-
-    # Inner function to calculate distance between the point on the transect at the given longitude, and the beginning of the transect, minus the target distance in km (and absolute value)
-    def dist_from_target (lon_star, target):
-        lat_star = lat_on_line(lon_star)
-        return abs(dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3 - target)
-
-    # Find longitude and latitude of each point on transect we care about
-    lon_pts = []
-    lat_pts = []
-    for dist in transect_dist:
-        res = minimize_scalar(dist_from_target, bounds=(lon0, lon1), args=(dist), method='bounded')
-        lon_star = res.x
-        lat_star = lat_on_line(lon_star)
-        print 'Point at ('+str(lon_star)+', '+str(lat_star)+') is '+str(dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3)+' km from start'
-        lon_pts.append(lon_star)
-        lat_pts.append(lat_star)
-
-    # Build grid
+    print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Now extract density profiles at each year
-    rho_profiles = np.zeros([num_pts, num_years])
-    for year in range(start_year, end_year+1):
-        print 'Processing ' + str(year)
-        # Read temperature and salinity from Maud Rise simulation, averaged over this year
-        file_path = base_dir+case_dir[1]+file_head+str(year)+file_tail
+    # Calculate vertically averaged density and vertically averaged density gradient for each experiment
+    rho_vavg = []
+    grad_rho_vavg = []
+    for expt in range(num_expts-1):
+        # Read temperature and salinity
+        file_path = base_dir + case_dir[expt] + avg_file
         temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
         salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
-        for i in range(num_pts):
-            # Extract temperature and salinity profiles, and hfac
-            temp_profile, hfac = interp_bilinear(temp, lon_pts[i], lat_pts[i], grid, return_hfac=True)
-            salt_profile = interp_bilinear(salt, lon_pts[i], lat_pts[i], grid)
-            # Calculate density and mask with hfac
-            rho_profiles[i,year] = np.ma.masked_where(hfac==0, density('MDJWF', salt_profile, temp_profile, ref_depth)-1000)
+        # Calculate density
+        rho = mask_3d(density('MDJWF', salt[i], temp[i], ref_depth), grid)-1000
+        # Extract transect
+        rho_trans, haxis = transect_patches(rho, grid, point0, point1, return_gridded=True)[8:10]
+        if expt==0:
+            # Also need hfac along the transect; just need to do this once
+            hfac_trans = transect_patches(grid.hfac, grid, point0, point1, return_gridded=True)[8]            
+            # Tile things to be 2D
+            nh = rho_trans.size[1]
+            z = np.tile(np.expand_dims(grid.z,1), (1, nh))
+            dz = np.tile(np.expand_dims(grid.dz,1), (1, nh))
+            # Convert from km to m
+            h = np.tile(haxis, (grid.nz, 1))*1e3
+        # Mask everything outside the given depth bounds
+        rho_trans = np.ma.masked_where(np.invert((z >= zmin)*(z <= zmax)), rho_trans)
+        # Vertically average
+        rho_vavg.append(np.sum(rho_trans*dz*hfac_trans, axis=0)/np.sum(dz*hfac_trans, axis=0))
+        # Now calculate gradient along transect
+        grad_rho_trans = (rho_trans[:,1:]-rho_trans[:,:-1])/(h[:,1:]-h[:,:-1])
+        # Vertically average the gradient
+        grad_rho_vavg.append(np.sum(grad_rho_trans*dz*hfac_trans, axis=0)/np.sum(dz*hfac_trans, axis=0))
 
-    # Determine bounds on density to plot
-    min_rho = np.amin(rho_profiles)
-    max_rho = np.amax(rho_profiles)
-    drho = max_rho - min_rho
-    min_rho_plot = min_rho - 0.05*drho
-    max_rho_plot = max_rho + 0.05*drho
+    # Inner function to make plots
+    def make_density_plot (data, title, units, fig_name):
+        fig, ax = plt.subplots(figsize=(1,6))
+        # Data might be one index shorter than haxis
+        hstart = haxis.size - data[0].size
+        for expt in range(num_expts-1):
+            ax.plot(haxis[hstart:], data[expt], '-', color=expt_colours[expt], label=expt_names[expt], linewidth=1.5)
+        ax.grid(True)
+        plt.xlabel('Distance along transect (km)', fontsize=16)
+        plt.ylabel(units, fontsize=16)
+        plt.title(title+', 'str(-zmax)+'-'+str(-zmin)+' m average', fontsize=18)
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+        finished_plot(fig) #, fig_name=fig_name)
 
-    # Prepare for animation
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import matplotlib.animation as animation
-
-    # Make the initial figure    
-    fig, ax = plt.subplots(figsize=(11,6))
-    for i in range(num_pts):
-        ax.plot(rho_profiles[i,0], grid.z, '-', color=colours[i], label=labels[i], linewidth=1.5)
-    ax.grid(True)
-    ax.set_ylim([z_min, 0])
-    ax.set_xlim([min_rho_plot, max_rho_plot])
-    plt.title(str(start_year), fontsize=18)
-    plt.xlabel(r'Density (kg/m$^3$-1000)', fontsize=16)
-    plt.ylabel('Depth (m)', fontsize=16)
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
-    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
-
-    # Function to update figure with the given frame
-    def animate(year):
-        ax.cla()
-        for i in range(num_pts):
-            ax.plot(rho_profiles[i,year-start_year], grid.z, '-', color=colours[i], linewidth=1.5)
-        plt.title(str(year), fontsize=18)
-
-    # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(start_year,end_year+1), interval=300)
-    anim.save(fig_dir+'rho_profiles.mp4')
+    # Plot vertically averaged density
+    make_density_plot(rho_vavg, 'Density', r'kg/m$^3$', fig_dir+'rho_vavg_trans.png')
+    # Plot vertically averaged density gradient
+    make_density_plot(rho_vavg, 'Density gradient', r'kg/m$^4$', fig_dir+'grad_rho_vavg_trans.png')
+    
         
-        
+            
 
     
 
-
-        
-        
-
-        
+    
     
     
 
