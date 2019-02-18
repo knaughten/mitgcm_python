@@ -7,9 +7,10 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import minimize_scalar
 
 from ..postprocess import precompute_timeseries
-from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land, polar_stereo
+from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom, convert_ismr, mask_except_ice, mask_land, polar_stereo, dist_btw_points
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
@@ -1114,6 +1115,41 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
         plt.title(var + ' signal/noise', fontsize=18)
         plt.text(0.5, 0.05, 'Recovers in '+str(year0), fontsize=18, ha='center', va='center', transform=fig.transFigure)
         finished_plot(fig, fig_name=fig_dir+'s2n_'+var+'.png')
+
+
+def density_profiles (base_dir='./', fig_dir='./'):
+
+    # Endpoints of transect from mwdw_slices
+    [lon0, lat0] = [-56, -79]
+    [lon1, lat1] = [-42, -65]
+    # Distances along transect we want to select (km)
+    transect_dist = [400, 700, 1000]    
+
+    # Inner function to calculate latitude of point on the transect at lon0
+    def lat_on_line (lon_star):
+        if lon_star < lon0 or lon_star > lon1:
+            print 'Error (lat_on_line): outside endpoints of transect'
+            sys.exit()
+        return (lat1-lat0)/float(lon1-lon0)*(lon_star-lon0) + lat0
+
+    # Inner function to calculate distance between the point on the transect at the given longitude, and the beginning of the transect, minus the target distance in km
+    def dist_from_target (lon_star, target):
+        lat_star = lat_on_line(lon_star)
+        return dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3 - target
+
+    # Find longitude and latitude of each point on transect we care about
+    lon_points = []
+    lat_points = []
+    for dist in transect_dist:
+        res = minimize_scalar(dist_from_target, bounds=(lon0, lat0), method='bounded', args=(dist))
+        lon_star = res.x
+        lat_star = lat_on_line(lon_star)
+        print 'Point at ('+str(lon_star)+', '+str(lat_star)+') is '+str(dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3)+' km from start'
+        lon_points.append(lon_star)
+        lat_points.append(lat_star)
+        
+
+    
 
 
         
