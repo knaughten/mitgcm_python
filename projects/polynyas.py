@@ -1016,8 +1016,8 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'massloss_timeseries.png')
     
         
-# Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (last year minus first year).
-def calc_polynya_ts_anom (base_dir='./'):
+# Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (default last year minus first year).
+def calc_polynya_ts_anom (base_dir='./', year=-1):
 
     base_dir = real_dir(base_dir)
     file_path = base_dir + case_dir[1] + timeseries_file
@@ -1031,8 +1031,8 @@ def calc_polynya_ts_anom (base_dir='./'):
     temp_polynya, time_tmp = monthly_to_annual(temp_polynya, time)
     salt_polynya, time_tmp = monthly_to_annual(salt_polynya, time)
 
-    print 'Change in temperature: ' + str(temp_polynya[-1]-temp_polynya[0]) + ' degC'
-    print 'Change in salinity: ' + str(salt_polynya[-1]-salt_polynya[0]) + ' psu'
+    print 'Change in temperature: ' + str(temp_polynya[year]-temp_polynya[0]) + ' degC'
+    print 'Change in salinity: ' + str(salt_polynya[year]-salt_polynya[0]) + ' psu'
 
 # Calculate the Weddell Gyre transport in the given simulation, either averaged over the entire simulation or just the last year.
 def calc_wed_gyre_trans (timeseries_path, last_year=False):
