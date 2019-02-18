@@ -25,6 +25,7 @@ from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
+from ..interpolation import interp_bilinear
 
 # Global parameters
 
@@ -810,6 +811,8 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     t_contours = [-1.5]
     s_contours = [34.42]
     r_contours = np.arange(32.45, 32.57, 0.02)
+    # Reference depth for density
+    ref_depth = 1000
 
     loc_label = 'from ' + get_loc(None, point0=point0, point1=point1)[-1]
 
@@ -824,7 +827,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         file_path = base_dir + case_dir[i] + avg_file
         temp.append(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
         salt.append(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
-        rho.append(mask_3d(density('MDJWF', salt[i], temp[i], 1000), grid)-1000)
+        rho.append(mask_3d(density('MDJWF', salt[i], temp[i], ref_depth), grid)-1000)
 
     print 'Building patches'
     temp_values = []
@@ -1119,11 +1122,22 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
 
 def density_profiles (base_dir='./', fig_dir='./'):
 
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
     # Endpoints of transect from mwdw_slices
     [lon0, lat0] = [-56, -79]
     [lon1, lat1] = [-42, -65]
     # Distances along transect we want to select (km)
-    transect_dist = [400, 700, 1000]    
+    transect_dist = [400, 700, 1000]
+    num_pts = len(transect_dist)
+    # Reference depth for density
+    ref_depth = 1000
+    # Colours and labels for plotting
+    colours = ['red', 'green', 'blue']
+    labels = ['On shelf', 'Crossing shelf', 'Off shelf']
+    # Deepest depth to plot
+    zmin = -1500
 
     # Inner function to calculate latitude of point on the transect at lon0
     def lat_on_line (lon_star):
@@ -1132,21 +1146,77 @@ def density_profiles (base_dir='./', fig_dir='./'):
             sys.exit()
         return (lat1-lat0)/float(lon1-lon0)*(lon_star-lon0) + lat0
 
-    # Inner function to calculate distance between the point on the transect at the given longitude, and the beginning of the transect, minus the target distance in km
+    # Inner function to calculate distance between the point on the transect at the given longitude, and the beginning of the transect, minus the target distance in km (and absolute value)
     def dist_from_target (lon_star, target):
         lat_star = lat_on_line(lon_star)
-        return dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3 - target
+        return abs(dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3 - target)
 
     # Find longitude and latitude of each point on transect we care about
-    lon_points = []
-    lat_points = []
+    lon_pts = []
+    lat_pts = []
     for dist in transect_dist:
-        res = minimize_scalar(dist_from_target, bounds=(lon0, lat0), method='bounded', args=(dist))
+        res = minimize_scalar(dist_from_target, bounds=(lon0, lon1), args=(dist), method='bounded')
         lon_star = res.x
         lat_star = lat_on_line(lon_star)
         print 'Point at ('+str(lon_star)+', '+str(lat_star)+') is '+str(dist_btw_points((lon0, lat0), (lon_star, lat_star))*1e-3)+' km from start'
-        lon_points.append(lon_star)
-        lat_points.append(lat_star)
+        lon_pts.append(lon_star)
+        lat_pts.append(lat_star)
+
+    # Build grid
+    grid = Grid(base_dir+grid_dir)
+
+    # Now extract density profiles at each year
+    rho_profiles = np.zeros([num_pts, num_years])
+    for year in range(start_year, end_year+1):
+        print 'Processing ' + str(year)
+        # Read temperature and salinity from Maud Rise simulation, averaged over this year
+        file_path = base_dir+case_dir[1]+file_head+str(year)+file_tail
+        temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
+        salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+        for i in range(num_pts):
+            # Extract temperature and salinity profiles, and hfac
+            temp_profile, hfac = interp_bilinear(temp, lon_pts[i], lat_pts[i], grid, return_hfac=True)
+            salt_profile = interp_bilinear(salt, lon_pts[i], lat_pts[i], grid)
+            # Calculate density and mask with hfac
+            rho_profiles[i,year] = np.ma.masked_where(hfac==0, density('MDJWF', salt_profile, temp_profile, ref_depth)-1000)
+
+    # Determine bounds on density to plot
+    min_rho = np.amin(rho_profiles)
+    max_rho = np.amax(rho_profiles)
+    drho = max_rho - min_rho
+    min_rho_plot = min_rho - 0.05*drho
+    max_rho_plot = max_rho + 0.05*drho
+
+    # Prepare for animation
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+
+    # Make the initial figure    
+    fig, ax = plt.subplots(figsize=(11,6))
+    for i in range(num_pts):
+        ax.plot(rho_profiles[i,0], grid.z, '-', color=colours[i], label=labels[i], linewidth=1.5)
+    ax.grid(True)
+    ax.set_ylim([z_min, 0])
+    ax.set_xlim([min_rho_plot, max_rho_plot])
+    plt.title(str(start_year), fontsize=18)
+    plt.xlabel(r'Density (kg/m$^3$-1000)', fontsize=16)
+    plt.ylabel('Depth (m)', fontsize=16)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+
+    # Function to update figure with the given frame
+    def animate(year):
+        ax.cla()
+        for i in range(num_pts):
+            ax.plot(rho_profiles[i,year-start_year], grid.z, '-', color=colours[i], linewidth=1.5)
+        plt.title(str(year), fontsize=18)
+
+    # Call this for each frame
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(start_year,end_year+1), interval=300)
+    anim.save(fig_dir+'rho_profiles.mp4')
+        
         
 
     
