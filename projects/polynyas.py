@@ -1126,15 +1126,15 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
     point0 = (-56, -79)
     point1 = (-42, -65)
     zmin = -400
-    zmax = -100
+    zmax = -200
     ref_depth = 1000
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Calculate vertically averaged density and vertically averaged density gradient for each experiment
-    rho_vavg = []
-    grad_rho_vavg = []
+    # Calculate transects of minimum and maximum density in each water column along the transect
+    rho_min = []
+    rho_max = []
     for expt in range(num_expts-1):
         print 'Reading ' + expt_names[expt]
         # Read temperature and salinity
@@ -1142,54 +1142,28 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
         temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
         salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
         # Calculate density
-        rho = mask_3d(density('MDJWF', salt[i], temp[i], ref_depth), grid)-1000
+        rho = mask_3d(density('MDJWF', salt, temp, ref_depth), grid)-1000
         # Extract transect
         rho_trans, haxis = transect_patches(rho, grid, point0, point1, return_gridded=True)[8:10]
         if expt==0:
-            # Also need hfac along the transect; just need to do this once
-            hfac_trans = transect_patches(grid.hfac, grid, point0, point1, return_gridded=True)[8]            
-            # Tile things to be 2D
-            nh = rho_trans.size[1]
-            z = np.tile(np.expand_dims(grid.z,1), (1, nh))
-            dz = np.tile(np.expand_dims(grid.dz,1), (1, nh))
-            # Convert from km to m
-            h = np.tile(haxis, (grid.nz, 1))*1e3
-        # Mask everything outside the given depth bounds
-        rho_trans = np.ma.masked_where(np.invert((z >= zmin)*(z <= zmax)), rho_trans)
-        # Vertically average
-        rho_vavg.append(np.sum(rho_trans*dz*hfac_trans, axis=0)/np.sum(dz*hfac_trans, axis=0))
-        # Now calculate gradient along transect
-        grad_rho_trans = (rho_trans[:,1:]-rho_trans[:,:-1])/(h[:,1:]-h[:,:-1])
-        # Vertically average the gradient
-        grad_rho_vavg.append(np.sum(grad_rho_trans*dz*hfac_trans, axis=0)/np.sum(dz*hfac_trans, axis=0))
+            # Get z tiled to be 2D
+            nh = rho_trans.shape[1]
+            z = np.tile(np.expand_dims(grid.z,1), (1, nh))        
+        # Depth flag which is 0 outside the given depth bounds
+        depth_flag = (z >= zmin)*(z <= zmax)
+        #rho_trans = np.ma.maksed_where(depth_flag==0, rho_trans)
+        # Extract min and max
+        rho_min.append(np.amin(rho_trans, axis=0))
+        rho_max.append(np.amax(rho_trans, axis=0))
 
-    # Inner function to make plots
-    def make_density_plot (data, title, units, fig_name):
-        fig, ax = plt.subplots(figsize=(1,6))
-        # Data might be one index shorter than haxis
-        hstart = haxis.size - data[0].size
-        for expt in range(num_expts-1):
-            ax.plot(haxis[hstart:], data[expt], '-', color=expt_colours[expt], label=expt_names[expt], linewidth=1.5)
+    for expt in range(1, num_expts-1):
+        fig, ax = plt.subplots(figsize=(11,6))
+        ax.fill_between(haxis, rho_min[expt], rho_max[expt])
         ax.grid(True)
         plt.xlabel('Distance along transect (km)', fontsize=16)
-        plt.ylabel(units, fontsize=16)
-        plt.title(title+', '+str(-zmax)+'-'+str(-zmin)+' m average', fontsize=18)
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
-        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
-        finished_plot(fig) #, fig_name=fig_name)
-
-    # Plot vertically averaged density
-    make_density_plot(rho_vavg, 'Density', r'kg/m$^3$', fig_dir+'rho_vavg_trans.png')
-    # Plot vertically averaged density gradient
-    make_density_plot(rho_vavg, 'Density gradient', r'kg/m$^4$', fig_dir+'grad_rho_vavg_trans.png')
-    
-        
-            
-
-    
-
-    
+        plt.ylabel(r'kg/m$^3$', fontsize=16)
+        plt.title('Density range in water column', fontsize=18)
+        finished_plot(fig, fig_name=fig_dir+'rho_range_'+case_dir[expt][:-1]+'.png')    
     
     
 
