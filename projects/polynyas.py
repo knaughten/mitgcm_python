@@ -1118,18 +1118,29 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
         finished_plot(fig, fig_name=fig_dir+'s2n_'+var+'.png')
 
 
-def rho_shelf_break (base_dir='./', fig_dir='./'):
+def rho_range (base_dir='./', fig_dir='./', option='shelf_break'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    point0 = (-56, -79)
-    point1 = (-42, -65)
     ref_depth = 1000
-    hmin = 0
-    hmax = 1600
-    ymin = 31.8
-    ymax = 32.7
+    if option == 'shelf_break':
+        point0 = (-56, -79)
+        point1 = (-42, -65)
+        ymin = 31.8
+        ymax = 32.7
+    elif option == 'ronne':
+        point0 = (-72, -78)
+        point1 = (-55, -74)
+    elif option == 'filchner':
+        point0 = (-42, -81)
+        point1 = (-35, -75)
+    elif option == 'berkner':
+        point0 = (-55, -80)
+        point1 = (-47, -76)
+    else:
+        print 'Error (rho_range): invalid option ' + option
+        sys.exit()
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
@@ -1151,6 +1162,9 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
         rho_min.append(np.amin(rho_trans, axis=0))
         rho_max.append(np.amax(rho_trans, axis=0))
 
+    hmin = haxis[0]
+    hmax = haxis[-1]
+
     for expt in range(1, num_expts-1):
         print 'Plotting ' + expt_names[expt]
         fig, ax = plt.subplots(figsize=(11,6))
@@ -1158,7 +1172,8 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
         ax.fill_between(haxis, rho_min[expt], rho_max[expt], color='red', alpha=0.5)
         ax.grid(True)
         ax.set_xlim([hmin, hmax])
-        ax.set_ylim([ymin, ymax])
+        if option == 'shelf_break':            
+            ax.set_ylim([ymin, ymax])
         plt.xlabel('Distance along transect (km)', fontsize=16)
         plt.ylabel(r'kg/m$^3$', fontsize=16)
         plt.title('Density range in water column: '+expt_names[expt]+' (red) vs Baseline (blue)', fontsize=18)
