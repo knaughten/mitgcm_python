@@ -1125,14 +1125,16 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
 
     point0 = (-56, -79)
     point1 = (-42, -65)
-    zmin = -400
-    zmax = -200
     ref_depth = 1000
+    hmin = 0
+    hmax = 1600
+    ymin = 31.8
+    ymax = 32.7
 
     print 'Building grid'
     grid = Grid(base_dir+grid_dir)
 
-    # Calculate transects of minimum and maximum density in each water column along the transect
+    # Extract range of densities in each water column along the transect
     rho_min = []
     rho_max = []
     for expt in range(num_expts-1):
@@ -1145,27 +1147,28 @@ def rho_shelf_break (base_dir='./', fig_dir='./'):
         rho = mask_3d(density('MDJWF', salt, temp, ref_depth), grid)-1000
         # Extract transect
         rho_trans, haxis = transect_patches(rho, grid, point0, point1, return_gridded=True)[8:10]
-        if expt==0:
-            # Get z tiled to be 2D
-            nh = rho_trans.shape[1]
-            z = np.tile(np.expand_dims(grid.z,1), (1, nh))        
-        # Depth flag which is 0 outside the given depth bounds
-        depth_flag = (z >= zmin)*(z <= zmax)
-        #rho_trans = np.ma.maksed_where(depth_flag==0, rho_trans)
         # Extract min and max
         rho_min.append(np.amin(rho_trans, axis=0))
         rho_max.append(np.amax(rho_trans, axis=0))
 
     for expt in range(1, num_expts-1):
+        print 'Plotting ' + expt_names[expt]
         fig, ax = plt.subplots(figsize=(11,6))
-        ax.fill_between(haxis, rho_min[expt], rho_max[expt])
+        ax.fill_between(haxis, rho_min[0], rho_max[0], color='blue', alpha=0.5)
+        ax.fill_between(haxis, rho_min[expt], rho_max[expt], color='red', alpha=0.5)
         ax.grid(True)
+        ax.set_xlim([hmin, hmax])
+        ax.set_ylim([ymin, ymax])
         plt.xlabel('Distance along transect (km)', fontsize=16)
         plt.ylabel(r'kg/m$^3$', fontsize=16)
-        plt.title('Density range in water column', fontsize=18)
+        plt.title('Density range in water column: '+expt_names[expt]+' (red) vs Baseline (blue)', fontsize=18)
+        ax2 = ax.twinx()
+        ax2.set_xlim([hmin, hmax])
+        ax2.plot(haxis, rho_max[0]-rho_min[0], color='blue')
+        ax2.plot(haxis, rho_max[expt]-rho_min[expt], color='red')
         finished_plot(fig, fig_name=fig_dir+'rho_range_'+case_dir[expt][:-1]+'.png')    
-    
-    
+
+
 
     
 

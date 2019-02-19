@@ -8,6 +8,8 @@ import sys
 from constants import rho_ice, wed_gyre_bounds, Cp_sw
 from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
 from calculus import area_integral, vertical_integral, indefinite_ns_integral
+from plot_utils.slices import get_transect
+from interpolation import interp_grid
 
 
 # Calculate the adiabatic temperature gradient exactly like MITgcm does. This originates from section 7 of "Algorithms for computation of fundamental properties of seawater", UNESCO technical papers in marine science 44, 1983.
@@ -228,7 +230,50 @@ def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tre
     # Calculate potential density
     rho = potential_density(eosType, salt, temp, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)        
     # Now calculate heat content relative to Tf, in J
-    return (temp-Tf)*rho*Cp_sw*dV    
+    return (temp-Tf)*rho*Cp_sw*dV
+
+
+# Calculate the normal velocity with respect to the angle given by the transect between the 2 points. Assumes u and v only include one time record (i.e. 3D fields). Does not extract the transect itself.
+# The sign convention is that point0 is on the "west" and point1 on the "east" of the new axes. So negative values for the normal velocity are going "south" of the line.
+def normal_velocity (u, v, grid, point0, point1):
+
+    # Find angle between east and the transect (intersecting at point0)
+    [lon0, lat0] = point0
+    [lon1, lat1] = point1
+    angle = np.arctan2(lat1-lat0, lon1-lon0)
+
+    # Interpolate u and v to the tracer grid
+    u_t = interp_grid(u, grid, 'u', 't')
+    v_t = interp_grid(v, grid, 'v', 't')
+    # Rotate to find normal velocity
+    return u_t*np.sin(angle) + v_t*np.cos(angle)
+
+
+# Calculate the total onshore and offshore transport with respect to the given transect. Sign convention as in normal_velocity; default is for the shore to be to the "south".
+def transport_transect (u, v, grid, point0, point1, shore='S'):
+
+    # Calculate normal velocity
+    u_norm = normal_velocity(u, v, grid, point0, point1)
+    # Extract the transect
+    u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1)
+    # Calculate integrands
+    dh = (right - left)*1e3  # Convert from km to m
+    dz = above - below
+    # Integrate and convert to Sv
+    trans_S = np.sum(np.minimum(u_norm_trans,0)*dh*dz*1e-6)
+    trans_N = np.sum(np.maximum(u_norm_trans,0)*dh*dz*1e-6)
+    # Retrn onshore, then offshore transport
+    if shore == 'S':
+        return trans_S, trans_N
+    elif shore == 'N':
+        return trans_N, trans_S
+    else:
+        print 'Error (transport_transect): invalid shore ' + shore
+        sys.exit()
+    
+    
+
+    
             
 
     
