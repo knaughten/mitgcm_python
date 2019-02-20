@@ -264,7 +264,11 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
             if var_name == 'rho':
                 return mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
             elif var_name == 'tminustf':
-                return t_minus_tf(temp, salt, grid)        
+                return t_minus_tf(temp, salt, grid)
+        elif var_name == 'vnorm':
+            u = read_and_mask('UVEL', file_path, check_diff_time=check_diff_time, gtype='u')
+            v = read_and_mask('VVEL', file_path, check_diff_time=check_diff_time, gtype='v')
+            return normal_velocity(u, v, grid, point0, point1)
         else:
             if check_diff_time and diff_time:
                 return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid, gtype=gtype)
@@ -296,6 +300,12 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     elif var == 'v':
         v_1, v_2 = read_and_mask_both('VVEL', gtype='v')
         slice_plot_diff(v_1, v_2, grid, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'vnorm':
+        if None in [point0, point1]:
+                print 'Error (read_plot_slice_diff): normal velocity plots only work for transects, not regular slices. Plot u or v instead.'
+                sys.exit()
+        vnorm_1, vnorm_2 = read_and_mask_both(var)
+        slice_plot_diff(vnorm_1, vnorm_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
