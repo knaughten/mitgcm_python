@@ -279,12 +279,14 @@ def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax,
 def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
 
     # Extract the coordinates from the start and end points, so that we start at the southernmost point
-    if point0[1] < point1[1]:
-        [lon0, lat0] = point0
-        [lon1, lat1] = point1
-    else:
+    flip = point1[1] < point0[1]
+    if flip:
         [lon0, lat0] = point1
         [lon1, lat1] = point0
+    else:
+        [lon0, lat0] = point0
+        [lon1, lat1] = point1
+        
     # Boolean indicating direction of slope
     pos_slope = lon0 < lon1
     
@@ -336,6 +338,10 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         # Add the new cell
         if j < j_end:
             cells_intersect.append((j,i_new))
+
+    if flip:
+        # Reverse the order of the list
+        cells_intersect.reverse()
 
     # Set up array to save the extracted transects
     data_trans = np.ma.empty([grid.nz, len(cells_intersect)])
@@ -389,8 +395,8 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         data_trans[:,posn] = data[:,j,i]
         if return_grid_vars:
             # Calculate the distance from each intersection to the start of the line
-            dist_a = dist_btw_points(intersections[0], [lon0, lat0])
-            dist_b = dist_btw_points(intersections[1], [lon0, lat0])
+            dist_a = dist_btw_points(intersections[0], point0)
+            dist_b = dist_btw_points(intersections[1], point0)
             # Choose the left and right boundaries and convert to km
             left_dist = min(dist_a, dist_b)*1e-3
             right_dist = max(dist_a, dist_b)*1e-3
