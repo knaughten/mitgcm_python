@@ -16,7 +16,7 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
-from diagnostics import t_minus_tf, density
+from diagnostics import t_minus_tf, density, normal_velocity
 from constants import deg_string
 
 
@@ -164,13 +164,15 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
 #      'rho': density (referenced to ref_depth)
 #      'u': zonal velocity
 #      'v': meridional velocity
+#      'vnorm': normal velocity (only for transects). See function normal_velocity in diagnostics.py to explain the sign convention.
 # file_path: path to NetCDF file containing the necessary variable:
 #      'temp': THETA
 #      'salt': SALT
 #      'tminustf': THETA and SALT
 #      'rho': THETA and SALT
-#      'u': 'UVEL'
-#      'v': 'VVEL'
+#      'u': UVEL
+#      'v': VVEL
+#      'vnorm': UVEL and VVEL
 # If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
 
 # Optional keyword arguments:
@@ -211,11 +213,11 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         temp = read_and_mask('THETA', check_second=True)
     if var in ['salt', 'tminustf', 'rho']:
         salt = read_and_mask('SALT', check_second=True)
-    if var == 'u':
+    if var in ['u', 'vnorm']:
         u = read_and_mask('UVEL', gtype='u')
-    if var == 'v':
+    if var in ['v', 'vnorm']:
         v = read_and_mask('VVEL', gtype='v')
-
+        
     # Plot
     if var == 'temp':
         slice_plot(temp, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
@@ -231,6 +233,12 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         slice_plot(u, grid, gtype='u', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
         slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'vnorm':
+        if None in [point0, point1]:
+            print 'Error (read_plot_slice): normal velocity plots only work for transects, not regular slices. Plot u or v instead.'
+            sys.exit()
+        vnorm = normal_velocity(u, v, grid, point0, point1)
+        slice_plot(vnorm, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
