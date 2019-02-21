@@ -1199,9 +1199,39 @@ def salinity_timeseries (base_dir='./', fig_dir='./'):
     time, outer_shelf_salt = get_timeseries_diff('sws_shelf_salt_outer', timeseries_shelf_file)
     inner_shelf_salt = get_timeseries_diff('sws_shelf_salt_inner', timeseries_shelf_file)[1]
     fris_salt = get_timeseries_diff('fris_salt', timeseries_file)[1]
+    shelf_salt = get_timeseries_diff('sws_shelf_salt', timeseries_file)[1]
 
-    timeseries_multi_plot(time, [outer_shelf_salt, inner_shelf_salt, fris_salt], ['Outer continental shelf', 'Inner continental shelf', 'FRIS cavity'], ['black', 'green', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu')
+    timeseries_multi_plot(time, [shelf_salt, fris_salt], ['Continental shelf', 'FRIS cavity'], ['black', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu')
 
+    timeseries_multi_plot(time, [outer_shelf_salt, inner_shelf_salt, fris_salt], ['Outer shelf', 'Inner shelf', 'FRIS cavity'], ['black', 'green', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu')
+
+
+def vice_anomalies (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    grid = Grid(base_dir+grid_dir)
+
+    def read_mask_uv (file_path):
+        u = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=0), grid,  gtype='u')
+        v = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=0), grid,  gtype='v')
+        return u, v
+
+    u0, v0 = read_mask_uv(base_dir+case_dir[0]+avg_file)
+    u1, v1 = read_mask_uv(base_dir+case_dir[1]+avg_file)
+    speed0, u0_plot, v0_plot = prepare_vel(u0, v0, grid, vel_option='ice')
+    speed1, u1_plot, v1_plot = prepare_vel(u1, v1, grid, vel_option='ice')
+    speed_diff = speed1-speed0
+    udiff_plot, vdiff_plot = prepare_vel(u1-u0, v1-v0, grid, vel_option='ice')[1:]
+
+    def plot_with_vectors (speed, u_plot, v_plot, title, ctype='vel'):
+        fig, ax = latlon_plot(speed, grid, ctype=ctype, include_shelf=False, title=title, return_fig=True, figsize=(10,6))
+        overlay_vectors(ax, u_plot, v_plot, grid, chunk=10, scale=4)
+
+    plot_with_vectors(speed0, u0_plot, v0_plot, 'Baseline sea ice velocity (m/s)')
+    plot_with_vectors(speed1, u1_plot, v1_plot, 'Maud Rise sea ice velocity (m/s)')
+    plot_with_vectors(speed_diff, udiff_plot, vdiff_plot, 'Anomalies in sea ice velocity (m/s)', ctype='plusminus')
         
 
 
