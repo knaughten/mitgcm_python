@@ -1210,21 +1210,35 @@ def salinity_timeseries (base_dir='./', fig_dir='./'):
 # Plot baseline velocity (see options), and Maud Rise anomalies with vectors.
 # Options are:
 # 'vice': sea ice velocity
-# 'v500': 500 m ocean velocity
-def anomaly_vectors (base_dir='./', fig_dir='./', option='ice'):
+# 'v350': 350 m ocean velocity
+def anomaly_vectors (base_dir='./', fig_dir='./', option='vice'):
 
     if option == 'vice':
         var_name = 'sea ice'
         vel_option = 'ice'
         z0 = None
+        chunk = 8
         scale_abs = 2
         scale_diff = 0.2
-    elif option == 'v500':
-        var_name = '500m'
+        xmin = None
+        xmax = None
+        ymin = None
+        ymax = None
+        vmax_diff = None
+        figsize = (15, 9)
+    elif option == 'v350':
+        var_name = '350m'
         vel_option = 'interp'
-        z0 = -500
-        scale_abs = 0.8
+        z0 = -350
+        chunk = 3
+        scale_abs = 1
         scale_diff = 0.1
+        xmin = -70
+        xmax = -15
+        ymin = -77
+        ymax = -73
+        vmax_diff = 0.015
+        figsize = (12, 5)
     else:
         print 'Error (anomaly_vectors): invalid option ' + option
         sys.exit()
@@ -1238,7 +1252,7 @@ def anomaly_vectors (base_dir='./', fig_dir='./', option='ice'):
         if option == 'vice':
             u = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=0), grid,  gtype='u')
             v = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=0), grid,  gtype='v')
-        elif option == 'v500':
+        elif option == 'v350':
             u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
             v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
         return u, v
@@ -1246,16 +1260,16 @@ def anomaly_vectors (base_dir='./', fig_dir='./', option='ice'):
     u0, v0 = read_mask_uv(base_dir+case_dir[0]+avg_file)
     u1, v1 = read_mask_uv(base_dir+case_dir[1]+avg_file)
     speed0, u0_plot, v0_plot = prepare_vel(u0, v0, grid, vel_option=vel_option, z0=z0)
-    speed1 = prepare_vel(u1, v1, grid, vel_option='ice')[0]
+    speed1 = prepare_vel(u1, v1, grid, vel_option=vel_option, z0=z0)[0]
     speed_diff = speed1-speed0
     udiff_plot, vdiff_plot = prepare_vel(u1-u0, v1-v0, grid, vel_option=vel_option, z0=z0)[1:]
 
-    fig, ax = latlon_plot(speed0, grid, ctype='vel', include_shelf=False, title='Baseline '+var_name+' velocity (m/s)', return_fig=True, figsize=(15,9))
-    overlay_vectors(ax, u0_plot, v0_plot, grid, chunk=8, scale=scale_abs)
+    fig, ax = latlon_plot(speed0, grid, ctype='vel', include_shelf=False, title='Baseline '+var_name+' velocity (m/s)', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, return_fig=True, figsize=figsize)
+    overlay_vectors(ax, u0_plot, v0_plot, grid, chunk=chunk, scale=scale_abs)
     finished_plot(fig, fig_name=fig_dir+option+'_baseline.png')
 
-    fig, ax = latlon_plot(speed_diff, grid, ctype='plusminus', include_shelf=False, title='Anomalies in '+var_name+' velocity (m/s)', return_fig=True, figsize=(15,9))
-    overlay_vectors(ax, udiff_plot, vdiff_plot, grid, chunk=8, scale=scale_diff)
+    fig, ax = latlon_plot(speed_diff, grid, ctype='plusminus', include_shelf=False, title='Anomalies in '+var_name+' velocity (m/s)', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmax=vmax_diff, return_fig=True, figsize=figsize)
+    overlay_vectors(ax, udiff_plot, vdiff_plot, grid, chunk=chunk, scale=scale_diff)
     finished_plot(fig, fig_name=fig_dir+option+'_anomalies.png')
 
     
