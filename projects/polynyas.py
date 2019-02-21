@@ -32,6 +32,7 @@ case_dir = ['polynya_baseline/', 'polynya_maud_rise/', 'polynya_near_shelf/', 'p
 grid_dir = case_dir[0] + 'grid/'
 timeseries_file = 'output/timeseries_polynya.nc'
 timeseries_age_file = 'output/timeseries_age.nc'
+timeseries_shelf_file = 'output/timeseries_shelf.nc'
 avg_file = 'output/1979_2016_avg.nc'
 ice_prod_file = 'output/ice_prod_1979_2016_avg.nc'
 start_year = 1979
@@ -1181,7 +1182,27 @@ def rho_range (base_dir='./', fig_dir='./', option='shelf_break'):
         ax2.set_xlim([hmin, hmax])
         ax2.plot(haxis, rho_max[0]-rho_min[0], color='blue')
         ax2.plot(haxis, rho_max[expt]-rho_min[expt], color='red')
-        finished_plot(fig, fig_name=fig_dir+'rho_range_'+case_dir[expt][:-1]+'.png')    
+        finished_plot(fig, fig_name=fig_dir+'rho_range_'+case_dir[expt][:-1]+'.png')
+
+
+def salinity_timeseries (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    def get_timeseries_diff (var, fname):
+        time = netcdf_time(base_dir+case_dir[0]+fname, monthly=False)
+        data_tmp = read_netcdf(base_dir+case_dir[1]+fname, var)-read_netcdf(base_dir+case_dir[0]+fname, var)
+        data, time = monthly_to_annual(data_tmp, time)
+        return time, data
+
+    time, outer_shelf_salt = get_timeseries_diff('sws_shelf_salt_outer', timeseries_shelf_file)
+    inner_shelf_salt = get_timeseries_diff('sws_shelf_salt_inner', timeseries_shelf_file)[1]
+    fris_salt = get_timeseries_diff('fris_salt', timeseries_file)[1]
+
+    timeseries_multi_plot(time, [outer_shelf_salt, inner_shelf_salt, fris_salt], ['Outer continental shelf', 'Inner continental shelf', 'FRIS cavity'], ['black', 'green', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu')
+
+        
 
 
 
