@@ -1185,6 +1185,7 @@ def rho_range (base_dir='./', fig_dir='./', option='shelf_break'):
         finished_plot(fig, fig_name=fig_dir+'rho_range_'+case_dir[expt][:-1]+'.png')
 
 
+# Plot timeseries of volume-averaged salinity anomalies (Maud Rise minus baseline) in the cavity and over the continental shelf (split into inner and outer shelf).
 def salinity_timeseries (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -1206,6 +1207,7 @@ def salinity_timeseries (base_dir='./', fig_dir='./'):
     timeseries_multi_plot(time, [outer_shelf_salt, inner_shelf_salt, fris_salt], ['Outer shelf', 'Inner shelf', 'FRIS cavity'], ['black', 'green', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu', fig_name=fig_dir+'timeseries_salt_anomalies_inner_outer.png')
 
 
+# Plot baseline sea ice velocity, and Maud Rise anomalies with vectors.
 def vice_anomaly_vectors (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)

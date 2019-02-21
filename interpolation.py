@@ -464,3 +464,17 @@ def smooth_xy (data, sigma=2):
 
     from scipy.ndimage.filters import gaussian_filter
     return gaussian_filter(data, sigma)
+
+
+# Interpolate the given field to the given depth (constant). It can be any dimension as long as depth is the first axis (if time_dependent=False) or the second axis (if time_dependent=True).
+def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
+
+    if gtype == 'w':
+        print 'Error (interp_to_depth): w-grids not supported yet'
+        sys.exit()
+    # Make depth positive so array is increasing and we can get right coefficients
+    k1, k2, c1, c2 = interp_slice_helper(-grid.z, -z0)
+    if time_dependent:
+        return c1*data[:,k1,:] + c2*data[:,k2,:]
+    else:
+        return c1*data[k1,:] + c2*data[k2,:]
