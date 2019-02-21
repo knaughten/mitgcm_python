@@ -16,7 +16,7 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
-from diagnostics import t_minus_tf, density, normal_velocity
+from diagnostics import t_minus_tf, density, normal_vector, parallel_vector
 from constants import deg_string
 
 
@@ -164,7 +164,8 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
 #      'rho': density (referenced to ref_depth)
 #      'u': zonal velocity
 #      'v': meridional velocity
-#      'vnorm': normal velocity (only for transects). See function normal_velocity in diagnostics.py to explain the sign convention.
+#      'vnorm': normal velocity (only for transects). See function normal_vector in diagnostics.py to explain the sign convention.
+#      'valong': along-transect velocity.
 # file_path: path to NetCDF file containing the necessary variable:
 #      'temp': THETA
 #      'salt': SALT
@@ -172,7 +173,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
 #      'rho': THETA and SALT
 #      'u': UVEL
 #      'v': VVEL
-#      'vnorm': UVEL and VVEL
+#      'vnorm', 'valong': UVEL and VVEL
 # If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
 
 # Optional keyword arguments:
@@ -213,9 +214,9 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         temp = read_and_mask('THETA', check_second=True)
     if var in ['salt', 'tminustf', 'rho']:
         salt = read_and_mask('SALT', check_second=True)
-    if var in ['u', 'vnorm']:
+    if var in ['u', 'vnorm', 'valong']:
         u = read_and_mask('UVEL', gtype='u')
-    if var in ['v', 'vnorm']:
+    if var in ['v', 'vnorm', 'valong']:
         v = read_and_mask('VVEL', gtype='v')
         
     # Plot
@@ -237,8 +238,14 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         if None in [point0, point1]:
             print 'Error (read_plot_slice): normal velocity plots only work for transects, not regular slices. Plot u or v instead.'
             sys.exit()
-        vnorm = normal_velocity(u, v, grid, point0, point1)
+        vnorm = normal_vector(u, v, grid, point0, point1)
         slice_plot(vnorm, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'valong':
+        if None in [point0, point1]:
+            print 'Error (read_plot_slice): along-transect velocity plots only work for transects, not regular slices. Plot u or v instead.'
+            sys.exit()
+        valong = parallel_vector(u, v, grid, point0, point1)
+        slice_plot(valong, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
@@ -265,10 +272,13 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
                 return mask_3d(density(eosType, salt, temp, ref_depth, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta), grid)
             elif var_name == 'tminustf':
                 return t_minus_tf(temp, salt, grid)
-        elif var_name == 'vnorm':
+        elif var_name in ['vnorm', 'valong']:
             u = read_and_mask('UVEL', file_path, check_diff_time=check_diff_time, gtype='u')
             v = read_and_mask('VVEL', file_path, check_diff_time=check_diff_time, gtype='v')
-            return normal_velocity(u, v, grid, point0, point1)
+            if var_name == 'vnorm':
+                return normal_vector(u, v, grid, point0, point1)
+            elif var_name = 'valong':
+                return parallel_vector(u, v, grid, point0, point1)
         else:
             if check_diff_time and diff_time:
                 return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid, gtype=gtype)
@@ -306,6 +316,12 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
                 sys.exit()
         vnorm_1, vnorm_2 = read_and_mask_both(var)
         slice_plot_diff(vnorm_1, vnorm_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'valong':
+        if None in [point0, point1]:
+                print 'Error (read_plot_slice_diff): along-transect velocity plots only work for transects, not regular slices. Plot u or v instead.'
+                sys.exit()
+        valong_1, valong_2 = read_and_mask_both(var)
+        slice_plot_diff(valong_1, valong_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()

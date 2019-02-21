@@ -233,10 +233,9 @@ def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tre
     return (temp-Tf)*rho*Cp_sw*dV
 
 
-# Calculate the normal velocity with respect to the angle given by the transect between the 2 points. Assumes u and v only include one time record (i.e. 3D fields). Does not extract the transect itself.
-# The sign convention is that point0 is on the "west" and point1 on the "east" of the new axes. So negative values for the normal velocity are going "south" of the line.
-def normal_velocity (u, v, grid, point0, point1):
-
+# Helper function for normal_vector and parallel_vector.
+def rotate_vector (option, u, v, grid, point0, point1):
+    
     # Find angle between east and the transect (intersecting at point0)
     [lon0, lat0] = point0
     [lon1, lat1] = point1
@@ -245,15 +244,32 @@ def normal_velocity (u, v, grid, point0, point1):
     # Interpolate u and v to the tracer grid
     u_t = interp_grid(u, grid, 'u', 't')
     v_t = interp_grid(v, grid, 'v', 't')
-    # Rotate to find normal velocity
-    return u_t*np.sin(angle) + v_t*np.cos(angle)
+
+    if option == 'normal':
+        return u_t*np.sin(angle) + v_t*np.cos(angle)
+    elif option == 'parallel':
+        return u_t*np.cos(angle) - v_t*np.sin(angle)
+    else:
+        print 'Error (rotate_vector): invalid option ' + option
+        sys.exit()
 
 
-# Calculate the total onshore and offshore transport with respect to the given transect. Sign convention as in normal_velocity; default is for the shore to be to the "south".
+# Calculate the normal component of the vector field with respect to the angle angle given by the transect between the 2 points. Assumes u and v only include one time record (i.e. 3D fields). Does not extract the transect itself.
+# The sign convention is that point0 is on the "west" and point1 on the "east" of the new axes. So negative values for the normal vector are going "south" of the line.
+def normal_vector (u, v, grid, point0, point1):
+    return rotate_vector('normal', u, v, grid, point0, point1)
+
+
+# Calculate the parallel component of the vector. Negative values are going towards the beginning of the line (point0).
+def parallel_vector (u, v, grid, point0, point1):
+    return rotate_vector('parallel', u, v, grid, point0, point1)
+
+
+# Calculate the total onshore and offshore transport with respect to the given transect. Sign convention as in normal_vector; default is for the shore to be to the "south".
 def transport_transect (u, v, grid, point0, point1, shore='S'):
 
     # Calculate normal velocity
-    u_norm = normal_velocity(u, v, grid, point0, point1)
+    u_norm = normal_vector(u, v, grid, point0, point1)
     # Extract the transect
     u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1)
     # Calculate integrands
