@@ -257,6 +257,7 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
 
 # Optional keyword arguments:
 # vel_option: as in function prepare_vel
+# z0: as in function prepare_vel (only matters if vel_option='interp')
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes
@@ -265,10 +266,10 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
 # figsize: as in function latlon_plot
 # chunk: as in function overlay_vectors
 
-def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None):
+def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None):
 
     # Do the correct vertical transformation, and interpolate to the tracer grid
-    speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option)
+    speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option, z0=z0)
 
     include_shelf=True
     if vel_option == 'avg':
@@ -280,6 +281,8 @@ def plot_vel (u, v, grid, vel_option='avg', vmin=None, vmax=None, zoom_fris=Fals
     elif vel_option == 'ice':
         title_beg = 'Sea ice '
         include_shelf = False
+    elif vel_option == 'interp':
+        title_beg = str(int(round(-z0)))+'m '
 
     # Make the plot but don't finish it yet
     fig, ax = latlon_plot(speed, grid, ctype='vel', include_shelf=include_shelf, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title_beg+'velocity (m/s)', return_fig=True, figsize=figsize)
@@ -374,10 +377,11 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # change_points: only matters for 'ismr'. As in function set_colours.
 # tf_option: only matters for 'tminustf'. As in function plot_tminustf.
 # vel_option: only matters for 'vel'. As in function prepare_vel.
+# z0: only matters for vel_option='interp'. As in function prepare_vel.
 # chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', chunk=None, figsize=(8,6)):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, figsize=(8,6)):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -469,7 +473,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     elif var == 'tminustf':
         plot_tminustf(temp, salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'vel':
-        plot_vel(u, v, grid, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
+        plot_vel(u, v, grid, vel_option=vel_option, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     elif var == 'velice':
         plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
     elif var == 'psi':
@@ -488,7 +492,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 # file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice').
 # It is assumed they cover the same period of time. If they don't, you can set time_index_2, etc. for the corresponding timesteps in file_path_2 which match time_index, etc. for file_path_1.
 
-def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', figsize=(8,6)):
+def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', z0=None, figsize=(8,6)):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
@@ -599,8 +603,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         data_diff = eta_2 - eta_1
         title = 'Change in free surface (m)'
     elif var == 'vel':
-        speed_1 = prepare_vel(u_1, v_1, grid, vel_option=vel_option)[0]
-        speed_2 = prepare_vel(u_2, v_2, grid, vel_option=vel_option)[0]
+        speed_1 = prepare_vel(u_1, v_1, grid, vel_option=vel_option, z0=z0)[0]
+        speed_2 = prepare_vel(u_2, v_2, grid, vel_option=vel_option, z0=z0)[0]
         data_diff = speed_2 - speed_1
         title = 'Change in '
         if vel_option == 'avg':
@@ -609,6 +613,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
             title += 'surface'
         elif vel_option == 'bottom':
             title += 'bottom'
+        elif vel_option == 'interp':
+            title += str(int(round(-z0))) + 'm'
         title += ' speed (m/s)'
     elif var == 'velice':
         speed_1 = prepare_vel(uice_1, vice_1, grid, vel_option='ice')[0]

@@ -8,7 +8,7 @@ import sys
 
 from ..utils import mask_land, select_top, select_bottom, get_x_y
 from ..calculus import vertical_average
-from ..interpolation import interp_grid
+from ..interpolation import interp_grid, interp_to_depth
 
 
 # Determine longitude and latitude on the boundaries of cells for the given grid type (tracer, u, v, psi), and do one of two things:
@@ -152,9 +152,10 @@ def contour_iceshelf_front (ax, grid, pster=False):
 # 'vel': vertically average (default)
 # 'sfc': select the top layer
 # 'bottom': select the bottom layer
+# 'interp': interpolate to depth z0 (positive, in metres)
 # 'ice': indicates u and v are already 2D (usually because they're sea ice velocity) so no vertical transformation is needed
 # Returns the speed as well as both vector components.
-def prepare_vel (u, v, grid, vel_option='avg'):
+def prepare_vel (u, v, grid, vel_option='avg', z0=None):
 
     # Get the correct 2D velocity field
     if vel_option == 'avg':
@@ -169,6 +170,12 @@ def prepare_vel (u, v, grid, vel_option='avg'):
     elif vel_option == 'ice':
         u_2d = u
         v_2d = v
+    elif vel_option == 'interp':
+        if z0 is None:
+            print "Error (prepare_vel): Must set z0 if option='interp'."
+            sys.exit()
+        u_2d = interp_to_depth(u, z0, grid, gtype='u')
+        v_2d = interp_to_depth(v, z0, grid, gtype='v')
 
     # Interpolate to the tracer grid
     if vel_option == 'ice':

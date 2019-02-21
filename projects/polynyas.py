@@ -1207,8 +1207,27 @@ def salinity_timeseries (base_dir='./', fig_dir='./'):
     timeseries_multi_plot(time, [outer_shelf_salt, inner_shelf_salt, fris_salt], ['Outer shelf', 'Inner shelf', 'FRIS cavity'], ['black', 'green', 'blue'], title='Volume-averaged salinity anomalies (Maud Rise minus baseline)', units='psu', fig_name=fig_dir+'timeseries_salt_anomalies_inner_outer.png')
 
 
-# Plot baseline sea ice velocity, and Maud Rise anomalies with vectors.
-def vice_anomaly_vectors (base_dir='./', fig_dir='./'):
+# Plot baseline velocity (see options), and Maud Rise anomalies with vectors.
+# Options are:
+# 'vice': sea ice velocity
+# 'v500': 500 m ocean velocity
+def anomaly_vectors (base_dir='./', fig_dir='./', option='ice'):
+
+    if option == 'vice':
+        var_name = 'sea ice'
+        vel_option = 'ice'
+        z0 = None
+        scale_abs = 2
+        scale_diff = 0.2
+    elif option == 'v500':
+        var_name = '500m'
+        vel_option = 'interp'
+        z0 = -500
+        scale_abs = 0.8
+        scale_diff = 0.1
+    else:
+        print 'Error (anomaly_vectors): invalid option ' + option
+        sys.exit()
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1216,24 +1235,29 @@ def vice_anomaly_vectors (base_dir='./', fig_dir='./'):
     grid = Grid(base_dir+grid_dir)
 
     def read_mask_uv (file_path):
-        u = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=0), grid,  gtype='u')
-        v = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=0), grid,  gtype='v')
+        if option == 'vice':
+            u = mask_land_ice(read_netcdf(file_path, 'SIuice', time_index=0), grid,  gtype='u')
+            v = mask_land_ice(read_netcdf(file_path, 'SIvice', time_index=0), grid,  gtype='v')
+        elif option == 'v500':
+            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
+            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
         return u, v
 
     u0, v0 = read_mask_uv(base_dir+case_dir[0]+avg_file)
     u1, v1 = read_mask_uv(base_dir+case_dir[1]+avg_file)
-    speed0, u0_plot, v0_plot = prepare_vel(u0, v0, grid, vel_option='ice')
+    speed0, u0_plot, v0_plot = prepare_vel(u0, v0, grid, vel_option=vel_option, z0=z0)
     speed1 = prepare_vel(u1, v1, grid, vel_option='ice')[0]
     speed_diff = speed1-speed0
-    udiff_plot, vdiff_plot = prepare_vel(u1-u0, v1-v0, grid, vel_option='ice')[1:]
+    udiff_plot, vdiff_plot = prepare_vel(u1-u0, v1-v0, grid, vel_option=vel_option, z0=z0)[1:]
 
-    fig, ax = latlon_plot(speed0, grid, ctype='vel', include_shelf=False, title='Baseline sea ice velocity (m/s)', return_fig=True, figsize=(15,9))
-    overlay_vectors(ax, u0_plot, v0_plot, grid, chunk=8, scale=2)
-    finished_plot(fig, fig_name='vice_baseline.png')
+    fig, ax = latlon_plot(speed0, grid, ctype='vel', include_shelf=False, title='Baseline '+var_name+' velocity (m/s)', return_fig=True, figsize=(15,9))
+    overlay_vectors(ax, u0_plot, v0_plot, grid, chunk=8, scale=scale_abs)
+    finished_plot(fig, fig_name=fig_dir+option+'_baseline.png')
 
-    fig, ax = latlon_plot(speed_diff, grid, ctype='plusminus', include_shelf=False, title='Anomalies in sea ice velocity (m/s)', return_fig=True, figsize=(15,9))
-    overlay_vectors(ax, udiff_plot, vdiff_plot, grid, chunk=8, scale=0.2)
-    finished_plot(fig, fig_name='vice_anomalies.png')    
+    fig, ax = latlon_plot(speed_diff, grid, ctype='plusminus', include_shelf=False, title='Anomalies in '+var_name+' velocity (m/s)', return_fig=True, figsize=(15,9))
+    overlay_vectors(ax, udiff_plot, vdiff_plot, grid, chunk=8, scale=scale_diff)
+    finished_plot(fig, fig_name=fig_dir+option+'_anomalies.png')
+
     
 
     
