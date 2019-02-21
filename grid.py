@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line
 
 
 # Grid object containing lots of grid variables:
@@ -41,6 +41,7 @@ from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds
 # fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
 # ewed_mask: boolean Eastern Weddell ice shelf mask on the tracer grid (XY)
 # sws_shelf_mask: boolean Southern Weddell Sea continental shelf mask on the tracer grid (XY)
+# sws_shelf_mask_inner, sws_shelf_mask_outer: boolean inner and outer Southern Weddell Sea continental shelf masks on the tracer grid (XY)
 class Grid:
 
     # Initialisation arguments:
@@ -157,6 +158,8 @@ class Grid:
         self.ewed_mask = self.build_ewed_mask(self.ice_mask, self.lon_2d, self.lat_2d)
         # Southern Weddell Sea continental shelf mask
         self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, self.ice_mask, self.lon_2d, self.lat_2d, self.bathy)
+        # Inner and outer sections
+        self.sws_shelf_mask_inner, self.sws_shelf_mask_outer = self.build_sws_shelf_mask_inner_outer(self.sws_shelf_mask, self.lon_2d, self.lat_2d)
 
         
     # Given a 3D hfac array on any grid, create the land mask.
@@ -201,6 +204,16 @@ class Grid:
     def build_sws_shelf_mask(self, land_mask, ice_mask, lon, lat, bathy):
 
         return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= sws_shelf_bounds[0])*(lon <= sws_shelf_bounds[1])*(lat >= sws_shelf_bounds[2])*(lat <= sws_shelf_bounds[3])
+
+
+    # Split this mask into inner and outer sections, based on a straight line cutting across the shelf.
+    def build_sws_shelf_mask_inner_outer(self, sws_shelf_mask, lon, lat):
+        
+        [lon0, lon1, lat0, lat1] = sws_shelf_line
+        bdry = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
+        inner = sws_shelf_mask*(lat < bdry)
+        outer = sws_shelf_mask*(lat >= bdry)
+        return inner, outer
 
         
     # Return the longitude and latitude arrays for the given grid type.

@@ -115,7 +115,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1
 
 
 # Slice plot showing difference between two simulations (2 minus 1). It is assumed the corresponding data arrays cover the same period of time.
-def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, title=None, date_string=None, fig_name=None):
+def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, title='', date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
