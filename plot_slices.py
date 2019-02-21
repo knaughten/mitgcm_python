@@ -277,7 +277,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
             v = read_and_mask('VVEL', file_path, check_diff_time=check_diff_time, gtype='v')
             if var_name == 'vnorm':
                 return normal_vector(u, v, grid, point0, point1)
-            elif var_name = 'valong':
+            elif var_name == 'valong':
                 return parallel_vector(u, v, grid, point0, point1)
         else:
             if check_diff_time and diff_time:
