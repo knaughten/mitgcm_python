@@ -70,7 +70,7 @@ def get_polynya_loc (polynya):
 # Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
-    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans']
+    timeseries_types = ['sws_shelf_temp', 'sws_shelf_salt'] #['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans']
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None
@@ -639,7 +639,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     data = [bwage, psi, bwtemp, bwsalt, ismr]
     ctype = ['basic', 'psi', 'basic', 'basic', 'ismr']
     vmin = [0, -0.6, -2.5, 34.3, None]
-    vmax = [12, 6, -1.5, None, None]
+    vmax = [10, 6, -1.5, None, None]
     extend = ['max', None, 'both', 'min', 'neither']
     title = ['a) Bottom water age (years)', 'b) Velocity streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
     fig, gs = set_panels('5C0')
@@ -692,9 +692,11 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             for j in range(len(label)):
                 plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
         if i==0:
-            # Overlay transect from (56W, 79S) to (42W, 65S)
-            lat = np.linspace(-79, -65)
-            lon = lat + 23        
+            # Overlay transect shown in mwdw_slices
+            [lon0, lat0] = (-56, -79)
+            [lon1, lat1] = (-40, -65)
+            lon = np.linspace(lon0, lon1)
+            lat = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
             x, y = polar_stereo(lon, lat)
             ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
     # Main title in top left space
@@ -790,7 +792,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     # Slice parameters
     # Location
     point0 = (-56, -79)
-    point1 = (-42, -65)
+    point1 = (-40, -65)
     zmin = -1500
     # Colour bounds
     tmin = -2
@@ -798,18 +800,18 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     smin = 34.3
     smax = 34.7
     rmin = 32.4
-    rmax = 32.6
+    rmax = 32.65
     # Difference bounds
     tmin_diff = -0.75
     tmax_diff = 0.75
-    smin_diff = -0.02
+    smin_diff = -0.06
     smax_diff = 0.1
-    rmin_diff = -0.005
-    rmax_diff = 0.05
+    rmin_diff = -0.003
+    rmax_diff = 0.06
     # Contours
-    t_contours = [-1.5]
-    s_contours = [34.42]
-    r_contours = np.arange(32.45, 32.57, 0.02)
+    t_contours = [-1.3]
+    s_contours = [34.45]
+    r_contours = np.arange(32.47, 32.65, 0.02)
     # Reference depth for density
     ref_depth = 1000
 
@@ -839,7 +841,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         if i == 0:
             # The first time, build the patches
             patches, temp_values_tmp, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, temp_gridded_tmp, haxis, zaxis = transect_patches(temp[i], grid, point0, point1, zmin=zmin, return_bdry=True, return_gridded=True)
-            
+
         else:
             temp_values_tmp, tmp1, tmp2, temp_gridded_tmp = transect_values(temp[i], grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         temp_values.append(temp_values_tmp)
@@ -951,8 +953,8 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     print 'Plotting'
     # Wrap things into lists
     data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.2, -0.6, -0.04, -2, -0.005, -0.2]
-    vmax_diff = [0.2, 0.7, 0.04, 1, 0.01, 0.5]
+    vmin_diff = [-0.14, -0.55, -0.02, -1.5, -0.006, -0.3]
+    vmax_diff = [0.14, 1, 0.04, 0.75, 0.012, 0.3]
     include_shelf = [True, False, True, True, True, True]
     title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Net sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
@@ -1058,11 +1060,11 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    for var in ['fris_ismr', 'ewed_ismr', 'wed_gyre_trans', 'fris_temp', 'fris_salt', 'fris_age', 'sws_shelf_temp', 'sws_shelf_salt']:
+    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt']:
 
         # Paths to timeseries files for the baseline and Maud Rise 5y simulations
-        if var == 'fris_age':
-            ts_file = timeseries_age_file
+        if var in ['sws_shelf_temp', 'sws_shelf_salt']:
+            ts_file = timeseries_shelf_file
         else:
             ts_file = timeseries_file
         file1 = base_dir + case_dir[0] + ts_file
