@@ -166,6 +166,8 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
 #      'v': meridional velocity
 #      'vnorm': normal velocity (only for transects). See function normal_vector in diagnostics.py to explain the sign convention.
 #      'valong': along-transect velocity.
+#      'tadv_along': along-transect advective heat flux
+#      'tdif_along': along-transect diffusive heat flux
 # file_path: path to NetCDF file containing the necessary variable:
 #      'temp': THETA
 #      'salt': SALT
@@ -174,6 +176,8 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
 #      'u': UVEL
 #      'v': VVEL
 #      'vnorm', 'valong': UVEL and VVEL
+#      'tadv_along': ADVx_TH and ADVy_TH
+#      'tdif_along': DFxE_TH and DFyE_TH
 # If there are two variables needed (eg THETA and SALT for 'tminustf') and they are stored in separate files, you can put the other file in second_file_path (see below).
 
 # Optional keyword arguments:
@@ -218,7 +222,17 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         u = read_and_mask('UVEL', gtype='u')
     if var in ['v', 'vnorm', 'valong']:
         v = read_and_mask('VVEL', gtype='v')
-        
+    if var == 'tadv_along':
+        tadv_x = read_and_mask('ADVx_TH')
+        tadv_y = read_and_mask('ADVy_TH')
+    if var == 'tdif_along':
+        tdif_x = read_and_mask('DFxE_TH')
+        tdif_y = read_and_mask('DFyE_TH')
+
+    if var in ['vnorm', 'valong', 'tadv_along', 'tdif_along'] and None in [point0, point1]:
+        print 'Error (read_plot_slice): normal or along-transect variables require point0 and point1 to be specified.'
+        sys.exit()
+            
     # Plot
     if var == 'temp':
         slice_plot(temp, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
@@ -235,17 +249,17 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
     elif var == 'v':
         slice_plot(v, grid, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'vnorm':
-        if None in [point0, point1]:
-            print 'Error (read_plot_slice): normal velocity plots only work for transects, not regular slices. Plot u or v instead.'
-            sys.exit()
         vnorm = normal_vector(u, v, grid, point0, point1)
         slice_plot(vnorm, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'valong':
-        if None in [point0, point1]:
-            print 'Error (read_plot_slice): along-transect velocity plots only work for transects, not regular slices. Plot u or v instead.'
-            sys.exit()
         valong = parallel_vector(u, v, grid, point0, point1)
         slice_plot(valong, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'tadv_along':
+        tadv_along = parallel_vector(tadv_x, tadv_y, grid, point0, point1)
+        slice_plot(tadv_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'tdif_along':
+        tdif_along = parallel_vector(tdif_x, tdif_y, grid, point0, point1)
+        slice_plot(tdif_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
@@ -279,6 +293,14 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
                 return normal_vector(u, v, grid, point0, point1)
             elif var_name == 'valong':
                 return parallel_vector(u, v, grid, point0, point1)
+        elif var_name == 'tadv_along':
+            tadv_x = read_and_mask('ADVx_TH', file_path, check_diff_time=check_diff_time)
+            tadv_y = read_and_mask('ADVy_TH', file_path, check_diff_time=check_diff_time)
+            return parallel_vector(tadv_x, tadv_y, grid, point0, point1)
+        elif var_name == 'tdif_along':
+            tdif_x = read_and_mask('DFxE_TH', file_path, check_diff_time=check_diff_time)
+            tdif_y = read_and_mask('DFyE_TH', file_path, check_diff_time=check_diff_time)
+            return parallel_vector(tdif_x, tdif_y, grid, point0, point1)
         else:
             if check_diff_time and diff_time:
                 return mask_3d(read_netcdf(file_path, var_name, time_index=time_index_2, t_start=t_start_2, t_end=t_end_2, time_average=time_average), grid, gtype=gtype)
@@ -290,6 +312,10 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
         data1 = read_and_mask(var_name, file_path_1, gtype=gtype)
         data2 = read_and_mask(var_name, file_path_2, check_diff_time=True, gtype=gtype)
         return data1, data2
+
+    if var in ['vnorm', 'valong', 'tadv_along', 'tdif_along'] and None in [point0, point1]:
+        print 'Error (read_plot_slice_diff): normal or along-transect variables require point0 and point1 to be specified.'
+        sys.exit()
 
     # Read variables and make plots
     if var == 'temp':
@@ -311,17 +337,17 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
         v_1, v_2 = read_and_mask_both('VVEL', gtype='v')
         slice_plot_diff(v_1, v_2, grid, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'vnorm':
-        if None in [point0, point1]:
-                print 'Error (read_plot_slice_diff): normal velocity plots only work for transects, not regular slices. Plot u or v instead.'
-                sys.exit()
         vnorm_1, vnorm_2 = read_and_mask_both(var)
         slice_plot_diff(vnorm_1, vnorm_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'valong':
-        if None in [point0, point1]:
-                print 'Error (read_plot_slice_diff): along-transect velocity plots only work for transects, not regular slices. Plot u or v instead.'
-                sys.exit()
         valong_1, valong_2 = read_and_mask_both(var)
         slice_plot_diff(valong_1, valong_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'tadv_along':
+        tadv_along_1, tadv_along_2 = read_and_mask_both(var)
+        slice_plot_diff(tadv_along_1, tadv_along_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+    elif var == 'tdif_along':
+        tdif_along_1, tdif_along_2 = read_and_mask_both(var)
+        slice_plot_diff(tdif_along_1, tdif_along_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
