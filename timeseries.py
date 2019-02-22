@@ -163,7 +163,7 @@ def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', tim
 def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read u
-    u = read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    u = read_netcdf(file_path, 'UVELMASS', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Build the timeseries
     timeseries = []
     for t in range(u.shape[0]):
