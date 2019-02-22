@@ -74,7 +74,7 @@ def over_depth (option, data, grid, gtype='t', time_dependent=False):
     if option == 'average':
         return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
     elif option == 'integrate':
-        return np.sum(data*dz*hfac, axis=-3)
+        return np.sum(data*dz, axis=-3) #np.sum(data*dz*hfac, axis=-3)
     else:
         print 'Error (over_depth): invalid option ' + option
         sys.exit()
