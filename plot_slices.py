@@ -256,10 +256,10 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         slice_plot(valong, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title='Along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'tadv_along':
         tadv_along = parallel_vector(tadv_x, tadv_y, grid, point0, point1)
-        slice_plot(tadv_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot(tadv_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title=r'Along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'tdif_along':
         tdif_along = parallel_vector(tdif_x, tdif_y, grid, point0, point1)
-        slice_plot(tdif_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot(tdif_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title=r'Along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
         sys.exit()
