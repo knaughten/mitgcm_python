@@ -1039,6 +1039,20 @@ def calc_polynya_ts_anom (base_dir='./', year=-1):
     print 'Change in temperature: ' + str(temp_polynya[year]-temp_polynya[0]) + ' degC'
     print 'Change in salinity: ' + str(salt_polynya[year]-salt_polynya[0]) + ' psu'
 
+    
+# Calculate the percentage change in convective area by the end of the given simulation, compare d to the given imposed value.
+def calc_conv_area_anom (timeseries_path, orig_area, year=-1):
+
+    # Read the timeseries and convert to 10^5 km^2
+    time = netcdf_time(timeseries_path, monthly=False)
+    conv_area = read_netcdf(timeseries_path, 'conv_area')*10
+
+    # Annually average
+    conv_area, time_tmp = monthly_to_annual(conv_area, time)
+
+    print 'Change in convective area: ' + str((conv_area[year]-orig_area)/orig_area*100) + '%'
+
+    
 # Calculate the Weddell Gyre transport in the given simulation, either averaged over the entire simulation or just the last year.
 def calc_wed_gyre_trans (timeseries_path, last_year=False):
 
@@ -1060,11 +1074,15 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt']:
+    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_age']:
 
         # Paths to timeseries files for the baseline and Maud Rise 5y simulations
         if var in ['sws_shelf_temp', 'sws_shelf_salt']:
             ts_file = timeseries_shelf_file
+        elif var == 'fris_age':
+            ts_file = timeseries_age_file
+        elif var == 'fris_salt':
+            ts_file = 'output/timeseries.nc'
         else:
             ts_file = timeseries_file
         file1 = base_dir + case_dir[0] + ts_file
