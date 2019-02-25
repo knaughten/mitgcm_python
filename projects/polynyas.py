@@ -1074,7 +1074,7 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_age']:
+    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_temp', 'fris_age']:
 
         # Paths to timeseries files for the baseline and Maud Rise 5y simulations
         if var in ['sws_shelf_temp', 'sws_shelf_salt']:
