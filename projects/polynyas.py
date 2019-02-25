@@ -1074,7 +1074,7 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_temp', 'fris_age', 'shelf_minus_cavity_salt']:
+    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_temp', 'fris_age', 'shelf_minus_fris_salt']:
 
         if var == 'shelf_minus_fris_salt':
             # We already have the timeseries of the component parts
