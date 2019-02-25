@@ -1074,34 +1074,45 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_temp', 'fris_age']:
+    for var in ['fris_ismr', 'ewed_ismr', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_salt', 'fris_temp', 'fris_age', 'shelf_minus_cavity_salt']:
 
-        # Paths to timeseries files for the baseline and Maud Rise 5y simulations
-        if var in ['sws_shelf_temp', 'sws_shelf_salt']:
-            ts_file = timeseries_shelf_file
-        elif var == 'fris_age':
-            ts_file = timeseries_age_file
-        elif var in ['fris_temp','fris_salt']:
-            ts_file = 'output/timeseries.nc'
+        if var == 'shelf_minus_fris_salt':
+            # We already have the timeseries of the component parts
+            data1 = shelf_salt_1 - fris_salt_1
+            data2 = shelf_salt_2 - fris_salt_2
         else:
-            ts_file = timeseries_file
-        file1 = base_dir + case_dir[0] + ts_file
-        file2 = base_dir + case_dir[-1] + ts_file
+            # Paths to timeseries files for the baseline and Maud Rise 5y simulations
+            if var in ['sws_shelf_temp', 'sws_shelf_salt']:
+                ts_file = timeseries_shelf_file
+            elif var == 'fris_age':
+                ts_file = timeseries_age_file
+            elif var in ['fris_temp','fris_salt']:
+                ts_file = 'output/timeseries.nc'
+            else:
+                ts_file = timeseries_file
+            file1 = base_dir + case_dir[0] + ts_file
+            file2 = base_dir + case_dir[-1] + ts_file
+            # Read baseline timeseries
+            time1 = netcdf_time(file1, 'time', monthly=False)
+            data1 = read_netcdf(file1, var)
+            # Read Maud Rise 5y timeseries
+            time2 = netcdf_time(file2, 'time', monthly=False)
+            data2 = read_netcdf(file2, var)
+            if var == 'sws_shelf_salt':
+                # Save for later
+                shelf_salt_1 = data1
+                shelf_salt_2 = data2
+            elif var == 'fris_salt':
+                fris_salt_1 = data1
+                fris_salt_2 = data2
 
-        # Set up plot
-        fig, gs = set_panels('2TS')
-
-        # Read baseline timeseries
-        time1 = netcdf_time(file1, 'time', monthly=False)
-        data1 = read_netcdf(file1, var)
-        # Read Maud Rise 5y timeseries
-        time2 = netcdf_time(file2, 'time', monthly=False)
-        data2 = read_netcdf(file2, var)
         # Get difference
         time, data = trim_and_diff(time1, time2, data1, data2)
         # Annually average
         data, time = monthly_to_annual(data, time)
 
+        # Set up plot
+        fig, gs = set_panels('2TS')
         # Plot difference
         ax = plt.subplot(gs[0,0])
         ax.plot_date(time, data, '-', linewidth=1.25)
