@@ -906,7 +906,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'mwdw_slices.png')
 
 
-# Plot 6 polar stereographic panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: bottom water temperature, surface salt flux, bottom water salinity, bottom water age, barotropic velocity, and ice shelf melt rate.
+# Plot 6 polar stereographic panels showing the anomalies for Maud Rise with respect to the baseline, in the FRIS cavity: vertically averaged temperature, surface salt flux, vertically averaged salinity, vertically averaged age, barotropic velocity, and ice shelf melt rate.
 def anomaly_panels (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -917,18 +917,18 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     # Inner function to read and process field from a single simulation
     def read_field (var, file_path):
-        if var == 'bwtemp':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+        if var == 'tempavg':
+            return vertical_average(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid), grid)
         elif var == 'iceprod':
             # Convert from m/s to m/y
             return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year
         elif var == 'saltflx':
             # Multiply by 1e6 for nicer colourbar
             return mask_land_ice(read_netcdf(file_path, 'SIempmr', time_index=0), grid)*1e6
-        elif var == 'bwsalt':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
-        elif var == 'bwage':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=0), grid))
+        elif var == 'saltavg':
+            return vertical_average(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid), grid)
+        elif var == 'ageavg':
+            return vertical_average(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=0), grid), grid)
         elif var == 'speed':
             u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
             v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
@@ -943,20 +943,20 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
 
     # Now call the functions for each variable
     print 'Processing fields'
-    bwtemp_diff = read_anomaly('bwtemp')
+    temp_diff = read_anomaly('tempavg')
     iceprod_diff = read_anomaly('iceprod')
-    bwsalt_diff = read_anomaly('bwsalt')
-    bwage_diff = read_anomaly('bwage')
+    salt_diff = read_anomaly('saltavg')
+    age_diff = read_anomaly('ageavg')
     speed_diff = read_anomaly('speed')
     ismr_diff = read_anomaly('ismr')
 
     print 'Plotting'
     # Wrap things into lists
-    data = [bwtemp_diff, iceprod_diff, bwsalt_diff, bwage_diff, speed_diff, ismr_diff]
-    vmin_diff = [-0.14, -0.55, -0.02, -1.5, -0.006, -0.3]
-    vmax_diff = [0.14, 1, 0.04, 0.75, 0.012, 0.3]
+    data = [temp_diff, iceprod_diff, salt_diff, age_diff, speed_diff, ismr_diff]
+    vmin_diff = [-0.06, -0.55, -0.004, -1.5, -0.006, -0.3]
+    vmax_diff = [0.16, 1, 0.045, 0.75, 0.012, 0.3]
     include_shelf = [True, False, True, True, True, True]
-    title = ['a) Bottom water temperature ('+deg_string+'C)', 'b) Net sea ice production (m/y)', 'c) Bottom water salinity (psu)', 'd) Bottom water age (years)', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
+    title = ['a) Temperature ('+deg_string+'C), depth-average', 'b) Net sea ice production (m/y)', 'c) Salinity (psu), depth-average', 'd) Age (years), depth-average', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
         ax = plt.subplot(gs[i/3,i%3])
