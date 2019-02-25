@@ -999,7 +999,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     data = [fris_diff_percent, ewed_diff_percent]
     title = ['a) FRIS basal mass loss % anomaly', 'b) EWIS basal mass loss % anomaly']
     vmin = [-2, -4]
-    vmax = [42, 95]
+    vmax = [35, 85]
 
     print 'Plotting'
     fig, gs = set_panels('2TS')
