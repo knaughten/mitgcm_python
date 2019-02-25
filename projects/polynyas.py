@@ -1081,7 +1081,7 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
             ts_file = timeseries_shelf_file
         elif var == 'fris_age':
             ts_file = timeseries_age_file
-        elif var == 'fris_salt':
+        elif var == ['fris_temp','fris_salt']:
             ts_file = 'output/timeseries.nc'
         else:
             ts_file = timeseries_file
