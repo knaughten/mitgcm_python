@@ -144,8 +144,9 @@ def neighbours_z (data, missing_val=-9999):
 # Given an array with missing values, extend the data into the mask by setting missing values to the average of their non-missing neighbours, and repeating as many times as the user wants.
 # If "data" is a regular array with specific missing values, set missing_val (default -9999). If "data" is a MaskedArray, set masked=True instead.
 # Setting use_3d=True indicates this is a 3D array, and where there are no valid neighbours on the 2D plane, neighbours above and below should be used.
+# Setting preference='vertical' (instead of default 'horizontal') indicates that if use_3d=True, vertical neighbours should be preferenced over horizontal ones.
 # Setting use_1d=True indicates this is a 1D array.
-def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3d=False, num_iters=1):
+def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3d=False, preference='horizontal', num_iters=1):
 
     if missing_val != -9999 and masked:
         print "Error (extend_into_mask): can't set a missing value for a masked array"
@@ -153,6 +154,8 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3
     if use_1d and use_3d:
         print "Error (extend_into_mask): can't have use_1d and use_3d at the same time"
         sys.exit()
+    if use_3d and preference not in ['horizontal', 'vertical']:
+        print 'Error (extend_into_mask): invalid preference ' + preference
 
     if masked:
         # MaskedArrays will mess up the extending
@@ -162,25 +165,37 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3
         data = data_unmasked
 
     for iter in range(num_iters):
-        # Find the neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are
+        # Find the neighbours of each point, whether or not they are missing, and how many non-missing neighbours there are.
+        # Then choose the points that can be filled.
+        # Then set them to the average of their non-missing neighbours.
         if use_1d:
+            # Just consider horizontal neighbours in one direction
             data_w, data_e, valid_w, valid_e, num_valid_neighbours = neighbours(data, missing_val=missing_val, use_1d=True)
-        else:
-            data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(data, missing_val=missing_val)
-        # Choose the points that can be filled
-        index = (data == missing_val)*(num_valid_neighbours > 0)
-        # Set them to the average of their non-missing neighbours
-        if use_1d:
+            index = (data == missing_val)*(num_valid_neighbours > 0)
             data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index])/num_valid_neighbours[index]
+        elif use_3d and preference == 'vertical':
+            # Consider vertical neighbours
+            data_d, data_u, valid_d, valid_u, num_valid_neighbours = neighbours_z(data, missing_val=missing_val)
+            index = (data == missing_val)*(num_valid_neighbours > 0)
+            data[index] = (data_u[index]*valid_u[index] + data_d[index]*valid_d[index])/num_valid_neighbours[index]
         else:
+            # Consider horizontal neighbours in both directions
+            data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(data, missing_val=missing_val)
+            index = (data == missing_val)*(num_valid_neighbours > 0)
             data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index] + data_s[index]*valid_s[index] + data_n[index]*valid_n[index])/num_valid_neighbours[index]
         if use_3d:
-            # Consider vertical neighbours too
-            data_d, data_u, valid_d, valid_u, num_valid_neighbours_z = neighbours_z(data, missing_val=missing_val)
-            # Find the points that haven't already been filled based on 2D neighbours, but could be filled now
-            index = (data == missing_val)*(num_valid_neighbours == 0)*(num_valid_neighbours_z > 0)
-            data[index] = (data_u[index]*valid_u[index] + data_d[index]*valid_d[index])/num_valid_neighbours_z[index]
-
+            # Consider the other dimension(s). Find the points that haven't already been filled based on the first dimension(s) we checked, but could be filled now.
+            if preference == 'vertical':
+                # Look for horizontal neighbours
+                data_w, data_e, data_s, data_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours_new = neighbours(data, missing_val=missing_val)
+                index = (data == missing_val)*(num_valid_neighbours == 0)*(num_valid_neighbours_new > 0)
+                data[index] = (data_w[index]*valid_w[index] + data_e[index]*valid_e[index] + data_s[index]*valid_s[index] + data_n[index]*valid_n[index])/num_valid_neighbours_new[index]
+            elif preference == 'horizontal':
+                # Look for vertical neighbours
+                data_d, data_u, valid_d, valid_u, num_valid_neighbours_new = neighbours_z(data, missing_val=missing_val)
+                index = (data == missing_val)*(num_valid_neighbours == 0)*(num_valid_neighbours_new > 0)
+                data[index] = (data_u[index]*valid_u[index] + data_d[index]*valid_d[index])/num_valid_neighbours_new[index]
+                
     if masked:
         # Remask the MaskedArray
         data = ma.masked_where(data==missing_val, data)
@@ -312,7 +327,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 
 
 # Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
-def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
+def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True, preference='horizontal'):
 
     # First throw away the points we don't trust
     data[discard] = missing_val
@@ -320,7 +335,7 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True):
     num_missing = np.count_nonzero((data==missing_val)*fill)
     while num_missing > 0:
         print '......' + str(num_missing) + ' points to fill'
-        data = extend_into_mask(data, missing_val=missing_val, use_3d=use_3d)
+        data = extend_into_mask(data, missing_val=missing_val, use_3d=use_3d, preference=preference)
         num_missing_old = num_missing
         num_missing = np.count_nonzero((data==missing_val)*fill)
         if num_missing == num_missing_old:
