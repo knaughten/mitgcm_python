@@ -138,41 +138,60 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 
 # Optional keyword arguments:
 # option: 'constant', 'nearest', or 'precomputed' as described above
+# ini_temp_file, ini_salt_file: paths to initial conditions (binary) for temperature and salinity
+# ini_temp, ini_salt: alternatively, just pass the 3D arrays for initial temperature and salinity
 # constant_t, constant_s: if option='constant', temperature and salinity to use
-# ini_temp_file, ini_salt_file: if option='nearest', paths to initial conditions files (binary) for temperature and salinity
 # eosType: 'MDJWF', 'JMD95', or 'LINEAR'. Must match value in "data" namelist.
 # rhoConst: reference density as in MITgcm's "data" namelist
 # tAlpha, sBeta, Tref, Sref: if eosType='LINEAR', set these to match your "data" namelist.
+# hfac: 3D array of hFacC values, if the values stored in the grid are out of date (eg when coupling)
 # prec: as in function sose_ics
 # check_grid: boolean indicating that grid might be a file/directory path rather than a Grid object. Switch this off if you're using a dummy grid which has all the necessary variables but is not a Grid object.
 
-def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, constant_s=34.4, ini_temp_file=None, ini_salt_file=None, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, prec=64, check_grid=True):
+def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, ini_salt_file=None, ini_temp=None, ini_salt=None, constant_t=-1.9, constant_s=34.4, eosType='MDJWF', rhoConst=1035, tAlpha=None, sBeta=None, Tref=None, Sref=None, hfac=None, prec=64, check_grid=True):
 
     errorTol = 1e-13  # convergence criteria
 
     # Build the grid if needed
     if check_grid:
         grid = choose_grid(grid, None)
+    # Decide which hfac to use
+    if hfac is None:
+        hfac = grid.hfac
 
     # Set temperature and salinity
-    if option == 'constant':
-        # 1D arrays: only varies over depth
-        temp = np.zeros(grid.nz) + constant_t
-        salt = np.zeros(grid.nz) + constant_s
-    elif option in ['nearest', 'precomputed']:
-        # 3D arrays read from file
+    if ini_temp is not None and ini_salt is not None:
+        # Deep copy of the arrays
+        temp = np.copy(ini_temp)
+        salt = np.copy(ini_salt)
+    elif ini_temp_file is not None and ini_salt_file is not None:
+        # Read from file
         temp = read_binary(ini_temp_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
         salt = read_binary(ini_salt_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
-        if option == 'nearest':
-            # Now fill in the ice shelves
-            # Select the layer immediately below the ice shelves and tile to make it 3D
-            temp_top = xy_to_xyz(select_top(temp, masked=False, grid=grid), grid)
-            salt_top = xy_to_xyz(select_top(salt, masked=False, grid=grid), grid)
-            # Fill the 3D mask with these values
-            # It doesn't matter that the bathymetry gets filled too, because pressure is integrated from the top down
-            index = grid.hfac==0
-            temp[index] = temp_top[index]
-            salt[index] = salt_top[index]
+    else:
+        print 'Error (calc_load_anomaly): Must either specify ini_temp and ini_salt OR ini_temp_file and ini_salt_file'
+        sys.exit()
+
+    # Fill in the ice shelves
+    # The bathymetry will get filled too, but that doesn't matter because pressure is integrated from the top down
+    closed = hfac==0
+    if option == 'constant':
+        # Fill with constant values
+        temp[closed] = constant_t
+        salt[closed] = constant_s
+    elif option == 'nearest':
+        # Select the layer immediately below the ice shelves and tile to make it 3D
+        temp_top = xy_to_xyz(select_top(np.ma.masked_where(closed, temp)))
+        salt_top = xy_to_xyz(select_top(np.ma.masked_where(closed, salt)))
+        # Fill the mask with these values
+        temp[closed] = temp_top[closed]
+        salt[closed] = salt_top[closed]
+    elif option == 'precomputed':
+        # Make sure there are no missing values
+        for data in [temp, salt]:
+            if (isinstance(data, np.ma.MaskedArray) and (closed!=data.mask).any()) or (data[~closed]==0).any():
+                print 'Error (calc_load_anomaly): you selected the precomputed option, but there are appear to be missing values in the land mask.'
+                sys.exit()
     else:
         print 'Error (calc_load_anomaly): invalid option ' + option
         sys.exit()
@@ -181,12 +200,9 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
     dz_merged = np.zeros(2*grid.nz)
     dz_merged[::2] = abs(grid.z - grid.z_edges[:-1])  # dz of top half of each cell
     dz_merged[1::2] = abs(grid.z_edges[1:] - grid.z)  # dz of bottom half of each cell
-
-    z = grid.z
-    if option in ['nearest', 'precomputed']:
-        # Need 3D tiled depth arrays
-        z = z_to_xyz(z, grid)
-        dz_merged = z_to_xyz(dz_merged, grid)
+    # Tile to make 3D
+    z = z_to_xyz(grid.z, grid)
+    dz_merged = z_to_xyz(dz_merged, grid)
 
     # Initial guess for pressure (dbar) at centres of cells
     press = abs(z)*gravity*rhoConst*1e-4
@@ -211,9 +227,6 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
 
     # Extract pload at each level edge (don't care about centres anymore)
     pload_edges = pload_full[::2,...]
-    if len(pload_full.shape) == 1:
-        # Tile to be 3D
-        pload_edges = z_to_xyz(pload_edges, grid)
 
     # Now find pload at the ice shelf base
     # For each xy point, calculate three variables:
@@ -222,9 +235,9 @@ def calc_load_anomaly (grid, out_file, option='constant', constant_t=-1.9, const
     # (3) hFacC for that cell
     # To calculate (1) we have to shift pload_3d_edges upward by 1 cell
     pload_edges_above = neighbours_z(pload_edges)[0]
-    pload_above = select_top(pload_edges_above, masked=False, grid=grid)
-    pload_below = select_top(pload_edges, masked=False, grid=grid)
-    hfac_below = select_top(grid.hfac, masked=False, grid=grid)
+    pload_above = select_top(np.ma.masked_where(closed, pload_edges_above))
+    pload_below = select_top(np.ma.masked_where(closed, pload_edges))
+    hfac_below = select_top(np.ma.masked_where(closed, hfac))
     # Now we can interpolate to the ice base
     pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
 
