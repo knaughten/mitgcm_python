@@ -397,8 +397,22 @@ def check_time_dependent (var, num_dim=3):
         sys.exit()
 
 
-# Calculate hFacC without knowing the full grid, i.e. just from the bathymetry and ice shelf draft.
-def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20.):
+# Calculate hFacC, hFacW, or hFacS (depending on value of gtype) without knowing the full grid, i.e. just from the bathymetry and ice shelf draft on the tracer grid.
+def calc_hfac (bathy, draft, z_edges, hFacMin=0.1, hFacMinDr=20., gtype='t'):
+
+    if gtype == 'u':
+        # Need to get bathy and draft on the western edge of each cell
+        # Choose the shallowest bathymetry from the adjacent tracer cells
+        bathy = np.concatenate((bathy[:,0], np.maximum(bathy[:,:-1], bathy[:,1:])), axis=1)
+        # Choose the deepest ice shelf draft from the adjacent tracer cells
+        draft = np.concatenate((draft[:,0], np.minimum(draft[:,:-1], draft[:,1:])), axis=1)
+        # Now correct for negative wct
+        draft = np.maximum(draft, bathy)
+    elif gtype == 'v':
+        # Need to get bathy and draft on the southern edge of each cell
+        bathy = np.concatenate((bathy[0,:], np.maximum(bathy[:-1,:], bathy[1:,:])), axis=0)
+        draft = np.concatenate((draft[0,:], np.minimum(draft[:-1,:], draft[1:,:])), axis=0)
+        draft = np.maximum(draft, bathy)        
 
     # Calculate a few grid variables
     z_above = z_edges[:-1]
