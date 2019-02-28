@@ -181,8 +181,8 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         salt[closed] = constant_s
     elif option == 'nearest':
         # Select the layer immediately below the ice shelves and tile to make it 3D
-        temp_top = xy_to_xyz(select_top(np.ma.masked_where(closed, temp)))
-        salt_top = xy_to_xyz(select_top(np.ma.masked_where(closed, salt)))
+        temp_top = xy_to_xyz(select_top(np.ma.masked_where(closed, temp)), grid)
+        salt_top = xy_to_xyz(select_top(np.ma.masked_where(closed, salt)), grid)
         # Fill the mask with these values
         temp[closed] = temp_top[closed]
         salt[closed] = salt_top[closed]
