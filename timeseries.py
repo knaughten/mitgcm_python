@@ -47,50 +47,44 @@ def timeseries_ismr (file_path, grid, shelves='fris', result='massloss', time_in
 
     # Read ice shelf melt rate and convert to m/y
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
+    if len(ismr.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        ismr = np.expand_dims(ismr,0)
 
     if mass_balance:
         # Split into melting and freezing
         ismr_positive = np.maximum(ismr, 0)
         ismr_negative = np.minimum(ismr, 0)
-    
-    if time_index is not None or time_average:
-        # Just one timestep
-        if mass_balance:
-            melt = total_melt(ismr_positive, mask, result=result)
-            freeze = total_melt(ismr_negative, mask, result=result)
-            return melt, freeze
-        else:
-            return total_melt(ismr, mask, grid, result=result)
+        
+    # Loop over timesteps
+    num_time = ismr.shape[0]
+    if mass_balance:
+        melt = np.zeros(num_time)
+        freeze = np.zeros(num_time)
+        for t in range(num_time):
+            melt[t] = total_melt(ismr_positive[t,:], mask, grid, result=result)
+            freeze[t] = total_melt(ismr_negative[t,:], mask, grid, result=result)
+        return melt, freeze
     else:
-        # Loop over timesteps
-        num_time = ismr.shape[0]
-        if mass_balance:
-            melt = np.zeros(num_time)
-            freeze = np.zeros(num_time)
-            for t in range(num_time):
-                melt[t] = total_melt(ismr_positive[t,:], mask, grid, result=result)
-                freeze[t] = total_melt(ismr_negative[t,:], mask, grid, result=result)
-            return melt, freeze
-        else:
-            melt = np.zeros(num_time)
-            for t in range(num_time):
-                melt[t] = total_melt(ismr[t,:], mask, grid, result=result)
-            return melt
+        melt = np.zeros(num_time)
+        for t in range(num_time):
+            melt[t] = total_melt(ismr[t,:], mask, grid, result=result)
+        return melt
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its maximum value in the given region.
 def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
 
-    if time_index is not None or time_average:
-        return var_min_max(data, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
-    else:
-        num_time = data.shape[0]
-        max_data = np.zeros(num_time)
-        for t in range(num_time):
-            max_data[t] = var_min_max(data[t,:], grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
-        return max_data
+    num_time = data.shape[0]
+    max_data = np.zeros(num_time)
+    for t in range(num_time):
+        max_data[t] = var_min_max(data[t,:], grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
+    return max_data
 
 
 # Helper function for timeseries_avg_sfc and timeseries_int_sfc.
@@ -98,6 +92,10 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
     
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
+    
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
@@ -123,6 +121,9 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
 
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
     # Convert to array of 1s and 0s based on threshold
     data = (data >= threshold).astype(float)
     # Now build the timeseries
@@ -136,6 +137,9 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
 def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
@@ -152,7 +156,10 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 def timeseries_point_vavg (file_path, var_name, lon0, lat0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read the data
-    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)    
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
     # Interpolate to the point, and get hfac too
     data_point, hfac_point = interp_bilinear(data, lon0, lat0, grid, gtype=gtype, return_hfac=True)
     # Vertically average to get timeseries
@@ -164,6 +171,9 @@ def timeseries_wed_gyre (file_path, grid, time_index=None, t_start=None, t_end=N
 
     # Read u
     u = read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(u.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        u = np.expand_dims(u,0)
     # Build the timeseries
     timeseries = []
     for t in range(u.shape[0]):
@@ -177,6 +187,10 @@ def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=Non
     # Read T and S
     temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(temp.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        temp = np.expand_dims(temp,0)
+        salt = np.expand_dims(salt,0)
     # Set any unset bounds
     if tmin is None:
         tmin = -9999
