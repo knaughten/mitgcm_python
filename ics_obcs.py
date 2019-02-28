@@ -239,7 +239,10 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     pload_below = select_top(np.ma.masked_where(closed, pload_edges))
     hfac_below = select_top(np.ma.masked_where(closed, hfac))
     # Now we can interpolate to the ice base
-    pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
+    pload_masked = pload_above + (1-hfac_below)*(pload_below - pload_above)
+    # Fill the mask with zeros
+    pload = pload_masked.data
+    pload[pload_masked.mask] = 0
 
     # Write to file
     write_binary(pload, out_file, prec=prec)
