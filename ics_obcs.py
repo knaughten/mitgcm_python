@@ -241,9 +241,9 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     # (3) hFacC for that cell
     # To calculate (1) we have to shift pload_3d_edges upward by 1 cell
     pload_edges_above = neighbours_z(pload_edges)[0]
-    pload_above = select_top(np.ma.masked_where(closed, pload_edges_above))
-    pload_below = select_top(np.ma.masked_where(closed, pload_edges))
-    hfac_below = select_top(np.ma.masked_where(closed, hfac))
+    pload_above = select_top(np.ma.masked_where(closed, pload_edges_above, return_masked=False))
+    pload_below = select_top(np.ma.masked_where(closed, pload_edges, return_masked=False))
+    hfac_below = select_top(np.ma.masked_where(closed, hfac, return_masked=False))
     # Now we can interpolate to the ice base
     pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
 
