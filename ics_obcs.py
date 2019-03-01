@@ -181,17 +181,22 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         salt[closed] = constant_s
     elif option == 'nearest':
         # Select the layer immediately below the ice shelves and tile to make it 3D
-        temp_top = xy_to_xyz(select_top(np.ma.masked_where(closed, temp)), grid)
-        salt_top = xy_to_xyz(select_top(np.ma.masked_where(closed, salt)), grid)
+        temp_top = xy_to_xyz(select_top(np.ma.masked_where(closed, temp), return_masked=False), grid)
+        salt_top = xy_to_xyz(select_top(np.ma.masked_where(closed, salt), return_masked=False), grid)
         # Fill the mask with these values
         temp[closed] = temp_top[closed]
-        salt[closed] = salt_top[closed]
+        salt[closed] = salt_top[closed]    
     elif option == 'precomputed':
-        # Make sure there are no missing values
         for data in [temp, salt]:
-            if (isinstance(data, np.ma.MaskedArray) and (closed!=data.mask).any()) or (data[~closed]==0).any():
+            # Make sure there are no missing values
+            if (data[~closed]==0).any():
                 print 'Error (calc_load_anomaly): you selected the precomputed option, but there are appear to be missing values in the land mask.'
                 sys.exit()
+            # Make sure it's not a masked array as this will break the rms
+            if isinstance(data, np.ma.MaskedArray):
+                # Fill the mask with zeros
+                data[data.mask] = 0
+                data = data.data
     else:
         print 'Error (calc_load_anomaly): invalid option ' + option
         sys.exit()
@@ -240,10 +245,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     pload_below = select_top(np.ma.masked_where(closed, pload_edges))
     hfac_below = select_top(np.ma.masked_where(closed, hfac))
     # Now we can interpolate to the ice base
-    pload_masked = pload_above + (1-hfac_below)*(pload_below - pload_above)
-    # Fill the mask with zeros
-    pload = pload_masked.data
-    pload[pload_masked.mask] = 0
+    pload = pload_above + (1-hfac_below)*(pload_below - pload_above)
 
     # Write to file
     write_binary(pload, out_file, prec=prec)

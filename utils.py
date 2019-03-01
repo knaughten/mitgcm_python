@@ -34,7 +34,7 @@ def xy_to_xyz (data, grid):
     else:
         nz = grid.nz
 
-    return np.tile(np.copy(data), (nz, 1, 1))
+    return np.tile(data, (nz, 1, 1))
 
 
 # Tile a 1D depth array in lat and lon so it is 3D (depth x lat x lon).
@@ -60,7 +60,7 @@ def add_time_dim (data, num_time):
 
 
 # Helper function for select_top and select_bottom
-def select_level (option, data, masked=True, grid=None, gtype='t', time_dependent=False):
+def select_level (option, data, masked=True, grid=None, gtype='t', time_dependent=False, return_masked=None):
 
     if not masked:
         if grid is None:
@@ -69,6 +69,8 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
         data_masked = mask_3d(np.copy(data), grid, gtype=gtype, time_dependent=time_dependent)
     else:
         data_masked = data
+    if return_masked is None:
+        return_masked = masked
 
     # Figure out the dimensions of the data when the vertical dimension is removed
     collapsed_shape = data_masked.shape[:-3] + data_masked.shape[-2:]
@@ -93,7 +95,7 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
     # Anything still NaN is land; mask it out
     data_lev = np.ma.masked_where(np.isnan(data_lev), data_lev)
 
-    if not masked:
+    if not return_masked:
         # Fill the mask with zeros
         data_lev[data_lev.mask] = 0
         data_lev = data_lev.data
@@ -102,15 +104,15 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
 
 
 # Select the top layer from the given array of data. This is useful to see conditions immediately beneath ice shelves.
-# If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d).
+# If masked=True (default), the input array is already masked with hfac (see mask_3d below). If masked=False, you need to supply the keyword arguments grid, gtype, and time_dependent (as in mask_3d). You can also control whether or not the output array is a masked array using return_masked (default the same value as masked).
 # The only assumption about the input array dimensions is that the third last dimension is the vertical dimension. So it can be depth x lat x lon, or time x depth x lat x lon, or even something like experiment x time x depth x lat x lon.
-def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False):
-    return select_level('top', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
+def select_top (data, masked=True, grid=None, gtype='t', time_dependent=False, return_masked=None):
+    return select_level('top', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent, return_masked=return_masked)
 
     
 # Select the bottom layer from the given array of data. See select_top for more documentation.
-def select_bottom (data, masked=True, grid=None, gtype='t', time_dependent=False):
-    return select_level('bottom', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent)
+def select_bottom (data, masked=True, grid=None, gtype='t', time_dependent=False, return_masked=None):
+    return select_level('bottom', data, masked=masked, grid=grid, gtype=gtype, time_dependent=time_dependent, return_masked=return_masked)
 
 
 # Helper function for masking functions below
