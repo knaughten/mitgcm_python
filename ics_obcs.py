@@ -223,6 +223,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         pload_full = np.cumsum(drho*gravity*dz_merged, axis=0)
         # Update estimate of pressure
         press = (abs(z)*gravity*rhoConst + pload_full[1::2,...])*1e-4
+    print 'RMS error = ' + str(rms(press, press_old))
     print 'Converged'
 
     # Extract pload at each level edge (don't care about centres anymore)
