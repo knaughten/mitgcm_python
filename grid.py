@@ -182,7 +182,7 @@ class Grid:
         fris_mask = np.zeros(ice_mask.shape, dtype='bool')
         # Identify FRIS in two parts, split along the line 45W
         # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-        regions = [[fris_bounds[0], -45, fris_bounds[2], -74.7], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
+        regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
         for bounds in regions:
             # Select the ice shelf points within these bounds
             index = ice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])

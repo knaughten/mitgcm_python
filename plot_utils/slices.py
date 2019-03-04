@@ -1,6 +1,7 @@
 #############################################################
 # Utilities specific to slice plots (lat-depth or lon-depth).
-# Also general transect between two points (scroll down)
+# Also general transect between two points, or data along
+# ice shelf front (scroll down)
 #############################################################
 
 import numpy as np
@@ -9,6 +10,8 @@ from matplotlib.collections import PatchCollection
 import sys
 
 from ..utils import dist_btw_points
+from ..constants import fris_bounds
+from ..interpolation import neighbours
 
 
 # Create the rectangular Polygon patches for plotting a slice (necessary to properly represent partial cells) and the corresponding data values. This is done with 4 helper functions:
@@ -452,6 +455,113 @@ def transect_values (data, grid, point0, point1, left, right, below, above, hmin
         return data_trans.ravel(), vmin, vmax, data_trans
     else:
         return data_trans.ravel(), vmin, vmax
+
+
+def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, shelf='other', primary_start='W', secondary_start='N', gtype='t'):
+
+    # Check the primary/secondary start variables make sense:
+    if primary_start not in ['W', 'E', 'S', 'N']:
+        print 'Error (get_iceshelf_front): invalid primary_start ' + primary_start
+        sys.exit()
+    if secondary_start not in ['W', 'E', 'S', 'N']:
+        print 'Error (get_iceshelf_front): invalid secondary_start ' + secondary_start
+        sys.exit()
+    if (primary_start in ['W', 'E'] and secondary_start in ['W', 'E']) or (primary_start in ['S', 'N'] and secondary_start in ['S', 'N']):
+        print 'Error (get_iceshelf_front): primary_start and secondary_start must be along different dimensions.'
+        sys.exit()
+
+    # Threshold distance after which to say the ice shelf is done
+    dist_max = 10
+
+    # Set up some variables for this grid
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+    i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
+    land_mask = grid.get_land_mask(gtype=gtype)
+    if shelf == 'ronne':
+        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon < -45)
+    elif shelf == 'filchner':
+        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon > -45)
+    else:
+        ice_mask = grid.get_ice_mask(gtype=gtype)
+    hfac = grid.get_hfac(gtype=gtype)
+
+    # Set any remaining bounds
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+
+    # Set up a mask which is 1 in open-ocean points, otherwise 0
+    open_ocean = np.ones(land_mask.shape)
+    open_ocean[land_mask] = 0
+    open_ocean[ice_mask] = 0
+    # Find the number of open-ocean neighbours for each point
+    num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
+
+    # Find all ice shelf points within these bounds that have at least 1 open-ocean neighbour
+    front_points = ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
+
+    # Find first point
+    # First narrow down based on the primary direction to start with
+    if primary_start == 'W':
+        # Find the cell(s) which are furthest west
+        index = lon[front_points]==np.amin(lon[front_points])
+    elif primary_start == 'E':
+        index = lon[front_points]==np.amax(lon[front_points])
+    elif primary_start == 'S':
+        index = lat[front_points]==np.amin(lat[front_points])
+    elif primary_start == 'N':
+        index = lat[front_points]==np.amax(lat[front_points])
+    # Now consider the secondary direction
+    if secondary_start == 'W':
+        posn = np.argmin(lon[front_points][index])
+    elif secondary_start == 'E':
+        posn = np.argmax(lon[front_points][index])
+    elif secondary_start == 'S':
+        posn = np.argmin(lat[front_points][index])
+    elif secondary_start == 'N':
+        posn = np.argmax(lat[front_points][index])
+    # Now get the i and j values of the first point
+    i0 = i_vals[front_points][index][posn]
+    j0 = j_vals[front_points][index][posn]
+
+    # Set up array to save extracted data and hfac
+    data_front = np.ma.empty([grid.nz, np.count_nonzero(front_points)])
+    hfac_front = np.ma.empty(data_front.shape)
+    # Counter for position along axis 1
+    counter = 0
+    # Make a copy of front_points to keep track of which points remain
+    remaining_points = np.copy(front_points)
+
+    # Extract data from the ice shelf points, in order
+    while True:
+        # Extract the data
+        data_front[:,counter] = data[:,j0,i0]
+        hfac_front[:,counter] = hfac[:,j0,i0]
+        counter += 1
+        # Remove this point from the list
+        remaining_points[j0,i0] = False
+        if np.count_nonzero(remaining_points) == 0:
+            # We've done all the points
+            break
+        # Find the next point (closest point in i-j space)
+        dist = np.sqrt((i_vals[remaining_points]-i0)**2 + (j_vals[remaining_points]-j0)**2)
+        if np.amin(dist) > dist_max:
+            # There are no points within the distance threshold. This will cut off weird artifacts (like sticking-out bits of the ice shelf, 1 cell thick) that weren't captured before.
+            break
+        posn = np.argmin(dist)
+        i0 = i_vals[remaining_points][posn]
+        j0 = j_vals[remaining_points][posn]
+    
+
+
+        
+    # Save lon/lat of start/end points, but haxis is just 1s.
+    # Get below and above
                 
         
             
