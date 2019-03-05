@@ -127,6 +127,79 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         ncfile.close()
 
 
+# Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using monthly climatology output from another (larger) MITgcm domain. This larger domain is assumed to include all ice shelf cavities.
+
+# Arguments:
+# grid_path: path to directory containing binary grid files for the new domain
+# source_file: path to NetCDF file (using xmitgcm conventions) containing a monthly climatology of the larger domain's output
+# output_dir: directory to save the binary MITgcm initial conditions files
+
+# Optional keyword arguments:
+# nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
+# prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
+
+def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
+
+    from file_io import NCfile
+    from interpolation import interp_reg
+
+    output_dir = real_dir(output_dir)
+
+     # Fields to interpolate
+    fields = ['THETA', 'SALT', 'SIarea', 'SIheff', 'SIhsnow']
+    # Flag for 2D or 3D
+    dim = [3, 3, 2, 2, 2]
+    # End of filenames for output
+    outfile_tail = '_MIT.ini'
+
+    print 'Building grids'
+    source_grid = grid(source_file)
+    model_grid = grid(grid_path)
+    # Extract land mask of source grid
+    source_mask = source_grid.hfac==0
+
+    print 'Building mask for points to fill'
+    # Select open cells according to the model, interpolated to the source grid
+    fill = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=1))
+    # Extend into mask a few times to make sure there are no artifacts near the coast
+    fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
+
+    # Set up a NetCDF file so the user can check the results
+    if nc_out is not None:
+        ncfile = NCfile(nc_out, model_grid, 'xyz')
+
+    # Process fields
+    for n in range(len(fields)):
+        print 'Processing ' + fields[n]
+        out_file = output_dir + fields[n] + outfile_tail
+        # Read the January climatology
+        source_data = read_netcdf(source_file, fields[n], time_index=0)
+        # Discard the land mask, and extrapolate slightly into missing regions so the interpolation doesn't get messed up.
+        print '...extrapolating into missing regions'
+        if dim[n] == 3:
+            source_data = discard_and_fill(source_data, source_mask, fill)
+        else:
+            # Just care about the surface layer
+            source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False)
+        print '...interpolating to model grid'
+        data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim[n])
+        # Fill the land mask with zeros
+        if dim[n] == 3:
+            data_interp[model_grid.hfac==0] = 0
+        else:
+            data_interp[model_gric.hfac[0,:]==0] = 0
+        write_binary(data_interp, out_file, prec=prec)
+        if nc_out is not None:
+            print '...adding to ' + nc_out
+            if dim[n] == 3:
+                ncfile.add_variable(fields[n], data_interp, 'xyz')
+            else:
+                ncfile.add_variable(fields[n], data_interp, 'xy')
+
+    if nc_out is not None:
+        ncfile.close()    
+
+
 # Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are three different assumptions we could make:
 # 1. Assume the displaced water has a constant temperature and salinity (default)
 # 2. Use nearest-neighbour extrapolation within the cavity to set the temperature and salinity of the displaced water. This is equivalent to finding the temperature and salinity of the surface layer immediately beneath the ice base, and extrapolating it up vertically at every point.
@@ -282,6 +355,11 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     dim = [3, 3, 3, 3, 2, 2, 2, 2]
     # Flag for grid type
     gtype = ['t', 't', 'u', 'v', 't', 't', 'u', 'v']
+    if source == 'MIT':
+        # Also consider snow thickness
+        fields += ['SIhsnow']
+        dim += [2]
+        gtype += ['t']
     # End of filenames for input
     infile_tail = '_climatology.data'
     # End of filenames for output
