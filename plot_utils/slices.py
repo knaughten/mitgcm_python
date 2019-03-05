@@ -279,7 +279,7 @@ def plot_slice_patches (ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax,
 
 
 # Extract the data and boundaries along a general transect between two (lon,lat) points. This replaces get_slice_values and get_slice_boundaries.
-def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
+def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True, time_dependent=False):
 
     # Extract the coordinates from the start and end points, so that we start at the southernmost point
     flip = point1[1] < point0[1]
@@ -347,12 +347,16 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         cells_intersect.reverse()
 
     # Set up array to save the extracted transects
-    data_trans = np.ma.empty([grid.nz, len(cells_intersect)])
+    if time_dependent:
+        num_time = data.shape[0]
+        data_trans = np.ma.empty([num_time, grid.nz, len(cells_intersect)])
+    else:
+        data_trans = np.ma.empty([grid.nz, len(cells_intersect)])
     if return_grid_vars:
         # Also their horizontal boundaries (distance from lon0, lat0) and hfac
-        left = np.ma.empty(data_trans.shape)
-        right = np.ma.empty(data_trans.shape)
-        hfac_trans = np.ma.empty(data_trans.shape)
+        left = np.ma.empty(data_trans.shape[-2:])
+        right = np.ma.empty(data_trans.shape[-2:])
+        hfac_trans = np.ma.empty(data_trans.shape[-2:])
     # Finally, a counter for the position in axis 1, because we might not keep all the intersected cells
     posn = 0
     for cell in cells_intersect:
@@ -395,7 +399,7 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
             print 'Error (get_transect): ' + str(len(intersections)) + ' intersections. Something went wrong.'
             sys.exit()
         # Now save data from this water column to the transect
-        data_trans[:,posn] = data[:,j,i]
+        data_trans[...,posn] = data[...,j,i]
         if return_grid_vars:
             # Calculate the distance from each intersection to the start of the line
             dist_a = dist_btw_points(intersections[0], point0)
@@ -410,7 +414,7 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         posn += 1
 
     # Trim the transects in case we didn't use all the cells
-    data_trans = data_trans[:,:posn]
+    data_trans = data_trans[...,:posn]
     if not return_grid_vars:
         return data_trans
     else:
@@ -418,7 +422,11 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True):
         right = right[:,:posn]
         hfac_trans = hfac_trans[:,:posn]
         # Now calculate the top and bottom boundaries
-        below, above = get_slice_boundaries(data_trans, grid, left, hfac_trans)[2:]
+        if time_dependent:
+            data_dummy = data_trans[0,:]
+        else:
+            data_dummy = data_trans
+        below, above = get_slice_boundaries(data_dummy, grid, left, hfac_trans)[2:]
         return data_trans, left, right, below, above
 
 
