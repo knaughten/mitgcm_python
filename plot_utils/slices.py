@@ -478,9 +478,9 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
     land_mask = grid.get_land_mask(gtype=gtype)
     if shelf == 'ronne':
-        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon < -45)
+        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon < -46)
     elif shelf == 'filchner':
-        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon > -45)
+        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon > -46)
     else:
         ice_mask = grid.get_ice_mask(gtype=gtype)
     hfac = grid.get_hfac(gtype=gtype)
@@ -498,7 +498,7 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     # Set up a mask which is 1 in open-ocean points, otherwise 0
     open_ocean = np.ones(land_mask.shape)
     open_ocean[land_mask] = 0
-    open_ocean[ice_mask] = 0
+    open_ocean[grid.get_ice_mask(gtype=gtype)] = 0
     # Find the number of open-ocean neighbours for each point
     num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
 
@@ -528,6 +528,9 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     # Now get the i and j values of the first point
     i0 = i_vals[front_points][index][posn]
     j0 = j_vals[front_points][index][posn]
+    # Save their lat and lon for labelling
+    lon_start = lon[j0,i0]
+    lat_start = lat[j0,i0]
 
     # Set up array to save extracted data and hfac
     data_front = np.ma.empty([grid.nz, np.count_nonzero(front_points)])
@@ -556,6 +559,10 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
         posn = np.argmin(dist)
         i0 = i_vals[remaining_points][posn]
         j0 = j_vals[remaining_points][posn]
+
+    # Save lat and lon from the last point
+    lon_end = lon[j0,i0]
+    lat_end = lat[j0,i0]
     
 
 

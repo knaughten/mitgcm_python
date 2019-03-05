@@ -641,7 +641,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     vmin = [0, -0.6, -2.5, 34.3, None]
     vmax = [10, 6, -1.5, None, None]
     extend = ['max', None, 'both', 'min', 'neither']
-    title = ['a) Bottom water age (years)', 'b) Velocity streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
+    title = ['a) Bottom water age (years)', 'b) Barotropic streamfunction (Sv)', 'c) Bottom water temperature ('+deg_string+'C)', 'd) Bottom water salinity (psu)', 'e) Ice shelf melt rate (m/y)']    
     fig, gs = set_panels('5C0')
     for i in range(len(data)):
         # Leave the top left plot empty for title
