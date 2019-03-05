@@ -354,11 +354,11 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         index = (omask==0)*(num_valid_neighbours==4)
         omask[index] = 1
         bathy_w, bathy_e, bathy_s, bathy_n = neighbours(bathy)[:4]
-        bathy[index] = np.mean(np.array([bathy_w, bathy_e, bathy_s, bathy_n]))[index]
+        bathy[index] = 0.25*(bathy_w+bathy_e+bathy_s+bathy_n)[index]
         imask_w, imask_e, imask_s, imask_n = neighbours(imask)[:4]
-        imask[index] = np.amax(np.array([imask_w, imask_e, imask_s, imask_n]))[index]
+        imask[index] = np.ceil(0.25*(imask_w+imask_e+imask_s+imask_n))[index]
         draft_w, draft_e, draft_s, draft_n = neighbours(draft)[:4]
-        draft[index] = np.mean(np.array([draft_w, draft_e, draft_s, draft_n]))[index]        
+        draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
         
     # Make the other fields consistent with this new mask
     index = omask == 0
