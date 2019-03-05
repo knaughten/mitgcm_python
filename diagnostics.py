@@ -234,7 +234,7 @@ def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tre
 
 
 # Helper function for normal_vector and parallel_vector.
-def rotate_vector (u, v, grid, point0, point1, option='both'):
+def rotate_vector (u, v, grid, point0, point1, option='both', time_dependent=False):
     
     # Find angle between east and the transect (intersecting at point0)
     [lon0, lat0] = point0
@@ -242,8 +242,8 @@ def rotate_vector (u, v, grid, point0, point1, option='both'):
     angle = np.arctan2(lat1-lat0, lon1-lon0)
 
     # Interpolate u and v to the tracer grid
-    u_t = interp_grid(u, grid, 'u', 't')
-    v_t = interp_grid(v, grid, 'v', 't')
+    u_t = interp_grid(u, grid, 'u', 't', time_dependent=time_dependent)
+    v_t = interp_grid(v, grid, 'v', 't', time_dependent=time_dependent)
 
     u_new = u_t*np.cos(-angle) - v_t*np.sin(-angle)
     v_new = u_t*np.sin(-angle) + v_t*np.cos(-angle)
@@ -260,13 +260,13 @@ def rotate_vector (u, v, grid, point0, point1, option='both'):
 
 
 # Calculate the normal component of the vector field with respect to the angle angle given by the transect between the 2 points. Assumes u and v only include one time record (i.e. 3D fields). Does not extract the transect itself.
-def normal_vector (u, v, grid, point0, point1):
-    return rotate_vector(u, v, grid, point0, point1, option='normal')
+def normal_vector (u, v, grid, point0, point1, time_dependent=False):
+    return rotate_vector(u, v, grid, point0, point1, option='normal', time_dependent=time_dependent)
 
 
 # Calculate the parallel component of the vector.
-def parallel_vector (u, v, grid, point0, point1):
-    return rotate_vector(u, v, grid, point0, point1, option='parallel')
+def parallel_vector (u, v, grid, point0, point1, time_dependent=False):
+    return rotate_vector(u, v, grid, point0, point1, option='parallel', time_dependent=time_dependent)
 
 
 # Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east").
