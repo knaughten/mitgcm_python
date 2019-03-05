@@ -344,12 +344,11 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         # Turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
     elif key == 'WSS':
-        # Small Weddell Sea domain
+        # Small Weddell Sea domain        
         # Block out everything west of the peninsula
-        omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
-        # Remove tiny ice shelves on the open boundaries
-        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-12, ymin=-71.6)
-        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=-70.5)
+        omask = mask_box(omask, lon_2d, lat_2d, xmax=-65, ymin=-75)
+        # Remove Larsen D which intersects the open boundary
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=-73)
         
     # Make the other fields consistent with this new mask
     index = omask == 0
