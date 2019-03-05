@@ -347,6 +347,8 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         # Small Weddell Sea domain        
         # Block out everything west of the peninsula
         omask = mask_box(omask, lon_2d, lat_2d, xmax=-65, ymin=-75)
+        # Remove the one cell of Brunt which intersects the open boundary
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-28)
         # Remove Larsen D which intersects the open boundary
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=-73)
         # There are a few 1-cell islands; fill them with the bathymetry and ice shelf draft of their neighbours
