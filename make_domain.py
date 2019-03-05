@@ -349,6 +349,16 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         omask = mask_box(omask, lon_2d, lat_2d, xmax=-65, ymin=-75)
         # Remove Larsen D which intersects the open boundary
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, ymin=-73)
+        # There are a few 1-cell islands; fill them with the bathymetry and ice shelf draft of their neighbours
+        omask_w, omask_e, omask_s, omask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(omask, missing_val=0)
+        index = (omask==0)*(num_valid_neighbours==4)
+        omask[index] = 1
+        bathy_w, bathy_e, bathy_s, bathy_n = neighbours(bathy)[:4]
+        bathy[index] = np.mean(np.array([bathy_w, bathy_e, bathy_s, bathy_n]))[index]
+        imask_w, imask_e, imask_s, imask_n = neighbours(imask)[:4]
+        imask[index] = np.amax(np.array([imask_w, imask_e, imask_s, imask_n]))[index]
+        draft_w, draft_e, draft_s, draft_n = neighbours(draft)[:4]
+        draft[index] = np.mean(np.array([draft_w, draft_e, draft_s, draft_n]))[index]        
         
     # Make the other fields consistent with this new mask
     index = omask == 0
