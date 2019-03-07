@@ -327,7 +327,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 
 
 # Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
-def discard_and_fill (data, discard, fill, missing_val=-9999, use_3d=True, preference='horizontal'):
+def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal'):
 
     # First throw away the points we don't trust
     data[discard] = missing_val
@@ -388,7 +388,7 @@ def interp_bilinear (data, lon0, lat0, grid, gtype='t', return_hfac=False):
         return data_interp
 
 
-# Interpolate a lateral boundary field from a regular grid to another regular grid. Prior to interpolation, extend the source data into the mask so there are no artifacts caused by missing values.
+# Interpolate a lateral boundary field from a regular grid to another regular grid. Prior to interpolation, extend the source data all the way into the mask so there will be no missing values (which MITgcm doesn't handle very well).
 # This routine can be called for a depth-dependent field (latitude or longitude versus depth, i.e. a 3D variable which was sliced) or a depth-independent field (just dependent on latitude or longitude, i.e. a 2D variable which was sliced).
 
 # Arguments:
@@ -422,10 +422,10 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
             source_data = np.concatenate((source_data, np.expand_dims(source_data[-1,:], 0)), axis=0)
             source_hfac = np.concatenate((source_hfac, np.expand_dims(source_hfac[-1,:], 0)), axis=0)
 
-    # Fill the mask with missing values
-    source_data[source_hfac==0] = missing_val
-    # Extend into the mask a few times so interpolation doesn't mess up
-    source_data = extend_into_mask(source_data, missing_val=missing_val, num_iters=10, use_1d=(not depth_dependent))
+    # Extend all the way into the mask
+    discard = source_hfac==0
+    fill = np.ones(source_data.shape).astype(bool)
+    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False)
     
     # Interpolate
     if depth_dependent:
@@ -435,15 +435,11 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     else:
         interpolant = interp1d(source_h, source_data, bounds_error=False, fill_value=missing_val)
         data_interp = interpolant(target_h)
-        
-    # Fill the land mask with zeros
-    data_interp[target_hfac==0] = 0
+    
     if np.count_nonzero(data_interp==missing_val) > 0:
         print 'Error (interp_bdry): missing values remain in the interpolated data.'
         if np.amin(target_h) < np.amin(source_h) or np.amax(target_h) > np.amax(source_h):
             print 'Need to extend the horizontal axis for the source data.'
-        else:
-            print 'Need to increase num_iters in the call to extend_into_mask.'
         sys.exit()
         
     return data_interp
