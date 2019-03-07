@@ -501,7 +501,6 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             data_interp_tmp = interp_bdry(source_haxis, source_grid.z, source_data[month,:], source_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
             if fields[n] not in ['THETA', 'SALT']:
                 # Zero in land mask is more physical than extrapolated data
-                print 'Masking with zeros'
                 index = model_hfac==0
                 data_interp_tmp[index] = 0
             data_interp[month,:] = data_interp_tmp
