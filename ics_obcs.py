@@ -140,7 +140,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 
 def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
-    from file_io import NCfile
+    from file_io import NCfile, read_netcdf
     from interpolation import interp_reg
 
     output_dir = real_dir(output_dir)
@@ -153,14 +153,14 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
     outfile_tail = '_MIT.ini'
 
     print 'Building grids'
-    source_grid = grid(source_file)
-    model_grid = grid(grid_path)
+    source_grid = Grid(source_file)
+    model_grid = Grid(grid_path)
     # Extract land mask of source grid
     source_mask = source_grid.hfac==0
 
     print 'Building mask for points to fill'
     # Select open cells according to the model, interpolated to the source grid
-    fill = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=1))
+    fill = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=0)).astype(bool)
     # Extend into mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
 
@@ -187,7 +187,7 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
         if dim[n] == 3:
             data_interp[model_grid.hfac==0] = 0
         else:
-            data_interp[model_gric.hfac[0,:]==0] = 0
+            data_interp[model_grid.hfac[0,:]==0] = 0
         write_binary(data_interp, out_file, prec=prec)
         if nc_out is not None:
             print '...adding to ' + nc_out
