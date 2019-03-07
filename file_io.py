@@ -116,13 +116,10 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
 
     import netCDF4 as nc
 
-    if return_units and not return_date:
-        print 'Error (netcdf_time): need return_date=True if return_units=True'
-        sys.exit()
-
     # Open the file and get the length of the record
     id = nc.Dataset(file_path, 'r')
     time_id = id.variables[var_name]
+    units = time_id.units
     num_time = time_id.size
 
     # Choose range of time values to consider
@@ -136,7 +133,6 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
     # Read the variable
     if return_date:
         # Return as handy Date objects
-        units = time_id.units
         time = nc.num2date(time_id[t_start:t_end], units=units)
     else:
         # Return just as scalar values
