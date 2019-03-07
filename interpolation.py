@@ -336,7 +336,7 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
     while num_missing > 0:
         if log:
             print '......' + str(num_missing) + ' points to fill'
-        data = extend_into_mask(data, missing_val=missing_val, use_3d=use_3d, preference=preference)
+        data = extend_into_mask(data, missing_val=missing_val, use_1d=use_1d, use_3d=use_3d, preference=preference)
         num_missing_old = num_missing
         num_missing = np.count_nonzero((data==missing_val)*fill)
         if num_missing == num_missing_old:
