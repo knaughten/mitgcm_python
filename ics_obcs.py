@@ -433,7 +433,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             else:
                 source_data = source_grid.read_field(in_file, 'xyt')
         else:
-            source_data = read_netcdf(file_path, fields[n])
+            source_data = read_netcdf(input_path, fields[n])
         
         if fields[n] == 'SIarea' and source == 'SOSE':
             # We'll need this field later for SIuice and SIvice, as SOSE didn't mask those variables properly
@@ -450,7 +450,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             source_data[index] = 0            
         
         # Choose the correct grid for lat, lon, hfac
-        source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype[n])
+        source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype[n], dim=1)
         source_hfac = source_grid.get_hfac(gtype=gtype[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
