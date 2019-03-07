@@ -745,7 +745,7 @@ def aice_simulations (base_dir='./', fig_dir='./'):
             [lon1, lat1] = (-40, -65)
             lon = np.linspace(lon0, lon1)
             lat = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
-            ax.plot(lon, lat, color='black', linestyle='dashed', linewidth=1.5)
+            ax.plot(lon, lat, color='white', linestyle='dashed', linewidth=1.5)
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
     reduce_cbar_labels(cbar)
     plt.suptitle('Sea ice concentration, 1979-2016', fontsize=22)
