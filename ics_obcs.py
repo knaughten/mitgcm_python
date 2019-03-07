@@ -287,8 +287,14 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
 
     # Iteratively calculate pressure load anomaly until it converges
     press_old = np.zeros(press.shape)  # Dummy initial value for pressure from last iteration
-    while rms(press, press_old) > errorTol:
-        print 'RMS error = ' + str(rms(press, press_old))
+    rms_error = 0
+    while True:
+        rms_old = rms_error
+        rms_error = rms(press, press_old)
+        print 'RMS error = ' + rms_error
+        if rms_error < errorTol or np.abs(rms_error-rms_old) < 0.1*errorTol:
+            print 'Converged'
+            break
         # Save old pressure
         press_old = np.copy(press)
         # Calculate density anomaly at centres of cells
@@ -301,8 +307,6 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         pload_full = np.cumsum(drho*gravity*dz_merged, axis=0)
         # Update estimate of pressure
         press = (abs(z)*gravity*rhoConst + pload_full[1::2,...])*1e-4
-    print 'RMS error = ' + str(rms(press, press_old))
-    print 'Converged'
 
     # Extract pload at each level edge (don't care about centres anymore)
     pload_edges = pload_full[::2,...]
