@@ -43,7 +43,7 @@ def build_file_list (output_dir, unravelled=False):
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSK'):
+def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSS'):
 
     if time_average:
         time_index = None
@@ -97,7 +97,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         # Plot
         read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
         # Make additional plots if needed
-        if var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
+        if key=='WSK' and var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
             # Make another plot zoomed into FRIS
             figsize = (8,6)
             # First adjust bounds
@@ -292,7 +292,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Timeseries to compute
     if timeseries_types is None:
-        timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+        timeseries_types = ['fris_mass_balance', 'eta_avg', 'sesaice_area', 'fris_temp', 'fris_salt', 'fris_age'] #['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)
