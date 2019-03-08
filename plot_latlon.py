@@ -266,7 +266,7 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
 # figsize: as in function latlon_plot
 # chunk: as in function overlay_vectors
 
-def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None):
+def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None, scale=None):
 
     # Do the correct vertical transformation, and interpolate to the tracer grid
     speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option, z0=z0)
@@ -300,7 +300,7 @@ def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_
     elif vel_option == 'bottom':
         scale = 1
     elif vel_option == 'ice':
-        scale = 4
+        scale = 2
     overlay_vectors(ax, u_plot, v_plot, grid, chunk=chunk, scale=scale)
 
     finished_plot(fig, fig_name=fig_name)
@@ -381,7 +381,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, figsize=(8,6)):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, figsize=(8,6)):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -473,9 +473,9 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     elif var == 'tminustf':
         plot_tminustf(temp, salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'vel':
-        plot_vel(u, v, grid, vel_option=vel_option, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
+        plot_vel(u, v, grid, vel_option=vel_option, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale)
     elif var == 'velice':
-        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk)
+        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale)
     elif var == 'psi':
         plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
     elif var == 'iceprod':
