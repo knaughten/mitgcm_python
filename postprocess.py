@@ -73,9 +73,14 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         vmin = None
         vmax = None
         zoom_fris = False
+        chunk = None
         fig_name = fig_dir + var + '.png'
         if var == 'bwtemp':
-            vmax = 1
+            if key == 'WSS':
+                vmin = -2.5
+                vmax = 0
+            elif key == 'WSK':
+                vmax = 1
         if var == 'bwsalt':
             vmin = 34.3
         if var == 'bwage':
@@ -90,12 +95,17 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         if var == 'iceprod':
             vmin = 0
             vmax = 5
+        if var == 'psi' and key=='WSS':
+            vmin = -0.5
+            vmax = 0.5
+        if var == 'vel' and key=='WSS':
+            chunk = 6
         if not zoom_fris and key=='WSK':
             figsize = (10,6)
         else:
             figsize = (8,6)
         # Plot
-        read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize)
+        read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize, chunk=chunk)
         # Make additional plots if needed
         if key=='WSK' and var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
             # Make another plot zoomed into FRIS
@@ -113,7 +123,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
             if key=='WSK':
                 figsize = (10,6)
             for vel_option in ['sfc', 'bottom']:
-                read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize)
+                read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize, chunk=chunk)
         if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
@@ -121,7 +131,6 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     # Slice plots
     read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=-25, zmin=-2000, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string)
     
 
 
