@@ -98,7 +98,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
         if var == 'psi' and key=='WSS':
             vmin = -0.5
             vmax = 0.5
-        if var == 'vel' and key=='WSS':
+        if var in ['vel', 'velice'] and key=='WSS':
             chunk = 6
         if not zoom_fris and key=='WSK':
             figsize = (10,6)

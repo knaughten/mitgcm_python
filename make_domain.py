@@ -359,6 +359,11 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         imask[index] = np.ceil(0.25*(imask_w+imask_e+imask_s+imask_n))[index]
         draft_w, draft_e, draft_s, draft_n = neighbours(draft)[:4]
         draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
+        # Also a few 1-cell ocean points surrounded by ice shelf draft. Fill them with the ice shelf draft of their neighbours.
+        imask_w, imask_e, imask_s, imask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(imask, missing_val=0)
+        index = (imask==0)*(num_valid_neighbours=4)
+        imask[index] = 1
+        draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
         
     # Make the other fields consistent with this new mask
     index = omask == 0
