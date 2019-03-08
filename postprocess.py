@@ -62,7 +62,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     grid = Grid(grid_path)
 
     # Timeseries
-    var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    var_names = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
@@ -203,7 +203,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     grid = Grid(grid_path)
 
     # Timeseries through the entire simulation
-    var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    var_names = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
@@ -292,7 +292,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Timeseries to compute
     if timeseries_types is None:
-        timeseries_types = ['fris_mass_balance', 'eta_avg', 'sesaice_area', 'fris_temp', 'fris_salt', 'fris_age'] #['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+        timeseries_types = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age'] #['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
 
     # Build the grid
     grid = Grid(mit_file)

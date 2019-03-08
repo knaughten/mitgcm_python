@@ -69,7 +69,8 @@ class Grid:
             self.lat_corners_2d = read_netcdf(path, 'YG')
             self.dx_s = read_netcdf(path, 'dxG')
             self.dy_w = read_netcdf(path, 'dyG')
-            self.dA = read_netcdf(path, 'rA')
+            # I have no idea why this requires .data but it does, otherwise WSS breaks (?!?!)
+            self.dA = read_netcdf(path, 'rA').data
             self.z = read_netcdf(path, 'Z')
             self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
