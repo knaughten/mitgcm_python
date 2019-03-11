@@ -691,7 +691,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
                 plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
-        if i==0:
+        '''if i==0:
             # Overlay transect shown in mwdw_slices
             [lon0, lat0] = (-56, -79)
             [lon1, lat1] = (-40, -65)
