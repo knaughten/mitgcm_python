@@ -179,6 +179,7 @@ def compare_timeseries_jan (timeseries_file, jan_file, fig_dir='./'):
     for year in range(100):
         for month in range(12):
             time.append(datetime.date(year+1, month+1, 1))
+    time = np.array(time)
 
     # Loop over variables
     for i in range(len(var_names)):
