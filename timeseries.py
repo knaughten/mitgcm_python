@@ -546,7 +546,7 @@ def set_parameters (var):
             title = 'Volume-averaged salinity over'+loc_string+' FRIS continental shelf'
             units = 'psu'
     elif var in ['avg_temp', 'avg_salt']:
-        option = 'avg_domain':
+        option = 'avg_domain'
         if var == 'avg_temp':
             var_name = 'THETA'
             title = 'Volume-averaged temperature'
