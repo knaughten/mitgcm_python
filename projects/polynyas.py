@@ -1032,8 +1032,8 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
 # Create a map of the model domain, including bathymetry and a number of features/transects/etc. labelled.
 def domain_map (base_dir='./', fig_dir='./'):
 
-base_dir = real_dir(base_dir)
-fig_dir = real_dir(fig_dir)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     # Build the grid
     grid = Grid(base_dir+grid_dir)
