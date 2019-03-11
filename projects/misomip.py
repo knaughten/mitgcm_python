@@ -13,13 +13,12 @@ from ..constants import deg_string
 from ..file_io import read_netcdf
 from ..plot_utils.windows import set_panels
 from ..plot_utils.colours import get_extend
+from ..postprocess import precompute_timeseries
 
 
-def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax=None, change_points=None, mov_name=None):
+# Helper function to get all the output directories, one per segment, in order.
+def get_segment_dir (output_dir):
 
-    output_dir = real_dir(output_dir)
-
-    # Get all the directories, one per segment
     segment_dir = []
     for name in os.listdir(output_dir):
         # Look for directories composed of numbers (date codes)
@@ -27,6 +26,13 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
             segment_dir.append(name)
     # Make sure in chronological order
     segment_dir.sort()
+
+
+def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax=None, change_points=None, mov_name=None):
+
+    output_dir = real_dir(output_dir)
+    # Get all the directories, one per segment
+    segment_dir = get_segment_dir(output_dir)
 
     # Inner function to read and process data from a single file
     def read_process_data (file_path, var_name, grid, mask_option='3d', gtype='t', lev_option=None, ismr=False):
@@ -130,3 +136,17 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         anim.save(mov_name)
     else:
         plt.show()
+
+
+def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc'):
+
+    timeseries_types = ['avgmelt', 'massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+
+    output_dir = real_dir(output_dir)
+    # Get all the directories, one per segment
+    segment_dir = get_segment_dir(output_dir)
+
+    for sdir in segment_dir:
+        file_path = output_dir+sdir+'/MITgcm/'+file_name
+        print 'Processing ' + file_path
+        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)

@@ -70,7 +70,7 @@ def get_polynya_loc (polynya):
 # Precompute timeseries for analysis. Wrapper for precompute_timeseries in postprocess.py. 
 def precompute_polynya_timeseries (mit_file, timeseries_file, polynya=None):
 
-    timeseries_types = ['conv_area', 'fris_ismr', 'ewed_ismr', 'wed_gyre_trans'] #['sws_shelf_temp', 'sws_shelf_salt'] 
+    timeseries_types = ['conv_area', 'fris_massloss', 'ewed_massloss', 'wed_gyre_trans'] #['sws_shelf_temp', 'sws_shelf_salt'] 
     if polynya is None:
         # Baseline simulation; skip temp_polynya and salt_polynya options
         lon0 = None
@@ -159,9 +159,9 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
 
     # Now make the timeseries plots
     plot_polynya_timeseries('conv_area', 'Convective area', r'million km$^2$', use_baseline=False)
-    plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y')
-    plot_polynya_timeseries('fris_ismr', 'FRIS basal mass loss', 'Gt/y', annual=False)
-    plot_polynya_timeseries('ewed_ismr', 'EWIS basal mass loss', 'Gt/y')
+    plot_polynya_timeseries('fris_massloss', 'FRIS basal mass loss', 'Gt/y')
+    plot_polynya_timeseries('fris_massloss', 'FRIS basal mass loss', 'Gt/y', annual=False)
+    plot_polynya_timeseries('ewed_massloss', 'EWIS basal mass loss', 'Gt/y')
     plot_polynya_timeseries('wed_gyre_trans', 'Weddell Gyre transport', 'Sv')
     plot_polynya_timeseries('fris_temp', 'FRIS cavity temperature', deg_string+'C', percent_diff=False)
     plot_polynya_timeseries('fris_salt', 'FRIS cavity salinity', 'psu', percent_diff=False)

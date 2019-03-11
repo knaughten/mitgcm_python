@@ -210,6 +210,25 @@ def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=Non
     return np.array(timeseries)
 
 
+# Calculate timeseries of the volume of the entire domain, including free surface changes.
+def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Read free surface
+    eta = read_netcdf(file_path, 'ETAN', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(eta.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        eta = np.expand_dims(eta,0)
+    # Calculate volume without free surface changes
+    volume = np.sum(grid.dV)
+    # Build the timeseries
+    timeseries = []
+    for t in range(eta.shape[0]):
+        # Get volume change in top layer due to free surface
+        volume_top = np.sum(eta[t,:]*grid.dA*grid.hfac[0,:])
+        timeseries.append(volume+volume_top)
+    return np.array(timeseries)
+    
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -223,6 +242,7 @@ def timeseries_watermass_volume (file_path, grid, tmin=None, tmax=None, smin=Non
 #          'area_threshold': calculates area of sea surface where the variable exceeds the given threshold
 #          'avg_fris': calculates volume-averaged value in the FRIS cavity
 #          'avg_sws_shelf': calculates volume-averaged value over the Southern Weddell Sea shelf
+#          'avg_domain': calculates volume-averaged value over entire domain
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
 #          'wed_gyre_trans': calculates Weddell Gyre transport.
 #          'watermass': calculates percentage volume of the water mass defined by any of tmin, tmax, smin, smax.
@@ -302,12 +322,16 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.fris_mask)
     elif option == 'avg_sws_shelf':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=shelf_mask)
+    elif option == 'avg_domain':
+        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype)
     elif option == 'point_vavg':
         values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
     elif option == 'wed_gyre_trans':
         values = timeseries_wed_gyre(first_file, grid)
     elif option == 'watermass':
         values = timeseries_watermass_volume(first_file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+    elif option == 'volume':
+        values = timeseries_domain_volume(first_file, grid)
     elif option != 'time':
         print 'Error (calc_timeseries): invalid option ' + option
         sys.exit()
@@ -333,12 +357,16 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.fris_mask)
             elif option == 'avg_sws_shelf':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=shelf_mask)
+            elif option == 'avg_domain':
+                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype)
             elif option == 'point_vavg':
                 values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
             elif option == 'wed_gyre_trans':
                 values_tmp = timeseries_wed_gyre(file, grid)
             elif option == 'watermass':
                 values_tmp = timeseries_watermass_volume(file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+            elif option == 'volume':
+                values_tmp = timeseries_domain_volume(file, grid)
             time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'ismr' and mass_balance:
@@ -390,9 +418,10 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 
 # Set a bunch of parameters corresponding to a given timeseries variable:
 #      'fris_mass_balance': melting, freezing, and net melting beneath FRIS
-#      'fris_ismr': net melting beneath FRIS
-#      'ewed_ismr': net melting beneath Eastern Weddell ice shelves
-#      'ismr': net melting beneath all ice shelves in the domain
+#      'fris_massloss': net melting beneath FRIS
+#      'ewed_massloss': net melting beneath Eastern Weddell ice shelves
+#      'massloss': net melting beneath all ice shelves in the domain
+#      'avgmelt': average melt rate beneath all ice shelves in the domain 
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
@@ -403,6 +432,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'sws_shelf_temp': volume-averaged temperature over the Southern Weddell Sea continental shelf
 #      'sws_shelf_salt': volume-averaged salinity over the Southern Weddell Sea continental shelf
 #      'sws_shelf_salt_inner', 'sws_shelf_salt_outer': volume-averaged salinity over the inner and outer shelf respectively
+#      'avg_temp': volume-averaged temperature in the entire domain
+#      'avg_salt': volume-averaged salinity in the entire domain
 #      'temp_polynya': depth-averaged temperature through the centre of a polynya
 #      'salt_polynya': depth-averaged salinity through the centre of a polynya
 #      'conv_area': total area of convection (MLD > 2000 m)
@@ -411,6 +442,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'hssw_vol': volume of HSSW (-1.8 to -1.9 C, >34.55 psu)
 #      'wdw_vol': volume of WDW (>0 C)
 #      'mwdw_vol': volume of MWDW (-1.5 to 0 C, 34.25-34.55 psu)
+#      'ocean_vol': volume of entire ocean domain (m^3)
 def set_parameters (var):
 
     var_name = None
@@ -420,6 +452,7 @@ def set_parameters (var):
     ymax = None
     shelves = None
     mass_balance = None
+    result = None
     threshold = None
     tmin = None
     tmax = None
@@ -427,20 +460,29 @@ def set_parameters (var):
     smax = None
     shelf_option = None
 
-    if var in ['fris_mass_balance', 'fris_ismr', 'ewed_ismr', 'all_ismr']:
+    if var in ['fris_mass_balance', 'fris_massloss', 'ewed_massloss', 'all_massloss']:
         option = 'ismr'
         var_name = 'SHIfwFlx'
         units = 'Gt/y'
-        mass_balance = var=='fris_mass_balance'        
-        if var in ['fris_mass_balance', 'fris_ismr']:
+        mass_balance = var=='fris_mass_balance'
+        result = 'massloss'
+        if var in ['fris_mass_balance', 'fris_massloss']:
             shelves = 'fris'
             title = 'Basal mass balance of FRIS'            
-        elif var == 'ewed_ismr':
+        elif var == 'ewed_massloss':
             shelves = 'ewed'
             title = 'Basal mass balance of Eastern Weddell ice shelves'
-        elif var == 'all_ismr':
+        elif var == 'all_massloss':
             shelves = 'all'
-            title = 'Basal mass balance of ice shelves'        
+            title = 'Basal mass balance of ice shelves'
+    elif var == 'avg_melt':
+        option = 'ismr'
+        var_name = 'SHIfwFlx'
+        units = 'm/y'
+        mass_balance = False
+        result = 'meltrate'
+        shelves = 'all'
+        title = 'Mean ice shelf melt rate'
     elif var in ['hice_corner', 'mld_ewed']:
         # Maximum between spatial bounds
         option = 'max'
@@ -502,7 +544,17 @@ def set_parameters (var):
         elif var.startswith('sws_shelf_salt'):
             var_name = 'SALT'
             title = 'Volume-averaged salinity over'+loc_string+' FRIS continental shelf'
-            units = 'psu'            
+            units = 'psu'
+    elif var in ['avg_temp', 'avg_salt']:
+        option = 'avg_domain':
+        if var == 'avg_temp':
+            var_name = 'THETA'
+            title = 'Volume-averaged temperature'
+            units = deg_string+'C'
+        elif var == 'avg_salt':
+            var_name = 'SALT'
+            title = 'Volume-averaged salinity'
+            units = 'psu'
     elif var in ['temp_polynya', 'salt_polynya']:
         option = 'point_vavg'
         if var == 'temp_polynya':
@@ -543,18 +595,22 @@ def set_parameters (var):
             smin = 34.25
             smax = 34.55
             title = 'Volume of MWDW'
+    elif var == 'ocean_vol':
+        option = 'volume'
+        units = r'm$^3$'
+        title = 'Volume of ocean in domain'            
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax, shelf_option
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, shelf_option
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax, shelf_option = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, shelf_option = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
@@ -562,7 +618,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
         time, melt, freeze = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, shelf_option=shelf_option, monthly=monthly)
+        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, shelf_option=shelf_option, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -573,7 +629,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, threshold, tmin, tmax, smin, smax, shelf_option = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, shelf_option = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:
@@ -584,7 +640,7 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, shelf_option=shelf_option, monthly=monthly)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, result=result, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, shelf_option=shelf_option, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data_diff *= 1e-12
