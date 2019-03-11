@@ -141,7 +141,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
 def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc'):
 
-    timeseries_types = ['avg_melt', 'massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    timeseries_types = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
 
     output_dir = real_dir(output_dir)
     # Get all the directories, one per segment
