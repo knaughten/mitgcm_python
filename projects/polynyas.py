@@ -682,12 +682,12 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         else:
             # Plot as normal
             img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
-        '''if ctype[i] == 'ismr':
+        if ctype[i] == 'ismr':
             # Overlay location labels
-            lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
-            lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
-            label = ['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)]
-            fs = [14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
+            lon = [-83, -63, -33, -86] #[-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
+            lat = [-84, -84.15, -75.5, -80] #[-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
+            label = [ lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)] #['RIS', 'FIS','RD', 'BB', 'BI', 'FT', lon_label(-80), lon_label(-60), lat_label(-75), lat_label(-80)]
+            fs = [10, 10, 10, 10] #[14, 14, 14, 14, 14, 14, 10, 10, 10, 10]
             x, y = polar_stereo(lon, lat)            
             for j in range(len(label)):
                 plt.text(x[j], y[j], label[j], fontsize=fs[j], va='center', ha='center')
