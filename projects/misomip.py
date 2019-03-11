@@ -163,7 +163,8 @@ def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', times
         precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=False)
 
 
-def compare_timeseries_jan (timeseries_file, jan_file, fig_dir='./'):
+# Plot each timeseries on the same axes as Jan's output from the old coupling setup.
+def compare_timeseries_jan (timeseries_file='timeseries.nc', jan_file='/work/n02/n02/kaight/jan_output/IceOcean1r_COM_ocean_UaMITgcm.nc', fig_dir='./'):
 
     fig_dir = real_dir(fig_dir)
 
