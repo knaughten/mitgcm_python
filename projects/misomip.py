@@ -170,7 +170,7 @@ def compare_timeseries_jan (timeseries_file, jan_file, fig_dir='./'):
     # Variable names in our files and in Jan's old file, plus titles, units, and conversion factors to apply to Jan's file to get the units we want
     var_names = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
     jan_names = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
-    titles = ['Mean ice shelf melte rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
+    titles = ['Mean ice shelf melt rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
     units = ['m/y', 'Gt/y', r'm$^3$', deg_string+'C', 'psu']
     conversion = [sec_per_year, 1e-12*sec_per_year, 1, 1, 1]
 

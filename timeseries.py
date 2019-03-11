@@ -475,7 +475,7 @@ def set_parameters (var):
             shelves = 'all'
             title = 'Basal mass balance of ice shelves'
     elif var == 'avg_melt':
-        option = 'ismr'
+        option = 'meltrate'
         var_name = 'SHIfwFlx'
         units = 'm/y'
         mass_balance = False
