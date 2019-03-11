@@ -276,7 +276,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
