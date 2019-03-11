@@ -32,6 +32,7 @@ from calculus import vertical_average
 # include_shelf: if True (default), plot the values beneath the ice shelf and contour the ice shelf front. If False, shade the ice shelf in grey like land.
 # make_cbar: whether to make a colourbar (default True). 
 # ctype: as in function set_colours
+# norm: output from a BoundaryNorm object or similar, to create nonlinear colour scales
 # vmin, vmax: as in function set_colours
 # zoom_fris: as in function latlon_axes
 # xmin, xmax, ymin, ymax: as in function latlon_axes or pster_axes, depending on value of pster (see below).
@@ -48,7 +49,7 @@ from calculus import vertical_average
 # label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -86,7 +87,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
             # Shade land and ice shelves in grey
             shade_land_ice(ax, grid, gtype=gtype, pster=pster)
     # Plot the data    
-    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
     if include_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid, pster=pster)

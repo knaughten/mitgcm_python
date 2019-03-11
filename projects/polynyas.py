@@ -6,6 +6,7 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.colors as cl
 import numpy as np
 
 from ..postprocess import precompute_timeseries
@@ -1026,6 +1027,27 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     # Make horizontal legend
     ax.legend(bbox_to_anchor=(0.85,-0.07), ncol=num_expts-1, fontsize=12)
     finished_plot(fig, fig_name=fig_dir+'massloss_timeseries.png')
+
+
+# Create a map of the model domain, including bathymetry and a number of features/transects/etc. labelled.
+def domain_map (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    # Build the grid
+    grid = Grid(base_dir+grid_dir)
+    # Prepare the bathymetry
+    bathy = mask_land(grid.bathy, grid)*1e-3
+    # Get bounds for nonlinear bathymetry
+    bounds = np.array([-6000, -5000, -4000, -3000, -2500, -2000, -1500, -1250, -1000, -750, -500, -250, 0])
+    norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
+    # Make the plot
+    fig, gs, cax = set_panels('smallC1')
+    ax = plt.subplot(gs[0,0])
+    img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False)
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(-5,1))
+    plt.text(.75, .03, 'Bathymetry (km)', fontsize=14, ha='left', va='bottom', transform=fig.transFigure)
     
         
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (default last year minus first year).

@@ -48,6 +48,8 @@ def set_panels (key, figsize=None):
             figsize = (12, 5)
         elif key == 'MISO_C1':
             figsize = (13, 4)
+        elif key == 'smallC1':
+            figsize = (8, 6)
 
     fig = plt.figure(figsize=figsize)
     
@@ -138,6 +140,11 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(1,1)
         gs.update(left=0.05, right=0.9, bottom=0.05, top=0.8)
         cax = fig.add_axes([0.93, 0.15, 0.02, 0.6])
+    elif key == 'smallC1':
+        # One axis with a small colourbar below, and no need for a title
+        gs = plt.GridSpec(1,1)
+        gs.update(left=0.1, right=0.97, bottom=0.15, top=0.95)
+        cax = fig.add_axes([0.3, 0.04, 0.4, 0.03])
         
     if key == 'CTD':
         return fig, gs_1, gs_2
