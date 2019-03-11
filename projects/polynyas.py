@@ -14,7 +14,7 @@ from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
-from ..constants import deg_string, sec_per_year, deg2rad
+from ..constants import deg_string, sec_per_year, deg2rad, a23a_bounds
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label, latlon_axes
@@ -1049,7 +1049,11 @@ fig_dir = real_dir(fig_dir)
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(-5,1))
     plt.text(.75, .03, 'Bathymetry (km)', fontsize=14, ha='left', va='bottom', transform=fig.transFigure)
     # Trace outline of sws_shelf_mask
-    ax.contour(grid.lon_2d, grid.lat_2d, grid.sws_shelf_mask.astype(float), levels=[0.5], colors=('magenta'), linestyles='dashed', linewidth=1.5)
+    # First add the grounded iceberg to the mask so it doesn't get outlined
+    mask = grid.sws_shelf_mask.astype(float)
+    index = (grid.lon_2d >= a23a_bounds[0])*(grid.lon_2d <= a23a_bounds[1])*(grid.lat_2d >= a23a_bounds[2])*(grid.lat_2d <= a23a_bounds[3])*(grid.land_mask)
+    mask[index] = 1
+    ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('magenta'), linestyles='dashed', linewidth=1.5)
     # Overlay transect shown in mwdw_slices
     [lon0, lat0] = (-56, -79)
     [lon1, lat1] = (-40, -65)
@@ -1060,9 +1064,9 @@ fig_dir = real_dir(fig_dir)
     # Dashed line between
     ax.plot(lon, lat, color='red', linestyle='dashed', linewidth=1.5)
     # Location labels
-    lon = [-60, -39, -58, -47, -47, -38, -22, -1, 21, -63.5]
-    lat = [-77, -80, -74.5, -77, -79, -77.5, -75, -70.9, -70.7, -67.5]
-    label = ['RIS', 'FIS', 'RD', 'BB', 'BI', 'FT', 'BrIS', 'FmIS', 'BoIS', 'LrIS']
+    lon = [-60, -39, -58, -47, -47, -38, -22, -1, 21, -63.5, -40]
+    lat = [-77, -80, -74.5, -77, -79, -77.5, -75, -70.9, -70.7, -67.5, -74.5]
+    label = ['RIS', 'FIS', 'RD', 'BB', 'BI', 'FT', 'BrIS', 'FmIS', 'BoIS', 'LrIS', 'A23-A']
     for i in range(len(label)):
         plt.text(lon[i], lat[i], label[i], fontsize=13, va='center', ha='center', color='black')
     plt.text(3, -65, 'MR', fontsize=13, va='center', ha='center', color='white')
