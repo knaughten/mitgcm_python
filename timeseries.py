@@ -249,8 +249,7 @@ def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
-# shelves: as in function timeseries_ismr. Only matters for 'ismr'.
-# mass_balance: as in function timeseries_ismr. Only matters for 'ismr'.
+# shelves, mass_balance, result: as in function timeseries_ismr. Only matters for 'ismr'.
 # var_name: variable name to process. Doesn't matter for 'ismr' or 'wed_gyre_trans'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
 # threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
@@ -265,7 +264,7 @@ def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, shelf_option='full', monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, shelf_option='full', monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -402,7 +401,7 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, monthly=True):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
