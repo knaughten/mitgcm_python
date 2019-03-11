@@ -682,7 +682,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
         else:
             # Plot as normal
             img = latlon_plot(data[i], grid, ax=ax, pster=True, lon_lines=lon_lines, lat_lines=lat_lines, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], extend=extend[i], zoom_fris=True, title=title[i], change_points=[0.5, 1.5, 4])
-        if ctype[i] == 'ismr':
+        '''if ctype[i] == 'ismr':
             # Overlay location labels
             lon = [-60, -39, -58, -47, -47, -38, -83, -63, -33, -86]
             lat = [-77, -80, -74.5, -77, -79, -77.5, -84, -84.15, -75.5, -80]
@@ -698,7 +698,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
             lon = np.linspace(lon0, lon1)
             lat = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
             x, y = polar_stereo(lon, lat)
-            ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)
+            ax.plot(x, y, color='white', linestyle='dashed', linewidth=1.5)'''
     # Main title in top left space
     plt.text(0.18, 0.78, 'Baseline conditions\nbeneath FRIS\n(1979-2016 mean)', fontsize=24, va='center', ha='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'baseline_panels.png')
@@ -739,13 +739,13 @@ def aice_simulations (base_dir='./', fig_dir='./'):
             ax.set_yticklabels([])
         if i in [1,2]:
             ax.set_xticklabels([])
-        if i==0:
+        '''if i==0:
             # Overlay transect shown in mwdw_slices
             [lon0, lat0] = (-56, -79)
             [lon1, lat1] = (-40, -65)
             lon = np.linspace(lon0, lon1)
             lat = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
-            ax.plot(lon, lat, color='black', linestyle='dashed')
+            ax.plot(lon, lat, color='black', linestyle='dashed')'''
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
     reduce_cbar_labels(cbar)
     plt.suptitle('Sea ice concentration, 1979-2016', fontsize=22)
