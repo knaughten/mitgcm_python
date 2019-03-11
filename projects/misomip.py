@@ -9,6 +9,7 @@ import datetime
 
 from ..grid import Grid
 from ..plot_latlon import latlon_plot
+from ..plot_1d import timeseries_multi_plot
 from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom
 from ..constants import deg_string, sec_per_year
 from ..file_io import read_netcdf
