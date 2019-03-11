@@ -421,7 +421,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'fris_massloss': net melting beneath FRIS
 #      'ewed_massloss': net melting beneath Eastern Weddell ice shelves
 #      'massloss': net melting beneath all ice shelves in the domain
-#      'avgmelt': average melt rate beneath all ice shelves in the domain 
+#      'avg_melt': average melt rate beneath all ice shelves in the domain 
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
