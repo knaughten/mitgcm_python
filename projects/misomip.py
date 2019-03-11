@@ -31,6 +31,15 @@ def get_segment_dir (output_dir):
     return segment_dir
 
 
+# Helper function to create the MISOMIP time array: first of each month for 100 years
+def misomip_time ():
+    time = []
+    for year in range(100):
+        for month in range(12):
+            time.append(datetime.date(year+1, month+1, 1))
+    return np.array(time)
+
+
 # Make animations of lat-lon variables (ismr, bwtemp, bwsalt, bdry_temp, bdry_salt, draft).
 def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax=None, change_points=None, mov_name=None):
 
@@ -176,16 +185,43 @@ def compare_timeseries_jan (timeseries_file='timeseries.nc', jan_file='/work/n02
     conversion = [sec_per_year, 1e-12*sec_per_year, 1, 1, 1]
 
     # Create the time array: first of each month for 100 years
-    time = []
-    for year in range(100):
-        for month in range(12):
-            time.append(datetime.date(year+1, month+1, 1))
-    time = np.array(time)
+    time = misomip_time()
 
     # Loop over variables
     for i in range(len(var_names)):
         data_new = read_netcdf(timeseries_file, var_names[i])
         data_old = read_netcdf(jan_file, jan_names[i])*conversion[i]
         timeseries_multi_plot(time, [data_old, data_new], ['MISOMIP_1r, old', 'MISOMIP_1r, new'], ['black', 'blue'], title=titles[i], units=units[i], fig_name=fig_dir+'jan_compare_'+var_names[i]+'.png')
+
+
+# Plot each timeseries from several different simulations on the same axes.
+def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_1rv','MISOMIP_1rvb','MISOMIP_1rp'], timeseries_file='/output/timeseries.nc', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    var_names = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    titles = ['Mean ice shelf melt rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
+    units = ['m/y', 'Gt/y', r'm$^3$', deg_string+'C', 'psu']
+
+    colours = ['black', 'blue', 'green', 'red', 'magenta', 'cyan']
+    num_sim = len(simulations)
+    if num_sim > len(colours):
+        print 'Error (compare_timeseries_multi): not enough colours defined.'
+        sys.exit()
+    colours = colours[:num_sim]
+
+    time = misomip_time()
+
+    for i in range(len(var_names)):
+        data = []
+        times = []
+        for j in range(num_sim):
+            data_tmp = read_netcdf(simulations[j]+timeseries_file, var_names[i])
+            data.append(data_tmp)
+            times.append(time[:data_tmp.size])
+        timeseries_multi_plot(times, data, simulations, colours, title=titles[i], units=units[i], fig_name=fig_dir+'multi_compare_'+var_names[i]+'.png') 
+            
+    
 
     
