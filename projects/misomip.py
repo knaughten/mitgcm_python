@@ -5,11 +5,12 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import os
+import datetime
 
 from ..grid import Grid
 from ..plot_latlon import latlon_plot
 from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom
-from ..constants import deg_string
+from ..constants import deg_string, sec_per_year
 from ..file_io import read_netcdf
 from ..plot_utils.windows import set_panels
 from ..plot_utils.colours import get_extend
@@ -161,6 +162,27 @@ def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', times
         precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=False)
 
 
-#def compare_timeseries_jan (timeseries_file, jan_file):
+def compare_timeseries_jan (timeseries_file, jan_file, fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+
+    # Variable names in our files and in Jan's old file, plus titles, units, and conversion factors to apply to Jan's file to get the units we want
+    var_names = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    jan_names = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
+    titles = ['Mean ice shelf melte rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
+    units = ['m/y', 'Gt/y', r'm$^3$', deg_string+'C', 'psu']
+    conversion = [sec_per_year, 1e-12*sec_per_year, 1, 1, 1]
+
+    # Create the time array: first of each month for 100 years
+    time = []
+    for year in range(100):
+        for month in range(12):
+            time.append(datetime.date(year+1, month+1, 1))
+
+    # Loop over variables
+    for i in range(len(var_names)):
+        data_new = read_netcdf(timeseries_file, var_names[i])
+        data_old = read_netcdf(jan_file, jan_names[i])*conversion[i]
+        timeseries_multi_plot(time, [data_old, data_new], ['MISOMIP_1r, old', 'MISOMIP_1r, new'], ['black', 'blue'], title=titles[i], units=units[i], fig_name=fig_dir+'jan_compare_'+var_names[i]+'.png')
 
     
