@@ -1064,9 +1064,9 @@ def domain_map (base_dir='./', fig_dir='./'):
     # Dashed line between
     ax.plot(lon, lat, color='red', linestyle='dashed', linewidth=1.5)
     # Location labels
-    lon = [-60, -39, -58, -47, -47, -38, -22, -1, 21, -63.5, -40]
-    lat = [-77, -80, -74.5, -77, -79, -77.5, -75, -70.9, -70.7, -67.5, -74.5]
-    label = ['RIS', 'FIS', 'RD', 'BB', 'BI', 'FT', 'BrIS', 'FmIS', 'BoIS', 'LrIS', 'A23-A']
+    lon = [-60, -39, -58, -47, -47, -38, -22, -1, 21, -63.5, -41]
+    lat = [-77, -80, -74.5, -77, -79, -77.5, -75, -70.9, -70.7, -67.5, -75.2]
+    label = ['RIS', 'FIS', 'RD', 'BB', 'BI', 'FT', 'BrIS', 'FmIS', 'BoIS', 'LrIS', 'A']
     for i in range(len(label)):
         plt.text(lon[i], lat[i], label[i], fontsize=13, va='center', ha='center', color='black')
     plt.text(3, -65, 'MR', fontsize=13, va='center', ha='center', color='white')
