@@ -1032,15 +1032,15 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
 # Create a map of the model domain, including bathymetry and a number of features/transects/etc. labelled.
 def domain_map (base_dir='./', fig_dir='./'):
 
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
+base_dir = real_dir(base_dir)
+fig_dir = real_dir(fig_dir)
 
     # Build the grid
     grid = Grid(base_dir+grid_dir)
-    # Prepare the bathymetry
+    # Prepare the bathymetry (km)
     bathy = mask_land(grid.bathy, grid)*1e-3
-    # Get bounds for nonlinear bathymetry
-    bounds = np.array([-6000, -5000, -4000, -3000, -2500, -2000, -1500, -1250, -1000, -750, -500, -250, 0])
+    # Get bounds for nonlinear colour scale, so continental shelf bathymetry is more visible
+    bounds = np.array([-6, -5, -4, -3, -2, -1.75, -1.5, -1.25, -1, -0.75, -0.5, -0.25, 0])
     norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
     # Make the plot
     fig, gs, cax = set_panels('smallC1')
@@ -1048,7 +1048,26 @@ def domain_map (base_dir='./', fig_dir='./'):
     img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False)
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(-5,1))
     plt.text(.75, .03, 'Bathymetry (km)', fontsize=14, ha='left', va='bottom', transform=fig.transFigure)
-    
+    # Trace outline of sws_shelf_mask
+    ax.contour(grid.lon_2d, grid.lat_2d, grid.sws_shelf_mask.astype(float), levels=[0.5], colors=('magenta'), linestyles='dashed', linewidth=1.5)
+    # Overlay transect shown in mwdw_slices
+    [lon0, lat0] = (-56, -79)
+    [lon1, lat1] = (-40, -65)
+    lon = np.linspace(lon0, lon1)
+    lat = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
+    # Endpoints
+    ax.plot([lon0, lon1], [lat0, lat1], 'ro', markeredgewidth=0)
+    # Dashed line between
+    ax.plot(lon, lat, color='red', linestyle='dashed', linewidth=1.5)
+    # Location labels
+    lon = [-60, -39, -58, -47, -47, -38, -22, -1, 21, -63.5]
+    lat = [-77, -80, -74.5, -77, -79, -77.5, -75, -70.9, -70.7, -67.5]
+    label = ['RIS', 'FIS', 'RD', 'BB', 'BI', 'FT', 'BrIS', 'FmIS', 'BoIS', 'LrIS']
+    for i in range(len(label)):
+        plt.text(lon[i], lat[i], label[i], fontsize=13, va='center', ha='center', color='black')
+    plt.text(3, -65, 'MR', fontsize=13, va='center', ha='center', color='white')
+    finished_plot(fig, fig_name=fig_dir+'map.png')
+
         
 # Calculate the change in temperature and salinity depth-averaged through the centre of the Maud Rise polynya (default last year minus first year).
 def calc_polynya_ts_anom (base_dir='./', year=-1):
