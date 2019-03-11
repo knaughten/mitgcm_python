@@ -26,6 +26,7 @@ def get_segment_dir (output_dir):
             segment_dir.append(name)
     # Make sure in chronological order
     segment_dir.sort()
+    return segment_dir
 
 
 def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax=None, change_points=None, mov_name=None):
