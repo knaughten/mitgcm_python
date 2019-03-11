@@ -29,6 +29,7 @@ def get_segment_dir (output_dir):
     return segment_dir
 
 
+# Make animations of lat-lon variables (ismr, bwtemp, bwsalt, bdry_temp, bdry_salt, draft).
 def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax=None, change_points=None, mov_name=None):
 
     output_dir = real_dir(output_dir)
@@ -139,15 +140,27 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         plt.show()
 
 
-def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc'):
+# Precompute timeseries for the given experiment.
+def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc', segment_dir=None):
 
     timeseries_types = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
 
     output_dir = real_dir(output_dir)
-    # Get all the directories, one per segment
-    segment_dir = get_segment_dir(output_dir)
+    if segment_dir is not None:
+        # segment_dir is preset
+        if isinstance(segment_dir, str):
+            # Just one directory, so make it a list
+            segment_dir = [segment_dir]
+    else:
+        # Get all the directories, one per segment
+        segment_dir = get_segment_dir(output_dir)
 
     for sdir in segment_dir:
         file_path = output_dir+sdir+'/MITgcm/'+file_name
         print 'Processing ' + file_path
-        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)
+        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=False)
+
+
+#def compare_timeseries_jan (timeseries_file, jan_file):
+
+    
