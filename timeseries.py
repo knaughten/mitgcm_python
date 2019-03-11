@@ -306,9 +306,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     # Calculate timeseries on the first file
     if option == 'ismr':
         if mass_balance:
-            melt, freeze = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance)
+            melt, freeze = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
         else:
-            values = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance)
+            values = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
     elif option == 'max':
         values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     elif option == 'avg_sfc':
@@ -341,9 +341,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         for file in file_path[1:]:
             if option == 'ismr':
                 if mass_balance:
-                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance)
+                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
                 else:
-                    values_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance)
+                    values_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
             elif option == 'max':
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             elif option == 'avg_sfc':
@@ -475,7 +475,7 @@ def set_parameters (var):
             shelves = 'all'
             title = 'Basal mass balance of ice shelves'
     elif var == 'avg_melt':
-        option = 'meltrate'
+        option = 'ismr'
         var_name = 'SHIfwFlx'
         units = 'm/y'
         mass_balance = False
