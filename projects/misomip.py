@@ -152,7 +152,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 
 
 # Precompute timeseries for the given experiment.
-def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc', segment_dir=None):
+def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc', segment_dir=None, discard_spinup=True, num_spinup_dir=1):
 
     timeseries_types = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
 
@@ -165,6 +165,9 @@ def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', times
     else:
         # Get all the directories, one per segment
         segment_dir = get_segment_dir(output_dir)
+        if discard_spinup:
+            # Throw away the spinup directory(s)
+            segment_dir = segment_dir[num_spinup_dir:]    
 
     for sdir in segment_dir:
         file_path = output_dir+sdir+'/MITgcm/'+file_name
