@@ -537,8 +537,7 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     i0 = i_vals[front_points][index][posn]
     j0 = j_vals[front_points][index][posn]
     # Save their lat and lon for labelling
-    lon_start = lon[j0,i0]
-    lat_start = lat[j0,i0]
+    point_start = (lon[j0,i0], lat[j0,i0])
 
     # Set up array to save extracted data and hfac
     data_front = np.ma.empty([grid.nz, np.count_nonzero(front_points)])
@@ -567,27 +566,21 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
         posn = np.argmin(dist)
         i0 = i_vals[remaining_points][posn]
         j0 = j_vals[remaining_points][posn]
-
+        
+    # Trim if needed
+    data_front = data_front[:,:counter]
+    hfac_front = hfac_front[:,:counter]
     # Save lat and lon from the last point
-    lon_end = lon[j0,i0]
-    lat_end = lat[j0,i0]
-    
+    point_end = (lon[j0,i0], lat[j0,i0])
 
+    # Dummy horizontal axis
+    left = np.tile(np.arange(data_front.shape[-1]), (grid.nz,1))
+    right = left + 1
 
-        
-    # Save lon/lat of start/end points, but haxis is just 1s.
-    # Get below and above
-                
-        
-            
-            
+    # Get vertical boundaries
+    below, above = get_slice_boundaries(data_front, grid, left, hfac_front)[2:]
 
-        
-        
-        
-        
-        
-        
+    return data_front, left, right, below, above, point_start, point_end        
             
             
 

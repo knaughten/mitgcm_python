@@ -6,3 +6,6 @@ WSS:
 balance_obcs(option='balance')
 balance_obcs(option='correct', d_eta=-1.8, d_t=1)
 balance_obcs(option='correct', d_eta=-7.5, d_t=1.75)
+balance_obcs(option='correct', d_eta=-7.5, d_t=2)
+balance_obcs(option='correct', d_eta=-8, d_t=3)
+balance_obcs(option='correct', d_eta=-8, d_t=6)
