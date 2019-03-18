@@ -9,7 +9,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import sys
 
-from ..utils import dist_btw_points, get_ice_shelf_front
+from ..utils import dist_btw_points, ice_shelf_front_points
 from ..constants import fris_bounds
 
 
@@ -493,7 +493,7 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     hfac = grid.get_hfac(gtype=gtype)
 
     # Find ice shelf front points
-    front_points = get_ice_shelf_front(grid, ice_mask=ice_mask, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    front_points = ice_shelf_front_points(grid, ice_mask=ice_mask, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
     # Find first point
     # First narrow down based on the primary direction to start with

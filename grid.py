@@ -310,10 +310,10 @@ class Grid:
     def get_open_ocean_mask (self, gtype='t'):
 
         # Start with array of all ones
-        open_ocean = np.ones([grid.ny, grid.nx])
+        open_ocean = np.ones([self.ny, self.nx])
         # Set to zero in land and ice shelf regions
-        open_ocean[grid.get_land_mask(gtype=gtype)] = 0
-        open_ocean[grid.get_ice_mask(gtype=gtype)] = 0
+        open_ocean[self.get_land_mask(gtype=gtype)] = 0
+        open_ocean[self.get_ice_mask(gtype=gtype)] = 0
 
         return open_ocean
 

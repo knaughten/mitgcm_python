@@ -519,7 +519,7 @@ def dist_btw_points (point0, point1):
 
 # Find all ice shelf front points and return them as a list.
 # For a specific ice shelf, pass a special ice_mask (such as grid.fris_mask)
-def get_ice_shelf_front (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
+def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
 
     from interpolation import neighbours
 
