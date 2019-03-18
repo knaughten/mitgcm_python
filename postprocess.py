@@ -85,6 +85,8 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
             vmin = 34.3
         if var == 'bwage':
             vmin = 0
+            if key == 'WSS':
+                vmax = 12
         if var == 'eta':
             vmin = -2.5
         if var == 'hice':

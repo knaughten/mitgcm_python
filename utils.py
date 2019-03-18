@@ -515,4 +515,38 @@ def dist_btw_points (point0, point1):
     dx = rEarth*np.cos((lat0+lat1)/2*deg2rad)*(lon1-lon0)*deg2rad
     dy = rEarth*(lat1-lat0)*deg2rad
     return np.sqrt(dx**2 + dy**2)
+
+
+# Find all ice shelf front points and return them as a list.
+# For a specific ice shelf, pass a special ice_mask (such as grid.fris_mask)
+def get_ice_shelf_front (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
+
+    from interpolation import neighbours
+
+    # Build masks
+    if ice_mask is None:
+        ice_mask = grid.get_ice_mask(gtype=gtype)
+    open_ocean = grid.get_open_ocean_mask(gtype=gtype)
+
+    # Set any remaining bounds
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+
+    # Find number of open-ocean neighbours for each point
+    num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
+    # Find all ice shelf points within bounds that have at least 1 open-ocean neighbour
+    return ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
+    
+    
+    
+    
+
+    
     

@@ -399,6 +399,23 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 
     # Write to file
     write_binary(mask, mask_file, prec=prec)
+
+
+# Create a file with scaling factors for atmosphere/sea-ice drag in each cell (SEAICE_scaleDragFile in input/data.seaice; also switch on SEAICE_scaleDrag). The value of SEAICE_drag will be multiplied by the scaling factor in each cell.
+# The arguments rd_scale and bb_scale are the scaling factors to set over Ronne Depression and Berkner Bank respectively. They must be positive. The code will smooth the mask so there are no sharp boundaries in the scaling.
+def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, prec=64):
+
+    # Longitude bounds on each region
+    rd_bounds = [-62, -58]
+    bb_bounds = [-50, -46]
+    # Max distance from the ice front (km)
+    max_dist = 100
+
+    print 'Building grid'
+    grid = Grid(grid_path)
+
+    print 'Selecting regions'
+    # First find ice shelf front points
     
 
     

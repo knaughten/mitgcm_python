@@ -9,9 +9,8 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import sys
 
-from ..utils import dist_btw_points
+from ..utils import dist_btw_points, get_ice_shelf_front
 from ..constants import fris_bounds
-from ..interpolation import neighbours
 
 
 # Create the rectangular Polygon patches for plotting a slice (necessary to properly represent partial cells) and the corresponding data values. This is done with 4 helper functions:
@@ -493,25 +492,8 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
         ice_mask = grid.get_ice_mask(gtype=gtype)
     hfac = grid.get_hfac(gtype=gtype)
 
-    # Set any remaining bounds
-    if xmin is None:
-        xmin = np.amin(lon)
-    if xmax is None:
-        xmax = np.amax(lon)
-    if ymin is None:
-        ymin = np.amin(lat)
-    if ymax is None:
-        ymax = np.amax(lat)
-
-    # Set up a mask which is 1 in open-ocean points, otherwise 0
-    open_ocean = np.ones(land_mask.shape)
-    open_ocean[land_mask] = 0
-    open_ocean[grid.get_ice_mask(gtype=gtype)] = 0
-    # Find the number of open-ocean neighbours for each point
-    num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
-
-    # Find all ice shelf points within these bounds that have at least 1 open-ocean neighbour
-    front_points = ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
+    # Find ice shelf front points
+    front_points = get_ice_shelf_front(grid, ice_mask=ice_mask, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 
     # Find first point
     # First narrow down based on the primary direction to start with

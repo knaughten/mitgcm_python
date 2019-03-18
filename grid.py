@@ -306,6 +306,18 @@ class Grid:
             sys.exit()
 
 
+    # Build and return an open ocean mask for the given grid type.
+    def get_open_ocean_mask (self, gtype='t'):
+
+        # Start with array of all ones
+        open_ocean = np.ones([grid.ny, grid.nx])
+        # Set to zero in land and ice shelf regions
+        open_ocean[grid.get_land_mask(gtype=gtype)] = 0
+        open_ocean[grid.get_ice_mask(gtype=gtype)] = 0
+
+        return open_ocean
+
+
 # Interface to Grid for situations such as read_plot_latlon where there are three possibilities:
 # (1) the Grid object is precomputed and saved in variable "grid"; nothing to do
 # (2) the Grid object is not precomputed, but file_path (where the model output is being read from in the master function) contains the grid variables; build the Grid from this file
