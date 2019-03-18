@@ -415,29 +415,29 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, prec=64
     grid = Grid(grid_path)
     lon, lat = grid.get_lon_lat()
 
-print 'Selecting regions'
-# First find ice shelf front points
-front_points = ice_shelf_front_points(grid, ice_mask=grid.fris_mask)
-# Also coastal points for Berkner Island
-bi_front_points = ice_shelf_front_points(grid, ice_mask=grid.get_bi_mask())
-# Combine the two arrays
-front_points = np.maximum(front_points, bi_front_points)
-# Now get i and j indices of these points
-i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
-i_front = i_vals[front_points]
-j_front = j_vals[front_points]
-num_points = len(i_front)
-# Find the distance from each point in the domain to the closest ice shelf front point, by looping over all the ice shelf front points.
-# Start with an array of infinity, and update it with any smaller values each iteration. So the first iteration will fully overwrite it.
-dist_to_front = np.zeros([grid.ny, grid.nx]) + np.inf
-for posn in range(num_points):
-    # Calculate the distance of each point to this point, and convert to km
-    dist_to_point = dist_btw_points((grid.lon_1d[i_front[posn]], grid.lat_1d[j_front[posn]]), (lon, lat))*1e-3
-    dist_to_front = np.minimum(dist_to_front, dist_to_point)
-    # Now select the two regions
-    # Must be between the given longitude bounds and not more than max_dist km away from the ice shelf front
-    rd_mask = (lon >= rd_bounds[0])*(lon <= rd_bounds[1])*(dist_to_front <= max_dist)
-    bb_mask = (lon >= bb_bounds[0])*(lon <= bb_bounds[1])*(dist_to_front <= max_dist)
+    print 'Selecting regions'
+    # First find ice shelf front points
+    front_points = ice_shelf_front_points(grid, ice_mask=grid.fris_mask)
+    # Also coastal points for Berkner Island
+    bi_front_points = ice_shelf_front_points(grid, ice_mask=grid.get_bi_mask())
+    # Combine the two arrays
+    front_points = np.maximum(front_points, bi_front_points)
+    # Now get i and j indices of these points
+    i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
+    i_front = i_vals[front_points]
+    j_front = j_vals[front_points]
+    num_points = len(i_front)
+    # Find the distance from each point in the domain to the closest ice shelf front point, by looping over all the ice shelf front points.
+    # Start with an array of infinity, and update it with any smaller values each iteration. So the first iteration will fully overwrite it.
+    dist_to_front = np.zeros([grid.ny, grid.nx]) + np.inf
+    for posn in range(num_points):
+        # Calculate the distance of each point to this point, and convert to km
+        dist_to_point = dist_btw_points((grid.lon_1d[i_front[posn]], grid.lat_1d[j_front[posn]]), (lon, lat))*1e-3
+        dist_to_front = np.minimum(dist_to_front, dist_to_point)
+        # Now select the two regions
+        # Must be between the given longitude bounds and not more than max_dist km away from the ice shelf front
+        rd_mask = (lon >= rd_bounds[0])*(lon <= rd_bounds[1])*(dist_to_front <= max_dist)
+        bb_mask = (lon >= bb_bounds[0])*(lon <= bb_bounds[1])*(dist_to_front <= max_dist)
 
     print 'Setting scaling factors'
     scale = np.ones([grid.ny, grid.nx])
