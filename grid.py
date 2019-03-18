@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds
 
 
 # Grid object containing lots of grid variables:
@@ -316,6 +316,15 @@ class Grid:
         open_ocean[self.get_ice_mask(gtype=gtype)] = 0
 
         return open_ocean
+
+    
+    # Build and return a Berkner Island mask for the given grid type.
+    def get_bi_mask (self, gtype='t'):
+
+        lon, lat = self.get_lon_lat(gtype=gtype)
+        [lon0, lon1, lat0, lat1] = berkner_island_bounds
+        return (lon>=lon0)*(lon<=lon1)*(lat>=lat0)*(lat<=lat1)*self.get_land_mask(gtype=gtype)
+        
 
 
 # Interface to Grid for situations such as read_plot_latlon where there are three possibilities:

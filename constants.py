@@ -47,6 +47,8 @@ sws_shelf_bounds = [-70., -30., -79., -72.]
 sws_shelf_line = [-70., -15., -72., -80.]
 # Bounds on location to search for grounded iceberg A-23A
 a23a_bounds = [-47., -38., -77., -75.]
+# Bounds on Berkner Island
+berkner_island_bounds = [-55, -41, -81, -77]
 
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.
