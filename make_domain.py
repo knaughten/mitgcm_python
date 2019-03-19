@@ -550,6 +550,13 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     # The second open cell digs into the layer below OR above that by the minimum amount (based on hFac constraints).
     hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_next, 1))
     limit += direction_flag*dz_next*hfac_limit
+    # In the land mask, there is no limit.
+    if dig_option == 'bathy':
+        # Shallowest acceptable bathymetry is zero
+        limit[bathy==0] = 0
+    elif dig_option == 'draft':
+        # Deepest acceptable ice shelf draft is the bottom of the grid
+        limit[bathy==0] = z_edges[-1]
     # Get limit at each point's 4 neighbours
     limit_w, limit_e, limit_s, limit_n = neighbours(limit)[:4]
 
