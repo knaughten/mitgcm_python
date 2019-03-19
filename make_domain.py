@@ -536,7 +536,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         level_next = level_above  # Depth of the z-level above the bathymetry
         dz_next = dz_layer_above  # Thickness of the layer above that
         # Also make sure the bathymetry itself is deep enough
-        if any(layer_number == 1):
+        if (layer_number == 1).any():
             print "Error (do_digging): some bathymetry points are within the first vertical layer. If this is a coupled simulation, you need to set up the initial domain using bathymetry digging. If this is not a coupled simulation, use dig_option='bathy'."
             sys.exit()
             
