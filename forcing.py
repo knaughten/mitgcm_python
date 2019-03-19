@@ -402,12 +402,13 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 
 
 # Create a file with scaling factors for atmosphere/sea-ice drag in each cell (SEAICE_scaleDragFile in input/data.seaice; also switch on SEAICE_scaleDrag). The value of SEAICE_drag will be multiplied by the scaling factor in each cell.
-# The arguments rd_scale and bb_scale are the scaling factors to set over Ronne Depression and Berkner Bank respectively. They must be positive. The code will smooth the mask so there are no sharp boundaries in the scaling.
-def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, prec=64):
+# The arguments rd_scale, bb_scale, and ft_scale are the scaling factors to set over Ronne Depression, Berkner Bank, and Filchner Trough respectively. They must be positive. The code will smooth the mask so there are no sharp boundaries in the scaling.
+def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
     # Longitude bounds on each region
     rd_bounds = [-80, -58]  # Western bound is well into land
     bb_bounds = [-49, -45]
+    ft_bounds = [-42, -38]
     # Max distance from the ice front (km)
     max_dist = 100
 
@@ -434,15 +435,17 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, prec=64
         # Calculate the distance of each point to this point, and convert to km
         dist_to_point = dist_btw_points((grid.lon_1d[i_front[posn]], grid.lat_1d[j_front[posn]]), (lon, lat))*1e-3
         dist_to_front = np.minimum(dist_to_front, dist_to_point)
-        # Now select the two regions
+        # Now select the three regions
         # Must be between the given longitude bounds and not more than max_dist km away from the ice shelf front
         rd_mask = (lon >= rd_bounds[0])*(lon <= rd_bounds[1])*(dist_to_front <= max_dist)
         bb_mask = (lon >= bb_bounds[0])*(lon <= bb_bounds[1])*(dist_to_front <= max_dist)
+        ft_mask = (lon >= ft_bounds[0])*(lon <= ft_bounds[1])*(dist_to_front <= max_dist)
 
     print 'Setting scaling factors'
     scale = np.ones([grid.ny, grid.nx])
     scale[rd_mask] = rd_scale
     scale[bb_mask] = bb_scale
+    scale[ft_mask] = ft_scale
     # Smooth
     scale = smooth_xy(scale, sigma=2)
     # Reset ice shelf points
