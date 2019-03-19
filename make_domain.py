@@ -428,9 +428,13 @@ def level_vars (A, dz, z_edges, include_edge='top'):
         level_above[index] = z_edges[k]
         level_below[index] = z_edges[k+1]
         dz_layer[index] = dz[k]
-        if k > 0:     # Points in the top layer will keep dz_layer_above=0
+        if k == 0:  # Points in the top layer will extrapolate dz_layer_above
+            dz_layer_above[index] = dz[k]
+        else:
             dz_layer_above[index] = dz[k-1]
-        if k+1 < dz.size:   # Points in the bottom layer will keep dz_layer_below=0            
+        if k+1 == dz.size:  # Points in the botttom layer will extrapolate dz_layer_below
+            dz_layer_below[index] = dz[k]
+        else:
             dz_layer_below[index] = dz[k+1]
         flag[index] = 1
     if (flag==0).any():
@@ -568,6 +572,11 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     for i in range(len(loc_strings)):
         print 'Digging based on field to ' + loc_strings[i]
         field = dig_one_direction(limit_neighbours[i])
+
+    # Error checking
+    if (dig_option == 'bathy' and (field < z_edges[-1]).any()) or (dig_option == 'draft' and (field > 0).any()):
+        print 'Error (do_digging): we have dug off the edge of the grid!!'
+        sys.exit()
 
     return field
 
