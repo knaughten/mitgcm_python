@@ -194,7 +194,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSK'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSS'):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -242,7 +242,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
             vmax = None
         read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
         # Zoom into some variables
-        if var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
+        if key=='WSK' and var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
             if var == 'bwage':
                 vmin = -5
                 vmax = None
@@ -258,7 +258,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Slice plots
     read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_filchner_diff.png')
     read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-55, hmax=-72, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_ronne_diff.png')
-    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-25, zmin=-2000, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_eweddell_diff.png')    
+    if key == 'WSS':
+        read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-25, zmin=-2000, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_eweddell_diff.png')    
     
 
 
