@@ -9,7 +9,7 @@ import datetime
 
 from ..grid import Grid
 from ..plot_latlon import latlon_plot
-from ..plot_1d import timeseries_multi_plot
+from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom
 from ..constants import deg_string, sec_per_year
 from ..file_io import read_netcdf
@@ -223,8 +223,42 @@ def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_
             data_tmp = read_netcdf(simulations[j]+timeseries_file, var_names[i])
             data.append(data_tmp)
             times.append(time[:data_tmp.size])
-        timeseries_multi_plot(times, data, simulations, colours, title=titles[i], units=units[i], fig_name=fig_dir+'multi_compare_'+var_names[i]+'.png') 
-            
+        timeseries_multi_plot(times, data, simulations, colours, title=titles[i], units=units[i], fig_name=fig_dir+'multi_compare_'+var_names[i]+'.png')
+
+
+# The following six functions compare the MISOMIP NetCDF files from two different simulations.
+
+# Compare a timeseries variable. Make one plot with both timeseries on the same axes, and one plot with the difference timeseries (2 minus 1).
+def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+    # Read the data
+    data_1, title, units = read_netcdf(file_path_1, var_name, return_info=True)
+    data_2 = read_netcdf(file_path_2, var_name)
+    time = misomip_time()
+    # Plot timeseries on the same axes
+    timeseries_multi_plot(time, [data_1, data_2], [name_1, name_2], ['black', 'blue'], title=title, units=units, fig_name=fig_dir+var_name+'.png')
+    # Plot the difference timeseries
+    make_timeseries_plot(time, data_2-data_1, title=title+'\n'+name_2+' minus '+name_1, units=units, fig_name=fig_dir+var_name+'_diff.png')
+    
+    
+
+
+
+# Call the other three functions for all possible variables.
+def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, file_path_2_ocean, file_path_2_ice, name_1, name_2, fig_dir='./'):
+
+    # Timeseries
+    timeseries_var_ocean = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
+    timeseries_var_ice = ['iceVolume', 'iceVAF', 'groundedArea']
+    for var in timeseries_var_ocean:
+        print 'Processing ' + var
+        compare_timeseries_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, fig_dir=fig_dir)
+    for var in timeseries_var_ice:
+        print 'Processing ' + var
+        compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
+        
+    
     
 
     

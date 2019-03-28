@@ -21,6 +21,7 @@ from utils import days_per_month
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
+# return_info: boolean indicating to return the 'description' and 'units' variables. Default False.
 
 # Output: numpy array containing the variable
 
@@ -36,7 +37,7 @@ from utils import days_per_month
 # Read the last 12 time indices and time-average:
 # temp = read_netcdf('temp.nc', 'temp', t_start=-12, time_average=True)
 
-def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
+def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False, return_info=False):
 
     import netCDF4 as nc
 
@@ -96,7 +97,10 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     # Remove any one-dimensional entries
     data = np.squeeze(data)
 
-    return data
+    if return_info:
+        return data, id.variables[var_name].description, id.variables[var_name].units
+    else:
+        return data
 
 
 # Read the time axis from a NetCDF file. The default behaviour is to read and return the entire axis as Date objects, but you can also select a subset of time indices, and/or return as scalars - see optional keyword arguments.
