@@ -78,7 +78,6 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
                 data = id.variables[var_name][t_start:t_end]
             else:
                 data = id.variables[var_name][t_start:t_end,:]
-        id.close()
 
         # Time-average if necessary
         if time_average:
@@ -98,7 +97,12 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     data = np.squeeze(data)
 
     if return_info:
-        return data, id.variables[var_name].description, id.variables[var_name].units
+        description = id.variables[var_name].description
+        units = id.variables[var_name].units
+    id.close()
+
+    if return_info:
+        return data, description, units
     else:
         return data
 

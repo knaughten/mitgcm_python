@@ -246,7 +246,7 @@ def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_
 
 
 # Call the other three functions for all possible variables.
-def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, file_path_2_ocean, file_path_2_ice, name_1, name_2, fig_dir='./'):
+def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./'):
 
     # Timeseries
     timeseries_var_ocean = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
