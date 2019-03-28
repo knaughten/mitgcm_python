@@ -340,8 +340,16 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
         num_missing_old = num_missing
         num_missing = np.count_nonzero((data==missing_val)*fill)
         if num_missing == num_missing_old:
-            print 'Error (discard_and_fill): some missing values cannot be filled'
-            sys.exit()
+            # There are some disconnected regions. This can happen with coupling sometimes. Try using more iterations of extend_into_mask.
+            for iters in range(2, 100):
+                data = extend_into_mask(data, missing_val=missing_val, use_1d=use_1d, use_3d=use_3d, preference=preference, num_iters=iters)
+                num_missing_old = num_missing
+                num_missing = np.count_nonzero((data==missing_val)*fill)
+                if num_missing != num_missing_old:
+                    break
+            if num_missing == num_missing_old:
+                print 'Error (discard_and_fill): some missing values cannot be filled'
+                sys.exit()
     return data
 
 
