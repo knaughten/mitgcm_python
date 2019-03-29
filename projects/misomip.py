@@ -10,11 +10,12 @@ import datetime
 from ..grid import Grid
 from ..plot_latlon import latlon_plot
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
-from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom
+from ..utils import str_is_int, real_dir, convert_ismr, mask_3d, mask_except_ice, mask_land, select_top, select_bottom, axis_edges
 from ..constants import deg_string, sec_per_year
 from ..file_io import read_netcdf
 from ..plot_utils.windows import set_panels
-from ..plot_utils.colours import get_extend
+from ..plot_utils.colours import get_extend, set_colours
+from ..plot_utils.labels import reduce_cbar_labels
 from ..postprocess import precompute_timeseries
 
 
@@ -240,13 +241,75 @@ def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_
     timeseries_multi_plot(time, [data_1, data_2], [name_1, name_2], ['black', 'blue'], title=title, units=units, fig_name=fig_dir+var_name+'.png')
     # Plot the difference timeseries
     make_timeseries_plot(time, data_2-data_1, title=title+'\n'+name_2+' minus '+name_1, units=units, fig_name=fig_dir+var_name+'_diff.png')
-    
-    
 
+
+# Compare a lat-lon variable. Make a 3-panelled animation with data from each simulation, and the difference (2 minus 1).
+def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x, y, fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+    # Read the data
+    data_1, title, units = read_netcdf(file_path_1, var_name, return_info=True)
+    data_2 = read_netcdf(file_path_2, var_name)
+    data_diff = data_2-data_1
+    # Get cell boundaries
+    x_bound = axis_edges(x)
+    y_bound = axis_edges(y)
+    # Get bounds
+    vmin = min(np.amin(data_1), np.amin(data_2))
+    vmax = max(np.amax(data_1), np.amax(data_2))
+    vmin_diff = np.amin(data_diff)
+    vmax_diff = np.amax(data_diff)
+    # Set colourmaps
+    if var_name == 'meltRate':
+        ctype = 'ismr'
+    elif var_name in ['uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']:
+        ctype = 'plusminus'
+    else:
+        ctype = 'basic'
+    cmap, vmin, vmax = set_colours(data_1, ctype=ctype, vmin=vmin, vmax=vmax)
+    cmap, vmin, vmax = set_colours(data_2, ctype=ctype, vmin=vmin, vmax=vmax)
+    cmap_diff, vmin_diff, vmax_diff = set_colours(data_diff, ctype='plusminus', vmin=vmin_diff, vmax=vmax_diff)
+    num_frames = data_1.shape[0]
+
+    # Set up the figure
+    fig, gs, cax1, cax2 = set_panels('MISO_3_C2')
+    ax1 = plt.subplot(gs[0,0])
+    ax2 = plt.subplot(gs[0,1])
+    ax3 = plt.subplot(gs[1,0])
+
+    # Function to update figure with the given frame
+    def animate(t):
+        ax1.cla()
+        ax2.cla()
+        ax3.cla()
+        ax1.pcolormesh(x_bound, y_bound, data_1[t,:], cmap=cmap, vmin=vmin, vmax=vmax)
+        plt.title(name_1, fontsize=18)
+        img = ax2.pcolormesh(x_bound, y_bound, data_2[t,:], cmap=cmap, vmin=vmin, vmax=vmax)
+        plt.title(name_2, fontsize=18)
+        cbar = plt.colorbar(img, cax=cax1, orientation='horizontal')
+        reduce_cbar_labels(cbar)
+        img_diff = ax3.pcolormesh(x_bound, y_bound, data_diff[t,:], cmap=cmap_diff, vmin=vmin_diff, vmax=vmax_diff)
+        plt.title('Difference', fontsize=18)
+        cbar = plt.colorbar(img_diff, cax=cax2, orientation='horizontal')
+        reduce_cbar_labels(cbar)
+        plt.suptitle(title+' ('+units+') ,'+str(t+1)+'/'+str(num_frames), fontsize=24)
+
+    # Call it for the first frame
+    animate(0)
+    # Call it for subsequent frames and save as animation
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=300)
+    mov_name = fig_dir + var_name + '.mp4'
+    print 'Saving ' + mov_name
+    anim.save(mov_name)
 
 
 # Call the other three functions for all possible variables.
 def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./'):
+
+    # Read grid variables needed later
+    x = read_netcdf(file_path_1_ocean, 'x')
+    y = read_netcdf(file_path_1_ocean, 'y')
+    z = read_netcdf(file_path_1_ocean, 'z')
 
     # Timeseries
     timeseries_var_ocean = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
@@ -257,8 +320,16 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
     for var in timeseries_var_ice:
         print 'Processing ' + var
         compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
-        
-    
+
+    # Lat-lon animations
+    latlon_var_ocean = ['iceDraft', 'bathymetry', 'meltRate', 'frictionVelocity', 'thermalDriving', 'halineDriving', 'uBoundayLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity']
+    latlon_var_ice = ['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
+    for var in latlon_var_ocean:
+        print 'Processing ' + var
+        compare_latlon_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, x, y, fig_dir=fig_dir)
+    for var in latlon_var_ice:
+        print 'Processing ' + var
+        compare_latlon_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, x, y, fig_dir=fig_dir)
     
 
     

@@ -543,10 +543,13 @@ def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None
     num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
     # Find all ice shelf points within bounds that have at least 1 open-ocean neighbour
     return ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
-    
-    
-    
-    
+
+
+# Given an axis with values in the centre of each cell, find the locations of the boundaries of each cell (extrapolating for the outer boundaries).
+def axis_edges (x):
+    x_bound = 0.5*(x[:-1]+x[1:])
+    x_bound = np.concatenate(([2*x_bound[0]-x_bound[1]], x_bound, [2*x_bound[-1]-x_bound[-2]]))
+    return x_bound    
 
     
     
