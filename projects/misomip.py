@@ -243,8 +243,8 @@ def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_
     make_timeseries_plot(time, data_2-data_1, title=title+'\n'+name_2+' minus '+name_1, units=units, fig_name=fig_dir+var_name+'_diff.png')
 
 
-# Compare a lat-lon variable. Make a 3-panelled animation with data from each simulation, and the difference (2 minus 1).
-def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x, y, fig_dir='./'):
+# Compare a 2D variable (lat-lon or slice; just pass x and y as appropriate). Make a 3-panelled animation with data from each simulation, and the difference (2 minus 1).
+def compare_2d_anim_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x, y, fig_dir='./'):
 
     fig_dir = real_dir(fig_dir)
     # Read the data
@@ -336,12 +336,22 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
     latlon_var_ice = ['iceThickness'] #['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
     for var in latlon_var_ocean:
         print 'Processing ' + var
-        compare_latlon_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, yo, fig_dir=fig_dir)
+        compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, yo, fig_dir=fig_dir)
     for var in latlon_var_ice:
         print 'Processing ' + var
-        compare_latlon_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, xi, yi, fig_dir=fig_dir)
+        compare_2d_anim_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, xi, yi, fig_dir=fig_dir)
 
-    # Slices
-    slice_var = ['overturningStreamfunction', 'temperatureXZ', 'salinityXZ', 'temperatureYZ', 'salinityYZ']
+    # Slice animations
+    slice_var_xz = ['overturningStreamfunction', 'temperatureXZ', 'salinityXZ']
+    slice_var_yz = ['temperatureYZ', 'salinityYZ']
+    for var in slice_var_xz:
+        print 'Processing ' + var
+        compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, zo, fig_dir=fig_dir)
+    for var in slice_var_yz:
+        print 'Processing ' + var
+        compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, yo, zo, fig_dir=fig_dir)
+
+    # Grounding line animation
+    
 
     
