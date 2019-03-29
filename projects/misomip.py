@@ -262,6 +262,8 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
     # Get bounds
     vmin = min(np.amin(data_1), np.amin(data_2))
     vmax = max(np.amax(data_1), np.amax(data_2))
+    if var_name == 'bottomSalinity':
+        vmax = 35
     vmin_diff = np.amin(data_diff)
     vmax_diff = np.amax(data_diff)
     # Set colourmaps
@@ -289,7 +291,7 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
     # Function to update figure with the given frame
     def animate(t):
         if (t+1) % 10 == 0:
-            print 'Frame ' + str(t+1)
+            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
         for i in range(3):
             ax[i].cla()
             img = ax[i].pcolormesh(x_bound, y_bound, data[i][t,:], cmap=cmaps[i], vmin=vmins[i], vmax=vmaxs[i])
@@ -299,24 +301,25 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
             if cax[i] is not None and t==0:
                 cbar = plt.colorbar(img, cax=cax[i], orientation='horizontal')
                 reduce_cbar_labels(cbar)
-        plt.suptitle(title+' ('+units+') ,'+str(t+1)+'/'+str(num_frames), fontsize=24)
+        plt.suptitle(title+' ('+units+'), '+str(t+1)+'/'+str(num_frames), fontsize=24)
 
-    # Call it for the first frame
-    animate(0)
-    # Call it for subsequent frames and save as animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=100)
+    # Call it for each frame and save as animation
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
     mov_name = fig_dir + var_name + '.mp4'
     print 'Saving ' + mov_name
-    anim.save(mov_name)
+    anim.save(mov_name, writer=writer)
 
 
 # Call the other three functions for all possible variables.
 def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./'):
 
     # Read grid variables needed later
-    x = read_netcdf(file_path_1_ocean, 'x')
-    y = read_netcdf(file_path_1_ocean, 'y')
-    z = read_netcdf(file_path_1_ocean, 'z')
+    xo = read_netcdf(file_path_1_ocean, 'x')
+    yo = read_netcdf(file_path_1_ocean, 'y')
+    zo = read_netcdf(file_path_1_ocean, 'z')
+    xi = read_netcdf(file_path_1_ice, 'x')
+    yi = read_netcdf(file_path_1_ice, 'y')
 
     # Timeseries
     timeseries_var_ocean = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
@@ -333,10 +336,10 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
     latlon_var_ice = ['iceThickness'] #['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
     for var in latlon_var_ocean:
         print 'Processing ' + var
-        compare_latlon_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, x, y, fig_dir=fig_dir)
+        compare_latlon_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, yo, fig_dir=fig_dir)
     for var in latlon_var_ice:
         print 'Processing ' + var
-        compare_latlon_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, x, y, fig_dir=fig_dir)
+        compare_latlon_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, xi, yi, fig_dir=fig_dir)
 
     # Slices
     slice_var = ['overturningStreamfunction', 'temperatureXZ', 'salinityXZ', 'temperatureYZ', 'salinityYZ']
