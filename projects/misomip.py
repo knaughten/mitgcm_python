@@ -227,7 +227,7 @@ def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_
         timeseries_multi_plot(times, data, simulations, colours, title=titles[i], units=units[i], fig_name=fig_dir+'multi_compare_'+var_names[i]+'.png')
 
 
-# The following six functions compare the MISOMIP NetCDF files from two different simulations.
+# The following functions compare the MISOMIP NetCDF files from two different simulations.
 
 # Compare a timeseries variable. Make one plot with both timeseries on the same axes, and one plot with the difference timeseries (2 minus 1).
 def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, fig_dir='./'):
@@ -288,6 +288,8 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
 
     # Function to update figure with the given frame
     def animate(t):
+        if (t+1) % 10 == 0:
+            print 'Frame ' + str(t+1)
         for i in range(3):
             ax[i].cla()
             img = ax[i].pcolormesh(x_bound, y_bound, data[i][t,:], cmap=cmaps[i], vmin=vmins[i], vmax=vmaxs[i])
@@ -302,7 +304,7 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
     # Call it for the first frame
     animate(0)
     # Call it for subsequent frames and save as animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=300)
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=100)
     mov_name = fig_dir + var_name + '.mp4'
     print 'Saving ' + mov_name
     anim.save(mov_name)
@@ -327,14 +329,16 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
         compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
 
     # Lat-lon animations
-    latlon_var_ocean = ['iceDraft', 'bathymetry', 'meltRate', 'frictionVelocity', 'thermalDriving', 'halineDriving', 'uBoundayLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity']
-    latlon_var_ice = ['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
+    latlon_var_ocean = ['iceDraft', 'meltRate', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity'] #['iceDraft', 'bathymetry', 'meltRate', 'frictionVelocity', 'thermalDriving', 'halineDriving', 'uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity']
+    latlon_var_ice = ['iceThickness'] #['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
     for var in latlon_var_ocean:
         print 'Processing ' + var
         compare_latlon_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, x, y, fig_dir=fig_dir)
     for var in latlon_var_ice:
         print 'Processing ' + var
         compare_latlon_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, x, y, fig_dir=fig_dir)
-    
+
+    # Slices
+    slice_var = ['overturningStreamfunction', 'temperatureXZ', 'salinityXZ', 'temperatureYZ', 'salinityYZ']
 
     
