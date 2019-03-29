@@ -145,9 +145,9 @@ def set_panels (key, figsize=None):
     elif key == 'MISO_3_C2':
         # Three axes in the MISOMIP shape, arranged into two rows and two columns, with the empty space in the bottom right filled with two colourbars.
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.88, wspace=0.05, hspace=0.12)
-        cax1 = fig.add_axes([0.57, 0.3, 0.25, 0.05])
-        cax2 = fig.add_axes([0.57, 0.15, 0.25, 0.05])
+        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.88, wspace=0.05, hspace=0.15)
+        cax1 = fig.add_axes([0.62, 0.3, 0.3, 0.05])
+        cax2 = fig.add_axes([0.62, 0.15, 0.3, 0.05])
     elif key == 'smallC1':
         # One axis with a small colourbar below, and no need for a title
         gs = plt.GridSpec(1,1)

@@ -250,6 +250,11 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
     # Read the data
     data_1, title, units = read_netcdf(file_path_1, var_name, return_info=True)
     data_2 = read_netcdf(file_path_2, var_name)
+    if var_name == 'iceDraft':
+        # Mask the open ocean and grounded ice
+        # Use -1e-3 not 0 to account for interpolation artifacts
+        data_1 = np.ma.masked_where(data_1>=-1e-3, data_1)
+        data_2 = np.ma.masked_where(data_2>=-1e-3, data_2)
     data_diff = data_2-data_1
     # Get cell boundaries
     x_bound = axis_edges(x)
@@ -273,25 +278,25 @@ def compare_latlon_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, x
 
     # Set up the figure
     fig, gs, cax1, cax2 = set_panels('MISO_3_C2')
-    ax1 = plt.subplot(gs[0,0])
-    ax2 = plt.subplot(gs[0,1])
-    ax3 = plt.subplot(gs[1,0])
+    ax = [plt.subplot(gs[0,0]), plt.subplot(gs[0,1]), plt.subplot(gs[1,0])]
+    data = [data_1, data_2, data_diff]
+    cax = [cax1, None, cax2]
+    cmaps = [cmap, cmap, cmap_diff]
+    vmins = [vmin, vmin, vmin_diff]
+    vmaxs = [vmax, vmax, vmax_diff]
+    titles = [name_1, name_2, 'Difference']
 
     # Function to update figure with the given frame
     def animate(t):
-        ax1.cla()
-        ax2.cla()
-        ax3.cla()
-        ax1.pcolormesh(x_bound, y_bound, data_1[t,:], cmap=cmap, vmin=vmin, vmax=vmax)
-        plt.title(name_1, fontsize=18)
-        img = ax2.pcolormesh(x_bound, y_bound, data_2[t,:], cmap=cmap, vmin=vmin, vmax=vmax)
-        plt.title(name_2, fontsize=18)
-        cbar = plt.colorbar(img, cax=cax1, orientation='horizontal')
-        reduce_cbar_labels(cbar)
-        img_diff = ax3.pcolormesh(x_bound, y_bound, data_diff[t,:], cmap=cmap_diff, vmin=vmin_diff, vmax=vmax_diff)
-        plt.title('Difference', fontsize=18)
-        cbar = plt.colorbar(img_diff, cax=cax2, orientation='horizontal')
-        reduce_cbar_labels(cbar)
+        for i in range(3):
+            ax[i].cla()
+            img = ax[i].pcolormesh(x_bound, y_bound, data[i][t,:], cmap=cmaps[i], vmin=vmins[i], vmax=vmaxs[i])
+            ax[i].set_xticklabels([])
+            ax[i].set_yticklabels([])
+            ax[i].set_title(titles[i], fontsize=18)
+            if cax[i] is not None and t==0:
+                cbar = plt.colorbar(img, cax=cax[i], orientation='horizontal')
+                reduce_cbar_labels(cbar)
         plt.suptitle(title+' ('+units+') ,'+str(t+1)+'/'+str(num_frames), fontsize=24)
 
     # Call it for the first frame
