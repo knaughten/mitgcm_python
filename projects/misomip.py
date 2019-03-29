@@ -269,7 +269,7 @@ def compare_2d_anim_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, 
     # Set colourmaps
     if var_name == 'meltRate':
         ctype = 'ismr'
-    elif var_name in ['uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']:
+    elif var_name in ['uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean', 'overturningStreamfunction']:
         ctype = 'plusminus'
     else:
         ctype = 'basic'
@@ -311,7 +311,50 @@ def compare_2d_anim_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, 
     anim.save(mov_name, writer=writer)
 
 
-# Call the other three functions for all possible variables.
+# Animate the grounding line locations over time, for two different simulations on the same axes.
+def compare_gl_anim_netcdf (file_path_1, file_path_2, name_1, name_2, fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+    # Read grounding line locations
+    x_1 = read_netcdf(file_path_1, 'xGL')
+    y_1 = read_netcdf(file_path_1, 'yGL')
+    x_2 = read_netcdf(file_path_2, 'xGL')
+    y_2 = read_netcdf(file_path_2, 'yGL')
+    xmin = min(np.amin(x_1), np.amin(x_2))
+    xmax = max(np.amax(x_1), np.amax(x_2))
+    ymin = min(np.amin(y_1), np.amin(y_2))
+    ymax = max(np.amax(y_1), np.amax(y_2))
+    num_frames = x_1.shape[0]
+
+    # Set up the figure
+    fig, ax = plt.subplots(figsize=(10,6))
+
+    # Function to update figure with the given frame
+    def animate(t):
+        if (t+1) % 10 == 0:
+            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
+        ax.cla()
+        ax.plot(x_1[t,:], y_1[t,:], '-', color='black', label=name_1)
+        ax.plot(x_2[t,:], y_2[t,:], '-', color='blue', label=name_2)
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_title('Grounding line position, '+str(t+1)+'/'+str(num_frames), fontsize=18)
+        if t==0:
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+
+    # Call it for each frame and save as animation
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    mov_name = fig_dir + 'GL.mp4'
+    print 'Saving ' + mov_name
+    anim.save(mov_name, writer=writer)  
+    
+
+# Call the above functions for all possible variables.
 def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./'):
 
     # Read grid variables needed later
@@ -352,6 +395,7 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
         compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, yo, zo, fig_dir=fig_dir)
 
     # Grounding line animation
-    
+    print 'Processing grounding line'
+    compare_gl_anim_netcdf(file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
 
     
