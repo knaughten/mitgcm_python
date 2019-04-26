@@ -233,8 +233,8 @@ def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_
 def timeseries_transport_transect (file_path, grid, point0, point1, direction='N', time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read u and v
-    u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u')
-    v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v')
+    u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u', time_dependent=True)
+    v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='v', time_dependent=True)
     if len(u.shape)==3:
         # Just one timestep; add a dummy time dimension
         u = np.expand_dims(u,0)
