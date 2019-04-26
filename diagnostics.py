@@ -270,18 +270,23 @@ def parallel_vector (u, v, grid, point0, point1, time_dependent=False):
 
 
 # Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east").
-def transport_transect (u, v, grid, point0, point1, shore='S'):
+def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=False):
 
     # Calculate normal velocity
-    u_norm = normal_vector(u, v, grid, point0, point1)
+    u_norm = normal_vector(u, v, grid, point0, point1, time_dependent=time_dependent)
     # Extract the transect
-    u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1)
+    u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1, time_dependent=time_dependent)
     # Calculate integrands
     dh = (right - left)*1e3  # Convert from km to m
     dz = above - below
+    if time_dependent:
+        # Make them 3D
+        num_time = u.shape[0]
+        dh = add_time_dim(dh, num_time)
+        dz = add_time_dim(dh, num_time)
     # Integrate and convert to Sv
-    trans_S = np.sum(np.minimum(u_norm_trans,0)*dh*dz*1e-6)
-    trans_N = np.sum(np.maximum(u_norm_trans,0)*dh*dz*1e-6)
+    trans_S = np.sum(np.minimum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
+    trans_N = np.sum(np.maximum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     # Retrn onshore, then offshore transport
     if shore == 'S':
         return trans_S, trans_N
