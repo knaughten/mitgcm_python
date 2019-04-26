@@ -243,7 +243,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
     timeseries = []
     for t in range(u.shape[0]):
         # Get the "southward" and "northward" components
-        trans_S, trans_N =  transport_transect(u, v, grid, point0, point1)
+        trans_S, trans_N =  transport_transect(u[t,:], v[t,:], grid, point0, point1)
         # Combine them
         if direction == 'N':
             trans = trans_N - trans_S
