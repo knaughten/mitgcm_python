@@ -9,7 +9,7 @@ import datetime
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
-from diagnostics import total_melt, wed_gyre_trans
+from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
 from constants import deg_string
