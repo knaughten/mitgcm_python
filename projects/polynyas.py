@@ -1357,7 +1357,7 @@ def anomaly_vectors (base_dir='./', fig_dir='./', option='vice'):
 
 
 # Calculate the mean and standard deviation of the baseline annually averaged FRIS melt rates.
-def calc_polynya_ts_anom (base_dir='./'):
+def calc_ismr_stats (base_dir='./'):
 
     base_dir = real_dir(base_dir)
     file_path = base_dir + case_dir[0] + timeseries_file
