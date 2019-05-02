@@ -1355,9 +1355,18 @@ def anomaly_vectors (base_dir='./', fig_dir='./', option='vice'):
     overlay_vectors(ax, udiff_plot, vdiff_plot, grid, chunk=chunk, scale=scale_diff)
     finished_plot(fig, fig_name=fig_dir+option+'_anomalies.png')
 
-    
 
-    
-    
-        
-    
+# Calculate the mean and standard deviation of the baseline annually averaged FRIS melt rates.
+def calc_polynya_ts_anom (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    file_path = base_dir + case_dir[0] + timeseries_file
+
+    # Read the timeseries
+    time = netcdf_time(file_path, monthly=False)
+    melt = read_netcdf(file_path, 'fris_ismr')
+    # Annually average
+    melt, time = monthly_to_annual(melt, time)
+
+    print 'Mean melt rate: ' + str(np.mean(melt)) + ' Gt/y'
+    print 'Standard deviation in annually averaged melt rate: ' + str(np.std(melt)) + ' Gt/y'
