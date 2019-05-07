@@ -144,10 +144,12 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         latlon_plot(all_data[i], all_grids[i], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', '+str(i+1)+'/'+str(num_frames), label_latlon=False, make_cbar=False)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames), interval=300)
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    anim.save(mov_name, writer=writer)
     if mov_name is not None:
         print 'Saving ' + mov_name
-        anim.save(mov_name)
+        anim.save(mov_name, writer=writer)
     else:
         plt.show()
 
