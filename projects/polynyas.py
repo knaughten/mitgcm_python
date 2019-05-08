@@ -1381,10 +1381,10 @@ def calc_salt_fluxes (base_dir='./'):
     for expt in range(2):
         print expt_names[expt]
         file_path = base_dir + case_dir[expt] + avg_file
-        # Read salt flux from basal melting in kg/m^2/s, and convert to kg/m^2/y
-        shelf_flux = read_netcdf(file_path, 'SHIfwFlx', time_index=0)*sec_per_year
-        # Read net sea ice formation in m/s, and convert to kg/m^2/y
-        seaice_flux = (read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0))*rho_fw*sec_per_year
+        # Read salt flux from basal melting in kg/m^2/s
+        shelf_flux = read_netcdf(file_path, 'SHIfwFlx', time_index=0)
+        # Read net sea ice formation in m/s, and convert to kg/m^2/s
+        seaice_flux = (read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0))*rho_fw
         # Mask (FRIS and continental shelf respectively)
         shelf_flux = mask_except_ice(shelf_flux, grid)
         seaice_flux = np.ma.masked_where(np.invert(grid.sws_shelf_mask), seaice_flux)
@@ -1395,6 +1395,6 @@ def calc_salt_fluxes (base_dir='./'):
         shelf_flux = area_integral(shelf_flux, grid)
         seaice_flux = area_integral(seaice_flux, grid)
         # Print results
-        print 'Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/y'
-        print 'Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/y'
+        print 'Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/s'
+        print 'Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/s'
         
