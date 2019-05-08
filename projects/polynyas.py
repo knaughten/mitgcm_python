@@ -14,7 +14,7 @@ from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
-from ..constants import deg_string, sec_per_year, deg2rad, a23a_bounds
+from ..constants import deg_string, sec_per_year, deg2rad, a23a_bounds, rho_fw
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label, latlon_axes
@@ -1370,3 +1370,31 @@ def calc_ismr_stats (base_dir='./'):
 
     print 'Mean melt rate: ' + str(np.mean(melt)) + ' Gt/y'
     print 'Standard deviation in annually averaged melt rate: ' + str(np.std(melt)) + ' Gt/y'
+
+
+# Calculate the baseline and Maud Rise salt fluxes from ice shelf refreezing beneath FRIS, and from sea ice formation on the continental shelf.
+def calc_salt_fluxes (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    grid = Grid(base_dir+grid_dir)
+
+    for expt in range(2):
+        print expt_names[expt]
+        file_path = base_dir + case_dir[expt] + avg_file
+        # Read salt flux from basal melting in kg/m^2/s, and convert to kg/m^2/y
+        shelf_flux = read_netcdf(file_path, 'SHIfwFlx', time_index=0)*sec_per_year
+        # Read net sea ice formation in m/s, and convert to kg/m^2/y
+        seaice_flux = (read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0))*rho_fw*sec_per_year
+        # Mask (FRIS and continental shelf respectively)
+        shelf_flux = mask_except_ice(shelf_flux, grid)
+        seaice_flux = np.ma.masked_where(np.invert(grid.sws_shelf_mask), seaice_flux)
+        # Select only positive values
+        shelf_flux = np.maximum(shelf_flux, 0)
+        seaice_flux = np.maximum(seaice_flux, 0)
+        # Integrate over area
+        shelf_flux = area_integral(shelf_flux, grid)
+        seaice_flux = area_integral(seaice_flux, grid)
+        # Print results
+        print 'Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/y'
+        print 'Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/y'
+        
