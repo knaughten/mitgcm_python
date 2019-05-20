@@ -25,6 +25,7 @@ from ..plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff, read_plot
 from ..calculus import area_integral, vertical_average, lat_derivative
 from ..diagnostics import potential_density, heat_content_freezing, density
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
+from ..interpolation import interp_bilinear
 
 # Global parameters
 
@@ -1397,4 +1398,78 @@ def calc_salt_fluxes (base_dir='./'):
         # Print results
         print 'Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/s'
         print 'Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/s'
-        
+
+
+# Plot profiles of temperature and salinity in the upper 1500 m, in the centre of the Maud Rise polynya, on the edge, and outside.
+def plot_ts_profiles (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    zmin = -1500
+
+    points = [(0, -65), (-8, -65), (-15, -65)]
+    point_names = ['Centre of polynya', 'Edge of polynya', 'Outside polynya']
+    num_points = len(point_names)
+    point_colours = ['red', 'green', 'blue']
+
+    grid = Grid(base_dir+grid_dir)
+    file_path = base_dir + case_dir[1] + avg_file
+
+    # Inner function to read profiles and make the plot
+    def read_and_plot (var_name, title, units, fig_name):
+        data = mask_3d(read_netcdf(file_path, var_name, time_index=0), grid)
+        profiles = []
+        for n in range(num_points):
+            profiles.append(interp_bilinear(data, points[n][0], points[n][1], grid))
+        fig, ax = plt.subplots(figsize=(11,6))
+        for n in range(num_points):
+            ax.plot(profiles[n], grid.z, '-', color=point_colours[n], label=point_names[n], linewidth=1.5)
+        ax.grid(True)
+        plt.title(title, fontsize=18)
+        plt.xlabel(units, fontsize=16)
+        plt.ylabel('Depth (m)', fontsize=16)
+        ax.set_ylim([zmin, 0])
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+        finished_plot(fig, fig_name=fig_name)
+
+    # Call for temperature and salinity
+    read_and_plot('THETA', 'Temperature profiles', deg_string+'C', fig_dir+'temp_profiles.png')
+    read_and_plot('SALT', 'Salinity profiles', 'psu', fig_dir+'salt_profiles.png')
+
+
+# Make a two-panelled figure showing the evolution of salinity profiles each year of the Maud Rise simulation. The first shows salinity profiles within the polynya, and the second shows salinity profiles just outside.
+def salinity_profile_evolution (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    zmin = -1500
+    points = [(0, -65), (-10, -65)]
+    point_names = ['Centre of polynya', 'Outside polynya']
+    num_points = len(point_names)
+
+    grid = Grid(base_dir+grid_dir)
+
+    profiles = np.ma.empty([num_points, num_years, grid.nz])
+    for year in range(start_year, end_year+1):
+        print year
+        file_path = base_dir + case_dir[1] + 'output/annual_averages/' + str(year) + '_avg.nc'
+        salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+        for n in range(num_points):
+            profiles[n, year-start_year, :] = interp_bilinear(salt, points[n][0], points[n][1], grid)
+
+    year_colours = plt.get_cmap('jet')(np.linspace(0,1,num_years))
+    fig, gs = set_panels('2TS')
+    for n in range(num_points):
+        ax = plt.subplot(gs[0,n])
+        for t in range(num_years):
+            ax.plot(profiles[n, t, :], grid.z, '-', color=year_colours[t])
+        ax.grid(True)
+        plt.title(point_names[n], fontsize=18)
+        plt.xlabel('psu', fontsize=16)
+        if n==0:
+            plt.ylabel('Depth (m)', fontsize=16)
+        ax.set_xlim([34.6, 34.7])
+        ax.set_ylim([zmin, 0])
+    finished_plot(fig, fig_dir+'salt_profiles_evolution_zoom.png')

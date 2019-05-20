@@ -81,10 +81,15 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
 # If you want the A-23A grounded iceberg in your land mask, set grounded_iceberg=True and make sure you have the RTopo-2 aux file (containing the variable "amask") in your topo_dir; set rtopo_file if it has a different path than the default.
-def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None):
+# If you also want a master bed file with no digging or masking (except the grounded iceberg), set master_bed=True, master_bed_file=<path to binary file to write>, and prec=<precision for this file>.
+def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None, master_bed=False, master_bed_file=None, prec=64):
 
     import netCDF4 as nc
     from plot_latlon import plot_tmp_domain
+
+    if master_bed and master_bed_file is None:
+        print 'Error (interp_bedmap2): must set master_bed_file.'
+        sys.exit()
 
     topo_dir = real_dir(topo_dir)
 
@@ -198,6 +203,10 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         imask_interp = np.zeros([lat.size-1, lon.size-1])
         imask_interp[:j_split-1,:] = imask_bedmap_interp
 
+    if master_bed:
+        # Deep copy of the bathymetry before we mask things out
+        bed_interp = np.copy(bathy_interp)
+
     print 'Processing masks'
     # Deal with values interpolated between 0 and 1
     omask_interp[omask_interp < 0.5] = 0
@@ -260,7 +269,10 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         # The mask is 1 in the grounded iceberg region and 0 elsewhere. Take a threshold of 0.5 for interpolation errors. Treat it as land.
         index = mask_rtopo_interp >= 0.5
         omask_interp[index] = 0
-        bathy_interp[index] = 0        
+        bathy_interp[index] = 0
+
+        if master_bed:
+            bed_interp[index] = 0
         
     print 'Plotting'
     if use_gebco:
@@ -271,6 +283,8 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     plot_tmp_domain(lon_2d, lat_2d, draft_interp - bathy_interp, title='Water column thickness (m)')
     plot_tmp_domain(lon_2d, lat_2d, omask_interp, title='Ocean mask')
     plot_tmp_domain(lon_2d, lat_2d, imask_interp, title='Ice mask')
+    if master_bed:
+        plot_tmp_domain(lon_2d, lat_2d, bed_interp, title='Bed (m)')
 
     # Write to NetCDF file (at cell centres not edges!)
     ncfile = NCfile_basiclatlon(nc_out, 0.5*(lon[1:] + lon[:-1]), 0.5*(lat[1:] + lat[:-1]))
@@ -279,6 +293,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     ncfile.add_variable('omask', omask_interp)
     ncfile.add_variable('imask', imask_interp)
     ncfile.close()
+
+    if master_bed:
+        write_binary(bed_interp, master_bed_file, prec=prec)
 
     print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
