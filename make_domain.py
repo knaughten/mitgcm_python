@@ -589,18 +589,24 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
 
 
 # Fix problem (3) above.
-def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20.):
+def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
 
-    # Find any points which are less than half the depth of the surface layer and remove them
-    index = (draft != 0)*(abs(draft) < 0.5*dz[0])
-    print '...' + str(np.count_nonzero(index)) + ' cells to zap'
-    draft[index] = 0
-    imask[index] = 0
-    if hFacMinDr < dz[0]:
-        # Also find any points which are between half the depth and the full depth of the surface layer, and grow them
-        index = (abs(draft) >= 0.5*dz[0])*(abs(draft) < dz[0])
+    if only_grow:
+        # Find any points which are less than the depth of the surface layer and grow them
+        index = (draft != 0)*(abs(draft) < dz[0])
         print '...' + str(np.count_nonzero(index)) + ' cells to grow'
         draft[index] = -1*dz[0]
+    else:
+        # Find any points which are less than half the depth of the surface layer and remove them
+        index = (draft != 0)*(abs(draft) < 0.5*dz[0])
+        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
+        draft[index] = 0
+        imask[index] = 0
+        if hFacMinDr < dz[0]:
+            # Also find any points which are between half the depth and the full depth of the surface layer, and grow them
+            index = (abs(draft) >= 0.5*dz[0])*(abs(draft) < dz[0])
+            print '...' + str(np.count_nonzero(index)) + ' cells to grow'
+            draft[index] = -1*dz[0]
         
     return draft, imask
         
