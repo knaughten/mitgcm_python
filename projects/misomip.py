@@ -32,10 +32,10 @@ def get_segment_dir (output_dir):
     return segment_dir
 
 
-# Helper function to create the MISOMIP time array: first of each month for 100 years
-def misomip_time ():
+# Helper function to create the MISOMIP time array: first of each month for the given number of years (default 100).
+def misomip_time (num_years=100):
     time = []
-    for year in range(100):
+    for year in range(num_years):
         for month in range(12):
             time.append(datetime.date(year+1, month+1, 1))
     return np.array(time)
@@ -232,13 +232,13 @@ def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_
 # The following functions compare the MISOMIP NetCDF files from two different simulations.
 
 # Compare a timeseries variable. Make one plot with both timeseries on the same axes, and one plot with the difference timeseries (2 minus 1).
-def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, fig_dir='./'):
+def compare_timeseries_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, fig_dir='./', num_years=100):
 
     fig_dir = real_dir(fig_dir)
     # Read the data
     data_1, title, units = read_netcdf(file_path_1, var_name, return_info=True)
     data_2 = read_netcdf(file_path_2, var_name)
-    time = misomip_time()
+    time = misomip_time(num_years=num_years)
     # Plot timeseries on the same axes
     timeseries_multi_plot(time, [data_1, data_2], [name_1, name_2], ['black', 'blue'], title=title, units=units, fig_name=fig_dir+var_name+'.png')
     # Plot the difference timeseries
@@ -357,7 +357,7 @@ def compare_gl_anim_netcdf (file_path_1, file_path_2, name_1, name_2, fig_dir='.
     
 
 # Call the above functions for all possible variables.
-def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./'):
+def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_path_2_ocean, file_path_2_ice, name_2, fig_dir='./', num_years=100):
 
     # Read grid variables needed later
     xo = read_netcdf(file_path_1_ocean, 'x')
@@ -371,10 +371,10 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
     timeseries_var_ice = ['iceVolume', 'iceVAF', 'groundedArea']
     for var in timeseries_var_ocean:
         print 'Processing ' + var
-        compare_timeseries_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, fig_dir=fig_dir)
+        compare_timeseries_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, fig_dir=fig_dir, num_years=num_years)
     for var in timeseries_var_ice:
         print 'Processing ' + var
-        compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
+        compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir, num_years=num_years)
 
     # Lat-lon animations
     latlon_var_ocean = ['iceDraft', 'meltRate', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity'] #['iceDraft', 'bathymetry', 'meltRate', 'frictionVelocity', 'thermalDriving', 'halineDriving', 'uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity']
