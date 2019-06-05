@@ -687,7 +687,7 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
 # hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
 # coupled: set to True if this is the initial topography for a coupled run. This will skip the filling step, and only grow ice shelf draft rather than zapping it.
 
-def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False)
+def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False):
 
     from plot_latlon import plot_tmp_domain
 
