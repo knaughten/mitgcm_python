@@ -3,6 +3,7 @@
 #######################################################
 
 import numpy as np
+from scipy.io import loadmat
 import sys
 import shutil
 
@@ -78,6 +79,39 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     return lon, lat
 
 
+# Helper function to add the grounded iceberg A23A to the domain.
+# lon, lat, bathy, omask are from the domain being built.
+def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
+
+    print 'Adding grounded iceberg A-23A'
+    
+    print 'Reading data'
+    id = nc.Dataset(rtopo_file, 'r')
+    lon_rtopo = id.variables['lon'][:]
+    lat_rtopo = id.variables['lat'][:]
+    # Select the region we care about
+    i_start = np.nonzero(lon_rtopo >= a23a_bounds[0])[0][0] - 1
+    i_end = np.nonzero(lon_rtopo >= a23a_bounds[1])[0][0]
+    j_start = np.nonzero(lat_rtopo >= a23a_bounds[2])[0][0] - 1
+    j_end = np.nonzero(lat_rtopo >= a23a_bounds[3])[0][0]
+    # Read mask just from this section
+    mask_rtopo = id.variables['amask'][j_start:j_end, i_start:i_end]
+    id.close()
+    # Trim the grid too
+    lon_rtopo = lon_rtopo[i_start:i_end]
+    lat_rtopo = lat_rtopo[j_start:j_end]
+
+    print 'Interpolating mask'
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    mask_rtopo_interp = interp_topo(lon_rtopo, lat_rtopo, mask_rtopo, lon_2d, lat_2d)
+    # The mask is 1 in the grounded iceberg region and 0 elsewhere. Take a threshold of 0.5 for interpolation errors. Treat it as land.
+    index = mask_rtopo_interp >= 0.5
+    bathy[index] = 0
+    omask[index] = 0
+
+    return bathy, omask
+
+
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
 # If you want the A-23A grounded iceberg in your land mask, set grounded_iceberg=True and make sure you have the RTopo-2 aux file (containing the variable "amask") in your topo_dir; set rtopo_file if it has a different path than the default.
@@ -96,8 +130,8 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         bed_file = topo_dir+'bedmap2_bed.flt'
     # GEBCO file name
     gebco_file = topo_dir+'GEBCO_2014_2D.nc'
-    if grounded_iceberg:
-        # RTopo-2 file name (auxiliary file including masks)
+    if grounded_iceberg and (rtopo_file is None):
+        # RTopo-2 file name (auxiliary file including masks)        
         rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
 
     if np.amin(lat) > -60:
@@ -234,33 +268,9 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     print 'Removing isolated ice shelf cells'
     imask_interp = remove_isolated_cells(imask_interp)
     draft_interp[imask_interp==0] = 0
-
+    
     if grounded_iceberg:
-        print 'Adding grounded iceberg A-23A'
-
-        print 'Reading data'
-        id = nc.Dataset(rtopo_file, 'r')
-        lon_rtopo = id.variables['lon'][:]
-        lat_rtopo = id.variables['lat'][:]
-        # Select the region we care about
-        i_start = np.nonzero(lon_rtopo >= a23a_bounds[0])[0][0] - 1
-        i_end = np.nonzero(lon_rtopo >= a23a_bounds[1])[0][0]
-        j_start = np.nonzero(lat_rtopo >= a23a_bounds[2])[0][0] - 1
-        j_end = np.nonzero(lat_rtopo >= a23a_bounds[3])[0][0]
-        # Read mask just from this section
-        mask_rtopo = id.variables['amask'][j_start:j_end, i_start:i_end]
-        id.close()
-        # Trim the grid too
-        lon_rtopo = lon_rtopo[i_start:i_end]
-        lat_rtopo = lat_rtopo[j_start:j_end]
-
-        print 'Interpolating mask'
-        lon_2d, lat_2d = np.meshgrid(lon, lat)
-        mask_rtopo_interp = interp_topo(lon_rtopo, lat_rtopo, mask_rtopo, lon_2d, lat_2d)
-        # The mask is 1 in the grounded iceberg region and 0 elsewhere. Take a threshold of 0.5 for interpolation errors. Treat it as land.
-        index = mask_rtopo_interp >= 0.5
-        omask_interp[index] = 0
-        bathy_interp[index] = 0
+        bathy_interp, omask_interp = add_grounded_iceberg(rtopo_file, lon, lat, bathy_interp, omask_interp)
         
     print 'Plotting'
     if use_gebco:
@@ -278,6 +288,50 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     ncfile.add_variable('draft', draft_interp, units='m')
     ncfile.add_variable('omask', omask_interp)
     ncfile.add_variable('imask', imask_interp)
+    ncfile.close()
+
+    print 'The results have been written into ' + nc_out
+    print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
+    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"
+
+
+# Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed.
+def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None):
+
+    import netCDF4 as nc
+    from plot_latlon import plot_tmp_domain
+    
+    if grounded_iceberg:
+        if topo_dir is None and rtopo_file is None:
+            print 'Error (ua_topo): must set topo_dir or rtopo_file if grounded_iceberg is True'
+            sys.exit()
+        if rtopo_file is None:
+            rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
+
+    print 'Reading ' + ua_file
+    f = loadmat(ua_file)
+    bathy = np.transpose(f['bathy'])
+    draft = np.transpose(f['draft'])
+    omask = np.transpose(f['omask'])
+    imask = np.transpose(f['imask'])
+
+    if grounded_iceberg:
+        bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
+
+    print 'Plotting'
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+    plot_tmp_domain(lon_2d, lat_2d, bathy, title='Bathymetry (m)')
+    plot_tmp_domain(lon_2d, lat_2d, draft, title='Ice shelf draft (m)')
+    plot_tmp_domain(lon_2d, lat_2d, draft - bathy, title='Water column thickness (m)')
+    plot_tmp_domain(lon_2d, lat_2d, omask, title='Ocean mask')
+    plot_tmp_domain(lon_2d, lat_2d, imask, title='Ice mask')
+
+    # Write to NetCDF file (at cell centres not edges!)
+    ncfile = NCfile_basiclatlon(nc_out, 0.5*(lon[1:] + lon[:-1]), 0.5*(lat[1:] + lat[:-1]))
+    ncfile.add_variable('bathy', bathy, units='m')
+    ncfile.add_variable('draft', draft, units='m')
+    ncfile.add_variable('omask', omask)
+    ncfile.add_variable('imask', imask)
     ncfile.close()
 
     print 'The results have been written into ' + nc_out
