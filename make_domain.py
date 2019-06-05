@@ -83,6 +83,8 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
 # lon, lat, bathy, omask are from the domain being built.
 def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
 
+    import netCDF4 as nc
+
     print 'Adding grounded iceberg A-23A'
     
     print 'Reading data'
@@ -298,9 +300,8 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed.
 def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None):
 
-    import netCDF4 as nc
     from plot_latlon import plot_tmp_domain
-    
+
     if grounded_iceberg:
         if topo_dir is None and rtopo_file is None:
             print 'Error (ua_topo): must set topo_dir or rtopo_file if grounded_iceberg is True'
@@ -314,6 +315,9 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
     draft = np.transpose(f['draft'])
     omask = np.transpose(f['omask'])
     imask = np.transpose(f['imask'])
+    if (bathy.shape[0] != len(lat)-1) or (bathy.shape[1] != len(lon)-1):
+        print 'Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'
+        sys.exit()
 
     if grounded_iceberg:
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
@@ -336,7 +340,7 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
 
     print 'The results have been written into ' + nc_out
     print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
-    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"
+    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy))) + " m), and run remove_grid_problems"
 
 
 # Helper function to read variables from a temporary NetCDF grid file
