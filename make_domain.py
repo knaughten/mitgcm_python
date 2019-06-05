@@ -685,11 +685,9 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
 
 # Optional keyword arguments:
 # hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
-# save_pre_digging: boolean indicating to write bathymetry to a binary file before digging (but after filling). This is important for some coupled runs.
-# pre_digging_file: file path to save bathymetry prior to digging.
-# prec: precision to write pre_digging_file.
+# coupled: set to True if this is the initial topography for a coupled run. This will skip the filling step, and only grow ice shelf draft rather than zapping it.
 
-def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., save_pre_digging=False, pre_digging_file=None, prec=64):
+def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False)
 
     from plot_latlon import plot_tmp_domain
 
@@ -701,18 +699,13 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., sa
         print 'Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'
         sys.exit()
 
-    print 'Filling isolated bottom cells'
-    bathy_orig = np.copy(bathy)
-    bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
-    # Plot how the results have changed
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after filling')
-    plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
-
-    if save_pre_digging:
-        if pre_digging_file is None:
-            print 'Error (remove_grid_problems): must set pre_digging_file if save_pre_digging is True.'
-            sys.exit()
-        write_binary(bathy, pre_digging_file, prec=prec)
+    if not coupled:
+        print 'Filling isolated bottom cells'
+        bathy_orig = np.copy(bathy)
+        bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+        # Plot how the results have changed
+        plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after filling')
+        plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
     print 'Digging subglacial lakes'
     bathy_orig = np.copy(bathy)
@@ -723,7 +716,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., sa
 
     print 'Zapping thin ice shelf draft'
     draft_orig = np.copy(draft)
-    draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr)
+    draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr, only_grow=coupled)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, draft-draft_orig), title='Change in ice shelf draft (m)\ndue to zapping')
 
