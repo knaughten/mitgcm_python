@@ -445,7 +445,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             source_aice_u = interp_grid(source_data, source_grid, 't', 'u', time_dependent=True, mask_with_zeros=True, periodic=True)
             source_aice_v = interp_grid(source_data, source_grid, 't', 'v', time_dependent=True, mask_with_zeros=True, periodic=True)
         # Set sea ice velocity to zero wherever sea ice area is zero
-        if fields[n] in ['SIuice', 'SIvice'] and source == 'SOURCE':
+        if fields[n] in ['SIuice', 'SIvice'] and source == 'SOSE':
             print 'Masking sea ice velocity with sea ice area'
             if fields[n] == 'SIuice':
                 index = source_aice_u==0
@@ -486,6 +486,11 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
                 model_hfac = model_hfac[...,0]
             else:
                 model_hfac = model_hfac[...,-1]
+            if source == 'MIT' and model_haxis[0] < source_haxis[0]:
+                # Need to extend source data to the south. Just add one row.
+                source_haxis = np.concatenate(([model_haxis[0]-0.1], source_haxis))
+                source_data = np.concatenate((np.expand_dims(source_data[:,:,0], 2), source_data), axis=2)
+                source_hfac = np.concatenate((np.expand_dims(source_hfac[:,0], 1), source_hfac), daxis=1)
         # For 2D variables, just need surface hfac
         if dim[n] == 2:
             source_hfac = source_hfac[0,:]
