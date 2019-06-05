@@ -486,11 +486,11 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
                 model_hfac = model_hfac[...,0]
             else:
                 model_hfac = model_hfac[...,-1]
-            if source == 'MIT' and model_haxis[0] < source_haxis[0]:
-                # Need to extend source data to the south. Just add one row.
-                source_haxis = np.concatenate(([model_haxis[0]-0.1], source_haxis))
-                source_data = np.concatenate((np.expand_dims(source_data[:,...,0], -1), source_data), axis=-1)
-                source_hfac = np.concatenate((np.expand_dims(source_hfac[:,0], 1), source_hfac), axis=1)
+        if source == 'MIT' and model_haxis[0] < source_haxis[0]:
+            # Need to extend source data to the west or south. Just add one row.
+            source_haxis = np.concatenate(([model_haxis[0]-0.1], source_haxis))
+            source_data = np.concatenate((np.expand_dims(source_data[:,...,0], -1), source_data), axis=-1)
+            source_hfac = np.concatenate((np.expand_dims(source_hfac[:,0], 1), source_hfac), axis=1)
         # For 2D variables, just need surface hfac
         if dim[n] == 2:
             source_hfac = source_hfac[0,:]
