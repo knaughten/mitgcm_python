@@ -10,8 +10,10 @@ gravity = 9.81
 rho_fw = 1e3
 # Density of ice (kg/m^3)
 rho_ice = 917.
+# Seconds per day
+sec_per_day = 24*60*60.
 # Seconds per year
-sec_per_year = 365.25*24*60*60
+sec_per_year = 365.25*sec_per_day
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
 # Radius of Earth

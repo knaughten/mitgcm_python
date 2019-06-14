@@ -13,8 +13,8 @@ from MITgcmutils.mdjwf import densmdjwf
 
 from ..grid import Grid
 from ..file_io import read_netcdf, netcdf_time, read_binary, NCfile
-from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr
-from ..constants import deg_string, gravity
+from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr, days_per_month, add_time_dim, xy_to_xyz, z_to_xyz
+from ..constants import deg_string, gravity, sec_per_day, rho_fw
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
@@ -294,6 +294,79 @@ def extract_ismr (out_file, start_year=1994, end_year=2016, output_dir='./annual
     ncfile.add_time(range(start_year,end_year+1), units='year')
     ncfile.add_variable('melt_rate', ismr, 'xyt', units='m/y')
     ncfile.close()
+
+
+# Calculate components of volume change in the domain, and save to NetCDF timeseries file.
+def calc_volume_components (file_path, nc_out):
+
+    grid = Grid(file_path)
+
+    # Calculate the dt of each output step
+    # First get the month and year of each 
+    time, time_units = netcdf_time(file_path, return_units=True)
+    num_time = time.size
+    dt = np.empty(num_time)
+    for t in range(num_time):
+        dt[t] = days_per_month(time[t].month, time[t].year)*sec_per_day
+        
+    # Expand area of each cell to have a time dimension
+    dA = add_time_dim(grid.dA, num_time)
+
+    # Calculate volume changes in m^3 from different components:
+
+    # As seen by free surface
+    eta = read_netcdf(file_path, 'ETAN')  # m
+    vol_eta = np.sum(eta*dA, axis=(1,2))  # m^3
+
+    # Ice shelf melting (integrated over time)
+    shiflx = -read_netcdf(file_path, 'SHIfwFlx')  # kg/m^2/s
+    dV_shi = np.sum(shiflx/rho_fw*dA, axis=(1,2)) # m^3/s
+    vol_shi = np.cumsum(dV_shi*dt)  # m^3
+
+    # Precipitation minus evaporation (integrated over time)
+    pminuse = read_netcdf(file_path, 'EXFpreci') - read_netcdf(file_path, 'EXFevap')  # m/s
+    dV_pme = np.sum(pminuse*dA, axis=(1,2))  # m^3/s
+    vol_pme = np.cumsum(dV_pme*dt)  # m^3
+
+    # Iceberg melting (integrated over time)
+    icebergs = read_netcdf(file_path, 'EXFroff')  # m/s
+    dV_ib = np.sum(icebergs*dA, axis=(1,2))  # m^3/s
+    vol_ib = np.cumsum(dV_ib*dt)  # m^3
+
+    # Sea ice melting minus freezing (integrated over time)
+    siflx = -(read_netcdf(file_path, 'SIdHbATC') + read_netcdf(file_path, 'SIdHbATO') + read_netcdf(file_path, 'SIdHbOCN') + read_netcdf(file_path, 'SIdHbFLO'))  # m/s
+    dV_si = np.sum(siflx*dA, axis=(1,2))  # m^3/s
+    vol_si = np.cumsum(dV_si*dt)  # m^3
+
+    # Net inflow on eastern boundary (integrated over time)
+    vnorm_e = -read_netcdf(file_path, 'UVEL')[:,:,-1]  # m/s
+    # Calculate area of boundary face: dy*dz*hfac
+    area_e = add_time_dim((xy_to_xyz(grid.dy_w, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,:,-1], num_time)  # m^2
+    dV_ebdry = np.sum(vnorm_e*area_e, axis=(1,2))  # m^3/s
+    vol_ebdry = np.cumsum(dV_ebdry*dt)  # m^3
+
+    # Net inflow on northern boundary (integrated over time)
+    vnorm_n = -read_netcdf(file_path, 'VVEL')[:,-1,:]  # m/s
+    area_n = add_time_dim((xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,-1,:], num_time)  # m^2
+    dV_nbdry = np.sum(vnorm_n*area_n, axis=(1,2))  # m^3/s
+    vol_nbdry = np.cumsum(dV_nbdry*dt)  # m^3
+
+    # Also calculate total volume components, to compare to eta changes
+    vol_total = vol_shi + vol_pme + vol_ib + vol_si + vol_ebdry + vol_nbdry
+
+    # Write to file
+    ncfile = NCfile(nc_out, grid, 't')
+    ncfile.add_time(time, units=time_units)
+    vars = [vol_eta, vol_shi, vol_pme, vol_ib, vol_si, vol_ebdry, vol_nbdry, vol_total]
+    var_names = ['vol_eta', 'vol_shi', 'vol_pme', 'vol_ib', 'vol_si', 'vol_ebdry', 'vol_nbdry', 'vol_total']
+    titles = ['Volume change seen by free surface', 'Volume change from ice shelf basal melting', 'Volume change from precipitation minus evaporation', 'Volume change from iceberg melting', 'Volume change from sea ice melting minus freezing', 'Volume change from eastern boundary flow', 'Volume change from northern boundary flow', 'Total of volume change components']
+    for i in range(len(vars)):
+        ncfile.add_variable(var_names[i], vars[i], 't', long_name=titles[i], units='m^3')
+    ncfile.close()
+    
+
+    
+    
 
 
 
