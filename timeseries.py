@@ -224,7 +224,7 @@ def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_
     timeseries = []
     for t in range(eta.shape[0]):
         # Get volume change in top layer due to free surface
-        volume_top = np.sum(eta[t,:]*grid.dA*grid.hfac[0,:])
+        volume_top = np.sum(eta[t,:]*grid.dA)
         timeseries.append(volume+volume_top)
     return np.array(timeseries)
 
