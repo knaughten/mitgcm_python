@@ -398,7 +398,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 
     if source == 'SOSE':
         print 'Building SOSE grid'
-        source_grid = SOSEGrid(input_path+'grid/')
+        source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid)
     elif source == 'MIT':
         print 'Building grid from source model'
         source_grid = Grid(input_path)
@@ -425,7 +425,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     for n in range(len(fields)):
         if fields[n].startswith('SI') and not use_seaice:
             continue
-        
+
         print 'Processing ' + fields[n]
         if source == 'SOSE':
             in_file = input_path + fields[n] + infile_tail
@@ -438,7 +438,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
                 source_data = source_grid.read_field(in_file, 'xyt')
         else:
             source_data = read_netcdf(input_path, fields[n])
-        
+
         if fields[n] == 'SIarea' and source == 'SOSE':
             # We'll need this field later for SIuice and SIvice, as SOSE didn't mask those variables properly
             print 'Interpolating sea ice area to u and v grids for masking of sea ice velocity'
@@ -452,7 +452,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             else:
                 index = source_aice_v==0
             source_data[index] = 0            
-        
+
         # Choose the correct grid for lat, lon, hfac
         source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype[n], dim=1)
         source_hfac = source_grid.get_hfac(gtype=gtype[n])
