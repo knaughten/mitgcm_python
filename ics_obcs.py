@@ -342,7 +342,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
 # nc_out: path to a NetCDF file to save the interpolated boundary conditions to, so you can easily check that they look okay
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
 
-def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32):
+def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32, split=180):
 
     from grid import SOSEGrid
     from file_io import NCfile, read_netcdf
@@ -370,11 +370,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     outfile_tail = '_'+source+'.OBCS_'+location
 
     print 'Building MITgcm grid'
-    if source == 'SOSE':
-        max_lon = 360
-    else:
-        max_lon = None
-    model_grid = Grid(grid_path, max_lon=max_lon)
+    model_grid = grid_check_split(grid_path, split)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
         lat0 = model_grid.lat_1d[0]
@@ -398,10 +394,10 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 
     if source == 'SOSE':
         print 'Building SOSE grid'
-        source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid)
+        source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid, split=split)
     elif source == 'MIT':
         print 'Building grid from source model'
-        source_grid = Grid(input_path)
+        source_grid = grid_check_split(input_path, split)
     else:
         print 'Error (make_obcs): invalid source ' + source
         sys.exit()
