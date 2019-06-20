@@ -370,8 +370,8 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
     grid = Grid(file_path)
 
     # Calculate areas of faces on boundaries
-    area_e = add_time_dim((xy_to_xyz(grid.dy_w, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,:,-1], num_time)
-    area_n = add_time_dim((xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,-1,:], num_time)
+    area_e = (xy_to_xyz(grid.dy_w, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,:,-1]
+    area_n = (xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,-1,:]
 
     ncfile = NCfile(nc_out, grid, 't')
     ncfile.add_time(np.arange(12)+1, units='months')
@@ -384,6 +384,7 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
         else:
             print 'Error (calc_save_transport): invalid direction ' + direction
             sys.exit()
+        area = add_time_dim(area, vnorm.shape[0])
         trans = np.sum(vnorm*area, axis=(1,2))*1e-6
         ncfile.add_variable(title, trans, 't', units='Sv')
 
