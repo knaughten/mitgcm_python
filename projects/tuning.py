@@ -365,6 +365,7 @@ def calc_volume_components (file_path, nc_out):
     ncfile.close()
 
 
+# Calculate transports into domain across the east and north boundaries, as seen by the OBCS file, the model output on the boundaries, and the model output on the inner side of the sponge.
 def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
 
     grid = Grid(file_path)

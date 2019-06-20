@@ -354,11 +354,11 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 
     # Fields to interpolate
     # Important: SIarea has to be before SIuice and SIvice so it can be used for masking
-    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'SIarea', 'SIheff', 'SIuice', 'SIvice']  
+    fields = ['THETA', 'SALT', 'UVEL', 'VVEL', 'SIarea', 'SIheff', 'SIuice', 'SIvice', 'ETAN']  
     # Flag for 2D or 3D
-    dim = [3, 3, 3, 3, 2, 2, 2, 2]
+    dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
     # Flag for grid type
-    gtype = ['t', 't', 'u', 'v', 't', 't', 'u', 'v']
+    gtype = ['t', 't', 'u', 'v', 't', 't', 'u', 'v', 't']
     if source == 'MIT':
         # Also consider snow thickness
         fields += ['SIhsnow']
