@@ -373,7 +373,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     if source == 'SOSE':
         model_grid = grid_check_split(grid_path, split)
     elif source == 'MIT':
-        model_Grid = Grid(grid_path)
+        model_grid = Grid(grid_path)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
         lat0 = model_grid.lat_1d[0]
