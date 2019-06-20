@@ -359,7 +359,8 @@ def interp_slice_helper (data, val0, lon=False):
 
     # Case that val0 is exactly at the edge of the array
     if val0 in data:
-        return np.argwhere(data==val0)[0][0], 0, 1, 0
+        i = np.argwhere(data==val0)[0][0]
+        return i, i, 1, 0
 
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
