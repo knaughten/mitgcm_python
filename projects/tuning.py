@@ -374,7 +374,6 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
     area_n = (xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)*grid.hfac)[:,-1,:]
 
     ncfile = NCfile(nc_out, grid, 't')
-    ncfile.add_time(np.arange(12)+1, units='months')
 
     def calc_save_transport (vnorm, direction, title):
         if direction == 'E':
@@ -391,6 +390,12 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
     vnorms = [-1*read_binary(obcs_e_u, [grid.nx, grid.ny, grid.nz], 'yzt'), -1*read_binary(obcs_n_v, [grid.nx, grid.ny, grid.nz], 'xzt'), -1*read_netcdf(file_path, 'UVEL')[:,:,:,-1], -1*read_netcdf(file_path, 'VVEL')[:,:,-1,:], -1*read_netcdf(file_path, 'UVEL')[:,:,:,-1*sponge], -1*read_netcdf(file_path, 'VVEL')[:,:,-1*sponge,:]]
     directions = ['E', 'N', 'E', 'N', 'E', 'N']
     titles = ['obcs_e', 'obcs_n', 'outer_e', 'outer_n', 'inner_e', 'inner_n']
+    
+    ntime = 0
+    for data in vnorms:
+        ntime = max(ntime, data.shape[0])
+    ncfile.add_time(np.arange(ntime)+1, units='months')
+    
     for i in range(len(titles)):
         calc_save_transport(vnorms[i], directions[i], titles[i])
 
