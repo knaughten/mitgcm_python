@@ -388,7 +388,7 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
         trans = np.sum(vnorm*area, axis=(1,2))*1e-6
         ncfile.add_variable(title, trans, 't', units='Sv')
 
-    vnorms = [-1*read_binary(obcs_e_u, [grid.nx, grid.ny, grid.nz], 'yzt'), -1*read_binary(obcs_n_v, [grid.nx, grid.ny, grid.nz], 'xzt'), -1*read_netcdf(file_path, 'UVEL')[:,:,-1], -1*read_netcdf(file_path, 'VVEL')[:,-1,:], -1*read_netcdf(file_path, 'UVEL')[:,:,-1*sponge], -1*read_netcdf(file_path, 'VVEL')[:,-1*sponge,:]]
+    vnorms = [-1*read_binary(obcs_e_u, [grid.nx, grid.ny, grid.nz], 'yzt'), -1*read_binary(obcs_n_v, [grid.nx, grid.ny, grid.nz], 'xzt'), -1*read_netcdf(file_path, 'UVEL')[:,:,:,-1], -1*read_netcdf(file_path, 'VVEL')[:,:,-1,:], -1*read_netcdf(file_path, 'UVEL')[:,:,:,-1*sponge], -1*read_netcdf(file_path, 'VVEL')[:,:,-1*sponge,:]]
     directions = ['E', 'N', 'E', 'N', 'E', 'N']
     titles = ['obcs_e', 'obcs_n', 'outer_e', 'outer_n', 'inner_e', 'inner_n']
     for i in range(len(titles)):
