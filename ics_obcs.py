@@ -370,7 +370,10 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     outfile_tail = '_'+source+'.OBCS_'+location
 
     print 'Building MITgcm grid'
-    model_grid = grid_check_split(grid_path, split)
+    if source == 'SOSE':
+        model_grid = grid_check_split(grid_path, split)
+    elif source == 'MIT':
+        model_Grid = Grid(grid_path)
     # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
     if location == 'S':
         lat0 = model_grid.lat_1d[0]
@@ -397,7 +400,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid, split=split)
     elif source == 'MIT':
         print 'Building grid from source model'
-        source_grid = grid_check_split(input_path, split)
+        source_grid = Grid(input_path)
     else:
         print 'Error (make_obcs): invalid source ' + source
         sys.exit()
