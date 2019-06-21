@@ -3,10 +3,10 @@
 ###########################################################
 
 from grid import Grid, grid_check_split, choose_grid
-from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range
+from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land
 from file_io import write_binary, read_binary
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
-from constants import sec_per_year, gravity
+from constants import sec_per_year, gravity, sec_per_day
 from diagnostics import density
 
 import numpy as np
@@ -530,6 +530,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # Correct the normal velocity in OBCS files to prevent massive sea level drift.
 # Option 1 ('balance'): Calculate net transport into the domain based on OBCS velocities alone. This can be done before simulations even start, and should work well if you have useRealFreshwaterFlux turned off.
 # Option 2 ('correct'): Calculate net transport based on the mean change in sea surface height over a test simulation. Run the model for a while, see how much the area-averaged eta changes over some number of years (timeseries.py should be helpful here), and then run this script to counteract any drift with OBCS corrections.
+# Option 3 ('dampen'): Dampen large seasonal cycles in net transport, by correcting the velocities on a monthly-varying basis. A maximum change in mean sea surface height in any one month is specified (default 0.25 m), and a scaling factor for transport is determined such that the maximum absolute value of transport is no more than this threshold. This assumes the OBCS are monthly!!
 
 # Arguments:
 # grid_path: path to Grid directory
@@ -539,9 +540,10 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v: paths to OBCS files for UVEL (western and eastern boundaries) or VVEL (southern and northern boundaries). You only have to set the filenames for the boundaries which are actually open in your domain. They will be overwritten with corrected versions.
 # d_eta: if option='correct', change in area-averaged sea surface height over the test simulation (m)
 # d_t: if option='correct', length of the test simulation (years)
+# max_deta_dt: if option='dampen', maximum allowable change in mean sea surface height in any given month (default 0.25 m/month)
 # prec: precision of the OBCS files (as in function sose_obcs)
 
-def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, prec=32):
+def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.25, prec=32):
 
     if option == 'correct' and (d_eta is None or d_t is None):
         print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
@@ -575,9 +577,12 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
             total_area += np.sum(dA_bdry[i])
 
     # Calculate the net transport into the domain
-    if option == 'balance':
+    if option in ['balance', 'dampen']:
         # Transport based on OBCS normal velocities
-        net_transport = 0
+        if option == 'balance':
+            net_transport = 0
+        elif option == 'dampen':
+            net_transport = None
         for i in range(len(files)):
             if files[i] is not None:
                 print 'Processing ' + bdry_key[i] + ' boundary from ' + files[i]
@@ -589,10 +594,18 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
                 elif num_time != vel.shape[0]:
                     print 'Error (balance_obcs): inconsistent number of time indices between OBCS files'
                     sys.exit()
-                # Time-average velocity (this is equivalent to calculating the transport at each time index and then time-averaging at the end - it's all just sums)
-                vel = np.mean(vel, axis=0)
-                # Integrate net transport through this boundary into the domain, and add to global sum
-                net_transport += np.sum(sign[i]*vel*dA_bdry[i])
+                if option == 'dampen' and net_transport is None:
+                    # Initialise transport per month
+                    net_transport = np.zeros(num_time)
+                if option == 'balance':
+                    # Time-average velocity (this is equivalent to calculating the transport at each month and then time-averaging at the end - it's all just sums)
+                    vel = np.mean(vel, axis=0)
+                    # Integrate net transport through this boundary into the domain, and add to global sum
+                    net_transport += np.sum(sign[i]*vel*dA_bdry[i])
+                elif option == 'dampen':
+                    # Integrate net transport at each month
+                    for t in range(num_time):
+                        net_transport[t,:] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
     elif option == 'correct':
         # Transport based on simulated changes in sea surface height
         # Need area of sea surface
@@ -608,10 +621,34 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
             direction = 'into the domain'
         print 'Net transport is ' + str(abs(transport*1e-6)) + ' Sv ' + direction
 
-    print_net_transport(net_transport)
-    # Calculate correction in m/s
-    correction = -1*net_transport/total_area
-    print 'Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'
+    if option == 'dampen':
+        for t in range(num_time):
+            print 'Month ' + str(t+1)
+            print_net_transport(net_transport[t])
+    else:
+        print_net_transport(net_transport)
+
+    if option == 'dampen':
+        # Calculate the acceptable maximum absolute transport
+        # First need total area of sea surface (including cavities) in domain
+        surface_area = np.sum(mask_land(grid.dA), grid)
+        max_transport = max_deta_dt*surface_area*1e-6/(sec_per_day*30)
+        print 'Maximum allowable transport is ' + str(max_transport) + ' Sv'
+        if np.max(np.abs(net_transport)) <= max_transport:
+            print 'OBCS satisfy this; nothing to do'
+            return
+        # Work out by what factor to dampen the transports
+        scale_factor = max_transport/np.max(np.abs(net_transport))
+        print 'Will scale transports by ' + str(scale_factor)
+        # Calculate corresponding velocity correction at each month
+        correction = np.zeros(num_time)
+        for t in range(num_time):
+            correction[t] = (scale_factor-1)*net_transport[t]/total_area
+            print 'Month ' + str(t+1) + ': will apply correction of ' + str(correction[t]) + ' m/s to normal velocity at each boundary'
+    else:
+        # Calculate single correction in m/s
+        correction = -1*net_transport/total_area
+        print 'Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'
 
     # Now apply the correction
     for i in range(len(files)):
@@ -620,15 +657,32 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
             # Read all the data again
             vel = read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
             # Apply the correction
-            vel += sign[i]*correction
+            if option == 'dampen':
+                for t in range(num_time):
+                    vel[t,:] += sign[i]*correction[t]
+            else:
+                vel += sign[i]*correction
             # Overwrite the file
             write_binary(vel, files[i], prec=prec)
 
-    if option == 'balance':
+    if option in ['balance', 'dampen']:
         # Recalculate the transport to make sure it worked
-        net_transport_new = 0
+        if option == 'balance':
+            net_transport_new = 0
+        elif option == 'dampen':
+            net_transport_new = np.zeros(num_time)
         for i in range(len(files)):
             if files[i] is not None:
-                vel = np.mean(read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec), axis=0)
-                net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
-        print_net_transport(net_transport_new)
+                vel = read_binary(files[i], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
+                if option == 'balance':
+                    vel = np.mean(vel, axis=0)
+                    net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
+                elif option == 'dampen':
+                    for t in range(num_time):
+                        net_transport_new[t,:] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
+        if option == 'balance':
+            print_net_transport(net_transport_new)
+        elif option == 'dampen':
+            for t in range(num_time):
+                print 'Month ' + str(t+1)
+                print_net_transport(net_transport_new[t,:])
