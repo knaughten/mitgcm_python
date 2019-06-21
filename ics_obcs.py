@@ -605,7 +605,7 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
                 elif option == 'dampen':
                     # Integrate net transport at each month
                     for t in range(num_time):
-                        net_transport[t,:] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
+                        net_transport[t] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
     elif option == 'correct':
         # Transport based on simulated changes in sea surface height
         # Need area of sea surface
@@ -631,9 +631,9 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
     if option == 'dampen':
         # Calculate the acceptable maximum absolute transport
         # First need total area of sea surface (including cavities) in domain
-        surface_area = np.sum(mask_land(grid.dA), grid)
-        max_transport = max_deta_dt*surface_area*1e-6/(sec_per_day*30)
-        print 'Maximum allowable transport is ' + str(max_transport) + ' Sv'
+        surface_area = np.sum(mask_land(grid.dA, grid))
+        max_transport = max_deta_dt*surface_area/(sec_per_day*30)
+        print 'Maximum allowable transport is ' + str(max_transport*1e-6) + ' Sv'
         if np.max(np.abs(net_transport)) <= max_transport:
             print 'OBCS satisfy this; nothing to do'
             return
@@ -679,10 +679,10 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
                     net_transport_new += np.sum(sign[i]*vel*dA_bdry[i])
                 elif option == 'dampen':
                     for t in range(num_time):
-                        net_transport_new[t,:] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
+                        net_transport_new[t] += np.sum(sign[i]*vel[t,:]*dA_bdry[i])
         if option == 'balance':
             print_net_transport(net_transport_new)
         elif option == 'dampen':
             for t in range(num_time):
                 print 'Month ' + str(t+1)
-                print_net_transport(net_transport_new[t,:])
+                print_net_transport(net_transport_new[t])
