@@ -14,5 +14,7 @@ balance_obcs(option='correct', d_eta=-1, d_t=15)
 
 WSS:
 balance_obcs(option='balance')
-balance_obcs(option='correct', d_eta=-1, d_t=1)
-balance_obcs(option='correct', d_eta=-10, d_t=1.5)
+balance_obcs(option='dampen')
+balance_obcs(option='correct', d_eta=-12, d_t=1)
+balance_obcs(option='correct', d_eta=0.7, d_t=1.5)
+balance_obcs(option='correct', d_eta=0.2, d_t=2.5)

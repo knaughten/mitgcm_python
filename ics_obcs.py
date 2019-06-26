@@ -530,7 +530,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # Correct the normal velocity in OBCS files to prevent massive sea level drift.
 # Option 1 ('balance'): Calculate net transport into the domain based on OBCS velocities alone. This can be done before simulations even start, and should work well if you have useRealFreshwaterFlux turned off.
 # Option 2 ('correct'): Calculate net transport based on the mean change in sea surface height over a test simulation. Run the model for a while, see how much the area-averaged eta changes over some number of years (timeseries.py should be helpful here), and then run this script to counteract any drift with OBCS corrections.
-# Option 3 ('dampen'): Dampen large seasonal cycles in net transport, by correcting the velocities on a monthly-varying basis. A maximum change in mean sea surface height in any one month is specified (default 0.25 m), and a scaling factor for transport is determined such that the maximum absolute value of transport is no more than this threshold. This assumes the OBCS are monthly!!
+# Option 3 ('dampen'): Dampen large seasonal cycles in net transport, by correcting the velocities on a monthly-varying basis. A maximum change in mean sea surface height in any one month is specified (default 0.5 m), and a scaling factor for transport is determined such that the maximum absolute value of transport is no more than this threshold. This assumes the OBCS are monthly!!
 
 # Arguments:
 # grid_path: path to Grid directory
@@ -540,10 +540,10 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v: paths to OBCS files for UVEL (western and eastern boundaries) or VVEL (southern and northern boundaries). You only have to set the filenames for the boundaries which are actually open in your domain. They will be overwritten with corrected versions.
 # d_eta: if option='correct', change in area-averaged sea surface height over the test simulation (m)
 # d_t: if option='correct', length of the test simulation (years)
-# max_deta_dt: if option='dampen', maximum allowable change in mean sea surface height in any given month (default 0.25 m/month)
+# max_deta_dt: if option='dampen', maximum allowable change in mean sea surface height in any given month (default 0.5 m/month)
 # prec: precision of the OBCS files (as in function sose_obcs)
 
-def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.25, prec=32):
+def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, prec=32):
 
     if option == 'correct' and (d_eta is None or d_t is None):
         print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
