@@ -13,10 +13,11 @@ from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
 from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
-from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
+from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from utils import real_dir, days_per_month, str_is_int
+from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom
 from plot_utils.labels import parse_date
+from plot_utils.colours import get_extend
 
 
 # Helper function to build lists of output files in a directory.
@@ -428,9 +429,9 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
         precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)
 
 
-# Make animations of lat-lon variables throughout the simulation, and also images of the first and last frames.
+# Make animations of lat-lon variables throughout a coupled UaMITgcm simulation, and also images of the first and last frames.
 # Currently supported: ismr, bwtemp, bwsalt, draft, aice, hice, mld, eta, psi.
-def animate_latlon (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6)):
+def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6)):
 
     output_dir = real_dir(output_dir)
     segment_dir = check_segment_dir(output_dir, segment_dir)
@@ -535,7 +536,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', segment_dir=Non
     # Make the first and last frames as stills
     tsteps = [0, -1]
     fig_names = [fig_name_beg, fig_name_end]
-    for t in range(1):
+    for t in range(2):
         latlon_plot(all_data[tsteps[t]], all_grids[tsteps[t]], gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title, date_string=all_dates[tsteps[t]], figsize=figsize, fig_name=fig_names[t])
 
     # Now make the animation
@@ -550,10 +551,12 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', segment_dir=Non
 
     # First frame
     img = plot_one_frame(0)        
-    plt.colorbar(img, cax=cax, extend=extend)
+    plt.colorbar(img, extend=extend)
 
     # Function to update figure with the given frame
     def animate(t):
+        if (t+1) % 10 == 0:
+            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
         ax.cla()
         plot_one_frame(t)
 
