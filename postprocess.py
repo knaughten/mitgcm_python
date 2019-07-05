@@ -469,7 +469,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', segment_dir=Non
     all_dates = []
     # Loop over segments
     for file_path in file_paths:
-        print 'Processing ' file_path
+        print 'Processing ' + file_path
         # Build the grid
         grid = Grid(file_path)
         # Read and process the variable we need
