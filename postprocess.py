@@ -508,6 +508,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
         elif var == 'psi':
             data = read_process_data(file_path, 'PsiVEL', grid, psi=True)
             title = 'Vertically integrated streamfunction (Sv)'
+            ctype = 'plusminus'
         else:
             print 'Error (animate_latlon): invalid var ' + var
             sys.exit()
