@@ -8,6 +8,7 @@ import numpy as np
 import shutil
 import netCDF4 as nc
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
