@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import shutil
 import netCDF4 as nc
+import matplotlib.animation as animation
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
@@ -381,6 +382,26 @@ def get_segment_dir (output_dir):
     return segment_dir
 
 
+# Either call get_segment_dir (if segment_dir is None), or make sure segment_dir is an array (and not a string, i.e. just one entry).
+def check_segment_dir (output_dir, segment_dir):
+
+    if segment_dir is None:
+        segment_dir = get_segment_dir(output_dir)
+    else:
+        if isinstance(segment_dir, str):
+            segment_dir = [segment_dir]
+    return segment_dir
+
+
+# Get the path to the MITgcm output file for each segment.
+def segment_file_paths (output_dir, segment_dir, file_name):
+
+    file_paths = []
+    for sdir in segment_dir:
+        file_paths.append(output_dir + sdir + '/MITgcm/' + file_name)
+    return file_paths
+
+
 # Precompute ocean timeseries from a coupled UaMITgcm simulation.
 # Optional keyword arguments:
 # output_dir: path to master output directory for experiment. Default the current directory.
@@ -395,24 +416,156 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
 
     output_dir = real_dir(output_dir)
 
-    if segment_dir is None:
-        if os.path.isfile(timeseries_file):
-            print 'Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'
-            sys.exit()
-        # Get all the directories, one per segment
-        segment_dir = get_segment_dir(output_dir)
-    else:
-        # segment_dir is preset
-        if isinstance(segment_dir, str):
-            # Just one directory, so make it a list
-            segment_dir = [segment_dir]
+    if segment_dir is None and os.path.isfile(timeseries_file):
+        print 'Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'
+        sys.exit()
+    segment_dir = check_segment_dir(output_dir, segment_dir)
+    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
 
     # Call precompute_timeseries for each segment
-    for sdir in segment_dir:
-        file_path = output_dir + sdir + '/MITgcm/' + file_name
+    for file_path in file_paths:
         print 'Processing ' + file_path
-        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)   
+        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)
 
+
+# Make animations of lat-lon variables throughout the simulation, and also images of the first and last frames.
+# Currently supported: ismr, bwtemp, bwsalt, draft, aice, hice, mld, eta, psi.
+def animate_latlon (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6)):
+
+    output_dir = real_dir(output_dir)
+    segment_dir = check_segment_dir(output_dir, segment_dir)
+    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
+
+    # Inner function to read and process data from a single file
+    def read_process_data (file_path, var_name, grid, mask_option='3d', gtype='t', lev_option=None, ismr=False, psi=False):
+        data = read_netcdf(file_path, var_name)
+        if mask_option == '3d':
+            data = mask_3d(data, grid, gtype=gtype, time_dependent=True)
+        elif mask_option == 'except_ice':
+            data = mask_except_ice(data, grid, gtype=gtype, time_dependent=True)
+        elif mask_option == 'land':
+            data = mask_land(data, grid, gtype=gtype, time_dependent=True)
+        elif mask_option == 'land_ice':
+            data = mask_land_ice(data, grid, gtype=gtype, time_dependent=True)
+        else:
+            print 'Error (read_process_data): invalid mask_option ' + mask_option
+            sys.exit()
+        if lev_option is not None:
+            if lev_option == 'top':
+                data = select_top(data)
+            elif lev_option == 'bottom':
+                data = select_bottom(data)
+            else:
+                print 'Error (read_process_data): invalid lev_option ' + lev_option
+                sys.exit()
+        if ismr:
+            data = convert_ismr(data)
+        if psi:
+            data = np.sum(data, axis=-3)*1e-6
+        return data
+
+    all_data = []
+    all_grids = []
+    all_dates = []
+    # Loop over segments
+    for file_path in file_paths:
+        print 'Processing ' file_path
+        # Build the grid
+        grid = Grid(file_path)
+        # Read and process the variable we need
+        ctype = 'basic'
+        gtype = 't'
+        include_shelf = var not in ['aice', 'hice', 'mld']
+        if var == 'ismr':
+            data = read_process_data(file_path, 'SHIfwFlx', grid, mask_option='except_ice', ismr=True)
+            title = 'Ice shelf melt rate (m/y)'
+            ctype = 'ismr'
+        elif var == 'bwtemp':
+            data = read_process_data(file_path, 'THETA', grid, lev_option='bottom')
+            title = 'Bottom water temperature ('+deg_string+'C)'
+        elif var == 'bwsalt':
+            data = read_process_data(file_path, 'SALT', grid, lev_option='bottom')
+            title = 'Bottom water salinity (psu)'
+        elif var == 'draft':
+            data = mask_except_ice(grid.draft, grid)
+            title = 'Ice shelf draft (m)'
+        elif var == 'aice':
+            data = read_process_data(file_path, 'SIarea', grid, mask_option='land_ice')
+            title = 'Sea ice concentration'
+        elif var == 'hice':
+            data = read_process_data(file_path, 'SIheff', grid, mask_option='land_ice')
+            title = 'Sea ice thickness (m)'
+        elif var == 'mld':
+            data = read_process_data(file_path, 'MXLDEPTH', grid, mask_option='land_ice')
+            title = 'Mixed layer depth (m)'
+        elif var == 'eta':
+            data = read_process_data(file_path, 'ETAN', grid, mask_option='land')
+            title = 'Free surface (m)'
+        elif var == 'psi':
+            data = read_process_data(file_path, 'PsiVEL', grid, psi=True)
+        else:
+            print 'Error (animate_latlon): invalid var ' + var
+            sys.exit()
+        # Loop over timesteps
+        if var == 'draft':
+            # Just one timestep
+            all_data.append(data)
+            all_grids.append(grid)
+            all_dates.append(parse_date(file_path=file_path, time_index=0))
+        else:
+            for t in range(data.shape[0]):
+                # Extract the data from this timestep
+                # Save it and the grid to the long lists
+                all_data.append(data[t,:])
+                all_grids.append(grid)
+                all_dates.append(parse_date(file_path=file_path, time_index=t))
+
+    extend = get_extend(vmin=vmin, vmax=vmax)
+    if vmin is None:
+        vmin = np.amax(data)
+        for elm in all_data:
+            vmin = min(vmin, np.amin(elm))
+    if vmax is None:
+        vmax = np.amin(data)
+        for elm in all_data:
+            vmax = max(vmax, np.amax(elm))
+
+    num_frames = len(all_data)
+
+    # Make the first and last frames as stills
+    tsteps = [0, -1]
+    fig_names = [fig_name_beg, fig_name_end]
+    for t in range(1):
+        latlon_plot(all_data[tsteps[t]], all_grids[tsteps[t]], gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title, date_string=all_dates[tsteps[t]], figsize=figsize, fig_name=fig_names[t])
+
+    # Now make the animation
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Inner function to plot a frame
+    def plot_one_frame (t):
+        img = latlon_plot(all_data[t], all_grids[t], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+'\n'+all_dates[t], make_cbar=False)
+        if t==0:
+            return img
+
+    # First frame
+    img = plot_one_frame(0)        
+    plt.colorbar(img, cax=cax, extend=extend)
+
+    # Function to update figure with the given frame
+    def animate(t):
+        ax.cla()
+        plot_one_frame(t)
+
+    # Call this for each frame
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    anim.save(mov_name, writer=writer)
+    if mov_name is not None:
+        print 'Saving ' + mov_name
+        anim.save(mov_name, writer=writer)
+    else:
+        plt.show()
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
