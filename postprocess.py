@@ -555,8 +555,6 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
 
     # Function to update figure with the given frame
     def animate(t):
-        if (t+1) % 10 == 0:
-            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
         ax.cla()
         plot_one_frame(t)
 
