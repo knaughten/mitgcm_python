@@ -19,6 +19,7 @@ from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
+from plot_utils.windows import set_panels
 from constants import deg_string
 
 
@@ -415,7 +416,7 @@ def segment_file_paths (output_dir, segment_dir, file_name):
 def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None):
 
     if timeseries_types is None:
-        timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        timeseries_types = ['all_massloss', 'avg_melt', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
     output_dir = real_dir(output_dir)
 
@@ -506,6 +507,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
             title = 'Free surface (m)'
         elif var == 'psi':
             data = read_process_data(file_path, 'PsiVEL', grid, psi=True)
+            title = 'Vertically integrated streamfunction (Sv)'
         else:
             print 'Error (animate_latlon): invalid var ' + var
             sys.exit()
@@ -569,6 +571,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
         anim.save(mov_name, writer=writer)
     else:
         plt.show()
+    
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
