@@ -18,6 +18,7 @@ from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
+from constants import deg_string
 
 
 # Helper function to build lists of output files in a directory.
