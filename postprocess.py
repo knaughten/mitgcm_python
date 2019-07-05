@@ -14,7 +14,7 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from utils import real_dir, days_per_month
+from utils import real_dir, days_per_month, str_is_int
 from plot_utils.labels import parse_date
 
 
