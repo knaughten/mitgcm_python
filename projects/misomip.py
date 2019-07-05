@@ -16,20 +16,7 @@ from ..file_io import read_netcdf
 from ..plot_utils.windows import set_panels
 from ..plot_utils.colours import get_extend, set_colours
 from ..plot_utils.labels import reduce_cbar_labels
-from ..postprocess import precompute_timeseries
-
-
-# Helper function to get all the output directories, one per segment, in order.
-def get_segment_dir (output_dir):
-
-    segment_dir = []
-    for name in os.listdir(output_dir):
-        # Look for directories composed of numbers (date codes)
-        if os.path.isdir(output_dir+name) and str_is_int(name):
-            segment_dir.append(name)
-    # Make sure in chronological order
-    segment_dir.sort()
-    return segment_dir
+from ..postprocess import precompute_timeseries, get_segment_dir
 
 
 # Helper function to create the MISOMIP time array: first of each month for the given number of years (default 100).

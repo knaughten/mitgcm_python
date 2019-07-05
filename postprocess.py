@@ -367,6 +367,52 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
     else:
         ncfile.close()
 
+        
+# Helper function to get all the output directories from a coupled model, one per segment, in order.
+def get_segment_dir (output_dir):
+
+    segment_dir = []
+    for name in os.listdir(output_dir):
+        # Look for directories composed of numbers (date codes)
+        if os.path.isdir(output_dir+name) and str_is_int(name):
+            segment_dir.append(name)
+    # Make sure in chronological order
+    segment_dir.sort()
+    return segment_dir
+
+
+# Precompute ocean timeseries from a coupled UaMITgcm simulation.
+# Optional keyword arguments:
+# output_dir: path to master output directory for experiment. Default the current directory.
+# timeseries_file: as in precompute_timeseries. Default 'timeseries.nc'.
+# file_name: name of the output NetCDF file within the output/XXXXXX/MITgcm/ directories. Default 'output.nc'.
+# segment_dir: list of date codes, in chronological order, corresponding to the subdirectories within output_dir. This must be specified if timeseries_file already exists. If it is not specified, all available subdirectories of output_dir will be used.
+# timeseries_types: as in precompute_timeseries
+def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None):
+
+    if timeseries_types is None:
+        timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+
+    output_dir = real_dir(output_dir)
+
+    if segment_dir is None:
+        if os.path.isfile(timeseries_file):
+            print 'Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'
+            sys.exit()
+        # Get all the directories, one per segment
+        segment_dir = get_segment_dir(output_dir)
+    else:
+        # segment_dir is preset
+        if isinstance(segment_dir, str):
+            # Just one directory, so make it a list
+            segment_dir = [segment_dir]
+
+    # Call precompute_timeseries for each segment
+    for sdir in segment_dir:
+        file_path = output_dir + sdir + '/MITgcm/' + file_name
+        print 'Processing ' + file_path
+        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)   
+
 
 
 # When the model crashes, convert its crash-dump to a NetCDF file.
