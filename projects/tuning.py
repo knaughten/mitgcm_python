@@ -401,6 +401,66 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
         calc_save_transport(vnorms[i], directions[i], titles[i])
 
     ncfile.close()
+
+
+def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None, vmax=None, fig_name=None):
+
+    # Read grids
+    lon_era = read_netcdf(file_path_era, 'longitude')
+    lat_era = read_netcdf(file_path_era, 'latitude')
+    grid = Grid(file_path_1)
+
+    # Read ERA-Interim evaporation and change sign convention
+    evap_era = -1*read_netcdf(file_path_era, 'e')
+    # Read MITgcm evaporation, mask, and convert to m/12h
+    evap_1 = mask_land_ice(read_netcdf(file_path_1, 'EXFevap')*12*60*60, grid, time_dependent=True)
+    evap_2 = mask_land_ice(read_netcdf(file_path_2, 'EXFevap')*12*60*60, grid, time_dependent=True)
+
+    # Inner function to annually average or select month
+    def choose_time (evap):
+        # Select the first 12 months
+        evap = evap[:12]
+        if month is None:
+            # Annually average
+            return np.mean(evap, axis=0)
+        else:
+            return evap[month-1,:]
+
+    evap_era = choose_time(evap_era)
+    evap_1 = choose_time(evap_1)
+    evap_2 = choose_time(evap_2)
+
+    if vmin is None:
+        vmin = 0
+    if vmax is None:
+        vmax = 5e-4
+
+    xmin = grid.lon_1d[0]
+    xmax = grid.lon_1d[-1]
+    ymin = grid.lat_1d[0]
+    ymax = grid.lat_1d[-1]
+
+    data = [evap_era, evap_1, evap_2]
+    lon = [lon_era, grid.lon_1d, grid.lon_1d]
+    lat = [lat_era, grid.lat_1d, grid.lat_1d]
+    title = ['ERA-Interim', 'MITgcm (old humidity)', 'MITgcm (new humidity)']
+    if month is None:
+        suffix = ' average'
+    else:
+        suffix = '-'+str(month)
+
+    fig, gs, cax = set_panels('1x3C1')
+    for i in range(3):
+        ax = plt.subplot(gs[0,i])
+        img = ax.contourf(lon[i], lat[i], data[i], 30, vmin=vmin, vmax=vmax)
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+        plt.title(title[i], fontsize=18)
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
+    plt.suptitle('Evaporation (m/12h), 1979'+suffix, fontsize=24)
+    finished_plot(fig, fig_name)
+    
+
     
     
 
