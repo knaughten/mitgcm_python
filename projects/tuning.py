@@ -13,7 +13,7 @@ from MITgcmutils.mdjwf import densmdjwf
 
 from ..grid import Grid
 from ..file_io import read_netcdf, netcdf_time, read_binary, NCfile
-from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr, days_per_month, add_time_dim, xy_to_xyz, z_to_xyz
+from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr, days_per_month, add_time_dim, xy_to_xyz, z_to_xyz, mask_land_ice, fix_lon_range, split_longitude
 from ..constants import deg_string, gravity, sec_per_day, rho_fw
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
@@ -403,15 +403,19 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
     ncfile.close()
 
 
+# Compare evaporation values from ERA-Interim to two MITgcm simulations: one with the original humidity formulation (from Nico, which we now know is correct) and one with the new formulation (from Kaitlin's screw-up).
 def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None, vmax=None, fig_name=None):
 
     # Read grids
-    lon_era = read_netcdf(file_path_era, 'longitude')
+    # Convert ERA-Interim to longitude range -180 to 180, and split and rearrange so strictly ascending
+    lon_era = fix_lon_range(read_netcdf(file_path_era, 'longitude'))
+    i_split = np.nonzero(lon_era < 0)[0][0]
+    lon_era = split_longitude(lon_era, i_split)
     lat_era = read_netcdf(file_path_era, 'latitude')
     grid = Grid(file_path_1)
 
-    # Read ERA-Interim evaporation and change sign convention
-    evap_era = -1*read_netcdf(file_path_era, 'e')
+    # Read ERA-Interim evaporation, split and rearrange, and change sign convention
+    evap_era = split_longitude(-1*read_netcdf(file_path_era, 'e'), i_split)
     # Read MITgcm evaporation, mask, and convert to m/12h
     evap_1 = mask_land_ice(read_netcdf(file_path_1, 'EXFevap')*12*60*60, grid, time_dependent=True)
     evap_2 = mask_land_ice(read_netcdf(file_path_2, 'EXFevap')*12*60*60, grid, time_dependent=True)
@@ -433,7 +437,7 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     if vmin is None:
         vmin = 0
     if vmax is None:
-        vmax = 5e-4
+        vmax = 1.5
 
     xmin = grid.lon_1d[0]
     xmax = grid.lon_1d[-1]
@@ -452,12 +456,12 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     fig, gs, cax = set_panels('1x3C1')
     for i in range(3):
         ax = plt.subplot(gs[0,i])
-        img = ax.contourf(lon[i], lat[i], data[i], 30, vmin=vmin, vmax=vmax)
+        img = ax.pcolormesh(lon[i], lat[i], data[i]*1e3, vmin=vmin, vmax=vmax)
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
         plt.title(title[i], fontsize=18)
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
-    plt.suptitle('Evaporation (m/12h), 1979'+suffix, fontsize=24)
+    plt.suptitle('Evaporation (mm/12h), 1979'+suffix, fontsize=24)
     finished_plot(fig, fig_name)
     
 
