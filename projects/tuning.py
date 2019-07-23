@@ -417,8 +417,14 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     # Read ERA-Interim evaporation, split and rearrange, and change sign convention
     evap_era = split_longitude(-1*read_netcdf(file_path_era, 'e'), i_split)
     # Read MITgcm evaporation, mask, and convert to m/12h
-    evap_1 = mask_land_ice(read_netcdf(file_path_1, 'EXFevap')*12*60*60, grid, time_dependent=True)
-    evap_2 = mask_land_ice(read_netcdf(file_path_2, 'EXFevap')*12*60*60, grid, time_dependent=True)
+    def mit_evap (file_path):
+        fwflx = read_netcdf(file_path, 'SIatmFW')
+        precip = read_netcdf(file_path, 'EXFprecip')
+        roff = read_netcdf(file_path, 'EXFroff')
+        evap = (fwflx - precip - roff)*12*60*60
+        return mask_land_ice(evap, grid, time_dependent=True)
+    evap_1 = mit_evap(file_path_1)
+    evap_2 = mit_evap(file_path_2)
 
     # Inner function to annually average or select month
     def choose_time (evap):
