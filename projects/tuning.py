@@ -419,7 +419,7 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     # Read MITgcm evaporation, mask, and convert to m/12h
     def mit_evap (file_path):
         fwflx = read_netcdf(file_path, 'SIatmFW')
-        precip = read_netcdf(file_path, 'EXFprecip')
+        precip = read_netcdf(file_path, 'EXFpreci')
         roff = read_netcdf(file_path, 'EXFroff')
         evap = (fwflx - precip - roff)*12*60*60
         return mask_land_ice(evap, grid, time_dependent=True)
