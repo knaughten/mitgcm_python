@@ -421,7 +421,7 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
         fwflx = read_netcdf(file_path, 'SIatmFW')/rho_fw
         precip = read_netcdf(file_path, 'EXFpreci')
         roff = read_netcdf(file_path, 'EXFroff')
-        evap = (fwflx - precip - roff)*12*60*60
+        evap = -(fwflx - precip - roff)*12*60*60
         return mask_land_ice(evap, grid, time_dependent=True)
     evap_1 = mit_evap(file_path_1)
     evap_2 = mit_evap(file_path_2)
