@@ -418,7 +418,7 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     evap_era = split_longitude(-1*read_netcdf(file_path_era, 'e'), i_split)
     # Read MITgcm evaporation, mask, and convert to m/12h
     def mit_evap (file_path):
-        fwflx = read_netcdf(file_path, 'SIatmFW')
+        fwflx = read_netcdf(file_path, 'SIatmFW')/rho_fw
         precip = read_netcdf(file_path, 'EXFpreci')
         roff = read_netcdf(file_path, 'EXFroff')
         evap = (fwflx - precip - roff)*12*60*60
