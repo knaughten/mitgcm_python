@@ -418,13 +418,13 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     evap_era = split_longitude(-1*read_netcdf(file_path_era, 'e'), i_split)
     # Read MITgcm evaporation, mask, and convert to m/12h
     def mit_evap (file_path):
-        evap = read_netcdf(file_path, 'EXFevap')
-        sublim = read_netcdf(file_path, 'SIacSubl')/rho_fw
-        evap = (evap + sublim)*12*60*60
-        #fwflx = read_netcdf(file_path, 'SIatmFW')/rho_fw
-        #precip = read_netcdf(file_path, 'EXFpreci')
-        #roff = read_netcdf(file_path, 'EXFroff')
-        #evap = -(fwflx - precip - roff)*12*60*60
+        #evap = read_netcdf(file_path, 'EXFevap')
+        #sublim = read_netcdf(file_path, 'SIacSubl')/rho_fw
+        #evap = (evap + sublim)*12*60*60
+        fwflx = read_netcdf(file_path, 'SIatmFW')/rho_fw
+        precip = read_netcdf(file_path, 'EXFpreci')
+        roff = read_netcdf(file_path, 'EXFroff')
+        evap = -(fwflx - precip - roff)*12*60*60
         return mask_land_ice(evap, grid, time_dependent=True)
     evap_1 = mit_evap(file_path_1)
     evap_2 = mit_evap(file_path_2)
