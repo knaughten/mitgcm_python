@@ -142,7 +142,7 @@ def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path=
     read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
     if key == 'WSK':
-        read_plot_ts_slice(file_path, grid=grid, lon0=0, hmax=-71, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string)
+        read_plot_ts_slice(file_path, grid=grid, lon0=0, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string)
 
 
 # Given lists of files from two simulations, find the file and time indices corresponding to the last year (if option='last_year') or last month/timestep (if option='last_month') in the shortest simulation.
