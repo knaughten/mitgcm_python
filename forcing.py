@@ -148,10 +148,10 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
 
-    if year == 2000 and not first_year:
-        print 'Warning (process_era): last we checked, 2000 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
-    if year == 2017 and not first_year:
-        print 'Warning (process_era): last we checked, 2017 was the last year of ERA5. Unless this has changed, you need to set last_year=True.'
+    if year == 1979 and not first_year:
+        print 'Warning (process_era): last we checked, 1979 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
+    if year == 2018 and not last_year:
+        print 'Warning (process_era): last we checked, 2018 was the last year of ERA5. Unless this has changed, you need to set last_year=True.'
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
@@ -213,15 +213,13 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
             press = np.copy(data)
 
         elif var_in[i] == 't2m':
-            # Save temperature for later conversions
-            temp = np.copy(data)
-            # Now convert from Kelvin to Celsius
+            # Convert from Kelvin to Celsius
             data -= temp_C2K
 
         elif var_in[i] == 'd2m':
-            # Calculate specific humidity from dew point temperature, temperature, and pressure
+            # Calculate specific humidity from dew point temperature and pressure
             # Start with vapour pressure
-            e = es0*np.exp(Lv/Rv*(1/temp - 1/data))
+            e = es0*np.exp(Lv/Rv*(1/temp_C2K - 1/data))
             data = sh_coeff*e/(press - (1-sh_coeff)*e)
             
         elif var_in[i] in ['tp', 'ssrd', 'strd']:
@@ -319,6 +317,7 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
 
 
 # Recalculate ERA-Interim humidity: the original Matlab scripts did the conversion using a reference temperature instead of actual temperature. Also make a dummy last year as above.
+# WARNING WARNING THIS IS WRONG THE ORIGINAL WAY WAS RIGHT
 def fix_eraint_humidity (in_dir, out_dir, prec=32):
 
     in_dir = real_dir(in_dir)
