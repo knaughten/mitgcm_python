@@ -257,6 +257,11 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     omask_interp[index] = 0
     bathy_interp[index] = 0
     draft_interp[index] = 0
+    # Anything with positive ice shelf draft should be land
+    index = draft_interp > 0
+    omask_interp[index] = 0
+    bathy_interp[index] = 0
+    draft_interp[index] = 0
     # Any points with zero ice shelf draft should not be in the ice mask
     # (This will also remove grounded ice, and ice shelves with total thickness (draft + freeboard) thinner than firn_air)
     index = draft_interp == 0
