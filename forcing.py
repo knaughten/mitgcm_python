@@ -155,12 +155,12 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
-    var_in = ['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd']
+    var_in = ['e'] #['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd']
     if six_hourly:
         accum_flag = '_2'
     in_tail = '_' + str(year) + '.nc'
     out_head = out_dir + 'ERA5_'
-    var_out = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+    var_out = ['evap'] #['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
     out_tail = '_' + str(year)
 
     # Northermost latitude to keep
@@ -222,7 +222,7 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
             e = es0*np.exp(Lv/Rv*(1/temp_C2K - 1/data))
             data = sh_coeff*e/(press - (1-sh_coeff)*e)
             
-        elif var_in[i] in ['tp', 'ssrd', 'strd']:
+        elif var_in[i] in ['tp', 'ssrd', 'strd', 'e']:
             # Accumulated variables
             # This is more complicated
             
@@ -261,8 +261,8 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
             data = 0.5*(data + data_2)
             # Convert from integrals to time-averages
             data /= dt
-            if var_in[i] in ['ssrd', 'strd']:
-                # Swap sign on radiation fluxes
+            if var_in[i] in ['ssrd', 'strd', 'e']:
+                # Swap sign on fluxes
                 data *= -1
 
         out_file = out_head + var_out[i] + out_tail
