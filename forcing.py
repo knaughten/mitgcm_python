@@ -155,12 +155,12 @@ def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, las
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
-    var_in = ['e'] #['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd']
+    var_in = ['msl', 't2m', 'd2m', 'u10', 'v10', 'tp', 'ssrd', 'strd', 'e']
     if six_hourly:
         accum_flag = '_2'
     in_tail = '_' + str(year) + '.nc'
     out_head = out_dir + 'ERA5_'
-    var_out = ['evap'] #['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+    var_out = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown', 'evap']
     out_tail = '_' + str(year)
 
     # Northermost latitude to keep
