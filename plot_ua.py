@@ -7,9 +7,10 @@ import numpy as np
 from scipy.io import loadmat
 
 from plot_utils.colours import set_colours, get_extend
-from plot_utils.latlon import latlon_axes
+from plot_utils.labels import latlon_axes
 from plot_utils.windows import finished_plot
 from file_io import read_netcdf
+from utils import var_min_max
 
 # Plot a 2D variable on the Ua triangular mesh.
 # Arguments:
@@ -26,17 +27,29 @@ def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic
     # Choose what the endpoints of the colourbar should do
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
+    # If we're zooming, choose the correct colour bounds
+    zoom = zoom_fris or any([xmin, xmax, ymin, ymax])
+    if zoom:
+        vmin_tmp, vmax_tmp = var_min_max(data, [x,y], pster=True, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, ua=True)
+        if vmin is None:
+            vmin = vmin_tmp
+        if vmax is None:
+            vmax = vmax_tmp
     # Get colourmap
     cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
+    if zoom:
+        levels = np.linspace(vmin, vmax)
+    else:
+        levels = 30
     # Make the figure and axes, if needed
     existing_ax = ax is not None
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
     # Plot the data
-    img = ax.tricontourf(x, y, connectivity, data, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     if make_cbar:
         # Add a colourbar
-        plt.colorbar(img, extend=extend)
+        plt.colorbar(img)
     # Set axes limits etc.
     latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
     if title is not None:
@@ -84,7 +97,7 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
     if var == 'b':
         title = 'Ice base elevation (m)'
     elif var == 'B':
-        title = 'Bathymetry (m)'
+        title = 'Bedrock elevation (m)'
     elif var == 'dhdt':
         title = 'Ice thickness rate of change (m/y)'
     elif var == 'h':
@@ -93,23 +106,21 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
         title = r'Ice density (kg/m$^3$)'
     elif var == 's':
         title = 'Ice surface elevation (m)'
-    elif var == 'S':
-        title = 'Sea surface height (m)'
     elif var == 'ub':
         title = 'Basal x-velocity (m/y)'
     elif var == 'vb':
         title = 'Basal y-velocity (m/y)'
     elif var == 'velb':
         title = 'Basal velocity (m/y)'
-    elif var in ['ab', 'AGlen', 'C', 'm', 'n']:
+    elif var in ['ab', 'AGlen', 'C']:
         title = var
     else:
         print 'Error (read_plot_ua_tri): variable ' + var + ' unknown'
         sys.exit()
     # Choose colourmap
-    cmap = 'basic'
+    ctype = 'basic'
     if var in ['dhdt', 'ub', 'vb']:
-        cmap = 'plusminus'
+        ctype = 'plusminus'
     
     ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize)
 

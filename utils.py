@@ -252,12 +252,16 @@ def get_x_y (lon, lat, pster=False):
 
 
 # Find the minimum and maximum values of a 2D (lat x lon) array in the given region.
-def var_min_max (data, grid, pster=False, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t'):
+def var_min_max (data, grid, pster=False, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, gtype='t', ua=False):
 
-    # Choose the correct longitude and latitude arrays
-    lon, lat = grid.get_lon_lat(gtype=gtype)
-    # Convert to polar stereographic if needed
-    x, y = get_x_y(lon, lat, pster=pster)
+    if ua:
+        # grid is a list with x and y wrapped up in it
+        [x, y] = grid
+    else:
+        # Choose the correct longitude and latitude arrays
+        lon, lat = grid.get_lon_lat(gtype=gtype)
+        # Convert to polar stereographic if needed
+        x, y = get_x_y(lon, lat, pster=pster)
 
     # Set limits on axes
     if zoom_fris:
