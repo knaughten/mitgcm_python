@@ -1,0 +1,156 @@
+#######################################################
+# Plots from Ua output in coupled Ua/MITgcm simulations
+#######################################################
+
+import sys
+import numpy as np
+from scipy.io import loadmat
+
+from plot_utils.colours import set_colours, get_extend
+from plot_utils.latlon import latlon_axes
+from plot_utils.windows import finished_plot
+from file_io import read_netcdf
+
+# Plot a 2D variable on the Ua triangular mesh.
+# Arguments:
+# data: Ua variable at each node
+# x, y: locations of each node (polar stereographic)
+# connectivity: from the MUA object
+# Optional keyword arguments: as in function latlon_plot
+def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6)):
+    
+    import matplotlib
+    matplotlib.use('TkAgg')
+    import matplotlib.pyplot as plt
+
+    # Choose what the endpoints of the colourbar should do
+    if extend is None:
+        extend = get_extend(vmin=vmin, vmax=vmax)
+    # Get colourmap
+    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
+    # Make the figure and axes, if needed
+    existing_ax = ax is not None
+    if not existing_ax:
+        fig, ax = plt.subplots(figsize=figsize)
+    # Plot the data
+    img = ax.tricontourf(x, y, connectivity, data, cmap=cmap, vmin=vmin, vmax=vmax)
+    if make_cbar:
+        # Add a colourbar
+        plt.colorbar(img, extend=extend)
+    # Set axes limits etc.
+    latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
+    if title is not None:
+        # Add a title
+        plt.title(title, fontsize=titlesize)
+
+    if return_fig:
+        return fig, ax
+    elif existing_ax:
+        return img
+    else:
+        finished_plot(fig, fig_name=fig_name)
+        
+
+# Read x, y, and connectivity from the MUA object within an Ua output file.
+# If the file has already been loaded, pass the loadmat object.
+# Otherwise, pass the file name.
+def read_ua_mesh (f):
+
+    # Check if f is a file name that still needs to be read
+    if isinstance(f, str):
+        f = loadmat(f)
+    x = f['MUA']['coordinates'][0][0][:,0]
+    y = f['MUA']['coordinates'][0][0][:,1]
+    connectivity = f['MUA']['connectivity'][0][0]-1
+    return x, y, connectivity
+
+
+# Read a variable from an Ua output file and plot it.
+def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6)):
+
+    # Read the file
+    f = loadmat(file_path)
+    x, y, connectivity = read_ua_mesh(f)
+    def read_data (var_name):
+        return f[var_name][:,0]
+    if var == 'velb':
+        u = read_data('ub')
+        v = read_data('vb')
+        data = np.sqrt(u**2 + v**2)
+    else:
+        data = read_data(var)
+
+    # Choose title
+    if var == 'b':
+        title = 'Ice base elevation (m)'
+    elif var == 'B':
+        title = 'Bathymetry (m)'
+    elif var == 'dhdt':
+        title = 'Ice thickness rate of change (m/y)'
+    elif var == 'h':
+        title = 'Ice thickness (m)'
+    elif var == 'rho':
+        title = r'Ice density (kg/m$^3$)'
+    elif var == 's':
+        title = 'Ice surface elevation (m)'
+    elif var == 'S':
+        title = 'Sea surface height (m)'
+    elif var == 'ub':
+        title = 'Basal x-velocity (m/y)'
+    elif var == 'vb':
+        title = 'Basal y-velocity (m/y)'
+    elif var == 'velb':
+        title = 'Basal velocity (m/y)'
+    elif var in ['ab', 'AGlen', 'C', 'm', 'n']:
+        title = var
+    else:
+        print 'Error (read_plot_ua_tri): variable ' + var + ' unknown'
+        sys.exit()
+    # Choose colourmap
+    cmap = 'basic'
+    if var in ['dhdt', 'ub', 'vb']:
+        cmap = 'plusminus'
+    
+    ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize)
+
+
+# Animate the grounding line position over time, with the original grounding line for comparison. You must have a NetCDF file with the x and y positions of nodes over time (use the ua_postprocess utility within UaMITgcm).
+# Type "conda activate animations" before running this, so you can access ffmpeg.
+def gl_animation (file_path, mov_name=None):
+    
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.animation as animation
+
+    # Read grounding line locations
+    xGL = read_netcdf(file_path, 'xGL')
+    yGL = read_netcdf(file_path, 'yGL')
+    xmin = np.amin(xGL)
+    xmax = np.amax(xGL)
+    ymin = np.amin(yGL)
+    ymax = np.amax(yGL)
+    num_frames = xGL.shape[0]
+
+    # Set up the figure
+    fig, ax = plt.subplots()
+
+    # Function to update figure with the given frame
+    def animate(t):
+        ax.cla()
+        ax.plot(xGL[0,:], yGL[0,:], '-', color='blue')
+        ax.plot(xGL[t,:], yGL[t,:], '-', color='black')
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_title('Grounding line position', fontsize=18)
+
+    # Call it for each frame and save as an animation
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    if mov_name is None:
+        plt.show()
+    else:
+        anim.save(mov_name, writer=writer)
+
