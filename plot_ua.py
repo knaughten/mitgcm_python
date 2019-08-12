@@ -37,10 +37,7 @@ def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic
             vmax = vmax_tmp
     # Get colourmap
     cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
-    if zoom:
-        levels = np.linspace(vmin, vmax)
-    else:
-        levels = 30
+    levels = np.linspace(vmin, vmax, num=26)
     # Make the figure and axes, if needed
     existing_ax = ax is not None
     if not existing_ax:
