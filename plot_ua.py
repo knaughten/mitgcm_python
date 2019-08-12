@@ -6,6 +6,10 @@ import sys
 import numpy as np
 from scipy.io import loadmat
 
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.labels import latlon_axes
 from plot_utils.windows import finished_plot
@@ -123,14 +127,14 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
 
 
 # Helper function to plot the grounding line at the beginning of the simulation, and at the current frame.
-def gl_frame (xGL, yGL, t, ax=None, title='', xmin=None, xmax=None, ymin=None, ymax=None, move_box=False):
+def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Current', xmin=None, xmax=None, ymin=None, ymax=None, move_box=False):
 
     return_fig = ax is None
     if return_fig:
         # Set up the plot
         fig, ax = plt.subplots(figsize=(10,6))
     ax.plot(xGL[0,:], yGL[0,:], '-', color='blue', label='Initial')
-    ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label='Current')
+    ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label=label)
     # Choose bounds
     xmin, xmax = choose_range(xGL[0,:], x2=xGL[t,:], xmin=xmin, xmax=xmax)
     ymin, ymax = choose_range(yGL[0,:], x2=yGL[t,:], xmin=ymin, xmax=ymax)
@@ -185,12 +189,8 @@ def gl_animation (file_path, mov_name=None):
 # As above, but just plot the last frame.
 def gl_final (file_path, fig_name=None):
 
-    import matplotlib
-    matplotlib.use('TkAgg')
-    import matplotlib.pyplot as plt
-
     xGL = read_netcdf(file_path, 'xGL')
     yGL = read_netcdf(file_path, 'yGL')
 
-    fig, ax = gl_frame(xGL, yGL, -1, title='Grounding line position, last timestep', move_box=True)
+    fig, ax = gl_frame(xGL, yGL, -1, label='Final', move_box=True)
     finished_plot(fig, fig_name)
