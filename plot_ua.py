@@ -124,7 +124,7 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
 
 # Animate the grounding line position over time, with the original grounding line for comparison. You must have a NetCDF file with the x and y positions of nodes over time (use the ua_postprocess utility within UaMITgcm).
 # Type "conda activate animations" before running this, so you can access ffmpeg.
-def gl_animation (file_path, mov_name=None):
+def gl_plot (file_path, animation=True, last_frame=True, mov_name=None, fig_name=None):
     
     import matplotlib
     matplotlib.use("Agg")
@@ -141,24 +141,37 @@ def gl_animation (file_path, mov_name=None):
     num_frames = xGL.shape[0]
 
     # Set up the figure
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,6))
 
     # Function to update figure with the given frame
     def animate(t):
         ax.cla()
-        ax.plot(xGL[0,:], yGL[0,:], '-', color='blue')
-        ax.plot(xGL[t,:], yGL[t,:], '-', color='black')
+        ax.plot(xGL[0,:], yGL[0,:], '-', color='blue', label='Initial')
+        ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label='Current')
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax.set_title('Grounding line position', fontsize=18)
+        ax.set_title('Grounding line position, '+str(t+1)+'/'+str(num_frames), fontsize=18)
+        if t==0:
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
 
-    # Call it for each frame and save as an animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
-    writer = animation.FFMpegWriter(bitrate=500, fps=10)
-    if mov_name is None:
-        plt.show()
-    else:
-        anim.save(mov_name, writer=writer)
+    if animation:
+        # Call it for each frame and save as an animation
+        anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+        writer = animation.FFMpegWriter(bitrate=500, fps=10)
+        if mov_name is None:
+            plt.show()
+        else:
+            anim.save(mov_name, writer=writer)
+    if last_frame:
+        # Initialise for legend
+        animate(0)
+        # Now get final shot
+        animate(-1)
+        finished_plot(fig, fig_name)
+        
+
 
