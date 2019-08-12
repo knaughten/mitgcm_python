@@ -553,7 +553,30 @@ def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None
 def axis_edges (x):
     x_bound = 0.5*(x[:-1]+x[1:])
     x_bound = np.concatenate(([2*x_bound[0]-x_bound[1]], x_bound, [2*x_bound[-1]-x_bound[-2]]))
-    return x_bound    
+    return x_bound
+
+
+# Given an array (or two), find the min and max value (unless these are already defined), and pad with the given percentage (default 2%) of the difference between them.
+def choose_range (x1, x2=None, xmin=None, xmax=None, pad=0.02):
+
+    xmin_set = xmin is not None
+    xmax_set = xmax is not None
+
+    if not xmin_set:
+        xmin = np.amin(x1)
+        if x2 is not None:
+            xmin = min(xmin, np.amin(x2))
+    if not xmax_set:
+        xmax = np.amax(x1)
+        if x2 is not None:
+            xmax = max(xmax, np.amax(x2))
+            
+    delta = pad*(xmax-xmin)
+    if not xmin_set:
+        xmin -= delta
+    if not xmax_set:
+        xmax += delta
+    return xmin, xmax
 
     
     

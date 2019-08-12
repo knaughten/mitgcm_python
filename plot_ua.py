@@ -10,7 +10,7 @@ from plot_utils.colours import set_colours, get_extend
 from plot_utils.labels import latlon_axes
 from plot_utils.windows import finished_plot
 from file_io import read_netcdf
-from utils import var_min_max
+from utils import var_min_max, choose_range
 
 # Plot a 2D variable on the Ua triangular mesh.
 # Arguments:
@@ -122,9 +122,34 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
     ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize)
 
 
+# Helper function to plot the grounding line at the beginning of the simulation, and at the current frame.
+def gl_frame (xGL, yGL, t, ax=None, title='', xmin=None, xmax=None, ymin=None, ymax=None, move_box=False):
+
+    return_fig = ax is None
+    if return_fig:
+        # Set up the plot
+        fig, ax = plt.subplots(figsize=(10,6))
+    ax.plot(xGL[0,:], yGL[0,:], '-', color='blue', label='Initial')
+    ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label='Current')
+    # Choose bounds
+    xmin, xmax = choose_range(xGL[0,:], x2=xGL[t,:], xmin=xmin, xmax=xmax)
+    ymin, ymax = choose_range(yGL[0,:], x2=yGL[t,:], xmin=ymin, xmax=ymax)
+    ax.set_xlim([xmin, xmax])
+    ax.set_ylim([ymin, ymax])
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.set_title(title, fontsize=18)
+    if move_box:
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    if return_fig:
+        return fig, ax
+
+
 # Animate the grounding line position over time, with the original grounding line for comparison. You must have a NetCDF file with the x and y positions of nodes over time (use the ua_postprocess utility within UaMITgcm).
 # Type "conda activate animations" before running this, so you can access ffmpeg.
-def gl_plot (file_path, animation=True, last_frame=True, mov_name=None, fig_name=None):
+def gl_animation (file_path, mov_name=None):
     
     import matplotlib
     matplotlib.use("Agg")
@@ -146,32 +171,26 @@ def gl_plot (file_path, animation=True, last_frame=True, mov_name=None, fig_name
     # Function to update figure with the given frame
     def animate(t):
         ax.cla()
-        ax.plot(xGL[0,:], yGL[0,:], '-', color='blue', label='Initial')
-        ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label='Current')
-        ax.set_xlim([xmin, xmax])
-        ax.set_ylim([ymin, ymax])
-        ax.set_xticklabels([])
-        ax.set_yticklabels([])
-        ax.set_title('Grounding line position, '+str(t+1)+'/'+str(num_frames), fontsize=18)
-        if t==0:
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
-        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+        gl_frame(xGL, yGL, t, ax=ax, title='Grounding line position, '+str(t+1)+'/'+str(num_frames), xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, move_box=t==0)
 
-    if animation:
-        # Call it for each frame and save as an animation
-        anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
-        writer = animation.FFMpegWriter(bitrate=500, fps=10)
-        if mov_name is None:
-            plt.show()
-        else:
-            anim.save(mov_name, writer=writer)
-    if last_frame:
-        # Initialise for legend
-        animate(0)
-        # Now get final shot
-        animate(-1)
-        finished_plot(fig, fig_name)
-        
+    # Call it for each frame and save as an animation
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    if mov_name is None:
+        plt.show()
+    else:
+        anim.save(mov_name, writer=writer)
 
 
+# As above, but just plot the last frame.
+def gl_final (file_path, fig_name=None):
+
+    import matplotlib
+    matplotlib.use('TkAgg')
+    import matplotlib.pyplot as plt
+
+    xGL = read_netcdf(file_path, 'xGL')
+    yGL = read_netcdf(file_path, 'yGL')
+
+    fig, ax = gl_frame(xGL, yGL, -1, title='Grounding line position, last timestep', move_box=True)
+    finished_plot(fig, fig_name)
