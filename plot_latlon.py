@@ -49,7 +49,7 @@ from calculus import vertical_average
 # label_latlon: whether to label latitude and longitude axes
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6)):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6), dpi=None):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -108,7 +108,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
     elif existing_ax:
         return img
     else:
-        finished_plot(fig, fig_name=fig_name)
+        finished_plot(fig, fig_name=fig_name, dpi=dpi)
         
 
 # Plot ice shelf melt rate field.
@@ -126,11 +126,11 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, fig_name=None, figsize=(8,6)):
+def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, fig_name=None, figsize=(8,6), dpi=None):
 
     # Convert to m/y
     ismr = convert_ismr(shifwflx)
-    latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', fig_name=fig_name, figsize=figsize)
+    latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot bottom water temperature, salinity, or age.
@@ -148,7 +148,7 @@ def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None,
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
     if var == 'temp':
         title = 'Bottom water temperature (' + deg_string + 'C)'
@@ -156,7 +156,7 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
         title = 'Bottom water salinity (psu)'
     elif var == 'age':
         title = 'Bottom water age (years)'
-    latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
+    latlon_plot(select_bottom(data), grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot surface temperature or salinity.
@@ -174,13 +174,13 @@ def plot_bw (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
     if var == 'temp':
         title = 'Sea surface temperature (' + deg_string + 'C)'
     elif var == 'salt':
         title = 'Sea surface salinity (psu)'
-    latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
+    latlon_plot(data[0,:], grid, include_shelf=False, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot miscellaneous 2D variables that do not include the ice shelf: sea ice concentration or thickness, mixed layer depth, free surface, surface salt flux.
@@ -199,7 +199,7 @@ def plot_ss (var, data, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, 
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
     if var == 'aice':
         title = 'Sea ice concentration (fraction)'
@@ -215,7 +215,7 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
         title = r'Surface salt flux (kg/m$^2$/s)'
     elif var == 'iceprod':
         title = 'Sea ice production (m/y)'
-    latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)
+    latlon_plot(data, grid, include_shelf=False, ctype=ctype, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot the difference from the in-situ freezing point.
@@ -233,7 +233,7 @@ def plot_2d_noshelf (var, data, grid, ctype='basic', vmin=None, vmax=None, zoom_
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
     # Calculate difference from freezing point
     tminustf = t_minus_tf(temp, salt, grid)
@@ -247,7 +247,7 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
     elif tf_option == 'min':
         tmtf_plot = np.amin(tminustf, axis=0)
         title_end = '\n(minimum over depth)'
-    latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=r'Difference from in-situ freezing point ('+deg_string+'C)'+title_end, fig_name=fig_name, figsize=figsize)
+    latlon_plot(tmtf_plot, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=r'Difference from in-situ freezing point ('+deg_string+'C)'+title_end, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot horizontal ocean or sea ice velocity: magnitude overlaid with vectors.
@@ -267,7 +267,7 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
 # figsize: as in function latlon_plot
 # chunk: as in function overlay_vectors
 
-def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None, scale=None):
+def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), chunk=None, scale=None, dpi=None):
 
     # Do the correct vertical transformation, and interpolate to the tracer grid
     speed, u_plot, v_plot = prepare_vel(u, v, grid, vel_option=vel_option, z0=z0)
@@ -304,7 +304,7 @@ def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_
         scale = 2
     overlay_vectors(ax, u_plot, v_plot, grid, chunk=chunk, scale=scale)
 
-    finished_plot(fig, fig_name=fig_name)
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)
 
 
 # Plot horizontal velocity streamfunction (vertically integrated).
@@ -313,11 +313,11 @@ def plot_vel (u, v, grid, vel_option='avg', z0=None, vmin=None, vmax=None, zoom_
 # psi: 3D (depth x lat x lon) array of horizontal velocity streamfunction, already masked with hfac
 # Everything else as before.
 
-def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6)):
+def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
     # Vertically integrate and convert to Sv
     psi = np.sum(psi, axis=0)*1e-6
-    latlon_plot(psi, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title='Horizontal velocity streamfunction (Sv)\nvertically integrated', fig_name=fig_name, figsize=figsize)
+    latlon_plot(psi, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title='Horizontal velocity streamfunction (Sv)\nvertically integrated', fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
@@ -382,7 +382,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, figsize=(8,6)):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, figsize=(8,6), dpi=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -448,39 +448,39 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         
     # Plot
     if var == 'ismr':
-        plot_ismr(shifwflx, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_ismr(shifwflx, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'bwtemp':
-        plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'bwsalt':
-        plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_bw('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'bwage':
-        plot_bw('age', age, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_bw('age', age, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'sst':
-        plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_ss('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'sss':
-        plot_ss('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_ss('salt', salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'aice':
-        plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('aice', aice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'hice':
-        plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('hice', hice, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'hsnow':
-        plot_2d_noshelf('hsnow', hsnow, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('hsnow', hsnow, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'mld':
-        plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('mld', mld, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'eta':
-        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('eta', eta, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'saltflx':
-        plot_2d_noshelf('saltflx', saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('saltflx', saltflx, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'tminustf':
-        plot_tminustf(temp, salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_tminustf(temp, salt, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, tf_option=tf_option, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'vel':
-        plot_vel(u, v, grid, vel_option=vel_option, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale)
+        plot_vel(u, v, grid, vel_option=vel_option, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale, dpi=dpi)
     elif var == 'velice':
-        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale)
+        plot_vel(uice, vice, grid, vel_option='ice', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, chunk=chunk, scale=scale, dpi=dpi)
     elif var == 'psi':
-        plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'iceprod':
-        plot_2d_noshelf('iceprod', iceprod, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize)
+        plot_2d_noshelf('iceprod', iceprod, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     else:
         print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
         sys.exit()

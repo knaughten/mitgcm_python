@@ -117,5 +117,16 @@ def plot_final_dhdt (output_dir='output/', expt_name='FRIS_999', max_scale=5, fi
     # Now make the plot
     read_plot_ua_tri('dhdt', ua_file_final, title='Ice thickness rate of change (m/y) at end of simulation', vmin=-max_scale, vmax=max_scale, fig_name=fig_name, figsize=(12,6), dpi=300)
 
+
+# Plot basal melt rates averaged over the last 6 months.
+def plot_final_ismr (output_dir='output/', fig_name=None):
+
+    # Find the final output file
+    output_dir = real_dir(output_dir)
+    segment_dir = get_segment_dir(output_dir)
+    final_mit_file = output_dir + segment_dir[-1] + '/MITgcm/output.nc'
+    # Now make the plot
+    read_plot_latlon('ismr', final_mit_file, time_average=True, zoom_fris=True, date_string='final 6 months of simulation', fig_name=fig_name, dpi=300)
+
     
                                    
