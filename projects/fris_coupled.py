@@ -78,7 +78,7 @@ def plot_fris_temp_salt (timeseries_file='output/timeseries.nc', fig_name=None):
     make_timeseries_plot_2sided(time, temp, salt, 'Volume-averaged conditions in FRIS cavity', 'Temperature ('+deg_string+')', 'Salinity (psu)', fig_name=fig_name, dpi=300)
 
 
-# Plot timeseries of integrated ice sheet variables, as percentages of their initial values.
+# Plot timeseries of integrated ice sheet variables, as percentage anomalies from their initial values.
 def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua_postprocessed.nc', fig_name=None):
 
     # Get the dates from MITgcm timeseries
@@ -90,11 +90,11 @@ def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua
     # Trim the time array if needed (for simulation in progress)
     time = time[:iceVAF.size]
 
-    # Convert to percentages of initial values
-    groundedArea = groundedArea/groundedArea[0]*100
-    iceVolume = iceVolume/iceVolume[0]*100
-    iceVAF = iceVAF/iceVAF[0]*100
+    # Convert to percent anomalies
+    groundedArea = (groundedArea-groundedArea[0])/groundedArea[0]*100
+    iceVolume = (iceVolume-iceVolume[0])/iceVolume[0]*100
+    iceVAF = (iceVAF-iceVAF[0])/iceVAF[0]*100
 
     # Make the plot
-    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded ice area', 'Ice volume', 'Ice volume above flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% of initial value', fig_name=fig_name, dpi=300)
+    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded\nice area', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', fig_name=fig_name, dpi=300)
                                    
