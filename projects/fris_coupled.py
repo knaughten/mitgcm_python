@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
 import sys
+import os
 
 from ..plot_ua import read_ua_mesh
 from ..postprocess import get_segment_dir
