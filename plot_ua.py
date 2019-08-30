@@ -127,7 +127,7 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
 
 
 # Helper function to plot the grounding line at the beginning of the simulation, and at the current frame.
-def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Current', xmin=None, xmax=None, ymin=None, ymax=None, move_box=False):
+def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Current', xmin=None, xmax=None, ymin=None, ymax=None):
 
     return_fig = ax is None
     if return_fig:
@@ -143,10 +143,7 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_title(title, fontsize=20)
-    #if move_box:
-        #box = ax.get_position()
-        #ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
-    ax.legend(loc='center') #loc='center left', bbox_to_anchor=(1,0.5))
+    ax.legend(loc='center')
     if return_fig:
         return fig, ax
 
@@ -170,7 +167,7 @@ def gl_animation (file_path, mov_name=None):
     num_frames = xGL.shape[0]
 
     # Set up the figure
-    fig, ax = plt.subplots(figsize=(8,6))
+    fig, ax = plt.subplots(figsize=(7,6))
 
     # Function to update figure with the given frame
     def animate(t):
@@ -192,5 +189,5 @@ def gl_final (file_path, fig_name=None, dpi=None):
     xGL = read_netcdf(file_path, 'xGL')
     yGL = read_netcdf(file_path, 'yGL')
 
-    fig, ax = gl_frame(xGL, yGL, -1, label='Final', move_box=True)
+    fig, ax = gl_frame(xGL, yGL, -1, label='Final')
     finished_plot(fig, fig_name, dpi=dpi)
