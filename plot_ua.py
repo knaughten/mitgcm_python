@@ -132,7 +132,7 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     return_fig = ax is None
     if return_fig:
         # Set up the plot
-        fig, ax = plt.subplots(figsize=(8,6))
+        fig, ax = plt.subplots(figsize=(7,6))
     ax.plot(xGL[0,:], yGL[0,:], '-', color='red', label='Initial')
     ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label=label)
     # Choose bounds
@@ -143,10 +143,10 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_title(title, fontsize=20)
-    if move_box:
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
-    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    #if move_box:
+        #box = ax.get_position()
+        #ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+    ax.legend() #loc='center left', bbox_to_anchor=(1,0.5))
     if return_fig:
         return fig, ax
 
