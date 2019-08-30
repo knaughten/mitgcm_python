@@ -127,7 +127,7 @@ def plot_final_ismr (output_dir='output/', fig_name=None):
     segment_dir = get_segment_dir(output_dir)
     final_mit_file = output_dir + segment_dir[-1] + '/MITgcm/output.nc'
     # Now make the plot
-    read_plot_latlon('ismr', final_mit_file, time_average=True, zoom_fris=True, date_string='final 6 months of simulation', fig_name=fig_name, dpi=300)
+    read_plot_latlon('ismr', final_mit_file, time_average=True, zoom_fris=True, date_string='final 6 months of simulation', pster=True, fig_name=fig_name, dpi=300)
 
     
                                    

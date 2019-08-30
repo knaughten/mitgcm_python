@@ -384,6 +384,10 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 
 def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, pster=False, figsize=(8,6), dpi=None):
 
+    if pster and var != 'ismr':
+        print 'Error (read_plot_latlon): polar stereographic not yet implemented for ' + var
+        sys.exit()
+
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
     # Make sure we'll end up with a single record in time
