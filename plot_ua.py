@@ -187,10 +187,10 @@ def gl_animation (file_path, mov_name=None):
 
 
 # As above, but just plot the last frame.
-def gl_final (file_path, fig_name=None):
+def gl_final (file_path, fig_name=None, dpi=None):
 
     xGL = read_netcdf(file_path, 'xGL')
     yGL = read_netcdf(file_path, 'yGL')
 
     fig, ax = gl_frame(xGL, yGL, -1, label='Final', move_box=True)
-    finished_plot(fig, fig_name)
+    finished_plot(fig, fig_name, dpi=dpi)

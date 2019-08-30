@@ -17,6 +17,7 @@ from ..grid import Grid
 from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.windows import finished_plot
+from ..plot_ua import gl_final
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
@@ -53,3 +54,9 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', output_dir='output/
     # Title
     plt.title(u'Initial MITgcm grid (blue) and Úa mesh (red)', fontsize=24)
     finished_plot(fig, fig_name=fig_name, dpi=300)
+
+
+# Wrapper to gl_final: plot initial and final grounding line positions.
+def plot_gl_change (ua_nc_file='output/ua_postprocessed.nc', fig_name=None):
+
+    gl_final(ua_nc_file, fig_name=fig_name, dpi=300)
