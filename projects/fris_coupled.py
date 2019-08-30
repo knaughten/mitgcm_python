@@ -50,5 +50,5 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', output_dir='output/
     # Turn off box
     ax.axis('off')
     # Title
-    plt.title('Initial MITgcm grid (blue) and $\'{U}$a mesh (red)', fontsize=24)
+    plt.title('Initial MITgcm grid (blue) and $\acute{U}$a mesh (red)', fontsize=24)
     finished_plot(fig, fig_name=fig_name)
