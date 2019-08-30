@@ -17,7 +17,7 @@ from ..grid import Grid
 from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.windows import finished_plot
-from ..plot_ua import gl_final
+from ..plot_ua import gl_final, read_plot_ua_tri
 from ..plot_1d import read_plot_timeseries, make_timeseries_plot_2sided, timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf
 from ..constants import deg_string
@@ -97,4 +97,24 @@ def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua
 
     # Make the plot
     timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded ice\narea', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', fig_name=fig_name, dpi=300)
+
+
+# Plot dh/dt in Ua on the final month.
+def plot_final_dhdt (output_dir='output/', expt_name='FRIS_999', max_scale=10, fig_name=None):
+
+    # Find the final output file
+    output_dir = real_dir(output_dir)
+    segment_dir = get_segment_dir(output_dir)
+    final_ua_dir = output_dir + segment_dir[-1] + '/Ua/'
+    ua_files = []
+    for fname in os.listdir(final_ua_dir):
+        if fname.startswith(expt_name+'_') and fname.endswith('.mat') and 'RestartFile' not in fname:
+            ua_files.append(fname)
+    ua_files.sort()
+    ua_file_final = ua_files[-1]
+
+    # Now make the plot
+    read_plot_ua_tri('dhdt', ua_file_final, vmin=-max_scale, vmax=max_scale, fig_name=fig_name, dpi=300)
+
+    
                                    

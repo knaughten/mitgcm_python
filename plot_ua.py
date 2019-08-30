@@ -22,7 +22,7 @@ from utils import var_min_max, choose_range
 # x, y: locations of each node (polar stereographic)
 # connectivity: from the MUA object
 # Optional keyword arguments: as in function latlon_plot
-def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6)):
+def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
     
     import matplotlib
     matplotlib.use('TkAgg')
@@ -62,7 +62,7 @@ def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic
     elif existing_ax:
         return img
     else:
-        finished_plot(fig, fig_name=fig_name)
+        finished_plot(fig, fig_name=fig_name, dpi=dpi)
         
 
 # Read x, y, and connectivity from the MUA object within an Ua output file.
@@ -80,7 +80,7 @@ def read_ua_mesh (f):
 
 
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6)):
+def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -123,7 +123,7 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
     if var in ['dhdt', 'ub', 'vb']:
         ctype = 'plusminus'
     
-    ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize)
+    ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Helper function to plot the grounding line at the beginning of the simulation, and at the current frame.
