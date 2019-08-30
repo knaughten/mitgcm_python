@@ -70,14 +70,18 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None):
+def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
     # Boolean which will tell us whether we need a line at 0
     crosses_zero = np.amin(datas)<0 and np.amax(datas)>0
 
-    fig, ax = plt.subplots(figsize=(11,6))
+    if legend_in_centre:
+        figsize=(8,6)
+    else:
+        figsize=(11,6)
+    fig, ax = plt.subplots(figsize=figsize)
     # Plot each line
     for i in range(len(datas)):
         if multi_time:
@@ -94,11 +98,15 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
         monthly_ticks(ax)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
-    # Move plot over to make room for legend
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
-    # Make legend
-    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    if legend_in_centre:
+        # Make legend
+        ax.legend(loc='center')
+    else:
+        # Move plot over to make room for legend
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+        # Make legend
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     
     finished_plot(fig, fig_name=fig_name, dpi=dpi)    
     
@@ -117,7 +125,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, dpi=None):
+def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
@@ -134,7 +142,7 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
         else:
             # Calculate the timeseries from the MITgcm file(s)
             time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
-        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
+        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
     else:
         if precomputed:
             data = read_netcdf(file_path, var)

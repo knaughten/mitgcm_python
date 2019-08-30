@@ -67,7 +67,7 @@ def plot_gl_change (ua_nc_file='output/ua_postprocessed.nc', fig_name=None):
 
 # Make timeseries plot of FRIS basal mass balance.
 def plot_fris_mass_balance (timeseries_file='output/timeseries.nc', fig_name=None):
-    read_plot_timeseries('fris_mass_balance', timeseries_file, precomputed=True, fig_name=fig_name, dpi=300)
+    read_plot_timeseries('fris_mass_balance', timeseries_file, precomputed=True, legend_in_centre=True, fig_name=fig_name, dpi=300)
 
 
 # Make 2-sided timeseries plot of FRIS temperature and salinity.
@@ -97,7 +97,7 @@ def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua
     iceVAF = (iceVAF-iceVAF[0])/iceVAF[0]*100
 
     # Make the plot
-    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded ice\narea', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', fig_name=fig_name, dpi=300)
+    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded ice\narea', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', legend_in_centre=True, fig_name=fig_name, dpi=300)
 
 
 # Plot dh/dt in Ua on the final month.
