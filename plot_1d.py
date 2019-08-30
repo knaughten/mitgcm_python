@@ -26,7 +26,7 @@ from file_io import netcdf_time, read_netcdf
 # monthly: as in function netcdf_time
 # fig_name: as in function finished_plot
 
-def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name=None):
+def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name=None, dpi=None):
 
     fig, ax = plt.subplots()
     ax.plot_date(time, data, '-', linewidth=1.5)
@@ -38,7 +38,25 @@ def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name
         monthly_ticks(ax)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
-    finished_plot(fig, fig_name=fig_name)
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)
+
+
+# Plot two different variables on the same axes, with different scales, in blue and red respectively.
+def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, monthly=True, fig_name=None, dpi=None):
+
+    fig, ax1 = plt.subplots()
+    ax1.plot_date(time, data1, '-', linewidth=1.5, color='blue')
+    ax1.grid(True)
+    if not monthly:
+        monthly_ticks(ax1)
+    ax1.set_ylabel(units1, color='blue', fontsize=16)
+    ax1.tick_params(axis='y', labelcolor='blue')
+    ax2 = ax1.twinx()
+    ax2.plot_date(time, data2, '-', linewidth=1.5, color='red')
+    ax2.set_ylabel(units2, color='red', fontsize=16)
+    ax2.tick_params(axis='y', labelcolor='blue')
+    plt.title(title, fontsize=18)
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)        
 
 
 # Plot multiple timeseries on the same axes.
@@ -51,7 +69,7 @@ def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None):
+def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -83,7 +101,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
     # Make legend
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     
-    finished_plot(fig, fig_name=fig_name)    
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)    
     
 
 # User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot.
@@ -100,7 +118,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
+def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, dpi=None):
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
@@ -117,13 +135,13 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
         else:
             # Calculate the timeseries from the MITgcm file(s)
             time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
-        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name)
+        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
     else:
         if precomputed:
             data = read_netcdf(file_path, var)
         else:
             time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name)
+        make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
 

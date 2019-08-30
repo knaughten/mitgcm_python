@@ -18,6 +18,9 @@ from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.windows import finished_plot
 from ..plot_ua import gl_final
+from ..plot_1d import read_plot_timeseries, make_timeseries_plot_2sided
+from ..file_io import netcdf_time, read_netcdf
+from ..constants import deg_string
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
@@ -58,5 +61,34 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', output_dir='output/
 
 # Wrapper to gl_final: plot initial and final grounding line positions.
 def plot_gl_change (ua_nc_file='output/ua_postprocessed.nc', fig_name=None):
-
     gl_final(ua_nc_file, fig_name=fig_name, dpi=300)
+
+
+# Make timeseries plot of FRIS basal mass balance.
+def plot_fris_mass_balance (timeseries_file='output/timeseries.nc', fig_name=None):
+    read_plot_timeseries('fris_mass_balance', timeseries_file, precomputed=True, fig_name=fig_name, dpi=300)
+
+
+# Make 2-sided timeseries plot of FRIS temperature and salinity.
+def plot_fris_temp_salt (timeseries_file='output/timeseries.nc', fig_name=None):
+
+    time = netcdf_time(timeseries_file)
+    temp = read_netcdf(timeseries_file, 'fris_temp')
+    salt = read_netcdf(timeseries_file, 'fris_salt')
+    make_timeseries_plot_2sided(time, temp, salt, 'Volume-averaged conditions in FRIS cavity', 'Temperature ('+deg_string+')', 'Salinity (psu)', fig_name=fig_name, dpi=300)
+
+
+# Print percent changes in integrated ice sheet variables.
+def calc_ice_changes (ua_file='output/ua_postprocessed.nc'):
+
+    iceVAF = read_netcdf(ua_file, 'iceVAF')
+    iceVolume = read_netcdf(ua_file, 'iceVolume')
+    groundedArea = read_netcdf(ua_file, 'groundedArea')
+
+    def percent_change (data):
+        return str((data[-1] - data[0])/data[0]*100)+'%'
+
+    print 'Change in grounded area of ice: '+percent_change(groundedArea)
+    print 'Change in total ice volume: '+percent_change(iceVolume)
+    print 'Change in ice volume above flotation: '+percent_change(iceVAF)
+                                   
