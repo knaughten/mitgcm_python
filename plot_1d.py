@@ -74,7 +74,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
     # Boolean which will tell us whether we need a line at 0
-    crosses_zero = False
+    crosses_zero = np.amin(datas)<0 and np.amax(datas)>0
 
     fig, ax = plt.subplots(figsize=(11,6))
     # Plot each line
@@ -84,8 +84,6 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
         else:
             time = times
         ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
-        if (not crosses_zero) and (np.amin(datas[i]) < 0) and (np.amax(datas[i]) > 0):
-            crosses_zero = True
 
     ax.grid(True)
     if crosses_zero:

@@ -96,5 +96,5 @@ def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua
     iceVAF = (iceVAF-iceVAF[0])/iceVAF[0]*100
 
     # Make the plot
-    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded\nice area', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', fig_name=fig_name, dpi=300)
+    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded\nice\narea', 'Ice volume', 'Ice volume\nabove flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% change from initial value', fig_name=fig_name, dpi=300)
                                    
