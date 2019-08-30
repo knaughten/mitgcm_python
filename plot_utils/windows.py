@@ -8,11 +8,11 @@ import matplotlib.pyplot as plt
 
 
 # If a figure name is defined, save the figure to that file. Otherwise, display the figure on screen.
-def finished_plot (fig, fig_name=None):
+def finished_plot (fig, fig_name=None, dpi=None):
 
     if fig_name is not None:
         print 'Saving ' + fig_name
-        fig.savefig(fig_name)
+        fig.savefig(fig_name, dpi=dpi)
     else:
         fig.show()
 
