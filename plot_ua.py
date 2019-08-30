@@ -132,7 +132,7 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     return_fig = ax is None
     if return_fig:
         # Set up the plot
-        fig, ax = plt.subplots(figsize=(10,6))
+        fig, ax = plt.subplots(figsize=(8,6))
     ax.plot(xGL[0,:], yGL[0,:], '-', color='red', label='Initial')
     ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label=label)
     # Choose bounds
@@ -142,7 +142,7 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     ax.set_ylim([ymin, ymax])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-    ax.set_title(title, fontsize=18)
+    ax.set_title(title, fontsize=24)
     if move_box:
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
@@ -170,7 +170,7 @@ def gl_animation (file_path, mov_name=None):
     num_frames = xGL.shape[0]
 
     # Set up the figure
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(8,6))
 
     # Function to update figure with the given frame
     def animate(t):
