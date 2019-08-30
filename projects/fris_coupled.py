@@ -20,6 +20,7 @@ from ..plot_utils.labels import latlon_axes
 from ..plot_utils.windows import finished_plot
 from ..plot_ua import gl_final, read_plot_ua_tri
 from ..plot_1d import read_plot_timeseries, make_timeseries_plot_2sided, timeseries_multi_plot
+from ..plot_latlon import read_plot_latlon
 from ..file_io import netcdf_time, read_netcdf
 from ..constants import deg_string
 
