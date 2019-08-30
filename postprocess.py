@@ -425,7 +425,7 @@ def segment_file_paths (output_dir, segment_dir, file_name):
 def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None):
 
     if timeseries_types is None:
-        timeseries_types = ['all_massloss', 'avg_melt', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        timeseries_types = ['fris_mass_balance', 'avg_melt', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
     output_dir = real_dir(output_dir)
 
