@@ -142,7 +142,7 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     ax.set_ylim([ymin, ymax])
     ax.set_xticklabels([])
     ax.set_yticklabels([])
-    ax.set_title(title, fontsize=24)
+    ax.set_title(title, fontsize=20)
     if move_box:
         box = ax.get_position()
         ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
