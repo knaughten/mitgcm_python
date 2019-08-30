@@ -44,7 +44,7 @@ def make_timeseries_plot (time, data, title='', units='', monthly=True, fig_name
 # Plot two different variables on the same axes, with different scales, in blue and red respectively.
 def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, monthly=True, fig_name=None, dpi=None):
 
-    fig, ax1 = plt.subplots()
+    fig, ax1 = plt.subplots(figsize=(9,6))
     ax1.plot_date(time, data1, '-', linewidth=1.5, color='blue')
     ax1.grid(True)
     if not monthly:
@@ -53,8 +53,9 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
     ax1.tick_params(axis='y', labelcolor='blue')
     ax2 = ax1.twinx()
     ax2.plot_date(time, data2, '-', linewidth=1.5, color='red')
+    ax2.get_yaxis().get_major_formatter().set_useOffset(False)
     ax2.set_ylabel(units2, color='red', fontsize=16)
-    ax2.tick_params(axis='y', labelcolor='blue')
+    ax2.tick_params(axis='y', labelcolor='red')
     plt.title(title, fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=dpi)        
 
