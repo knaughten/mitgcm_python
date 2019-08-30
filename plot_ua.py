@@ -80,7 +80,7 @@ def read_ua_mesh (f):
 
 
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
+def read_plot_ua_tri (var, file_path, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -94,30 +94,31 @@ def read_plot_ua_tri (var, file_path, vmin=None, vmax=None, xmin=None, xmax=None
     else:
         data = read_data(var)
 
-    # Choose title
-    if var == 'b':
-        title = 'Ice base elevation (m)'
-    elif var == 'B':
-        title = 'Bedrock elevation (m)'
-    elif var == 'dhdt':
-        title = 'Ice thickness rate of change (m/y)'
-    elif var == 'h':
-        title = 'Ice thickness (m)'
-    elif var == 'rho':
-        title = r'Ice density (kg/m$^3$)'
-    elif var == 's':
-        title = 'Ice surface elevation (m)'
-    elif var == 'ub':
-        title = 'Basal x-velocity (m/y)'
-    elif var == 'vb':
-        title = 'Basal y-velocity (m/y)'
-    elif var == 'velb':
-        title = 'Basal velocity (m/y)'
-    elif var in ['ab', 'AGlen', 'C']:
-        title = var
-    else:
-        print 'Error (read_plot_ua_tri): variable ' + var + ' unknown'
-        sys.exit()
+    if title is None:
+        # Choose title
+        if var == 'b':
+            title = 'Ice base elevation (m)'
+        elif var == 'B':
+            title = 'Bedrock elevation (m)'
+        elif var == 'dhdt':
+            title = 'Ice thickness rate of change (m/y)'
+        elif var == 'h':
+            title = 'Ice thickness (m)'
+        elif var == 'rho':
+            title = r'Ice density (kg/m$^3$)'
+        elif var == 's':
+            title = 'Ice surface elevation (m)'
+        elif var == 'ub':
+            title = 'Basal x-velocity (m/y)'
+        elif var == 'vb':
+            title = 'Basal y-velocity (m/y)'
+        elif var == 'velb':
+            title = 'Basal velocity (m/y)'
+        elif var in ['ab', 'AGlen', 'C']:
+            title = var
+        else:
+            print 'Error (read_plot_ua_tri): variable ' + var + ' unknown'
+            sys.exit()
     # Choose colourmap
     ctype = 'basic'
     if var in ['dhdt', 'ub', 'vb']:

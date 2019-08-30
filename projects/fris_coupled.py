@@ -115,7 +115,7 @@ def plot_final_dhdt (output_dir='output/', expt_name='FRIS_999', max_scale=5, fi
     ua_file_final = final_ua_dir + ua_files[-1]
 
     # Now make the plot
-    read_plot_ua_tri('dhdt', ua_file_final, vmin=-max_scale, vmax=max_scale, fig_name=fig_name, figsize=(12,6), dpi=300)
+    read_plot_ua_tri('dhdt', ua_file_final, title='Ice thickness rate of change (m/y) at end of simulation', vmin=-max_scale, vmax=max_scale, fig_name=fig_name, figsize=(12,6), dpi=300)
 
     
                                    
