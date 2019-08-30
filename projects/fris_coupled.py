@@ -18,7 +18,7 @@ from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.labels import latlon_axes
 from ..plot_utils.windows import finished_plot
 from ..plot_ua import gl_final
-from ..plot_1d import read_plot_timeseries, make_timeseries_plot_2sided
+from ..plot_1d import read_plot_timeseries, make_timeseries_plot_2sided, timeseries_multi_plot
 from ..file_io import netcdf_time, read_netcdf
 from ..constants import deg_string
 
@@ -78,17 +78,23 @@ def plot_fris_temp_salt (timeseries_file='output/timeseries.nc', fig_name=None):
     make_timeseries_plot_2sided(time, temp, salt, 'Volume-averaged conditions in FRIS cavity', 'Temperature ('+deg_string+')', 'Salinity (psu)', fig_name=fig_name, dpi=300)
 
 
-# Print percent changes in integrated ice sheet variables.
-def calc_ice_changes (ua_file='output/ua_postprocessed.nc'):
+# Plot timeseries of integrated ice sheet variables, as percentages of their initial values.
+def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua_postprocessed.nc', fig_name=None):
 
-    iceVAF = read_netcdf(ua_file, 'iceVAF')
-    iceVolume = read_netcdf(ua_file, 'iceVolume')
+    # Get the dates from MITgcm timeseries
+    time = netcdf_time(timeseries_file)
+    # Now read ice sheet timeseries
     groundedArea = read_netcdf(ua_file, 'groundedArea')
+    iceVolume = read_netcdf(ua_file, 'iceVolume')
+    iceVAF = read_netcdf(ua_file, 'iceVAF')    
+    # Trim the time array if needed (for simulation in progress)
+    time = time[:iceVAF.size]
 
-    def percent_change (data):
-        return str((data[-1] - data[0])/data[0]*100)+'%'
+    # Convert to percentages of initial values
+    groundedArea = groundedArea/groundedArea[0]*100
+    iceVolume = iceVolume/iceVolume[0]*100
+    iceVAF = iceVAF/iceVAF[0]*100
 
-    print 'Change in grounded area of ice: '+percent_change(groundedArea)
-    print 'Change in total ice volume: '+percent_change(iceVolume)
-    print 'Change in ice volume above flotation: '+percent_change(iceVAF)
+    # Make the plot
+    timeseries_multi_plot(time, [groundedArea, iceVolume, iceVAF], ['Grounded ice area', 'Ice volume', 'Ice volume above flotation'], ['green', 'blue', 'magenta'], title='Drift in integrated ice sheet variables', units='% of initial value', fig_name=fig_name, dpi=300)
                                    
