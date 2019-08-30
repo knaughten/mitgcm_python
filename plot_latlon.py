@@ -126,11 +126,11 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
 # fig_name: as in function finished_plot
 # figsize: as in function latlon_plot
 
-def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, fig_name=None, figsize=(8,6), dpi=None):
+def plot_ismr (shifwflx, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, change_points=None, pster=False, fig_name=None, figsize=(8,6), dpi=None):
 
     # Convert to m/y
     ismr = convert_ismr(shifwflx)
-    latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', fig_name=fig_name, figsize=figsize, dpi=dpi)
+    latlon_plot(ismr, grid, ctype='ismr', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, change_points=change_points, title='Ice shelf melt rate (m/y)', pster=pster, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Plot bottom water temperature, salinity, or age.
@@ -382,7 +382,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, figsize=(8,6), dpi=None):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, pster=False, figsize=(8,6), dpi=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -448,7 +448,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         
     # Plot
     if var == 'ismr':
-        plot_ismr(shifwflx, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
+        plot_ismr(shifwflx, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, change_points=change_points, pster=pster, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'bwtemp':
         plot_bw('temp', temp, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'bwsalt':
