@@ -134,8 +134,8 @@ def gl_frame (xGL, yGL, t, ax=None, title='Grounding line position', label='Curr
     if return_fig:
         # Set up the plot
         fig, ax = plt.subplots(figsize=(7,6))
-    ax.plot(xGL[0,:], yGL[0,:], '-', color='black', label='Initial')
-    ax.plot(xGL[t,:], yGL[t,:], '-', color='red', label=label)
+    ax.plot(xGL[0,:], yGL[0,:], '-', color='red', label='Initial')
+    ax.plot(xGL[t,:], yGL[t,:], '-', color='black', label=label)
     # Choose bounds
     xmin, xmax = choose_range(xGL[0,:], x2=xGL[t,:], xmin=xmin, xmax=xmax)
     ymin, ymax = choose_range(yGL[0,:], x2=yGL[t,:], xmin=ymin, xmax=ymax)
