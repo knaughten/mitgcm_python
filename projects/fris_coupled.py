@@ -81,7 +81,7 @@ def plot_fris_temp_salt (timeseries_file='output/timeseries.nc', fig_name=None):
 
 
 # Plot timeseries of integrated ice sheet variables, as percentage anomalies from their initial values.
-def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua_postprocessed.nc', fig_name=None):
+def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua_postprocessed.nc', spinup_months=12, fig_name=None):
 
     # Get the dates from MITgcm timeseries
     time = netcdf_time(timeseries_file)
@@ -89,8 +89,8 @@ def plot_ice_changes (timeseries_file='output/timeseries.nc', ua_file='output/ua
     groundedArea = read_netcdf(ua_file, 'groundedArea')
     iceVolume = read_netcdf(ua_file, 'iceVolume')
     iceVAF = read_netcdf(ua_file, 'iceVAF')    
-    # Trim the time array if needed (for simulation in progress)
-    time = time[:iceVAF.size]
+    # Trim the time array to remove ocean spinup
+    time = time[spinup_months:]
 
     # Convert to percent anomalies
     groundedArea = (groundedArea-groundedArea[0])/groundedArea[0]*100

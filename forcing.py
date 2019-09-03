@@ -301,7 +301,7 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
 
     # Figure out the file paths
     if option == 'era5':
-        var_names = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+        var_names = ['apressure', 'atemp', 'aqh', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown', 'evap']
         file_head = 'ERA5_'
     elif option == 'eraint':
         var_names = ['msl', 'tmp2m_degC', 'spfh2m', 'u10m', 'v10m', 'rain', 'dsw', 'dlw']
