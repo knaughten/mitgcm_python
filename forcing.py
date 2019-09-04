@@ -508,8 +508,8 @@ def cmip6_atm_forcing (var, expt, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/U
     print '*_lon_inc='+str(lon[1]-lon[0])
     print '*_lat0='+str(lat[0])
     print '*_lat_inc='+str(lat[1]-lat[0])
-    print '*_nlon='+str(i_end-i_start)
-    print '*_nlat='+str(j_end-j_start)
+    print '*_nlon='+str(lon.size)
+    print '*_nlat='+str(lat.size)
 
     # Loop over each file
     for file_path in in_files:
