@@ -1,11 +1,12 @@
 import numpy as np
 import sys
+import os
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary
 from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points
-from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy
-from constants import temp_C2K, Lv, Rv, es0, sh_coeff
+from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper
+from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
 from calculus import area_integral
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
@@ -451,6 +452,145 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
 
     # Write to file
     write_binary(scale, output_file, prec=prec)
+
+
+# Process one year of daily CMIP6 atmospheric data (in practice, from UKESM1-0-LL) and convert to MITgcm EXF format for forcing simulations.
+# Assumes there are 30-day months - true for the DECK experiments in UKESM at least.
+
+# Arguments:
+# var: CMIP variable to process. Accepted variables are: tas, huss, uas, vas, psl, pr, rsds, rlds
+# expt: experiment name to process, eg abrupt-4xCO2.
+
+# Optional keyword arguments:
+# model_path: path to the directory for the given model's output, within which all the experiments lie.
+# ensemble member: name of the ensemble member to process. Must have daily output available.
+# grid: Set this variable if you only want to extract the necessary spatial subset of the CMIP6 data. If grid is a list of the form [lon_min, lon_max, lat_min, lat_max], the function will extract CMIP6 output just clearing these boundaries. If grid is a Grid object for an MITgcm model, the boundaries will be determined automatically. Otherwise, the entire globe will be extracted.
+# out_dir: path to directory in which to save output files.
+# out_file_head: beginning of output filenames. If not set, it will be determined automatically as <expt>_<var>_. Each file will have the year appended.
+
+def cmip6_atm_forcing (var, expt, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', grid=None, out_dir='./', out_file_head=None):
+
+    import netCDF4 as nc
+
+    # Days per year (assumes 30-day months)
+    days_per_year = 12*30
+
+    # Make sure it's a real variable
+    if var not in ['tas', 'huss', 'uas', 'vas', 'psl', 'pr', 'rsds', 'rlds']:
+        print 'Error (cmip6_atm_forcing): unknown variable ' + var
+        sys.exit()
+
+    # Construct out_file_head if needed
+    if out_file_head is None:
+        out_file_head = expt+'_'+var+'_'
+    elif out_file_head[-1] != '_':
+        # Add an underscore if it's not already there
+        out_file_head += '_'
+    out_dir = real_dir(out_dir)
+
+    # Construct the path to the directory containing all the data files, and make sure it exists
+    in_dir = real_dir(model_path)+expt+'/'+ensemble_member+'/day/'+var+'/gn/latest/'
+    if not os.path.isdir(in_dir):
+        print 'Error (cmip6_atm_forcing): no such directory ' + in_dir
+        sys.exit()
+
+    # Get the names of all the data files in this directory, in chronological order
+    in_files = []
+    for fname in os.listdir(in_dir):
+        if fname.endswith('.nc'):
+            in_files.append(in_dir+fname)
+    in_files.sort()
+
+    # Work out what spatial slice of data to extract
+    lat = read_netcdf(in_files[0], 'lat')
+    lon = read_netcdf(in_files[0], 'lon')  # Note in 0-360 range
+    if grid is None:
+        # Read the entire globe
+        j_start = 0
+        j_end = lat.size
+        i_start = 0
+        i_end = lon.size
+    else:
+        if isinstance(grid, Grid):
+            # Choose the boundaries based on the grid corners
+            lon_start = fix_lon_range(grid.lon_corners_1d[0], max_lon=360)
+            lon_end = fix_lon_range(2*grid.lon_1d[-1] - grid.lon_corners_1d[-1], max_lon=360)
+            lat_start = grid.lat_corners_1d[0]
+            lat_end = 2*grid.lat_1d[-1] - grid.lat_corners_1d[-1]
+        elif isinstance(grid, list):
+            # Boundaries already supplied
+            lon_start = fix_lon_range(grid[0], max_lon=360)
+            lon_end = fix_lon_range(grid[1], max_lon=360)
+            lat_start = grid[2]
+            lat_end = grid[3]
+        else:
+            print 'Error (cmip6_atm_forcing): invalid data type for grid'
+            sys.exit()
+        # Find the CMIP6 model's indices which go just past the MITgcm model's boundaries. Add 1 to end so python slicing convention works.
+        j_start = interp_slice_helper(lat, lat_start)[0]
+        j_end = interp_slice_helper(lat, lat_end)[1]+1
+        i_start = interp_slice_helper(lon, lon_start, lon=True)[0]
+        i_end = interp_slice_helper(lon, lon_end, lon=True)[1]+1
+    print 'Extracting data from longitudes '+str(lon[i_start])+' to '+str(lon[i_end-1])+', latitudes '+str(lat[j_start])+' to '+str(lat[j_end-1])
+    print '\nChanges to make in data.exf:'
+    print '*_lon0='+str(lon[i_start])
+    print '*_lon_inc='+str(lon[1]-lon[0])
+    print '*_lat0='+str(lat[j_start])
+    print '*_lat_inc='+str(lat[1]-lat[0])
+    print '*_nlon='+str(i_end-i_start)
+    print '*_nlat='+str(j_end-j_start)
+
+    # Loop over each file
+    for file_path in in_files:
+        print 'Processing ' + file_path
+        
+        # Extract the start and end dates from the file name
+        start_date = file_path[-20:-12]
+        end_date = file_path[-11:-3]
+        start_year = start_date[:4]
+        end_year = end_date[:4]
+        print 'Covers years '+start_year+' to '+end_year
+        if start_date[4:] != '0101':
+            print 'Error (cmip6_atm_forcing): file does not start at the beginning of January'
+            sys.exit()
+        if end_date[4:] != '1230':
+            print 'Error (cmip6_atm_forcing): file does not end at the end of December'
+            sys.exit()
+        start_year = int(start_year)
+        end_year = int(end_year)
+
+        # Open the file
+        id = nc.Dataset(file_path, 'r')
+            
+        # Loop over years
+        t_start = 0  # Time index in file
+        t_end = t_start+days_per_year
+        for year in range(start_year, end_year+1):
+            print 'Processing ' + str(year)
+            # Read data
+            data = id.variables[var][t_start:t_end, j_start:j_end, i_start:i_end]
+            # Conversions if necessary
+            if var == 'tas':
+                # Kelvin to Celsius
+                data -= temp_C2K
+            elif var == 'pr':
+                # kg/m^2/s to m/s
+                data /= rho_fw
+            elif var in ['rsds', 'rlds']:
+                # Swap sign on radiation fluxes
+                data *= -1
+            # Write data
+            write_binary(data, out_dir+out_file_head+str(year))
+            # Update time range for next time
+            t_start = t_end
+            t_end = t_start + days_per_year
+            
+                
+        
+
+    
+
+    
 
     
 
