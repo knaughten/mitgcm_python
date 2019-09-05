@@ -460,6 +460,53 @@ def find_time_index (file_list, time_index):
     print "Error (find_time_index): this simulation isn't long enough to contain time_index=" + str(time_index)
     sys.exit()
 
+
+# Given information about a CMIP6 dataset (path to model directory, ensemble member, experiment, variable, and time code eg 'day' or 'Omon'), return a list of the files containing this data, and the years covered by each file.
+# This assumes there are 30-day months in the simulation (true for UKESM1).
+def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
+
+    # Construct the path to the directory containing all the data files, and make sure it exists
+    in_dir = real_dir(model_path)+expt+'/'+ensemble_member+'/'+time_code+'/'+var+'/gn/latest/'
+    if not os.path.isdir(in_dir):
+        print 'Error (find_cmip6_files): no such directory ' + in_dir
+        sys.exit()
+
+    # Get the names of all the data files in this directory, in chronological order
+    in_files = []
+    for fname in os.listdir(in_dir):
+        if fname.endswith('.nc'):
+            in_files.append(in_dir+fname)
+    in_files.sort()
+
+    # Work out the start and end years for each file
+    start_years = []
+    end_years = []
+    for file_path in in_files:
+        # Dates encoded in file names
+        start_date = file_path[-20:-12]
+        end_date = file_path[-11:-3]
+        start_year = start_date[:4]
+        end_year = end_date[:4]
+        # Make sure they are 30-day months and complete years        
+        if start_date[4:] != '0101':
+            print 'Error (find_cmip6_files): '+file_path+' does not start at the beginning of January'
+            sys.exit()
+        if end_date[4:] != '1230':
+            print 'Error (find_cmip6_files): '+file_path+' does not end at the end of December'
+            sys.exit()
+        # Save the start and end years
+        start_years.append(int(start_year))
+        end_years.append(int(end_year))
+    # Now make sure there are no missing years
+    for t in range(1, len(in_files)):
+        if start_years[t] != end_years[t-1]+1:
+            print 'Error (find_cmip6_files): there are missing years in '+in_dir
+            sys.exit()
+
+    return in_files, start_years, end_years
+
+    
+
     
 
 

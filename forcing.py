@@ -1,9 +1,13 @@
+###########################################################
+# Generate atmospheric forcing.
+###########################################################
+
 import numpy as np
 import sys
 import os
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid
-from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary
+from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
 from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
@@ -487,18 +491,8 @@ def cmip6_atm_forcing (var, expt, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/U
         out_file_head += '_'
     out_dir = real_dir(out_dir)
 
-    # Construct the path to the directory containing all the data files, and make sure it exists
-    in_dir = real_dir(model_path)+expt+'/'+ensemble_member+'/day/'+var+'/gn/latest/'
-    if not os.path.isdir(in_dir):
-        print 'Error (cmip6_atm_forcing): no such directory ' + in_dir
-        sys.exit()
-
-    # Get the names of all the data files in this directory, in chronological order
-    in_files = []
-    for fname in os.listdir(in_dir):
-        if fname.endswith('.nc'):
-            in_files.append(in_dir+fname)
-    in_files.sort()
+    # Figure out where all the files are, and which years they cover
+    in_files, start_years, end_years = find_cmip6_files(model_path, expt, ensemble_member, var, 'day')
 
     # Tell the user what to write about the grid
     lat = read_netcdf(in_files[0], 'lat')
@@ -512,29 +506,18 @@ def cmip6_atm_forcing (var, expt, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/U
     print '*_nlat='+str(lat.size)
 
     # Loop over each file
-    for file_path in in_files:
-        print 'Processing ' + file_path
+    for t in range(len(in_files)):
+
+        file_path = in_files[t]
+        print 'Processing ' + file_path        
+        print 'Covers years '+str(start_years[t])+' to '+str(end_years[t])
         
-        # Extract the start and end dates from the file name
-        start_date = file_path[-20:-12]
-        end_date = file_path[-11:-3]
-        start_year = start_date[:4]
-        end_year = end_date[:4]
-        print 'Covers years '+start_year+' to '+end_year
-        if start_date[4:] != '0101':
-            print 'Error (cmip6_atm_forcing): file does not start at the beginning of January'
-            sys.exit()
-        if end_date[4:] != '1230':
-            print 'Error (cmip6_atm_forcing): file does not end at the end of December'
-            sys.exit()
-        start_year = int(start_year)
-        end_year = int(end_year)
-            
         # Loop over years
         t_start = 0  # Time index in file
         t_end = t_start+days_per_year
-        for year in range(start_year, end_year+1):
+        for year in range(start_years[t], end_years[t]+1):
             print 'Processing ' + str(year)
+            
             # Read data
             data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
             # Conversions if necessary
