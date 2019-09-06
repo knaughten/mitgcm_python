@@ -664,6 +664,12 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                 data_slice = extract_slice(data, weights, location, time_dependent=True)
                 # Get mask as 1s and 0s
                 data_mask = np.invert(data_slice.mask).astype(int)
+                if model_haxis[0] < cmip_haxis[0]:
+                    # Need to extend CMIP data to the west or south. Just add one row.
+                    cmip_haxis = np.concatenate(([model_haxis[0]-0.1], cmip_haxis))
+                    data_slice = np.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
+                    data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
+                
                 # Interpolate each month in turn
                 if dim[n] == 3:
                     data_interp = np.zeros([12, model_grid.nz, model_haxis.size])

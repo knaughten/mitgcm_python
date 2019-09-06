@@ -664,24 +664,25 @@ class SOSEGrid(Grid):
 # CMIPGrid object containing basic grid variables for a CMIP6 ocean grid.
 class CMIPGrid:
 
-    def __init__ (self, model_path, expt, ensemble_member):
+    def __init__ (self, model_path, expt, ensemble_member, max_lon=180):
         # Get path to one file on the tracer grid
         cmip_file = find_cmip6_files(model_path, expt, ensemble_member, 'thetao', 'Omon')[0][0]
-        self.lon_2d = read_netcdf(cmip_file, 'longitude')
+        self.lon_2d = fix_lon_range(read_netcdf(cmip_file, 'longitude'), max_lon=max_lon)
         self.lat_2d = read_netcdf(cmip_file, 'latitude')
         self.z = -1*read_netcdf(cmip_file, 'lev')
         # And one on the u-grid
         cmip_file_u = find_cmip6_files(model_path, expt, ensemble_member, 'uo', 'Omon')[0][0]
-        self.lon_u_2d = read_netcdf(cmip_file_u, 'longitude')
+        self.lon_u_2d = fix_lon_range(read_netcdf(cmip_file_u, 'longitude'), max_lon=max_lon)
         self.lat_u_2d = read_netcdf(cmip_file_u, 'latitude')
         # And one on the v-grid
         cmip_file_v = find_cmip6_files(model_path, expt, ensemble_member, 'vo', 'Omon')[0][0]
-        self.lon_v_2d = read_netcdf(cmip_file_v, 'longitude')
+        self.lon_v_2d = fix_lon_range(read_netcdf(cmip_file_v, 'longitude'), max_lon=max_lon)
         self.lat_v_2d = read_netcdf(cmip_file_v, 'latitude')
         # Save grid dimensions too
         self.nx = self.lon_2d.shape[1]
         self.ny = self.lat_2d.shape[0]
         self.nz = self.z.size
+        
 
     # Return longitude and latitude on the right grid
     def get_lon_lat (self, gtype='t'):

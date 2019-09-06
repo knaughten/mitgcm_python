@@ -353,15 +353,15 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
 # If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
 def interp_slice_helper (data, val0, lon=False):
 
-    # Case that val0 is exactly at the edge of the array
-    if val0 in data:
-        i = np.argwhere(data==val0)[0][0]
-        return i, i, 1, 0
     if lon:
         # Transformation to make sure longitude array is strictly increasing
         data0 = data[0]
         data = (data-data0)%360
         val0 = (val0-data0)%360
+    # Case that val0 is in the array
+    if val0 in data:
+        i = np.argwhere(data==val0)[0][0]
+        return i, i, 1, 0    
 
     # Find the last index less than val0
     i1 = np.nonzero(data < val0)[0][-1]
@@ -374,7 +374,7 @@ def interp_slice_helper (data, val0, lon=False):
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
     if i2 != i1+1:
-        print 'Error (interp_helper): something went wrong'
+        print 'Error (interp_slice_helper): something went wrong'
         sys.exit()        
     # Calculate the weighting coefficients
     c2 = (val0 - data[i1])/(data[i2] - data[i1])
