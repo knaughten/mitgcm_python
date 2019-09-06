@@ -11,7 +11,7 @@ import numpy as np
 import sys
 import os
 
-from file_io import read_netcdf, find_cmip_files
+from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
 from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds
 
@@ -666,16 +666,16 @@ class CMIPGrid:
 
     def __init__ (self, model_path, expt, ensemble_member):
         # Get path to one file on the tracer grid
-        cmip_file = find_cmip_files(model_path, expt, ensemble_member, 'thetao', 'Omon')[0][0]
+        cmip_file = find_cmip6_files(model_path, expt, ensemble_member, 'thetao', 'Omon')[0][0]
         self.lon_2d = read_netcdf(cmip_file, 'longitude')
         self.lat_2d = read_netcdf(cmip_file, 'latitude')
         self.z = -1*read_netcdf(cmip_file, 'lev')
         # And one on the u-grid
-        cmip_file_u = find_cmip_files(model_path, expt, ensemble_member, 'uo', 'Omon')[0][0]
+        cmip_file_u = find_cmip6_files(model_path, expt, ensemble_member, 'uo', 'Omon')[0][0]
         self.lon_u_2d = read_netcdf(cmip_file_u, 'longitude')
         self.lat_u_2d = read_netcdf(cmip_file_u, 'latitude')
         # And one on the v-grid
-        cmip_file_v = find_cmip_files(model_path, expt, ensemble_member, 'vo', 'Omon')[0][0]
+        cmip_file_v = find_cmip6_files(model_path, expt, ensemble_member, 'vo', 'Omon')[0][0]
         self.lon_v_2d = read_netcdf(cmip_file_v, 'longitude')
         self.lat_v_2d = read_netcdf(cmip_file_v, 'latitude')
         # Save grid dimensions too
