@@ -535,15 +535,9 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # Helper functions for cmip6_obcs:
                 
 
-# Given the slice weighting coefficients (as calculated in next function), and an array of data (can be 2D, 3D, or 4D as long as the last 2 dimensions are lat and lon), extract the boundary slice from the given data.
+# Given the slice weighting coefficients (as calculated in next function, and tiled to match the data's dimensions), and an array of data (can be 2D, 3D, or 4D as long as the last 2 dimensions are lat and lon), extract the boundary slice from the given data.
 # Assumes "data" is a MaskedArray so we don't interpolate into the mask.
-def extract_slice (data, weights, location, time_dependent=False):
-
-    # Tile the weights if needed
-    if is_depth_dependent(data, time_dependent=time_dependent):
-        weights = xy_to_xyz(weights, data.shape[-3:])
-    if time_dependent:
-        weights = add_time_dim(weights, data.shape[0])
+def extract_slice (data, weights, location):
     # Multiply the data by the weights and sum in the correct dimension
     if location in ['N', 'S']:
         axis = -2
@@ -579,6 +573,9 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
                 weights[j,i1] = c1
                 weights[j,i2] = c2
         haxis = extract_slice(cmip_lat, weights, location)
+        # Parameters for error checking
+        N = cmip_grid.ny
+        axis = 1
     elif location in ['N', 'S']:
         # Loop from west to east
         for j in range(cmip_grid.nx):
@@ -586,6 +583,12 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
             weights[j1,i] = c1
             weights[j2,i] = c2
         haxis = extract_slice(cmip_lon, weights, location)
+        N = cmip_grid.nx
+        axis = 0
+    # Error checking
+    if np.count_nonzero(np.sum(weights, axis=axis)) != N:
+        print 'Error (find_slice_weights): Something went wrong'
+        sys.exit()
     return weights, haxis
 
 
@@ -621,15 +624,29 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
     weights_t, haxis_t = find_slice_weights(cmip_grid, model_grid, location, 't')
     weights_u, haxis_u = find_slice_weights(cmip_grid, model_grid, location, 'u')
     weights_v, haxis_v = find_slice_weights(cmip_grid, model_grid, location, 'v')
+
+    # Inner function to tile the weights in the z and time dimensions (12 months)
+    def tile_weights (weights):
+        weights_2d_time = add_time_dim(weights, 12)
+        weights_3d_time = add_time_dim(xy_to_xyz(weights, cmip_grid), 12)
+        return weights_t, weights_zt
     
-    # Inner function to choose the right weights/haxis for grid
-    def get_weights_haxis (gtype):
+    # Inner function to choose the right weights/haxis for grid and dimension
+    def get_weights_haxis (gtype, num_dim):
         if gtype == 't':
-            return weights_t, haxis_t
+            weights = weights_t
+            haxis = haxis_t
         elif gtype == 'u':
-            return weights_u, haxis_u
+            weights = weights_u
+            haxis = haxis_u
         elif gtype == 'v':
-            return weights_v, haxis_v
+            weights = weights_v
+            haxis = haxis_v
+        weights_2d_time, weights_3d_time = tile_weights(weights)
+        if num_dim==2:
+            return weights_2d_time, haxis
+        elif num_dim==3:
+            return weights_3d_time, haxis
 
     if nc_out is not None:
         # Set up a NetCDF file just for the first year
@@ -641,7 +658,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
         print 'Variable ' + fields_mit[n]
 
         # Organise grids
-        weights, cmip_haxis = get_weights_haxis(gtype[n])
+        weights, cmip_haxis = get_weights_haxis(gtype[n], dim[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
         if location in ['N', 'S']:
@@ -650,7 +667,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
             model_haxis = model_lat
         
         # Figure out where all the files are, and which years they cover
-        in_files, start_years, end_years = find_cmip6_files(model_path, expt, ensemble_member, fields_cmip[n], realm[n])
+        in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
         
         # Loop over each file
         for t in range(len(in_files)):
@@ -667,11 +684,11 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                 # Extract the slice
                 data_slice = extract_slice(data, weights, location, time_dependent=True)
                 # Get mask as 1s and 0s
-                data_mask = np.invert(data_slice.mask).astype(int)
+                data_mask = np.invert(data_slice[0,:].mask).astype(int)
                 if model_haxis[0] < cmip_haxis[0]:
                     # Need to extend CMIP data to the west or south. Just add one row.
                     cmip_haxis = np.concatenate(([model_haxis[0]-0.1], cmip_haxis))
-                    data_slice = np.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
+                    data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
                     data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
                 
                 # Interpolate each month in turn
