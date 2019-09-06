@@ -3,7 +3,7 @@
 ###############################################################
 
 import numpy as np
-from utils import z_to_xyz, xy_to_xyz, add_time_dim
+from utils import z_to_xyz, xy_to_xyz, add_time_dim, is_depth_dependent
 
 
 # Helper functions to set up integrands and masks, tiled to be the same dimension as the "data" array
@@ -38,7 +38,7 @@ def prepare_integrand_mask (option, data, grid, gtype='t', time_dependent=False)
         integrand = grid.dy_w
     else:
         print 'Error (prepare_integrand_mask): invalid option ' + option
-    if (len(integrand.shape)==2) and ((time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3)):
+    if (len(integrand.shape)==2) and is_depth_dependent(data, time_dependent=time_dependent):
         # There's also a depth dimension; tile in z
         integrand = xy_to_xyz(integrand, grid)
     if time_dependent:

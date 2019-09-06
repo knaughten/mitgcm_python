@@ -463,6 +463,17 @@ def find_time_index (file_list, time_index):
 
 # Given information about a CMIP6 dataset (path to model directory, ensemble member, experiment, variable, and time code eg 'day' or 'Omon'), return a list of the files containing this data, and the years covered by each file.
 # This assumes there are 30-day months in the simulation (true for UKESM1).
+
+# Input arguments:
+# model_path: path to directory containing output from that model and the given MIP, eg '/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/'
+# expt: experiment name, eg 'piControl'
+# ensemble_member: ensemble member name, eg 'r1i1p1f2'
+# var: variable name, eg 'tas' or 'thetao'
+# time_code: name of subdirectory that mentions the frequency and sometimes the domain. eg 'day' for daily atmospheric, 'Omon' for monthly ocean.
+
+# Output:
+# in_files: list of files containing this data, in chronological order
+# start_years, end_years: lists of integers containing the starting and ending years (inclusive) of each file. The code will check to make sure there are no gaps.
 def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
 
     # Construct the path to the directory containing all the data files, and make sure it exists

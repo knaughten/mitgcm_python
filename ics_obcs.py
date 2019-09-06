@@ -3,8 +3,8 @@
 ###########################################################
 
 from grid import Grid, grid_check_split, choose_grid
-from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land
-from file_io import write_binary, read_binary
+from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
+from file_io import write_binary, read_binary, find_cmip6_files
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
 from constants import sec_per_year, gravity, sec_per_day
 from diagnostics import density
@@ -328,6 +328,27 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     write_binary(pload, out_file, prec=prec)
 
 
+# Find the latitude or longitude on the boundary of the MITgcm grid, both on the centres and outside edges of these cells.
+def find_obcs_boundary (grid, location):
+
+    if location == 'S':
+        loc0 = grid.lat_1d[0]
+        loc0_e = grid.lat_corners_1d[0]
+    elif location == 'N':
+        loc0 = grid.lat_1d[-1]
+        loc0_e = 2*grid.lat_corners_1d[-1] - grid.lat_corners_1d[-2]
+    elif location == 'W':
+        loc0 = grid.lon_1d[0]
+        loc0_e = grid.lon_corners_1d[0]
+    elif location == 'E':
+        loc0 = grid.lon_1d[-1]
+        loc0_e = 2*grid.lon_corners_1d[-1] - grid.lon_corners_1d[-2]
+    else:
+        print 'Error (find_obcs_boundary): invalid location '+str(location)
+        sys.exit()
+    return loc0, loc0_e
+
+
 # Create open boundary conditions for temperature, salinity, horizontal velocities, and (if you want sea ice) sea ice area, thickness, and velocities. Use either the SOSE monthly climatology (source='SOSE') or output from another MITgcm model, stored in a NetCDF file (source='MIT').
 
 # Arguments:
@@ -374,26 +395,10 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         model_grid = grid_check_split(grid_path, split)
     elif source == 'MIT':
         model_grid = Grid(grid_path)
-    # Figure out what the latitude or longitude is on the boundary, both on the centres and outside edges of those cells
-    if location == 'S':
-        lat0 = model_grid.lat_1d[0]
-        lat0_e = model_grid.lat_corners_1d[0]
-        print 'Southern boundary at ' + str(lat0) + ' (cell centre), ' + str(lat0_e) + ' (cell edge)'
-    elif location == 'N':
-        lat0 = model_grid.lat_1d[-1]
-        lat0_e = 2*model_grid.lat_corners_1d[-1] - model_grid.lat_corners_1d[-2]
-        print 'Northern boundary at ' + str(lat0) + ' (cell centre), ' + str(lat0_e) + ' (cell edge)'
-    elif location == 'W':
-        lon0 = model_grid.lon_1d[0]
-        lon0_e = model_grid.lon_corners_1d[0]
-        print 'Western boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)'
-    elif location == 'E':
-        lon0 = model_grid.lon_1d[-1]
-        lon0_e = 2*model_grid.lon_corners_1d[-1] - model_grid.lon_corners_1d[-2]
-        print 'Eastern boundary at ' + str(lon0) + ' (cell centre), ' + str(lon0_e) + ' (cell edge)'
-    else:
-        print 'Error (make_obcs): invalid location ' + str(location)
-        sys.exit()
+
+    # Identify boundary
+    loc0, loc0_e = find_obcs_boundary(model_grid, location)
+    print location+' boundary at '+str(loc0)+' (cell centre), '+str(loc0_e)+' (cell edge)'
 
     if source == 'SOSE':
         print 'Building SOSE grid'
@@ -407,13 +412,13 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     # Calculate interpolation indices and coefficients to the boundary latitude or longitude
     if location in ['N', 'S']:
         # Cell centre
-        j1, j2, c1, c2 = interp_slice_helper(source_grid.lat_1d, lat0)
+        j1, j2, c1, c2 = interp_slice_helper(source_grid.lat_1d, loc0)
         # Cell edge
-        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(source_grid.lat_corners_1d, lat0_e)
+        j1_e, j2_e, c1_e, c2_e = interp_slice_helper(source_grid.lat_corners_1d, loc0_e)
     else:
         # Pass lon=True to consider the possibility of boundary near 0E
-        i1, i2, c1, c2 = interp_slice_helper(source_grid.lon_1d, lon0, lon=True)
-        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(source_grid.lon_corners_1d, lon0_e, lon=True)
+        i1, i2, c1, c2 = interp_slice_helper(source_grid.lon_1d, loc0, lon=True)
+        i1_e, i2_e, c1_e, c2_e = interp_slice_helper(source_grid.lon_corners_1d, loc0_e, lon=True)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
@@ -526,14 +531,180 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     if nc_out is not None:
         ncfile.close()
 
+
+# Helper functions for cmip6_obcs:
+                
+
+# Given the slice weighting coefficients (as calculated in next function), and an array of data (can be 2D, 3D, or 4D as long as the last 2 dimensions are lat and lon), extract the boundary slice from the given data.
+# Assumes "data" is a MaskedArray so we don't interpolate into the mask.
+def extract_slice (data, weights, location, time_dependent=False):
+
+    # Tile the weights if needed
+    if is_depth_dependent(data, time_dependent=time_dependent):
+        weights = xy_to_xyz(weights, data.shape[-3:])
+    if time_dependent:
+        weights = add_time_dim(weights, data.shape[0])
+    # Multiply the data by the weights and sum in the correct dimension
+    if location in ['N', 'S']:
+        axis = -2
+    else:
+        axis = -1
+    return np.sum(data*weights, axis=axis)    
+
+
+# Find the weighting coefficients for the 2D CMIP lat-lon grid (structured but not necessarily regular, eg ORCA1 grid) to interpolate to the given boundary.
+# Also interpolate the other axis (latitude for E/W boundary, longitude for N/S) to this slice.
+def find_slice_weights (cmip_grid, model_grid, location, gtype):
+
+    # Find the lon/lat value at the boundary
+    loc0_centre, loc0_edge = find_obcs_boundary(model_grid, location)
+    if (location in ['N','S'] and gtype=='v') or (location in ['E','W'] and gtype=='u'):
+        loc0 = loc0_edge
+    else:
+        loc0 = loc0_centre
+    cmip_lon, cmip_lat = cmip_grid.get_lon_lat(gtype=gtype)
+    # Set up an array of zeros, which will be filled with nonzero-weights where needed
+    weights = np.zeros(cmip_lon.shape)
+    # Unfortunately there is necessary code repetition here...
+    if location in ['E', 'W']:
+        # Loop from south to north
+        for j in range(cmip_grid.ny):
+            # Find the coefficients to interpolate to the boundary longitude in this row
+            i1, i2, c1, c2 = interp_slice_helper(cmip_lon[j,:], loc0, lon=True)
+            # Save these coefficients in the weighting array
+            weights[j,i1] = c1
+            weights[j,i2] = c2
+        haxis = extract_slice(cmip_lat, weights, location)
+    elif location in ['N', 'S']:
+        # Loop from west to east
+        for j in range(cmip_grid.nx):
+            j1, j2, c1, c2 = interp_slice_helper(cmip_lat[:,i], loc0)
+            weights[j1,i] = c1
+            weights[j2,i] = c2
+        haxis = extract_slice(cmip_lon, weights, location)
+    return weights, haxis
+
+
+# Create open boundary conditions from a CMIP6 model (in practice, UKESM1-0-LL). This is a bit more complicated as they're time-varying (rather than a single climatology), not on a regular lat-lon grid, and not from another MITgcm model.
+# Assumes 30-day months, and ocean longitude in the range (-180, 180).
+def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=32):
+
+    from file_io import NCfile, read_netcdf
+    from grid import CMIPGrid
+    from interpolation import interp_bdry
+
+    output_dir = real_dir(output_dir)
+
+    # Fields to interpolate
+    fields_mit = ['THETA', 'SALT', 'UVEL', 'VVEL', 'SIarea', 'SIheff', 'SIhsnow', 'SIuice', 'SIvice']
+    fields_cmip = ['thetao', 'so', 'uo', 'vo', 'siconc', 'sithick', 'sisnthick', 'siu', 'siv']
+    # Flag for number of dimensions
+    dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
+    # Flag for grid type
+    gtype = ['t', 't', 'u', 'v', 't', 't', 't', 'u', 'v']
+    # Flag for realm
+    realm = ['Omon', 'Omon', 'Omon', 'Omon', 'SImon', 'SImon', 'SImon', 'SImon', 'SImon']
+    # Middle of filenames for output (will be preceded by variable, and followed by year)
+    outfile_mid = '_'+expt+'.OBCS_'+location+'_'
+    months_per_year = 12
+
+    print 'Building MITgcm grid'
+    model_grid = Grid(grid_path)
+    print 'Building CMIP6 model grid'
+    cmip_grid = CMIPGrid(model_path, expt, ensemble_member)
+    print 'Calculating weighting coefficients to extract slice'
+    # Do this for each grid
+    weights_t, haxis_t = find_slice_weights(cmip_grid, model_grid, location, 't')
+    weights_u, haxis_u = find_slice_weights(cmip_grid, model_grid, location, 'u')
+    weights_v, haxis_v = find_slice_weights(cmip_grid, model_grid, location, 'v')
+    
+    # Inner function to choose the right weights/haxis for grid
+    def get_weights_haxis (gtype):
+        if gtype == 't':
+            return weights_t, haxis_t
+        elif gtype == 'u':
+            return weights_u, haxis_u
+        elif gtype == 'v':
+            return weights_v, haxis_v
+
+    if nc_out is not None:
+        # Set up a NetCDF file just for the first year
+        ncfile = NCfile(nc_out, model_grid, 'xyzt')
+        ncfile.add_time(np.arange(12)+1, units='months')
+
+    # Process each field
+    for n in range(len(fields_mit)):
+        print 'Variable ' + fields_mit[n]
+
+        # Organise grids
+        weights, cmip_haxis = get_weights_haxis(gtype[n])
+        model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        model_hfac = model_grid.get_hfac(gtype=gtype[n])
+        if location in ['N', 'S']:
+            model_haxis = model_lon
+        else:
+            model_haxis = model_lat
         
+        # Figure out where all the files are, and which years they cover
+        in_files, start_years, end_years = find_cmip6_files(model_path, expt, ensemble_member, fields_cmip[n], realm[n])
+        
+        # Loop over each file
+        for t in range(len(in_files)):
+            file_path = in_files[t]
+            print 'Processing ' + file_path
+            print 'Covers years '+str(start_years[t])+' to '+str(end_years[t])
+            
+            # Loop over years
+            t_start = 0  # Time index in file
+            t_end = t_start+months_per_year
+            for year in range(start_years[t], end_years[t]+1):
+                # Read data
+                data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
+                # Extract the slice
+                data_slice = extract_slice(data, weights, location, time_dependent=True)
+                # Get mask as 1s and 0s
+                data_mask = np.invert(data_slice.mask).astype(int)
+                # Interpolate each month in turn
+                if dim[n] == 3:
+                    data_interp = np.zeros([12, model_grid.nz, model_haxis.size])
+                else:
+                    data_interp = np.zeros([12, model_haxis.size])
+                for month in range(12):
+                    print str(year) + '/' + str(month+1)
+                    data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+                    if fields_mit[n] not in ['THETA', 'SALT']:
+                        # Zero in land mask is more physical than extrapolated data
+                        index = model_hfac==0
+                        data_interp_temp[index] = 0
+                    data_interp[month,:] = data_interp_tmp
+
+                # Write the data
+                write_binary(data_interp, fields_mit[n]+outfile_mid+str(year), prec=prec)
+                if nc_out is not None and t==0 and year==start_years[t]:
+                    # Save the first year in NetCDF file
+                    if location in ['N', 'S']:
+                        dimension = 'x'
+                    else:
+                        dimension = 'y'
+                    if dim[n] == 3:
+                        dimension += 'z'
+                    dimension += 't'
+                    ncfile.add_variable(fields_mit[n]+'_'+location, data_interp, dimension)
+
+                # Update time range for next time
+                t_start = t_end
+                t_end = t_start + months_per_year
+
+    ncfile.close()
+
+
 # Correct the normal velocity in OBCS files to prevent massive sea level drift.
 # Option 1 ('balance'): Calculate net transport into the domain based on OBCS velocities alone. This can be done before simulations even start, and should work well if you have useRealFreshwaterFlux turned off.
 # Option 2 ('correct'): Calculate net transport based on the mean change in sea surface height over a test simulation. Run the model for a while, see how much the area-averaged eta changes over some number of years (timeseries.py should be helpful here), and then run this script to counteract any drift with OBCS corrections.
 # Option 3 ('dampen'): Dampen large seasonal cycles in net transport, by correcting the velocities on a monthly-varying basis. A maximum change in mean sea surface height in any one month is specified (default 0.5 m), and a scaling factor for transport is determined such that the maximum absolute value of transport is no more than this threshold. This assumes the OBCS are monthly!!
 
 # Arguments:
-# grid_path: path to Grid directory
+# grid: Grid OR path to grid directory
 
 # Optional keyword arguments:
 # option: 'balance' or 'correct' (as above)
@@ -543,14 +714,13 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 # max_deta_dt: if option='dampen', maximum allowable change in mean sea surface height in any given month (default 0.5 m/month)
 # prec: precision of the OBCS files (as in function sose_obcs)
 
-def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, prec=32):
+def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, prec=32):
 
     if option == 'correct' and (d_eta is None or d_t is None):
         print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
         sys.exit()
-    
-    print 'Building grid'
-    grid = Grid(grid_path)
+
+    grid = choose_grid(grid, None)
 
     # Calculate integrands of area, scaled by hFacC
     # Note that dx and dy are only available on western and southern edges of cells respectively; for the eastern and northern boundary, will just have to use 1 cell in. Not perfect, but this correction wouldn't perfectly conserve anyway.
@@ -686,3 +856,26 @@ def balance_obcs (grid_path, option='balance', obcs_file_w_u=None, obcs_file_e_u
             for t in range(num_time):
                 print 'Month ' + str(t+1)
                 print_net_transport(net_transport_new[t])
+
+
+# Wrapper function to balance the net transport for many year-long files.
+def balance_obcs_years (grid_path, start_year, end_year, obcs_head_w_u=None, obcs_head_e_u=None, obcs_head_s_v=None, obcs_head_n_v=None, prec=32):
+
+    grid = Grid(grid_path)
+
+    # Inner function to make lists of filenames
+    def make_file_list (file_head):
+        if file_head is None:
+            return None
+        else:
+            return [file_head+str(year) for year in range(start_year, end_year+1)]
+    obcs_files_w_u = make_file_list(obcs_head_w_u)
+    obcs_files_e_u = make_file_list(obcs_head_e_u)
+    obcs_files_s_v = make_file_list(obcs_head_s_v)
+    obcs_files_n_v = make_file_list(obcs_head_n_v)    
+
+    for t in range(end_year-start_year+1):
+        print 'Processing year ' + str(t+start_year)
+        balance_obcs(grid, obcs_file_w_u=obcs_files_w_u[t], obcs_file_e_u=obcs_files_e_u[t], obcs_file_s_v=obcs_files_s_v[t], obcs_file_n_v=obcs_files_n_v[t], prec=prec)
+    
+

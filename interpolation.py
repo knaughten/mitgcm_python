@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz
+from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz, is_depth_dependent
 
 
 # Interpolate from one grid type to another. 
@@ -26,11 +26,7 @@ from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz
 
 def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_shelf=False, mask_with_zeros=False, periodic=False):
 
-    # Figure out if the field is depth-dependent
-    if (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3):
-        depth_dependent=True
-    else:
-        depth_dependent=False
+    depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
     # Make sure we're not trying to mask the ice shelf from a depth-dependent field
     if mask_shelf and depth_dependent:
         print "Error (interp_grid): can't set mask_shelf=True for a depth-dependent field."
@@ -354,29 +350,32 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
 
 
 # Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
-# If the array is longitude and there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
+# If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
 def interp_slice_helper (data, val0, lon=False):
 
     # Case that val0 is exactly at the edge of the array
     if val0 in data:
         i = np.argwhere(data==val0)[0][0]
         return i, i, 1, 0
+    if lon:
+        # Transformation to make sure longitude array is strictly increasing
+        data0 = data[0]
+        data = (data-data0)%360
+        val0 = (val0-data0)%360
 
-    # Find the first index greater than val0
-    i2 = np.nonzero(data > val0)[0][0]
     # Find the last index less than val0
-    if i2 > 0:
-        # General case
-        i1 = i2 - 1
-    elif lon and i2==0 and data[-1]-360 < val0:
-        # Longitude wraps around
-        i1 = data.size - 1
-        c2 = (val0 - (data[i1]-360))/(data[i2] - (data[i1]-360))
+    i1 = np.nonzero(data < val0)[0][-1]
+    if lon and i1==data.size-1:
+        # Special case where value falls in the periodic boundary
+        i2 = 0
+        c2 = (val0 - data[i1])/(data[i2]+360 - data[i1])
         c1 = 1 - c2
         return i1, i2, c1, c2
-    else:
-        print 'Error (interp_helper): ' + str(val0) + ' is out of bounds'
-        sys.exit()
+    # Find the first index greater than val0
+    i2 = np.nonzero(data > val0)[0][0]
+    if i2 != i1+1:
+        print 'Error (interp_helper): something went wrong'
+        sys.exit()        
     # Calculate the weighting coefficients
     c2 = (val0 - data[i1])/(data[i2] - data[i1])
     c1 = 1 - c2

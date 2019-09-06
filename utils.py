@@ -578,5 +578,10 @@ def choose_range (x1, x2=None, xmin=None, xmax=None, pad=0.02):
         xmax += delta
     return xmin, xmax
 
+
+# Figure out if a field is depth-dependent, given the last two dimensions being lat and lon, and the possibility of time-dependency.
+def is_depth_dependent (data, time_dependent=False):
+    return (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3)
+
     
     
