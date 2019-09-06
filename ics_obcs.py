@@ -611,7 +611,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
     print 'Building MITgcm grid'
     model_grid = Grid(grid_path)
     print 'Building CMIP6 model grid'
-    cmip_grid = CMIPGrid(model_path, expt, ensemble_member)
+    cmip_grid = CMIPGrid(cmip_model_path, expt, ensemble_member)
     print 'Calculating weighting coefficients to extract slice'
     # Do this for each grid
     weights_t, haxis_t = find_slice_weights(cmip_grid, model_grid, location, 't')

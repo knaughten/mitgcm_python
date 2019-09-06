@@ -494,15 +494,19 @@ def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
     end_years = []
     for file_path in in_files:
         # Dates encoded in file names
-        start_date = file_path[-20:-12]
-        end_date = file_path[-11:-3]
+        if time_code.endswith('day'):
+            start_date = file_path[-20:-12]
+            end_date = file_path[-11:-3]
+        elif time_code.endswith('mon'):
+            start_date = file_path[-16:-10]
+            end_date = file_path[-9:-3]
         start_year = start_date[:4]
         end_year = end_date[:4]
         # Make sure they are 30-day months and complete years        
-        if start_date[4:] != '0101':
+        if (time_code.endswith('day') and start_date[4:] != '0101') or (time_code.endswith('mon') and start_date[4:] != '01'):
             print 'Error (find_cmip6_files): '+file_path+' does not start at the beginning of January'
             sys.exit()
-        if end_date[4:] != '1230':
+        if (time_code.endswith('day') and end_date[4:] != '1230') or (time_code.endswith('mon') and end_date[4:] != '12'):
             print 'Error (find_cmip6_files): '+file_path+' does not end at the end of December'
             sys.exit()
         # Save the start and end years
