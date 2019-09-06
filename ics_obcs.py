@@ -572,8 +572,12 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
             # Find the coefficients to interpolate to the boundary longitude in this row
             i1, i2, c1, c2 = interp_slice_helper(cmip_lon[j,:], loc0, lon=True)
             # Save these coefficients in the weighting array
-            weights[j,i1] = c1
-            weights[j,i2] = c2
+            if i1==i2:
+                # Value is in array
+                weights[j,i1] = 1
+            else:
+                weights[j,i1] = c1
+                weights[j,i2] = c2
         haxis = extract_slice(cmip_lat, weights, location)
     elif location in ['N', 'S']:
         # Loop from west to east
