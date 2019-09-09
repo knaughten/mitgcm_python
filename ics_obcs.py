@@ -679,10 +679,11 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
             t_start = 0  # Time index in file
             t_end = t_start+months_per_year
             for year in range(start_years[t], end_years[t]+1):
+                print 'Reading ' + str(year)
                 # Read data
                 data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
                 # Extract the slice
-                data_slice = extract_slice(data, weights, location, time_dependent=True)
+                data_slice = extract_slice(data, weights, location)
                 # Get mask as 1s and 0s
                 data_mask = np.invert(data_slice[0,:].mask).astype(int)
                 if model_haxis[0] < cmip_haxis[0]:
@@ -697,7 +698,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                 else:
                     data_interp = np.zeros([12, model_haxis.size])
                 for month in range(12):
-                    print str(year) + '/' + str(month+1)
+                    print 'Interpolating ' + str(year) + '/' + str(month+1)
                     data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
                     if fields_mit[n] not in ['THETA', 'SALT']:
                         # Zero in land mask is more physical than extrapolated data
