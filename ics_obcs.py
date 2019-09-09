@@ -629,7 +629,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
     def tile_weights (weights):
         weights_2d_time = add_time_dim(weights, 12)
         weights_3d_time = add_time_dim(xy_to_xyz(weights, cmip_grid), 12)
-        return weights_t, weights_zt
+        return weights_2d_time, weights_3d_time
     
     # Inner function to choose the right weights/haxis for grid and dimension
     def get_weights_haxis (gtype, num_dim):
