@@ -543,7 +543,9 @@ def extract_slice (data, weights, location):
         axis = -2
     else:
         axis = -1
-    return np.sum(data*weights, axis=axis)    
+    data_slice = np.ma.sum(data*weights, axis=axis)
+    # Mask out any regions with no data (eg entirely land at this latitude)
+    return np.ma.masked_where(data_slice==0, data_slice)
 
 
 # Find the weighting coefficients for the 2D CMIP lat-lon grid (structured but not necessarily regular, eg ORCA1 grid) to interpolate to the given boundary.
@@ -658,6 +660,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
         print 'Variable ' + fields_mit[n]
 
         # Organise grids
+        print 'Building weights to extract slice'
         weights, cmip_haxis = get_weights_haxis(gtype[n], dim[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
