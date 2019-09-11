@@ -660,7 +660,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
         print 'Variable ' + fields_mit[n]
 
         # Organise grids
-        print 'Building weights to extract slice'
+        print 'Tiling weights to correct dimensions'
         weights, cmip_haxis = get_weights_haxis(gtype[n], dim[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])

@@ -413,6 +413,17 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         # Fill all non-FRIS ice shelves with land
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmax=-55, ymin=-74.5)
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-40, ymin=-78)
+    elif key == 'WSFRIS':
+        # Big Weddell Sea domain used for coupling
+        # Similar to WSK
+        omask = mask_box(omask, lon_2d, lat_2d, xmax=-66, ymin=-74)
+        points = [[-66, -67], [-62, -65], [-60, -64.5], [-52, -61]]
+        for i in range(len(points)-1):
+            omask = mask_above_line(omask, lon_2d, lat_2d, points[i], points[i+1])
+        boxes = [[-59, -58, -64.3, -63.6], [-58.5, -57, -63.8, -63.4], [-57, -56.3, -63.4, -63]]
+        for box in boxes:
+            omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
     elif key == 'WSS_old_smaller':
         # Small Weddell Sea domain - temporary before coupling      
         # Block out everything west of the peninsula
