@@ -427,6 +427,8 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
         source_h = (source_h-h0)%360
         target_h = (target_h-h0)%360
 
+    print source_h
+
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
         if abs(target_z[0]) < abs(source_z[0]):
