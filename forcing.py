@@ -466,13 +466,13 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
 # expt: experiment name to process, eg abrupt-4xCO2.
 
 # Optional keyword arguments:
-# mit_start_year: year to start the MITgcm simulation on. Default is whenever the CMIP6 experiment starts.
+# mit_start_year, mit_end_year: years to start and end the processing of forcing. Default is to process all available data.
 # model_path: path to the directory for the given model's output, within which all the experiments lie.
 # ensemble member: name of the ensemble member to process. Must have daily output available.
 # out_dir: path to directory in which to save output files.
 # out_file_head: beginning of output filenames. If not set, it will be determined automatically as <expt>_<var>_. Each file will have the year appended.
 
-def cmip6_atm_forcing (var, expt, mit_start_year=None, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', out_dir='./', out_file_head=None):
+def cmip6_atm_forcing (var, expt, mit_start_year=None, mit_end_year=None, model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', out_dir='./', out_file_head=None):
 
     import netCDF4 as nc
 
@@ -496,6 +496,8 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, model_path='/badc/cmip6/d
     in_files, start_years, end_years = find_cmip6_files(model_path, expt, ensemble_member, var, 'day')
     if mit_start_year is None:
         mit_start_year = start_years[0]
+    if mit_end_year is None:
+        mit_end_year = end_years[-1]
 
     # Tell the user what to write about the grid
     lat = read_netcdf(in_files[0], 'lat')
@@ -519,7 +521,7 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, model_path='/badc/cmip6/d
         t_start = 0  # Time index in file
         t_end = t_start+days_per_year
         for year in range(start_years[t], end_years[t]+1):
-            if year >= mit_start_year:
+            if year >= mit_start_year and year <= mit_end_year:
                 print 'Processing ' + str(year)
 
                 # Read data
