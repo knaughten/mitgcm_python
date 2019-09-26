@@ -713,7 +713,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                     data_interp[month,:] = data_interp_tmp
 
                 # Write the data
-                write_binary(data_interp, fields_mit[n]+outfile_mid+str(year), prec=prec)
+                write_binary(data_interp, output_dir+fields_mit[n]+outfile_mid+str(year), prec=prec)
                 if nc_out is not None and t==0 and year==start_years[t]:
                     # Save the first year in NetCDF file
                     if location in ['N', 'S']:
