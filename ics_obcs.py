@@ -669,6 +669,10 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
         else:
             model_haxis = model_lat
         h_is_lon = location in ['N', 'S']
+        extend_south = (model_haxis[0] < cmip_haxis[0]) and not h_is_lon
+        if extend_south:
+            # Will need to extend CMIP data to the south. Just add one row.
+            cmip_haxis = np.concatenate(([model_haxis[0]-0.1], cmip_haxis))
         
         # Figure out where all the files are, and which years they cover
         in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
@@ -690,9 +694,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                 data_slice = extract_slice(data, weights, location)
                 # Get mask as 1s and 0s
                 data_mask = np.invert(data_slice[0,:].mask).astype(int)
-                if (model_haxis[0] < cmip_haxis[0]) and not h_is_lon:
-                    # Need to extend CMIP data to the south. Just add one row.
-                    cmip_haxis = np.concatenate(([model_haxis[0]-0.1], cmip_haxis))
+                if extend_south:                    
                     data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
                     data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
                 
