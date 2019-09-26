@@ -762,6 +762,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path=
         ncfile.add_time(np.arange(12)+1, units='months')
 
     # Process each field
+    print str(len(fields_mit))+' fields'
     for n in range(len(fields_mit)):
         print 'Variable ' + fields_mit[n]
 
