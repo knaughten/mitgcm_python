@@ -728,7 +728,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
         ncfile.add_time(np.arange(12)+1, units='months')
 
     # Process each field
-    for n in range(3, len(fields_mit)):
+    for n in range(len(fields_mit)):
         print 'Variable ' + fields_mit[n]
 
         # Organise grids
@@ -818,7 +818,8 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                 t_start = t_end
                 t_end = t_start + months_per_year
 
-    ncfile.close()
+    if nc_out is not None:
+        ncfile.close()
 
 
 # Correct the normal velocity in OBCS files to prevent massive sea level drift.
