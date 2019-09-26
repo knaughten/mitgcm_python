@@ -287,7 +287,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
         write_binary(data_interp, output_dir+fields_mit[n]+outfile_tail)
         if nc_out is not None:
             print '...adding to ' + nc_out
-            if dim[n] == 3:
+            #if dim[n] == 3:
                 #ncfile.add_variable(
                     
         
