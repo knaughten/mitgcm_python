@@ -6,6 +6,7 @@ import numpy as np
 import sys
 
 from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz, is_depth_dependent
+from grid import Grid
 
 
 # Interpolate from one grid type to another. 
@@ -308,15 +309,11 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
     # Get the correct lat and lon on the target grid
     target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
-    if dim == 3:
-        # Also get depths
-        source_z = source_grid.z
-        target_z = target_grid.z
     
     if dim == 2:
         return interp_reg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
     elif dim == 3:
-        return interp_reg_xyz(source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=fill_value)
+        return interp_reg_xyz(source_lon, source_lat, source_grid.z, source_data, target_lon, target_lat, target_grid.z, fill_value=fill_value)
     else:
         print 'Error (interp_reg): dim must be 2 or 3'
         sys.exit()
@@ -465,6 +462,26 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     return data_interp
 
 
+# Interpolate the given field to the given depth (constant). It can be any dimension as long as depth is the first axis (if time_dependent=False) or the second axis (if time_dependent=True).
+# grid can either be a Grid object, or an array of depth values
+def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
+
+    if isinstance(grid, Grid):
+        z = grid.z
+    else:
+        z = grid
+        
+    if gtype == 'w':
+        print 'Error (interp_to_depth): w-grids not supported yet'
+        sys.exit()
+    # Make depth positive so array is increasing and we can get right coefficients
+    k1, k2, c1, c2 = interp_slice_helper(-z, -z0)
+    if time_dependent:
+        return c1*data[:,k1,:] + c2*data[:,k2,:]
+    else:
+        return c1*data[k1,:] + c2*data[k2,:]
+
+
 # Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).
 # The input lat and lon arrays should be 2D for the source grid, and either 1D (if regular) or 2D for the target grid.
 # Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
@@ -490,22 +507,55 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
     return np.reshape(data_interp, target_lon.shape)
 
 
+# Interpolate a 3D field on a grid which is non-regular in the lat-lon direction, but has a normal z-axis.
+def interp_nonreg_xyz (source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=-9999):
+
+    # Find dimensions of grid
+    if len(target_lon.shape) == 1 and len(target_lat.shape) == 1:
+        nx = target_lon.size
+        ny = target_lat.size
+    else:
+        nx = target_lon.shape[1]
+        ny = target_lon.shape[0]
+    nz = target_z.size
+
+    # Interpolate each depth individually
+    data_interp = np.ma.empty([nz, ny, nx])
+    for k in range(nz):
+        print '...depth ' + str(k+1) + ' of ' + str(nz)
+        if k==0 and target_z[k] > source_z[0]:
+            # Target grid's surface layer is too shallow - extrapolate
+            source_data_2d = source_data[0,:]
+        elif k==nz-1 and target_z[-1] < source_z[-1]:
+            # Target grid's bottom layer is too deep - extrapolate
+            source_data_2d = source_data[-1,:]
+        else:        
+            # Extract a lon-lat slice of source data, at this depth
+            source_data_2d = interp_to_depth(source_data, target_z[k], source_z)
+        # Now interpolate in 2D
+        data_interp[k,:] = interp_nonreg_xy(source_lon, source_lat, source_data_2d, target_lon, target_lat, fill_value=fill_value)
+
+    return data_interp
+
+
+# API to interpolate from a non-regular lat-lon grid, on either 2 or 3 dimensions.
+def interp_nonreg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_value=-9999):
+
+    # Get the correct lat and lon on source and target grids
+    source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=2)
+    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=2)
+
+    if dim == 2:
+        return interp_nonreg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
+    elif dim == 3:
+        return interp_nonreg_xyz(source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=fill_value)
+    else:
+        print 'Error (interp_nonreg): dim must be 2 or 3'
+        sys.exit()
+
+
 # Smooth a lat-lon field with a 2D Gaussian filter. Default radius of 2 grid cells (1/2 degree for a quarter-degree grid).
 def smooth_xy (data, sigma=2):
 
     from scipy.ndimage.filters import gaussian_filter
     return gaussian_filter(data, sigma)
-
-
-# Interpolate the given field to the given depth (constant). It can be any dimension as long as depth is the first axis (if time_dependent=False) or the second axis (if time_dependent=True).
-def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
-
-    if gtype == 'w':
-        print 'Error (interp_to_depth): w-grids not supported yet'
-        sys.exit()
-    # Make depth positive so array is increasing and we can get right coefficients
-    k1, k2, c1, c2 = interp_slice_helper(-grid.z, -z0)
-    if time_dependent:
-        return c1*data[:,k1,:] + c2*data[:,k2,:]
-    else:
-        return c1*data[k1,:] + c2*data[k2,:]

@@ -58,6 +58,8 @@ def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 # Helper function for initial conditions: process and interpolate a field from the source grid to the model grid, and write to file (binary plus NetCDF if needed).
 def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, dim, field_name, out_file, missing_cavities=True, model_cavity=None, cavity_value=None, regular=True, nc_out=None, ncfile=None, prec=64):
 
+    from interpolation import interp_reg, interp_nonreg
+
     # Error checking
     if missing_cavities and dim==3 and (model_cavity is None or cavity_value is None):
         print 'Error (process_ini_field): must provide model_cavity and cavity_value'
@@ -79,8 +81,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
     if regular:
         data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim[n])
     else:
-        # TODO NEED TO DO THIS
-        pass
+        data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim[n])
     # Fill the land mask with zeros
     if dim == 3:
         data_interp[model_grid.hfac==0] = 0
@@ -114,7 +115,6 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 
     from grid import SOSEGrid
     from file_io import NCfile
-    from interpolation import interp_reg
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -177,7 +177,6 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
 def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
     from file_io import NCfile, read_netcdf
-    from interpolation import interp_reg
 
     output_dir = real_dir(output_dir)
 
@@ -215,7 +214,6 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
 
     from file_io import NCfile, read_netcdf
     from grid import CMIPGrid
-    from interpolation import interp_reg
 
     output_dir = real_dir(output_dir)
 
