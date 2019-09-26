@@ -197,7 +197,14 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
                 ncfile.add_variable(fields[n], data_interp, 'xy')
 
     if nc_out is not None:
-        ncfile.close()    
+        ncfile.close()
+
+
+
+# Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using January output from the given year of a CMIP6 simulation. 
+#def cmip6_ics (grid_path, year, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=64):
+
+    
 
 
 # Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are three different assumptions we could make:
@@ -596,7 +603,8 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
 
 # Create open boundary conditions from a CMIP6 model (in practice, UKESM1-0-LL). This is a bit more complicated as they're time-varying (rather than a single climatology), not on a regular lat-lon grid, and not from another MITgcm model.
 # Assumes 30-day months, and ocean longitude in the range (-180, 180).
-def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=32):
+# Can set mit_start_year if you only want the last part of a simulation (eg for the last 180 years of piControl, set mit_start_year=2880)
+def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=32):
 
     from file_io import NCfile, read_netcdf
     from grid import CMIPGrid
@@ -676,6 +684,8 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
         
         # Figure out where all the files are, and which years they cover
         in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
+        if mit_start_year is None:
+            mit_start_year = start_years[0]
         
         # Loop over each file
         for t in range(len(in_files)):
@@ -687,6 +697,8 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
             t_start = 0  # Time index in file
             t_end = t_start+months_per_year
             for year in range(start_years[t], end_years[t]+1):
+                if year < mit_start_year:
+                    continue
                 print 'Reading ' + str(year)
                 # Read data
                 data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
