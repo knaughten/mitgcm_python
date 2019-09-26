@@ -690,8 +690,8 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                 data_slice = extract_slice(data, weights, location)
                 # Get mask as 1s and 0s
                 data_mask = np.invert(data_slice[0,:].mask).astype(int)
-                if model_haxis[0] < cmip_haxis[0]:
-                    # Need to extend CMIP data to the west or south. Just add one row.
+                if (model_haxis[0] < cmip_haxis[0]) and not h_is_lon:
+                    # Need to extend CMIP data to the south. Just add one row.
                     cmip_haxis = np.concatenate(([model_haxis[0]-0.1], cmip_haxis))
                     data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
                     data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
