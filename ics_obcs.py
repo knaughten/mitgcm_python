@@ -6,7 +6,7 @@ from grid import Grid, grid_check_split, choose_grid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
 from file_io import write_binary, read_binary, find_cmip6_files
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
-from constants import sec_per_year, gravity, sec_per_day
+from constants import sec_per_year, gravity, sec_per_day, months_per_year
 from diagnostics import density
 
 import numpy as np
@@ -29,6 +29,34 @@ def make_sose_climatology (in_file, out_file):
     for month in range(12):
         climatology[month,:] = np.mean(data[month::12,:], axis=0)
     write_binary(climatology, out_file)
+
+
+# Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless keep_cavities=True.
+def get_fill_mask (source_grid, model_grid, keep_cavities=False):
+
+    # Find open cells according to the model, interpolated to source grid
+    if keep_cavities:
+        fill_value = 0
+    else:
+        fill_value = 1
+    model_open = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=fill_value))
+    if keep_cavities:
+        fill = model_open
+    else:    
+        # Find ice shelf cavity points according to model, interpolated to source grid
+        model_cavity = np.ceil(interp_reg(model_grid, source_grid, xy_to_xyz(model_grid.ice_mask, model_grid), fill_value=0)).astype(bool)
+        # Select open, non-cavity cells
+        fill = model_open*np.invert(model_cavity)
+    # Extend into the mask a few times to make sure there are no artifacts near the coast
+    fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
+    if keep_cavities:
+        return fill
+    else:
+        return fill, model_cavity
+
+
+# Helper function for initial conditions: process and interpolate a field from the source grid to the model grid, and write to file (binary plus NetCDF if needed).
+
 
 
 # Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Ice shelf cavities will be filled with constant temperature and salinity.
@@ -73,15 +101,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     sose_mask = sose_grid.hfac == 0
     
     print 'Building mask for SOSE points to fill'
-    # Figure out which points we need for interpolation
-    # Find open cells according to the model, interpolated to SOSE grid
-    model_open = np.ceil(interp_reg(model_grid, sose_grid, np.ceil(model_grid.hfac), fill_value=1))
-    # Find ice shelf cavity points according to model, interpolated to SOSE grid
-    model_cavity = np.ceil(interp_reg(model_grid, sose_grid, xy_to_xyz(model_grid.ice_mask, model_grid), fill_value=0)).astype(bool)
-    # Select open, non-cavity cells
-    fill = model_open*np.invert(model_cavity)
-    # Extend into the mask a few times to make sure there are no artifacts near the coast
-    fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
+    fill, model_cavity = get_fill_mask(sose_grid, model_grid)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
@@ -159,6 +179,7 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
     source_mask = source_grid.hfac==0
 
     print 'Building mask for points to fill'
+    fill = get_fill_mask(source_grid, model_grid, keep_cavities=True)
     # Select open cells according to the model, interpolated to the source grid
     fill = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=0)).astype(bool)
     # Extend into mask a few times to make sure there are no artifacts near the coast
@@ -202,31 +223,79 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
 
 # Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using January output from the given year of a CMIP6 simulation. 
-def cmip6_ics (grid_path, year, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=64):
+def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', constant_t=-1.9, constant_s=34.4, output_dir='./', nc_out=None, prec=64):
 
     from file_io import NCfile, read_netcdf
     from grid import CMIPGrid
+    from interpolation import interp_reg
 
     output_dir = real_dir(output_dir)
 
-    # Fields to interpolate (MIT and CMIP names)
-    # Flag for 2D or 3D
+    # Fields to interpolate
+    fields_mit = ['THETA', 'SALT', 'SIarea', 'SIheff', 'SIhsnow']
+    fields_cmip = ['theato', 'so', 'siconc', 'sithick', 'sisnthick']
+    # Flag for number of dimensions
+    dim = [3, 3, 2, 2, 2]
+    # Flag for realm
+    realm = ['Omon', 'Omon', 'SImon', 'SImon', 'SImon']
+    # Constant values for ice shelf cavities
+    constant_value = [constant_t, constant_s, 0, 0]
     # End of filenames for output
-    # Constant values for cavities
+    outfile_tail = '_'+expt+'.ini'
 
-    # Build grids
+    print 'Building MITgcm grid'
+    model_grid = Grid(grid_path)
+    print 'Building CMIP6 model grid'
+    cmip_grid = CMIPGrid(cmip_model_path, expt, ensemble_member)
 
-    # Build mask for points to fill, including cavity points
+    print 'Building mask for CMIP points to fill'
+    fill, model_cavity = get_fill_mask(cmip_grid, model_grid)
 
     # Set up NetCDF file
+    if nc_out is not None:
+        ncfile = NCfile(nc_out, model_grid, 'xyz')
 
-    # Loop over fields
-    # Find paths to this variable
-    # Find file which includes year we want
-    # Figure out time index in that file for January of the year
-    # Read data
-    # Discard land mask and extrapolate slightly into missing regions
-    # Fill cavity points with constant values if 3D
+    # Process fields
+    for n in range(len(fields_mit)):
+        print 'Processing ' + fields_mit[n]
+        # Figure out where all the files are, and which years they cover
+        in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
+        # Find which file includes the year we want
+        file_index = np.where(np.array(start_years) > year0)[0][0]-1
+        file_path = in_files[file_index]
+        # Find time index in that file for January of year0
+        time_index = (year0-start_years[file_index])*months_per_year
+        # Read data
+        print 'Reading ' + file_path ' at index ' + time_index
+        cmip_data = read_netcdf(file_path, fields_cmip[n], time_index=time_index)
+        # Discard the land mask, and extrapolate into missing regions
+        print '...extrapolating into missing regions'
+        if dim[n] == 3:
+            cmip_data = discard_and_fill(cmip_data, cmip_data.mask, fill)
+            # Fill cavity points with constant values
+            cmip_data[model_cavity] = constant_value[n]
+        else:
+            # Just the surface layer
+            cmip_data = discard_and_fill(cmip_data, cmip_data.mask, fill[0,:], use_3d=False)
+        print '...interpolating to model grid'
+        # TODO
+        # Fill the land mask with zeros
+        if dim[n] == 3:
+            data_interp[model_grid.hfac==0] = 0
+        else:
+            data_interp[model_grid.hfac[0,:]==0] = 0
+        write_binary(data_interp, output_dir+fields_mit[n]+outfile_tail)
+        if nc_out is not None:
+            print '...adding to ' + nc_out
+            if dim[n] == 3:
+                #ncfile.add_variable(
+                    
+        
+            
+        
+        
+        
+
     # Interpolate to model grid - how??!!
     # Fill land mask with zeros
     # Write file
@@ -653,7 +722,6 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path=
     realm = ['Omon', 'Omon', 'Omon', 'Omon', 'SImon', 'SImon', 'SImon', 'SImon', 'SImon']
     # Middle of filenames for output (will be preceded by variable, and followed by year)
     outfile_mid = '_'+expt+'.OBCS_'+location+'_'
-    months_per_year = 12
 
     print 'Building MITgcm grid'
     model_grid = Grid(grid_path)
@@ -706,6 +774,18 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path=
             model_haxis = model_lon
         else:
             model_haxis = model_lat
+        # Get hfac on the boundary
+        if location == 'S':
+            model_hfac = model_hfac[:,0,:]
+        elif location == 'N':
+            model_hfac = model_hfac[:,-1,:]
+        elif location == 'W':
+            model_hfac = model_hfac[...,0]
+        elif location == 'E':
+            model_hfac = model_hfac[...,-1]
+        if dim[n] == 2:
+            # Just need surface hfac
+            model_hfac = model_hfac[0,:]
         h_is_lon = location in ['N', 'S']
         extend_south = (model_haxis[0] < cmip_haxis[0]) and not h_is_lon
         if extend_south:
@@ -727,45 +807,44 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path=
             t_start = 0  # Time index in file
             t_end = t_start+months_per_year
             for year in range(start_years[t], end_years[t]+1):
-                if year < mit_start_year:
-                    continue
-                print 'Reading ' + str(year)
-                # Read data
-                data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
-                # Extract the slice
-                data_slice = extract_slice(data, weights, location)
-                # Get mask as 1s and 0s
-                data_mask = np.invert(data_slice[0,:].mask).astype(int)
-                if extend_south:                    
-                    data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
-                    data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
-                
-                # Interpolate each month in turn
-                if dim[n] == 3:
-                    data_interp = np.zeros([12, model_grid.nz, model_haxis.size])
-                else:
-                    data_interp = np.zeros([12, model_haxis.size])
-                for month in range(12):
-                    print 'Interpolating ' + str(year) + '/' + str(month+1)
-                    data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, lon=h_is_lon, depth_dependent=(dim[n]==3))
-                    if fields_mit[n] not in ['THETA', 'SALT']:
-                        # Zero in land mask is more physical than extrapolated data
-                        index = model_hfac==0
-                        data_interp_tmp[index] = 0
-                    data_interp[month,:] = data_interp_tmp
+                if year >= mit_start_year:
+                    print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
+                    # Read data
+                    data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
+                    # Extract the slice
+                    data_slice = extract_slice(data, weights, location)
+                    # Get mask as 1s and 0s
+                    data_mask = np.invert(data_slice[0,:].mask).astype(int)
+                    if extend_south:                    
+                        data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
+                        data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
 
-                # Write the data
-                write_binary(data_interp, output_dir+fields_mit[n]+outfile_mid+str(year), prec=prec)
-                if nc_out is not None and t==0 and year==start_years[t]:
-                    # Save the first year in NetCDF file
-                    if location in ['N', 'S']:
-                        dimension = 'x'
-                    else:
-                        dimension = 'y'
+                    # Interpolate each month in turn
                     if dim[n] == 3:
-                        dimension += 'z'
-                    dimension += 't'
-                    ncfile.add_variable(fields_mit[n]+'_'+location, data_interp, dimension)
+                        data_interp = np.zeros([12, model_grid.nz, model_haxis.size])
+                    else:
+                        data_interp = np.zeros([12, model_haxis.size])
+                    for month in range(12):
+                        print 'Interpolating ' + str(year) + '/' + str(month+1)
+                        data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, lon=h_is_lon, depth_dependent=(dim[n]==3))
+                        if fields_mit[n] not in ['THETA', 'SALT']:
+                            # Zero in land mask is more physical than extrapolated data
+                            index = model_hfac==0
+                            data_interp_tmp[index] = 0
+                        data_interp[month,:] = data_interp_tmp
+
+                    # Write the data
+                    write_binary(data_interp, output_dir+fields_mit[n]+outfile_mid+str(year), prec=prec)
+                    if nc_out is not None and t==0 and year==start_years[t]:
+                        # Save the first year in NetCDF file
+                        if location in ['N', 'S']:
+                            dimension = 'x'
+                        else:
+                            dimension = 'y'
+                        if dim[n] == 3:
+                            dimension += 'z'
+                        dimension += 't'
+                        ncfile.add_variable(fields_mit[n]+'_'+location, data_interp, dimension)
 
                 # Update time range for next time
                 t_start = t_end

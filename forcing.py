@@ -519,24 +519,24 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, model_path='/badc/cmip6/d
         t_start = 0  # Time index in file
         t_end = t_start+days_per_year
         for year in range(start_years[t], end_years[t]+1):
-            if year < mit_start_year:
-                continue
-            print 'Processing ' + str(year)
-            
-            # Read data
-            data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
-            # Conversions if necessary
-            if var == 'tas':
-                # Kelvin to Celsius
-                data -= temp_C2K
-            elif var == 'pr':
-                # kg/m^2/s to m/s
-                data /= rho_fw
-            elif var in ['rsds', 'rlds']:
-                # Swap sign on radiation fluxes
-                data *= -1
-            # Write data
-            write_binary(data, out_dir+out_file_head+str(year))
+            if year >= mit_start_year:
+                print 'Processing ' + str(year)
+
+                # Read data
+                print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
+                data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+                # Conversions if necessary
+                if var == 'tas':
+                    # Kelvin to Celsius
+                    data -= temp_C2K
+                elif var == 'pr':
+                    # kg/m^2/s to m/s
+                    data /= rho_fw
+                elif var in ['rsds', 'rlds']:
+                    # Swap sign on radiation fluxes
+                    data *= -1
+                # Write data
+                write_binary(data, out_dir+out_file_head+str(year))
             # Update time range for next time
             t_start = t_end
             t_end = t_start + days_per_year

@@ -14,6 +14,8 @@ rho_ice = 917.
 sec_per_day = 24*60*60.
 # Seconds per year
 sec_per_year = 365.25*sec_per_day
+# Months per year
+months_per_year = 12
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
 # Radius of Earth
