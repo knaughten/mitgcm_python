@@ -32,31 +32,69 @@ def make_sose_climatology (in_file, out_file):
 
 
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless keep_cavities=True.
-def get_fill_mask (source_grid, model_grid, keep_cavities=False):
+def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 
     # Find open cells according to the model, interpolated to source grid
-    if keep_cavities:
-        fill_value = 0
-    else:
+    if missing_cavities:
         fill_value = 1
+    else:
+        fill_value = 0
     model_open = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=fill_value))
-    if keep_cavities:
-        fill = model_open
-    else:    
+    if missing_cavities:    
         # Find ice shelf cavity points according to model, interpolated to source grid
         model_cavity = np.ceil(interp_reg(model_grid, source_grid, xy_to_xyz(model_grid.ice_mask, model_grid), fill_value=0)).astype(bool)
         # Select open, non-cavity cells
         fill = model_open*np.invert(model_cavity)
+    else:
+        fill = model_open
     # Extend into the mask a few times to make sure there are no artifacts near the coast
     fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
-    if keep_cavities:
-        return fill
-    else:
+    if missing_cavities:
         return fill, model_cavity
+    else:
+        return fill
 
 
 # Helper function for initial conditions: process and interpolate a field from the source grid to the model grid, and write to file (binary plus NetCDF if needed).
+def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, dim, field_name, out_file, missing_cavities=True, model_cavity=None, cavity_value=None, regular=True, nc_out=None, ncfile=None, prec=64):
 
+    # Error checking
+    if missing_cavities and dim==3 and (model_cavity is None or cavity_value is None):
+        print 'Error (process_ini_field): must provide model_cavity and cavity_value'
+        sys.exit()
+    if nc_out is not None and ncfile is None:
+        print 'Error (process_ini_field): must provide ncfile'
+        sys.exit()
+        
+    print '...extrapolating into missing regions'
+    if dim == 3:
+        source_data = discard_and_fill(source_data, source_mask, fill)
+        if mising_cavities:
+            source_data[model_cavity] = cavity_value
+    else:
+        # Just the surface layer
+        source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False)
+
+    print '...interpolating to model grid'
+    if regular:
+        data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim[n])
+    else:
+        # TODO NEED TO DO THIS
+        pass
+    # Fill the land mask with zeros
+    if dim == 3:
+        data_interp[model_grid.hfac==0] = 0
+    else:
+        data_interp[model_grid.hfac[0,:]==0] = 0
+        
+    # Write file
+    write_binary(data_interp, out_file, prec=prec)
+    if nc_out is not None:
+        print '...adding to ' + nc_out
+        if dim[n] == 3:
+            ncfile.add_variable(field_name, data_interp, 'xyz')
+        else:
+            ncfile.add_variable(field_name, data_interp, 'xy')
 
 
 # Create initial conditions for temperature, salinity, sea ice area, and sea ice thickness using the SOSE monthly climatology for January. Ice shelf cavities will be filled with constant temperature and salinity.
@@ -119,29 +157,7 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         else:
             # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
             sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
-        # Discard the land mask, and extrapolate slightly into missing regions so the interpolation doesn't get messed up.
-        print '...extrapolating into missing regions'
-        if dim[n] == 3:
-            sose_data = discard_and_fill(sose_data, sose_mask, fill)
-            # Fill cavity points with constant values
-            sose_data[model_cavity] = constant_value[n]
-        else:
-            # Just care about surface layer
-            sose_data = discard_and_fill(sose_data, sose_mask[0,:], fill[0,:], use_3d=False)
-        print '...interpolating to model grid'
-        data_interp = interp_reg(sose_grid, model_grid, sose_data, dim=dim[n])
-        # Fill the land mask with zeros
-        if dim[n] == 3:
-            data_interp[model_grid.hfac==0] = 0
-        else:
-            data_interp[model_grid.hfac[0,:]==0] = 0
-        write_binary(data_interp, out_file, prec=prec)
-        if nc_out is not None:
-            print '...adding to ' + nc_out
-            if dim[n] == 3:
-                ncfile.add_variable(fields[n], data_interp, 'xyz')
-            else:
-                ncfile.add_variable(fields[n], data_interp, 'xy')
+        process_ini_field(sose_data, sose_mask, fill, sose_grid, model_grid, dim[n], fields[n], out_file, model_cavity=model_cavity, cavity_value=constant_value[n], nc_out=nc_out, ncfile=ncfile, prec=prec)
 
     if nc_out is not None:
         ncfile.close()
@@ -179,11 +195,7 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
     source_mask = source_grid.hfac==0
 
     print 'Building mask for points to fill'
-    fill = get_fill_mask(source_grid, model_grid, keep_cavities=True)
-    # Select open cells according to the model, interpolated to the source grid
-    fill = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=0)).astype(bool)
-    # Extend into mask a few times to make sure there are no artifacts near the coast
-    fill = extend_into_mask(fill, missing_val=0, use_3d=True, num_iters=3)
+    fill = get_fill_mask(source_grid, model_grid, missing_cavities=False)
 
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
@@ -195,31 +207,7 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
         out_file = output_dir + fields[n] + outfile_tail
         # Read the January climatology
         source_data = read_netcdf(source_file, fields[n], time_index=0)
-        # Discard the land mask, and extrapolate slightly into missing regions so the interpolation doesn't get messed up.
-        print '...extrapolating into missing regions'
-        if dim[n] == 3:
-            source_data = discard_and_fill(source_data, source_mask, fill)
-        else:
-            # Just care about the surface layer
-            source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False)
-        print '...interpolating to model grid'
-        data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim[n])
-        # Fill the land mask with zeros
-        if dim[n] == 3:
-            data_interp[model_grid.hfac==0] = 0
-        else:
-            data_interp[model_grid.hfac[0,:]==0] = 0
-        write_binary(data_interp, out_file, prec=prec)
-        if nc_out is not None:
-            print '...adding to ' + nc_out
-            if dim[n] == 3:
-                ncfile.add_variable(fields[n], data_interp, 'xyz')
-            else:
-                ncfile.add_variable(fields[n], data_interp, 'xy')
-
-    if nc_out is not None:
-        ncfile.close()
-
+        process_ini_field(source_data, source_mask, fill, source_grid, model_grid, dim[n], fields[n], out_file, missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
 
 # Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using January output from the given year of a CMIP6 simulation. 
@@ -255,6 +243,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
     if nc_out is not None:
         ncfile = NCfile(nc_out, model_grid, 'xyz')
 
+    cmip_mask = None
     # Process fields
     for n in range(len(fields_mit)):
         print 'Processing ' + fields_mit[n]
@@ -268,42 +257,17 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
         # Read data
         print 'Reading ' + file_path + ' at index ' + time_index
         cmip_data = read_netcdf(file_path, fields_cmip[n], time_index=time_index)
-        # Discard the land mask, and extrapolate into missing regions
-        print '...extrapolating into missing regions'
-        if dim[n] == 3:
-            cmip_data = discard_and_fill(cmip_data, cmip_data.mask, fill)
-            # Fill cavity points with constant values
-            cmip_data[model_cavity] = constant_value[n]
-        else:
-            # Just the surface layer
-            cmip_data = discard_and_fill(cmip_data, cmip_data.mask, fill[0,:], use_3d=False)
-        print '...interpolating to model grid'
-        # TODO
-        # Fill the land mask with zeros
-        if dim[n] == 3:
-            data_interp[model_grid.hfac==0] = 0
-        else:
-            data_interp[model_grid.hfac[0,:]==0] = 0
-        write_binary(data_interp, output_dir+fields_mit[n]+outfile_tail)
-        if nc_out is not None:
-            print '...adding to ' + nc_out
-            #if dim[n] == 3:
-                #ncfile.add_variable(
-                    
-        
-            
-        
-        
-        
+        # Extract the land mask the first time we can
+        if cmip_mask is None:
+            if dim[n] == 2:
+                print 'Error (cmip6_ics): need to run a 3D variable first so we get the mask!'
+                sys.exit()
+            cmip_mask = cmip_data.mask
+        out_file = output_dir + fields_mit[n] + outfile_tail
+        process_ini_field(cmip_data, cmip_mask, fill, cmip_grid, model_grid, dim[n], fields[n], out_file, model_cavity=model_cavity, cavity_value=constant_value[n], regular=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
-    # Interpolate to model grid - how??!!
-    # Fill land mask with zeros
-    # Write file
-    # Add to NetCDF file
-
-    # Close NetCDF file
-
-    
+    if nc_out is not None:
+        ncfile.close()    
 
 
 # Calculate the initial pressure loading anomaly of the ice shelf. This depends on the density of the hypothetical seawater displaced by the ice shelf. There are three different assumptions we could make:
@@ -665,6 +629,9 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
     else:
         loc0 = loc0_centre
     cmip_lon, cmip_lat = cmip_grid.get_lon_lat(gtype=gtype)
+    if gtype == 'v':
+        # There is something weird with the northernmost row of longitude on the v-grid. So replace it with the second last row.
+        cmip_lon[-1,:] = cmip_lon[-2,:]
     # Set up an array of zeros, which will be filled with nonzero-weights where needed
     weights = np.zeros(cmip_lon.shape)
     # Unfortunately there is necessary code repetition here...
@@ -761,7 +728,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
         ncfile.add_time(np.arange(12)+1, units='months')
 
     # Process each field
-    for n in range(len(fields_mit)):
+    for n in range(3, len(fields_mit)):
         print 'Variable ' + fields_mit[n]
 
         # Organise grids
