@@ -413,12 +413,19 @@ def interp_bilinear (data, lon0, lat0, grid, gtype='t', return_hfac=False):
 # IMPORTANT: Make sure that source_h, source_hfac, target_h, target_hfac are all on the correct grid (t, u, v) corresponding to the data.
 
 # Optional keyword arguments:
+# lon: indicates that "h" is a longitude array, and we might need to rearrange things so source_h is strictly increasing
 # depth_dependent: boolean indicating whether the data is depth-dependent
 # missing_val: missing value to use for checking mask; just make sure it doesn't equal a value that real data might hold
 
-def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, depth_dependent=True, missing_val=-9999):
+def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_z, target_hfac, lon=False, depth_dependent=True, missing_val=-9999):
 
     from scipy.interpolate import RegularGridInterpolator, interp1d
+
+    if lon:
+        # Transformation to make sure source_h is strictly increasing
+        h0 = source_h[0]
+        source_h = (source_h-h0)%360
+        target_h = (target_h-h0)%360
 
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
