@@ -580,7 +580,7 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
         axis = 1
     elif location in ['N', 'S']:
         # Loop from west to east
-        for j in range(cmip_grid.nx):
+        for i in range(cmip_grid.nx):
             j1, j2, c1, c2 = interp_slice_helper(cmip_lat[:,i], loc0)
             weights[j1,i] = c1
             weights[j2,i] = c2
