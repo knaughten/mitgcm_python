@@ -722,6 +722,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                         dimension += 'z'
                     dimension += 't'
                     ncfile.add_variable(fields_mit[n]+'_'+location, data_interp, dimension)
+                    ncfile.close()
 
                 # Update time range for next time
                 t_start = t_end
