@@ -784,8 +784,8 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                     # Get mask as 1s and 0s
                     data_mask = np.invert(data_slice[0,:].mask).astype(int)
                     if extend_south:                    
-                        data_slice = np.ma.concatenate((np.expand_dims(data_slice[:,...,0],-1), data_slice), axis=-1)
-                        data_mask = np.concatenate((np.expand_dims(data_mask[:,...,0],-1), data_mask), axis=-1)
+                        data_slice = np.ma.concatenate((np.expand_dims(data_slice[...,0],-1), data_slice), axis=-1)
+                        data_mask = np.concatenate((np.expand_dims(data_mask[...,0],-1), data_mask), axis=-1)
 
                     # Interpolate each month in turn
                     if dim[n] == 3:
