@@ -202,7 +202,37 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
 
 # Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using January output from the given year of a CMIP6 simulation. 
-#def cmip6_ics (grid_path, year, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=64):
+def cmip6_ics (grid_path, year, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=64):
+
+    from file_io import NCfile, read_netcdf
+    from grid import CMIPGrid
+
+    output_dir = real_dir(output_dir)
+
+    # Fields to interpolate (MIT and CMIP names)
+    # Flag for 2D or 3D
+    # End of filenames for output
+    # Constant values for cavities
+
+    # Build grids
+
+    # Build mask for points to fill, including cavity points
+
+    # Set up NetCDF file
+
+    # Loop over fields
+    # Find paths to this variable
+    # Find file which includes year we want
+    # Figure out time index in that file for January of the year
+    # Read data
+    # Discard land mask and extrapolate slightly into missing regions
+    # Fill cavity points with constant values if 3D
+    # Interpolate to model grid - how??!!
+    # Fill land mask with zeros
+    # Write file
+    # Add to NetCDF file
+
+    # Close NetCDF file
 
     
 
@@ -721,7 +751,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, cmip_model_path=
                     if fields_mit[n] not in ['THETA', 'SALT']:
                         # Zero in land mask is more physical than extrapolated data
                         index = model_hfac==0
-                        data_interp_temp[index] = 0
+                        data_interp_tmp[index] = 0
                     data_interp[month,:] = data_interp_tmp
 
                 # Write the data
