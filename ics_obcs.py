@@ -668,6 +668,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
             model_haxis = model_lon
         else:
             model_haxis = model_lat
+        h_is_lon = location in ['N', 'S']
         
         # Figure out where all the files are, and which years they cover
         in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
@@ -702,7 +703,7 @@ def cmip6_obcs (location, grid_path, expt, cmip_model_path='/badc/cmip6/data/CMI
                     data_interp = np.zeros([12, model_haxis.size])
                 for month in range(12):
                     print 'Interpolating ' + str(year) + '/' + str(month+1)
-                    data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
+                    data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, lon=h_is_lon, depth_dependent=(dim[n]==3))
                     if fields_mit[n] not in ['THETA', 'SALT']:
                         # Zero in land mask is more physical than extrapolated data
                         index = model_hfac==0
