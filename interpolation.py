@@ -423,11 +423,11 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
 
     if lon:
         # Transformation to make sure source_h is strictly increasing
+        print source_h
         h0 = source_h[0]
         source_h = (source_h-h0)%360
         target_h = (target_h-h0)%360
-
-    print source_h
+        print source_h
 
     if depth_dependent:
         # Extend the source axes at the top and/or bottom if needed
