@@ -288,10 +288,10 @@ def interp_reg_xyz (source_lon, source_lat, source_z, source_data, target_lon, t
     # Build an interpolant
     # Make depth positive so it's strictly increasing
     interpolant = RegularGridInterpolator((-source_z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
-    # Make target axes 3D
-    dimensions = [target_lon.size, target_lat.size, target_z.size]
+    # Make target axes 3D    
     if len(target_lon.shape) == 1:
         target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+    dimensions = [target_lon.shape[1], target_lon.shape[0], target_z.size]
     target_lon = xy_to_xyz(target_lon, dimensions)
     target_lat = xy_to_xyz(target_lat, dimensions)
     target_z = z_to_xyz(target_z, dimensions)
