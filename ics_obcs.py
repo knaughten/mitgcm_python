@@ -54,7 +54,7 @@ def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 
 
 # Helper function for initial conditions: process and interpolate a field from the source grid to the model grid, and write to file (binary plus NetCDF if needed).
-def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, dim, field_name, out_file, missing_cavities=True, model_cavity=None, cavity_value=None, regular=True, nc_out=None, ncfile=None, prec=64):
+def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, dim, field_name, out_file, missing_cavities=True, model_cavity=None, cavity_value=None, regular=True, nc_out=None, ncfile=None, prec=64, missing_val=-9999):
 
     from interpolation import interp_reg, interp_nonreg
 
@@ -68,18 +68,22 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
         
     print '...extrapolating into missing regions'
     if dim == 3:
-        source_data = discard_and_fill(source_data, source_mask, fill)
+        source_data = discard_and_fill(source_data, source_mask, fill, missing_val=missing_val)
         if missing_cavities:
             source_data[model_cavity] = cavity_value
     else:
         # Just the surface layer
-        source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False)
+        source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False, missing_val=missing_val)
 
     print '...interpolating to model grid'
     if regular:
         data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim)
     else:
-        data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim)
+        data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim, fill_value=missing_val)
+    if missing_cavities:
+        # Fill the cavities with constant values again, because there may be artifacts near the grounding line (cavity points not included in extend_into_mask call in get_fill_mask)
+        data_interp[xy_to_xyz(model_grid.ice_mask, model_grid)] = cavity_value
+        
     # Fill the land mask with zeros
     if dim == 3:
         data_interp[model_grid.hfac==0] = 0
