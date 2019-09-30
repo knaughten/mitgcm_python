@@ -670,14 +670,17 @@ class CMIPGrid:
         self.lon_2d = fix_lon_range(read_netcdf(cmip_file, 'longitude'), max_lon=max_lon)
         self.lat_2d = read_netcdf(cmip_file, 'latitude')
         self.z = -1*read_netcdf(cmip_file, 'lev')
+        self.mask = read_netcdf(cmip_file, 'thetao', time_index=0).mask
         # And one on the u-grid
         cmip_file_u = find_cmip6_files(model_path, expt, ensemble_member, 'uo', 'Omon')[0][0]
         self.lon_u_2d = fix_lon_range(read_netcdf(cmip_file_u, 'longitude'), max_lon=max_lon)
         self.lat_u_2d = read_netcdf(cmip_file_u, 'latitude')
+        self.mask_u = read_netcdf(cmip_file, 'uo', time_index=0).mask
         # And one on the v-grid
         cmip_file_v = find_cmip6_files(model_path, expt, ensemble_member, 'vo', 'Omon')[0][0]
         self.lon_v_2d = fix_lon_range(read_netcdf(cmip_file_v, 'longitude'), max_lon=max_lon)
         self.lat_v_2d = read_netcdf(cmip_file_v, 'latitude')
+        self.mask_v = read_netcdf(cmip_file, 'vo', time_index=0).mask
         # Save grid dimensions too
         self.nx = self.lon_2d.shape[1]
         self.ny = self.lat_2d.shape[0]
@@ -695,5 +698,20 @@ class CMIPGrid:
             return self.lon_u_2d, self.lat_u_2d
         elif gtype == 'v':
             return self.lon_v_2d, self.lat_v_2d
+
+
+    # Return mask on the right grid, either 3D or surface
+    def get_mask (self, gtype='t', surface=False):
+        if gtype == 't':
+            mask_3d = self.mask
+        elif gtype == 'u':
+            mask_3d = self.mask_u
+        elif gtype == 'v':
+            mask_3d = self.mask_v
+        if surface:
+            return mask_3d[0,:]
+        else:
+            return mask_3d
+        
 
 

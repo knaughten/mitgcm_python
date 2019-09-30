@@ -612,8 +612,10 @@ def extract_slice (data, weights, location):
     else:
         axis = -1
     data_slice = np.ma.sum(data*weights, axis=axis)
-    # Mask out any regions with no data (eg entirely land at this latitude)
-    return np.ma.masked_where(data_slice==0, data_slice)
+    # Do the same for the mask attached to the data. Any cells which end up as nonzero have interpolated into the mask.
+    data_mask_slice = np.ma.sum(data.mask*weights, axis=axis)
+    # Mask out these regions.
+    return np.ma.masked_where(data_mask_slice>0, data_slice)
 
 
 # Find the weighting coefficients for the 2D CMIP lat-lon grid (structured but not necessarily regular, eg ORCA1 grid) to interpolate to the given boundary.
@@ -762,6 +764,11 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
             mit_start_year = start_years[0]
         if mit_end_year is None:
             mit_end_year = end_years[-1]
+        if fields_mit[n] == 'SIarea':
+            # Save file list for sea ice area
+            in_files_aice = in_files
+            start_years_aice = start_years
+            end_years_aice = end_years
         
         # Loop over each file
         for t in range(len(in_files)):
@@ -777,6 +784,23 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                     print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
                     # Read data
                     data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
+                    if fields_mit[n] == 'SIconc':
+                        # Convert from percent to fraction
+                        data *= 1e-2
+                    if fields_mit[n] in ['SIheff', 'SIhsnow', 'SIuice', 'SIvice']:
+                        # These variables are masked in regions of zero sea ice. Fill those regions with zeros instead.
+                        mask = cmip_grid.get_mask(gtype=gtype[n], surface=True)
+                        index = np.where(data.mask*np.invert(mask))
+                        data[index] = 0
+                    if fields_mit[n] in ['SIheff', 'SIhsnow']:
+                        # These variables need to be weighted by sea ice concentration.
+                        # Make sure the concentration files (saved from before) line up with these files.
+                        if (start_years != start_years_aice) or (end_years != end_years_aice):
+                            print 'Error (cmip6_obcs): siconc files do not line up with ' + fields_cmip[n] + ' files. You will need to edit the code.'
+                            sys.exit()
+                        data_aice = read_netcdf(in_files_aice[t], 'siconc', t_start=t_start, t_end=t_end)*1e-2
+                        data *= data_aice
+                        
                     # Extract the slice
                     data_slice = extract_slice(data, weights, location)
                     # Get mask as 1s and 0s
