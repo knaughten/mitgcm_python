@@ -615,8 +615,9 @@ def extract_slice (data, weights, location):
     if isinstance(data, np.ma.MaskedArray):
         # Do the same for the mask attached to the data. Any cells which end up as nonzero have interpolated into the mask.
         data_mask_slice = np.ma.sum(data.mask*weights, axis=axis)
-    # Mask out these regions.
-    return np.ma.masked_where(data_mask_slice>0, data_slice)
+        # Mask out these regions.
+        data_slice = np.ma.masked_where(data_mask_slice>0, data_slice)
+    return data_slice
 
 
 # Find the weighting coefficients for the 2D CMIP lat-lon grid (structured but not necessarily regular, eg ORCA1 grid) to interpolate to the given boundary.
