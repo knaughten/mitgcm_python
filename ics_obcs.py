@@ -34,6 +34,8 @@ def make_sose_climatology (in_file, out_file):
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless keep_cavities=True.
 def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 
+    from mitgcm_python.interpolation import interp_reg
+
     # Find open cells according to the model, interpolated to source grid
     if missing_cavities:
         fill_value = 1
