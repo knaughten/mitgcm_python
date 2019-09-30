@@ -675,12 +675,12 @@ class CMIPGrid:
         cmip_file_u = find_cmip6_files(model_path, expt, ensemble_member, 'uo', 'Omon')[0][0]
         self.lon_u_2d = fix_lon_range(read_netcdf(cmip_file_u, 'longitude'), max_lon=max_lon)
         self.lat_u_2d = read_netcdf(cmip_file_u, 'latitude')
-        self.mask_u = read_netcdf(cmip_file, 'uo', time_index=0).mask
+        self.mask_u = read_netcdf(cmip_file_u, 'uo', time_index=0).mask
         # And one on the v-grid
         cmip_file_v = find_cmip6_files(model_path, expt, ensemble_member, 'vo', 'Omon')[0][0]
         self.lon_v_2d = fix_lon_range(read_netcdf(cmip_file_v, 'longitude'), max_lon=max_lon)
         self.lat_v_2d = read_netcdf(cmip_file_v, 'latitude')
-        self.mask_v = read_netcdf(cmip_file, 'vo', time_index=0).mask
+        self.mask_v = read_netcdf(cmip_file_v, 'vo', time_index=0).mask
         # Save grid dimensions too
         self.nx = self.lon_2d.shape[1]
         self.ny = self.lat_2d.shape[0]
