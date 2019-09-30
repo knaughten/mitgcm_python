@@ -254,7 +254,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
         # Find time index in that file for January of year0
         time_index = (year0-start_years[file_index])*months_per_year
         # Read data
-        print 'Reading ' + file_path + ' at index ' + time_index
+        print 'Reading ' + file_path + ' at index ' + str(time_index)
         cmip_data = read_netcdf(file_path, fields_cmip[n], time_index=time_index)
         out_file = output_dir + fields_mit[n] + outfile_tail
         process_ini_field(cmip_data, cmip_grid.mask, fill, cmip_grid, model_grid, dim[n], fields[n], out_file, model_cavity=model_cavity, cavity_value=constant_value[n], regular=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
