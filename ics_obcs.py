@@ -783,10 +783,10 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
             t_end = t_start+months_per_year
             for year in range(start_years[t], end_years[t]+1):
                 if year >= mit_start_year and year <= mit_end_year:
-                    print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
+                    print 'Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)
                     # Read data
                     data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
-                    if fields_mit[n] == 'SIconc':
+                    if fields_mit[n] == 'SIarea':
                         # Convert from percent to fraction
                         data *= 1e-2
                     if fields_mit[n] in ['SIheff', 'SIhsnow', 'SIuice', 'SIvice']:
