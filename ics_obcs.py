@@ -612,8 +612,9 @@ def extract_slice (data, weights, location):
     else:
         axis = -1
     data_slice = np.ma.sum(data*weights, axis=axis)
-    # Do the same for the mask attached to the data. Any cells which end up as nonzero have interpolated into the mask.
-    data_mask_slice = np.ma.sum(data.mask*weights, axis=axis)
+    if isinstance(data, np.ma.MaskedArray):
+        # Do the same for the mask attached to the data. Any cells which end up as nonzero have interpolated into the mask.
+        data_mask_slice = np.ma.sum(data.mask*weights, axis=axis)
     # Mask out these regions.
     return np.ma.masked_where(data_mask_slice>0, data_slice)
 
