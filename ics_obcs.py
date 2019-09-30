@@ -94,7 +94,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
     write_binary(data_interp, out_file, prec=prec)
     if nc_out is not None:
         print '...adding to ' + nc_out
-        if dim[n] == 3:
+        if dim == 3:
             ncfile.add_variable(field_name, data_interp, 'xyz')
         else:
             ncfile.add_variable(field_name, data_interp, 'xy')
