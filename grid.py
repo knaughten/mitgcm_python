@@ -690,7 +690,7 @@ class CMIPGrid:
     # Return longitude and latitude on the right grid
     def get_lon_lat (self, gtype='t', dim=2):
         if dim != 2:
-            print 'Error (get_lon_lat): must have dim=2 for SOSE grid'
+            print 'Error (get_lon_lat): must have dim=2 for CMIP grid'
             sys.exit()
         if gtype == 't':
             return self.lon_2d, self.lat_2d

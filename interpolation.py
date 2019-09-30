@@ -264,17 +264,16 @@ def remove_isolated_cells (data, mask_val=0):
 
 
 # Interpolate from a regular lat-lon grid to another regular lat-lon grid.
-# All the input lat and lon arrays should be 1D.
-# You can also interpolate to a non-regular (scattered) grid by setting target_reg=False.
+# source_lon and source_lat should be 1D arrays; target_lon and target_lat can be either 1D or 2D.
 # Fill anything outside the bounds of the source grid with fill_value, but assume there are no missing values within the bounds of the source grid.
-def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, target_reg=True):
+def interp_reg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
 
     from scipy.interpolate import RegularGridInterpolator
 
     # Build an interpolant
     interpolant = RegularGridInterpolator((source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
-    if target_reg:
-        # Make target axes 2D
+    if len(target_lon.shape) == 1:
+        # Make target lat/lon arrays 2D
         target_lon, target_lat = np.meshgrid(target_lon, target_lat)
     # Interpolate
     data_interp = interpolant((target_lat, target_lon))
@@ -291,7 +290,8 @@ def interp_reg_xyz (source_lon, source_lat, source_z, source_data, target_lon, t
     interpolant = RegularGridInterpolator((-source_z, source_lat, source_lon), source_data, bounds_error=False, fill_value=fill_value)
     # Make target axes 3D
     dimensions = [target_lon.size, target_lat.size, target_z.size]
-    target_lon, target_lat = np.meshgrid(target_lon, target_lat)
+    if len(target_lon.shape) == 1:
+        target_lon, target_lat = np.meshgrid(target_lon, target_lat)
     target_lon = xy_to_xyz(target_lon, dimensions)
     target_lat = xy_to_xyz(target_lat, dimensions)
     target_z = z_to_xyz(target_z, dimensions)
@@ -308,7 +308,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     # Get the correct lat and lon on the source grid
     source_lon, source_lat = source_grid.get_lon_lat(gtype=gtype, dim=1)
     # Get the correct lat and lon on the target grid
-    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype, dim=1)
+    target_lon, target_lat = target_grid.get_lon_lat(gtype=gtype)
     
     if dim == 2:
         return interp_reg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
