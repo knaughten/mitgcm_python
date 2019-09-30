@@ -270,6 +270,10 @@ def write_binary (data, file_path, prec=32, endian='big'):
 
     print 'Writing ' + file_path
 
+    if isinstance(data, np.ma.MaskedArray):
+        # Need to remove the mask
+        data = data.data
+
     dtype = set_dtype(prec, endian)    
     # Make sure data is in the right precision
     data = data.astype(dtype)
