@@ -221,7 +221,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
 
     # Fields to interpolate
     fields_mit = ['THETA', 'SALT', 'SIarea', 'SIheff', 'SIhsnow']
-    fields_cmip = ['theato', 'so', 'siconc', 'sithick', 'sisnthick']
+    fields_cmip = ['thetao', 'so', 'siconc', 'sithick', 'sisnthick']
     # Flag for number of dimensions
     dim = [3, 3, 2, 2, 2]
     # Flag for realm
