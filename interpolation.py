@@ -548,7 +548,7 @@ def interp_nonreg (source_grid, target_grid, source_data, dim=3, gtype='t', fill
     if dim == 2:
         return interp_nonreg_xy(source_lon, source_lat, source_data, target_lon, target_lat, fill_value=fill_value)
     elif dim == 3:
-        return interp_nonreg_xyz(source_lon, source_lat, source_z, source_data, target_lon, target_lat, target_z, fill_value=fill_value)
+        return interp_nonreg_xyz(source_lon, source_lat, source_grid.z, source_data, target_lon, target_lat, target_grid.z, fill_value=fill_value)
     else:
         print 'Error (interp_nonreg): dim must be 2 or 3'
         sys.exit()

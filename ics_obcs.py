@@ -31,17 +31,13 @@ def make_sose_climatology (in_file, out_file):
     write_binary(climatology, out_file)
 
 
-# Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless keep_cavities=True.
+# Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless missing_cavities=False.
 def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 
-    from mitgcm_python.interpolation import interp_reg
+    from interpolation import interp_reg
 
     # Find open cells according to the model, interpolated to source grid
-    if missing_cavities:
-        fill_value = 1
-    else:
-        fill_value = 0
-    model_open = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=fill_value))
+    model_open = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=0))
     if missing_cavities:    
         # Find ice shelf cavity points according to model, interpolated to source grid
         model_cavity = np.ceil(interp_reg(model_grid, source_grid, xy_to_xyz(model_grid.ice_mask, model_grid), fill_value=0)).astype(bool)
@@ -73,7 +69,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
     print '...extrapolating into missing regions'
     if dim == 3:
         source_data = discard_and_fill(source_data, source_mask, fill)
-        if mising_cavities:
+        if missing_cavities:
             source_data[model_cavity] = cavity_value
     else:
         # Just the surface layer
@@ -81,9 +77,9 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
 
     print '...interpolating to model grid'
     if regular:
-        data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim[n])
+        data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim)
     else:
-        data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim[n])
+        data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim)
     # Fill the land mask with zeros
     if dim == 3:
         data_interp[model_grid.hfac==0] = 0
