@@ -80,7 +80,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
         data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim)
     else:
         data_interp = interp_nonreg(source_grid, model_grid, source_data, dim=dim, fill_value=missing_val)
-    if missing_cavities:
+    if dim==3 and missing_cavities:
         # Fill the cavities with constant values again, because there may be artifacts near the grounding line (cavity points not included in extend_into_mask call in get_fill_mask)
         data_interp[xy_to_xyz(model_grid.ice_mask, model_grid)] = cavity_value
         
