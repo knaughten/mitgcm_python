@@ -227,7 +227,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
     # Flag for realm
     realm = ['Omon', 'Omon', 'SImon', 'SImon', 'SImon']
     # Constant values for ice shelf cavities
-    constant_value = [constant_t, constant_s, 0, 0]
+    constant_value = [constant_t, constant_s, 0, 0, 0]
     # End of filenames for output
     outfile_tail = '_'+expt+'.ini'
 
