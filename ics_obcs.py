@@ -268,7 +268,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
             cmip_data *= 1e-2
         if fields_mit[n] in ['SIheff', 'SIhsnow']:
             # These variables are masked in regions of zero sea ice. Fill these regions with zeros instead.
-            index = np.where(cmip_data.mask*np.invert(cmip_grid.mask))
+            index = np.where(cmip_data.mask*np.invert(cmip_grid.mask[0,:]))
             cmip_data[index] = 0
             # Also need to weight them with sea ice concentration.
             cmip_data_aice = read_netcdf(file_path_aice, 'siconc', time_index=time_index_aice)*1e-2
