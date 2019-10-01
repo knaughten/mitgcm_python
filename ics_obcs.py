@@ -265,14 +265,14 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
         cmip_data = read_netcdf(file_path, fields_cmip[n], time_index=time_index)
         if fields_mit[n] == 'SIarea':
             # Convert from percent to fraction
-            data *= 1e-2
+            cmip_data *= 1e-2
         if fields_mit[n] in ['SIheff', 'SIhsnow']:
             # These variables are masked in regions of zero sea ice. Fill these regions with zeros instead.
             index = np.where(data.mask*np.invert(cmip_grid.mask))
-            data[index] = 0
+            cmip_data[index] = 0
             # Also need to weight them with sea ice concentration.
-            data_aice = read_netcdf(file_path_aice, 'siconc', time_index=time_index_aice)*1e-2
-            data *= data_aice
+            cmip_data_aice = read_netcdf(file_path_aice, 'siconc', time_index=time_index_aice)*1e-2
+            cmip_data *= cmip_data_aice
         out_file = output_dir + fields_mit[n] + outfile_tail
         process_ini_field(cmip_data, cmip_grid.mask, fill, cmip_grid, model_grid, dim[n], fields_mit[n], out_file, model_cavity=model_cavity, cavity_value=constant_value[n], regular=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
