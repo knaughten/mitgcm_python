@@ -1012,7 +1012,7 @@ def balance_obcs_years (grid_path, start_year, end_year, obcs_head_w_u=None, obc
     # Inner function to make lists of filenames
     def make_file_list (file_head):
         if file_head is None:
-            return None
+            return [None for year in range(start_year, end_year+1)]
         else:
             return [file_head+str(year) for year in range(start_year, end_year+1)]
     obcs_files_w_u = make_file_list(obcs_head_w_u)
