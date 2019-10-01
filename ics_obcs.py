@@ -249,7 +249,10 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
         # Figure out where all the files are, and which years they cover
         in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
         # Find which file includes the year we want
-        file_index = np.where(np.array(start_years) > year0)[0][0]-1
+        if start_years[-1] <= year0 and end_years[-1] >= year0:
+            file_index = len(start_years)-1
+        else:
+            file_index = np.where(np.array(start_years) > year0)[0][0]-1
         file_path = in_files[file_index]
         # Find time index in that file for January of year0
         time_index = (year0-start_years[file_index])*months_per_year
