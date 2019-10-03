@@ -983,12 +983,12 @@ def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None
         for t in range(num_years):
             if multi_year:
                 print 'Year ' + str(start_year+t)
-                if option == 'dampen':
-                    for tt in range(num_months):
-                        print 'Month ' + str(t+1)
-                        print_net_transport(net_transport[t,tt])
-                else:
-                    print_net_transport(net_transport[t])        
+            if option == 'dampen':
+                for tt in range(num_months):
+                    print 'Month ' + str(t+1)
+                    print_net_transport(net_transport[t,tt])
+            else:
+                print_net_transport(net_transport[t])        
 
     if option == 'dampen':
         # Calculate the acceptable maximum absolute transport
