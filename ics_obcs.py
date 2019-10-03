@@ -842,7 +842,8 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                     if nc_out is not None and year==mit_start_year:
                         # Save the first year in NetCDF file
                         if location in ['N', 'S']:
-                            dimension = 'x'                        else:
+                            dimension = 'x'
+                        else:
                             dimension = 'y'
                         if dim[n] == 3:
                             dimension += 'z'
