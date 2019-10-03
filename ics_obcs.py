@@ -985,7 +985,7 @@ def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None
                 print 'Year ' + str(start_year+t)
             if option == 'dampen':
                 for tt in range(num_months):
-                    print 'Month ' + str(t+1)
+                    print 'Month ' + str(tt+1)
                     print_net_transport(net_transport[t,tt])
             else:
                 print_net_transport(net_transport[t])        
@@ -1009,7 +1009,7 @@ def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None
             # Calculate corresponding velocity correction at each month
             for tt in range(num_months):
                 correction[t,tt] = (scale_factor-1)*net_transport[t,tt]/total_area
-                print 'Month ' + str(t+1) + ': will apply correction of ' + str(correction[t,tt]) + ' m/s to normal velocity at each boundary'
+                print 'Month ' + str(tt+1) + ': will apply correction of ' + str(correction[t,tt]) + ' m/s to normal velocity at each boundary'
     else:
         # Calculate correction in m/s
         correction = -1*net_transport/total_area
