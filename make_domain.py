@@ -324,6 +324,15 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
         print 'Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'
         sys.exit()
 
+    print 'Removing isolated ocean cells'
+    omask = remove_isolated_cells(omask)
+    bathy[omask==0] = 0
+    draft[omask==0] = 0
+    imask[omask==0] = 0
+    print 'Removing isolated ice shelf cells'
+    imask = remove_isolated_cells(imask)
+    draft[imask==0] = 0
+
     if grounded_iceberg:
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
