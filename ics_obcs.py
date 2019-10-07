@@ -875,7 +875,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
 # multi_year: process many files, one per boundary per year
 # start_year, end_year: range of years to process, if multi_year=True. The filenames will be appended by these years.
 # prec: precision of the OBCS files (as in function sose_obcs
-def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, multi_year=False, start_year=None, end_year=None, prec=32):
+def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, multi_year=False, start_year=None, end_year=None, prec=32):
 
     if option == 'correct' and (d_eta is None or d_t is None):
         print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
@@ -884,6 +884,7 @@ def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None
         print 'Error (balance_obcs): must set start_year and end_year when multi_year=True'
         sys.exit()        
 
+    in_dir = real_dir(in_dir)
     grid = choose_grid(grid, None)
 
     # Set up the filenames as lists
@@ -891,7 +892,7 @@ def balance_obcs (grid, option='balance', obcs_file_w_u=None, obcs_file_e_u=None
         if file_head is None:
             return [None for year in range(start_year, end_year+1)]
         else:
-            return [file_head+str(year) for year in range(start_year, end_year+1)]
+            return [in_dir+file_head+str(year) for year in range(start_year, end_year+1)]
     if multi_year:
         obcs_files_w_u = make_file_list(obcs_file_w_u)
         obcs_files_e_u = make_file_list(obcs_file_e_u)
