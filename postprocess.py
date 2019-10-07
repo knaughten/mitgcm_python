@@ -48,7 +48,7 @@ def build_file_list (output_dir, unravelled=False):
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='.', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSS'):
+def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSS'):
 
     if time_average:
         time_index = None
@@ -425,7 +425,7 @@ def segment_file_paths (output_dir, segment_dir, file_name):
 def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None):
 
     if timeseries_types is None:
-        timeseries_types = ['fris_mass_balance', 'avg_melt', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
     output_dir = real_dir(output_dir)
 
