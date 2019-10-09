@@ -118,7 +118,9 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'vel', 'velice', 'psi', 'bwage', 'iceprod']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'vel', 'velice', 'psi', 'iceprod']
+    if key in ['WSK', 'WSS']:
+        var_names += 'bwage'
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
