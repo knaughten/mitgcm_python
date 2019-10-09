@@ -36,6 +36,39 @@ def build_file_list (output_dir, unravelled=False):
     return output_files
 
 
+# Helper function to get all the output directories from a coupled model, one per segment, in order.
+def get_segment_dir (output_dir):
+
+    segment_dir = []
+    for name in os.listdir(output_dir):
+        # Look for directories composed of numbers (date codes)
+        if os.path.isdir(output_dir+name) and str_is_int(name):
+            segment_dir.append(name)
+    # Make sure in chronological order
+    segment_dir.sort()
+    return segment_dir
+
+
+# Either call get_segment_dir (if segment_dir is None), or make sure segment_dir is an array (and not a string, i.e. just one entry).
+def check_segment_dir (output_dir, segment_dir):
+
+    if segment_dir is None:
+        segment_dir = get_segment_dir(output_dir)
+    else:
+        if isinstance(segment_dir, str):
+            segment_dir = [segment_dir]
+    return segment_dir
+
+
+# Get the path to the MITgcm output file for each segment.
+def segment_file_paths (output_dir, segment_dir, file_name):
+
+    file_paths = []
+    for sdir in segment_dir:
+        file_paths.append(output_dir + sdir + '/MITgcm/' + file_name)
+    return file_paths
+
+
 # Make a bunch of plots when the simulation is done.
 # This will keep evolving over time!
 
@@ -48,7 +81,7 @@ def build_file_list (output_dir, unravelled=False):
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSS'):
+def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=False, unravelled=False, key='WSFRIS'):
 
     if time_average:
         time_index = None
@@ -58,7 +91,13 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     fig_dir = real_dir(fig_dir)
     
     # Build the list of output files in this directory (use them all for timeseries)
-    output_files = build_file_list(output_dir, unravelled=unravelled)
+    if key == 'WSFRIS':
+        # Coupled
+        segment_dir = get_segment_dir(output_dir)
+        output_files = segment_file_paths(output_dir, segment_dir, 'output.nc')
+    else:
+        # Uncoupled
+        output_files = build_file_list(output_dir, unravelled=unravelled)
     if file_path is None:
         # Select the last file for single-timestep analysis
         file_path = output_files[-1]        
@@ -71,6 +110,8 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         var_names = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
     elif key == 'WSK':
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    elif key == 'WSFRIS':
+        var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
@@ -87,7 +128,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             if key == 'WSS':
                 vmin = -2.5
                 vmax = -1.5
-            elif key == 'WSK':
+            elif key in ['WSK', 'WSFRIS']:
                 vmax = 1
         if var == 'bwsalt':
             vmin = 34.3
@@ -110,14 +151,14 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             vmax = 0.5
         if var in ['vel', 'velice'] and key=='WSS':
             chunk = 6
-        if not zoom_fris and key=='WSK':
+        if not zoom_fris and key in ['WSK', 'WSFRIS']:
             figsize = (10,6)
         else:
             figsize = (8,6)
         # Plot
         read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize, chunk=chunk)
         # Make additional plots if needed
-        if key=='WSK' and var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
+        if key in ['WSK', 'WSFRIS'] and var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
             # Make another plot zoomed into FRIS
             figsize = (8,6)
             # First adjust bounds
@@ -130,7 +171,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=True, fig_name=fig_dir+var+'_zoom.png', date_string=date_string, figsize=figsize)
         if var == 'vel':
             # Call the other options for vertical transformations
-            if key=='WSK':
+            if key in ['WSK', 'WSFRIS']:
                 figsize = (10,6)
             for vel_option in ['sfc', 'bottom']:
                 read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize, chunk=chunk)
@@ -141,7 +182,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     # Slice plots
     read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
     read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
-    if key == 'WSK':
+    if key in ['WSK', 'WSFRIS']:
         read_plot_ts_slice(file_path, grid=grid, lon0=0, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string)
 
 
@@ -380,39 +421,6 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
         id.close()
     else:
         ncfile.close()
-
-        
-# Helper function to get all the output directories from a coupled model, one per segment, in order.
-def get_segment_dir (output_dir):
-
-    segment_dir = []
-    for name in os.listdir(output_dir):
-        # Look for directories composed of numbers (date codes)
-        if os.path.isdir(output_dir+name) and str_is_int(name):
-            segment_dir.append(name)
-    # Make sure in chronological order
-    segment_dir.sort()
-    return segment_dir
-
-
-# Either call get_segment_dir (if segment_dir is None), or make sure segment_dir is an array (and not a string, i.e. just one entry).
-def check_segment_dir (output_dir, segment_dir):
-
-    if segment_dir is None:
-        segment_dir = get_segment_dir(output_dir)
-    else:
-        if isinstance(segment_dir, str):
-            segment_dir = [segment_dir]
-    return segment_dir
-
-
-# Get the path to the MITgcm output file for each segment.
-def segment_file_paths (output_dir, segment_dir, file_name):
-
-    file_paths = []
-    for sdir in segment_dir:
-        file_paths.append(output_dir + sdir + '/MITgcm/' + file_name)
-    return file_paths
 
 
 # Precompute ocean timeseries from a coupled UaMITgcm simulation.
