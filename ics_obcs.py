@@ -39,38 +39,32 @@ def make_sose_climatology (in_file, out_file):
 
 
 # Do the same for SOSE versions stored in NetCDF files (like B-SOSE). You must also supply the variable name in the file, and the path to the complete NetCDF grid file.
-def make_sose_climatology_netcdf (in_file, var_name, grid_path, out_file, units=None):
+def make_sose_climatology_netcdf (in_file, var_name, out_file, units=None):
     
-    from file_io import read_netcdf, NCfile
+    from file_io import read_netcdf
+    import netCDF4 as nc
     
     data = read_netcdf(in_file, var_name)
     climatology = calc_climatology(data)
 
-    # Figure out dimensions
-    if len(data.shape) == 3:
-        dimensions = 'xyt'
-    elif len(data.shape) == 4:
-        dimensions = 'xyzt'
+    # Set up the file
+    id = nc.Dataset(out_file, 'w')
+    id.createDimension('time', None)
+    if len(data.shape) == 4:
+        # Need a depth dimension
+        id.createDimension('Z', data.shape[1])
+    id.createDimension('Y', data.shape[-2])
+    id.createDimension('X', data.shape[-3])
+    id.createVariable('time', 'f8', ['time'])
+    id.variables['time'][:] = np.arange(12)+1
+    if len(data.shape) == 4:
+        id.createVariable(var_name, 'f8', ['time', 'Z', 'Y', 'X'])
     else:
-        print 'Error (make_sose_climatology_netcdf): invalid dimensions for this variable'
-        sys.exit()
-    # Figure out grid type
-    if var_name in ['UVEL', 'SIuice']:
-        gtype = 'u'
-    elif var_name in ['VVEL', 'SIvice']:
-        gtype = 'v'
-    elif var_name in ['THETA', 'SALT', 'SIarea', 'SIheff', 'SIhsnow']:
-        gtype = 't'
-    else:
-        print 'Warning (make_sose_climatology_netcdf): unknown variable. Assuming it is on the tracer grid.'
-        gtype = 't'
-    
-    # Need to build the B-SOSE grid to write the output file
-    grid = Grid(grid_path)
-    ncfile = NCfile(out_file, grid, dimensions)
-    ncfile.add_time(np.arange(12)+1, units='months')
-    ncfile.add_variable(var_name, data, dimensions, gtype=gtype, units=units)
-    ncfile.close()
+        id.createVariable(var_name, 'f8', ['time', 'Y', 'X'])
+    if units is not None:
+        id.variables[var_name].units = units
+    id.variables[var_name][:] = data
+    id.close()
 
 
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless missing_cavities=False.
