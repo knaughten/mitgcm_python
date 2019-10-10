@@ -14,21 +14,63 @@ import os
 import sys
 
 
+# Helper function for make_sose_climatology and make_bsose_climatology.
+# Given an array of monthly data for multiple years, calculate the monthly climatology.
+def calc_climatology (data):
+    climatology = np.zeros(tuple([12]) + data.shape[1:])
+    for month in range(12):
+        climatology[month,:] = np.mean(data[month::12,:], axis=0)
+    return climatology  
+    
+
 # Calculate a monthly climatology of the given variable in SOSE, from its monthly output over the entire 6-year reanalysis.
 
 # Arguments:
 # in_file: binary SOSE file (.data) containing one record for each month of the SOSE period. You can also leave ".data" off as it will get stripped off anyway.
 # out_file: desired path to output file
 def make_sose_climatology (in_file, out_file):
-
+    
     from MITgcmutils import rdmds
-
+    
     # Strip .data from filename before reading
     data = rdmds(in_file.replace('.data', ''))
-    climatology = np.zeros(tuple([12]) + data.shape[1:])
-    for month in range(12):
-        climatology[month,:] = np.mean(data[month::12,:], axis=0)
+    climatology = calc_climatology(data)    
     write_binary(climatology, out_file)
+
+
+# Do the same for SOSE versions stored in NetCDF files (like B-SOSE). You must also supply the variable name in the file, and the path to the complete NetCDF grid file.
+def make_sose_climatology_netcdf (in_file, var_name, grid_path, out_file, units=None):
+    
+    from file_io import read_netcdf, NCfile
+    
+    data = read_netcdf(in_file, var_name)
+    climatology = calc_climatology(data)
+
+    # Figure out dimensions
+    if len(data.shape) == 3:
+        dimensions = 'xyt'
+    elif len(data.shape) == 4:
+        dimensions = 'xyzt'
+    else:
+        print 'Error (make_sose_climatology_netcdf): invalid dimensions for this variable'
+        sys.exit()
+    # Figure out grid type
+    if var_name in ['UVEL', 'SIuice']:
+        gtype = 'u'
+    elif var_name in ['VVEL', 'SIvice']:
+        gtype = 'v'
+    elif var_name in ['THETA', 'SALT', 'SIarea', 'SIheff', 'SIhsnow']:
+        gtype = 't'
+    else:
+        print 'Warning (make_sose_climatology_netcdf): unknown variable. Assuming it is on the tracer grid.'
+        gtype = 't'
+    
+    # Need to build the B-SOSE grid to write the output file
+    grid = Grid(grid_path)
+    ncfile = NCfile(out_file, grid, dimensions)
+    ncfile.add_time(np.arange(12)+1, units='months')
+    ncfile.add_variable(var_name, data, dimensions, gtype=gtype, units=units)
+    ncfile.close()
 
 
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless missing_cavities=False.

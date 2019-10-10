@@ -72,8 +72,12 @@ class Grid:
             # I have no idea why this requires .data but it does, otherwise WSS breaks (?!?!)
             self.dA = read_netcdf(path, 'rA').data
             self.z = read_netcdf(path, 'Z')
-            self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')
+            try:
+                self.z_edges = read_netcdf(path, 'Zp1')
+            except(KeyError):
+                # Some grids don't save this variable, so construct it from dz
+                self.z_edges = np.concatenate((np.array([0]), np.cumsum(-self.dz)))
             self.dz_t = read_netcdf(path, 'drC')
             self.hfac = read_netcdf(path, 'hFacC')
             self.hfac_w = read_netcdf(path, 'hFacW')
