@@ -933,7 +933,7 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
             if multi_year:
                 return [in_dir+file_head+str(year) for year in range(start_year, end_year+1)]
             else:
-                return [None]
+                return [in_dir+file_head]
             
     obcs_files_w_u = make_file_list(obcs_file_w_u)
     obcs_files_e_u = make_file_list(obcs_file_e_u)
