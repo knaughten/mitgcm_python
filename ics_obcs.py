@@ -124,12 +124,13 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
 # output_dir: directory to save the binary MITgcm initial conditions files (binary)
 
 # Optional keyword arguments:
+# bsose: set to True if it's the BSOSE version, including SIhsnow and saved in NetCDF files.
 # nc_out: path to a NetCDF file to save the initial conditions in, so you can easily check that they look okay
 # constant_t, constant_s: temperature and salinity to fill ice shelf cavities with (default -1.9 C and 34.4 psu)
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
 
-def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
+def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
 
     from grid import SOSEGrid
     from file_io import NCfile
@@ -143,8 +144,16 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     dim = [3, 3, 2, 2]
     # Constant values for ice shelf cavities
     constant_value = [constant_t, constant_s, 0, 0]
+    if bsose:
+        # Add snow depth
+        fields += ['SIhsnow']
+        dim += [2]
+        constant_value += [0]
     # End of filenames for input
-    infile_tail = '_climatology.data'
+    if bsose:
+        infile_tail = '_climatology.nc'
+    else:
+        infile_tail = '_climatology.data'
     # End of filenames for output
     outfile_tail = '_SOSE.ini'
     
@@ -152,7 +161,11 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
     # First build the model grid and check that we have the right value for split
     model_grid = grid_check_split(grid_path, split)
     # Now build the SOSE grid
-    sose_grid = SOSEGrid(sose_dir+'grid/', model_grid=model_grid, split=split)
+    if bsose:
+        sose_grid_path = sose_dir+'grid.nc'
+    else:
+        sose_grid_path = sose_dir+'grid/'
+    sose_grid = SOSEGrid(sose_grid_path, model_grid=model_grid, split=split)
     # Extract land mask
     sose_mask = sose_grid.hfac == 0
     
@@ -171,10 +184,10 @@ def sose_ics (grid_path, sose_dir, output_dir, nc_out=None, constant_t=-1.9, con
         print '...reading ' + in_file
         # Just keep the January climatology
         if dim[n] == 3:
-            sose_data = sose_grid.read_field(in_file, 'xyzt')[0,:]
+            sose_data = sose_grid.read_field(in_file, 'xyzt', var_name=fields[n])[0,:]
         else:
             # Fill any missing regions with zero sea ice, as we won't be extrapolating them later
-            sose_data = sose_grid.read_field(in_file, 'xyt', fill_value=0)[0,:]
+            sose_data = sose_grid.read_field(in_file, 'xyt', var_name=fields[n], fill_value=0)[0,:]
         process_ini_field(sose_data, sose_mask, fill, sose_grid, model_grid, dim[n], fields[n], out_file, model_cavity=model_cavity, cavity_value=constant_value[n], nc_out=nc_out, ncfile=ncfile, prec=prec)
 
     if nc_out is not None:
