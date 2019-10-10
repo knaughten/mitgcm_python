@@ -925,20 +925,23 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
     # Set up the filenames as lists
     def make_file_list (file_head):
         if file_head is None:
-            return [None for year in range(start_year, end_year+1)]
+            if multi_year:
+                return [None for year in range(start_year, end_year+1)]
+            else:
+                return [None]
         else:
-            return [in_dir+file_head+str(year) for year in range(start_year, end_year+1)]
+            if multi_year:
+                return [in_dir+file_head+str(year) for year in range(start_year, end_year+1)]
+            else:
+                return [None]
+            
+    obcs_files_w_u = make_file_list(obcs_file_w_u)
+    obcs_files_e_u = make_file_list(obcs_file_e_u)
+    obcs_files_s_v = make_file_list(obcs_file_s_v)
+    obcs_files_n_v = make_file_list(obcs_file_n_v)
     if multi_year:
-        obcs_files_w_u = make_file_list(obcs_file_w_u)
-        obcs_files_e_u = make_file_list(obcs_file_e_u)
-        obcs_files_s_v = make_file_list(obcs_file_s_v)
-        obcs_files_n_v = make_file_list(obcs_file_n_v)
         num_years = end_year-start_year+1
     else:
-        obcs_files_w_u = [obcs_file_w_u]
-        obcs_files_e_u = [obcs_file_e_u]
-        obcs_files_s_v = [obcs_file_s_v]
-        obcs_files_n_v = [obcs_file_n_v]
         num_years = 1
 
     # Calculate integrands of area, scaled by hFacC
