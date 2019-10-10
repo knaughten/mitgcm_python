@@ -155,7 +155,7 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
     else:
         infile_tail = '_climatology.data'
     # End of filenames for output
-    outfile_tail = '_SOSE.ini'
+    outfile_tail = '_BSOSE.ini'
     
     print 'Building grids'
     # First build the model grid and check that we have the right value for split
@@ -458,16 +458,16 @@ def find_obcs_boundary (grid, location):
     return loc0, loc0_e
 
 
-# Create open boundary conditions for temperature, salinity, horizontal velocities, and (if you want sea ice) sea ice area, thickness, and velocities. Use either the SOSE monthly climatology (source='SOSE') or output from another MITgcm model, stored in a NetCDF file (source='MIT').
+# Create open boundary conditions for temperature, salinity, horizontal velocities, and (if you want sea ice) sea ice area, thickness, and velocities. Use either the SOSE monthly climatology (source='BSOSE' or 'SOSE' depending on version) or output from another MITgcm model, stored in a NetCDF file (source='MIT').
 
 # Arguments:
 # location: 'N', 'S', 'E', or 'W' corresponding to the open boundary to process (north, south, east, west). So, run this function once for each open boundary in your domain.
 # grid_path: path to directory containing MITgcm binary grid files. The latitude or longitude of the open boundary will be determined from this file.
-# input_path: either a directory containing SOSE data (if source='SOSE'; as in function sose_ics) or a NetCDF file (with xmitgcm conventions) containing a monthly climatology from another MITgcm model (if source='MIT').
+# input_path: either a directory containing SOSE data (if source='SOSE' or 'BSOSE'; as in function sose_ics) or a NetCDF file (with xmitgcm conventions) containing a monthly climatology from another MITgcm model (if source='MIT').
 # output_dir: directory to save binary MITgcm OBCS files
 
 # Optional keyword arguments:
-# source: 'SOSE' or 'MIT' as described above.
+# source: 'BSOSE', 'SOSE' or 'MIT' as described above.
 # use_seaice: True if you want sea ice OBCS (default), False if you don't
 # nc_out: path to a NetCDF file to save the interpolated boundary conditions to, so you can easily check that they look okay
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
@@ -478,7 +478,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     from file_io import NCfile, read_netcdf
     from interpolation import interp_bdry
 
-    if source == 'SOSE':
+    if source in ['SOSE', 'BSOSE']:
         input_path = real_dir(input_path)
     output_dir = real_dir(output_dir)
 
@@ -489,18 +489,21 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
     # Flag for grid type
     gtype = ['t', 't', 'u', 'v', 't', 't', 'u', 'v', 't']
-    if source == 'MIT':
+    if source in ['BSOSE', 'MIT']:
         # Also consider snow thickness
         fields += ['SIhsnow']
         dim += [2]
         gtype += ['t']
     # End of filenames for input
-    infile_tail = '_climatology.data'
+    if source in ['SOSE', 'MIT']:
+        infile_tail = '_climatology.data'
+    elif source == 'BSOSE':
+        infile_tail = '_climatology.nc'
     # End of filenames for output
     outfile_tail = '_'+source+'.OBCS_'+location
 
     print 'Building MITgcm grid'
-    if source == 'SOSE':
+    if source in ['SOSE', 'BSOSE']:
         model_grid = grid_check_split(grid_path, split)
     elif source == 'MIT':
         model_grid = Grid(grid_path)
@@ -512,6 +515,9 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     if source == 'SOSE':
         print 'Building SOSE grid'
         source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid, split=split)
+    elif source == 'BSOSE':
+        print 'Building B-SOSE grid'
+        source_grid = SOSEGrid(input_path+'grid.nc', model_grid=model_grid, split=split)
     elif source == 'MIT':
         print 'Building grid from source model'
         source_grid = Grid(input_path)
@@ -540,15 +546,15 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             continue
 
         print 'Processing ' + fields[n]
-        if source == 'SOSE':
+        if source in ['SOSE', 'BSOSE']:
             in_file = input_path + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
         # Read the monthly climatology at all points
         if source == 'SOSE':
             if dim[n] == 3:
-                source_data = source_grid.read_field(in_file, 'xyzt')
+                source_data = source_grid.read_field(in_file, 'xyzt', var_name=fields[n])
             else:
-                source_data = source_grid.read_field(in_file, 'xyt')
+                source_data = source_grid.read_field(in_file, 'xyt', var_name=fields[n])
         else:
             source_data = read_netcdf(input_path, fields[n])
 
