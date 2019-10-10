@@ -582,26 +582,23 @@ class SOSEGrid(Grid):
                 print 'Error (SOSEGrid): deep bound not cleared'
                 sys.exit()
 
-            # Now read the rest of the variables we need, splitting/trimming/extending them as needed
-            self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
-            self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
-            self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
-
         else:
 
-            # Nothing fancy to do, so read the rest of the fields
-            if use_netcdf:
-                self.hfac = read_netcdf(path, 'hFacC')
-                self.hfac_w = read_netcdf(path, 'hFacW')
-                self.hfac_s = read_netcdf(path, 'hFacS')
-            else:
-                self.hfac = rdmds(path+'hFacC')
-                self.hfac_w = rdmds(path+'hFacW')
-                self.hfac_s = rdmds(path+'hFacS')
+            # Nothing fancy to do
             self.nx = sose_nx
             self.ny = sose_ny
             self.nz = sose_nz
 
+        # Now read the rest of the variables we need, splitting/trimming/extending them if needed
+        if use_netcdf:
+            self.hfac = self.read_field(path, 'xyz', var_name='hFacC', fill_value=0)
+            self.hfac_w = self.read_field(path, 'xyz', var_name='hFacW', fill_value=0)
+            self.hfac_s = self.read_field(path, 'xyz', var_name = 'hFacS', fill_value=0)
+        else:
+            self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
+            self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
+            self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
+            
         # Create land masks
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
@@ -609,18 +606,23 @@ class SOSEGrid(Grid):
     
 
 
-    # Read a field from a binary MDS file and split, trim, extend as needed.
-    # The filename can include the suffix .data or not, it doesn't matter.
+    # Read a field from an MDS or NetCDF file and split, trim, extend as needed.
     # The field can be time dependent: dimensions must be one of 'xy', 'xyt', 'xyz', or 'xyzt'.
     # Extended regions will just be filled with fill_value for now. See function discard_and_fill in interpolation.py for how to extrapolate data into these regions.
-    def read_field (self, file_path, dimensions, fill_value=-9999):
+    def read_field (self, path, dimensions, var_name=None, fill_value=-9999):
 
-        from MITgcmutils import rdmds
+        if path.endswith('.nc'):
+            if var_name is None:
+                print 'Error (SOSEGrid.read_field): Must specify var_name for NetCDF files'
+                sys.exit()
+            data_orig = read_netcdf(path, var_name)
+        elif path.endswith('.data') or os.path.isfile(path+'.data'):
+            from MITgcmutils import rdmds
+            data_orig = rdmds(path.replace('.data', ''))
         
         if self.trim_extend:
-
-            # Read the field and split along longitude
-            data_orig = split_longitude(rdmds(file_path.replace('.data', '')), self.i_split)
+            # Split along longitude
+            data_orig = split_longitude(data_orig, self.i_split)
             # Create a new array of the correct dimension (including extended regions)
             data_shape = [self.ny, self.nx]
             if 'z' in dimensions:
@@ -635,10 +637,6 @@ class SOSEGrid(Grid):
                 data[..., self.k0_after:self.k1_after, self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.k0_before:self.k1_before, self.j0_before:self.j1_before, self.i0_before:self.i1_before]
             else:
                 data[..., self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.j0_before:self.j1_before, self.i0_before:self.i1_before]
-
-        else:
-            # Nothing fancy to do
-            data = rdmds(file_path.replace('.data', ''))
 
         return data
             
