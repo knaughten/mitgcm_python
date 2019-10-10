@@ -373,9 +373,17 @@ def grid_check_split (grid_path, split):
 # If you don't want to do any trimming or extending, just set model_grid=None.
 class SOSEGrid(Grid):
 
-    def __init__ (self, grid_dir, model_grid=None, split=0):
+    def __init__ (self, path, model_grid=None, split=0):
 
-        from MITgcmutils import rdmds
+        if path.endswith('.nc'):
+            use_netcdf=True
+        elif os.path.isdir(path):
+            use_netcdf=False
+            path = real_dir(path)
+            from MITgcmutils import rdmds
+        else:
+            print 'Error (SOSEGrid): ' + path + ' is neither a NetCDF file nor a directory'
+            sys.exit()
 
         self.trim_extend = True
         if model_grid is None:
@@ -395,38 +403,43 @@ class SOSEGrid(Grid):
                 print 'Error (SOSEGrid): split must be 180 or 0'
                 sys.exit()
         else:
-            max_lon = 360        
+            max_lon = 360
 
-        grid_dir = real_dir(grid_dir)        
+        # Read variables
+        if use_netcdf:
+            # Make the 2D grid 1D so it's regular
+            self.lon_1d = read_netcdf(path, 'XC')[0,:]
+            self.lon_corners_1d = read_netcdf(path, 'XG')[0,:]
+            self.lat_1d = read_netcdf(path, 'YC')[:,0]
+            self.lat_corners_1d = read_netcdf(path, 'YG')[:,0]
+            self.z = read_netcdf(path, 'Z')
+        else:
+            self.lon_1d = rdmds(path+'XC')[0,:]
+            self.lon_corners_1d = rdmds(path+'XG')[0,:]
+            self.lat_1d = rdmds(path+'YC')[:,0]
+            self.lat_corners_1d = rdmds(path+'YG')[:,0]
+            self.z = rdmds(path+'RC').squeeze()
 
-        # Read longitude at cell centres (make the 2D grid 1D as it's regular)
-        self.lon_1d = fix_lon_range(rdmds(grid_dir+'XC'), max_lon=max_lon)[0,:]
+        # Fix longitude range
+        self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
+        self.lon_corners_1d = fix_lon_range(self.lon_corners_1d, max_lon=max_lon)
         if split == 180:
             # Split the domain at 180E=180W and rearrange the two halves so longitude is strictly ascending
             self.i_split = np.nonzero(self.lon_1d < 0)[0][0]
-            self.lon_1d = split_longitude(self.lon_1d, self.i_split)
         else:
             # Set i_split to 0 which won't actually do anything
             self.i_split = 0
-            
-        # Read longitude at cell corners, splitting as before
-        self.lon_corners_1d = split_longitude(fix_lon_range(rdmds(grid_dir+'XG'), max_lon=max_lon), self.i_split)[0,:]
+        self.lon_1d = split_longitude(self.lon_1d, self.i_split)
+        self.lon_corners_1d = split_longitude(self.lon_corners_1d, self.i_split)
         if self.lon_corners_1d[0] > 0:
             # The split happened between lon_corners[i_split] and lon[i_split].
             # Take mod 360 on this index of lon_corners to make sure it's strictly increasing.
             self.lon_corners_1d[0] -= 360
-
         # Make sure the longitude axes are strictly increasing after the splitting
         if not np.all(np.diff(self.lon_1d)>0) or not np.all(np.diff(self.lon_corners_1d)>0):
             print 'Error (SOSEGrid): longitude is not strictly increasing'
             sys.exit()
             
-        # Read latitude at cell centres and corners
-        self.lat_1d = rdmds(grid_dir+'YC')[:,0]
-        self.lat_corners_1d = rdmds(grid_dir+'YG')[:,0]
-        # Read depth
-        self.z = rdmds(grid_dir+'RC').squeeze()
-
         # Save original dimensions
         sose_nx = self.lon_1d.size
         sose_ny = self.lat_1d.size
@@ -570,16 +583,21 @@ class SOSEGrid(Grid):
                 sys.exit()
 
             # Now read the rest of the variables we need, splitting/trimming/extending them as needed
-            self.hfac = self.read_field(grid_dir+'hFacC', 'xyz', fill_value=0)
-            self.hfac_w = self.read_field(grid_dir+'hFacW', 'xyz', fill_value=0)
-            self.hfac_s = self.read_field(grid_dir+'hFacS', 'xyz', fill_value=0)
+            self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
+            self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
+            self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
 
         else:
 
             # Nothing fancy to do, so read the rest of the fields
-            self.hfac = rdmds(grid_dir+'hFacC')
-            self.hfac_w = rdmds(grid_dir+'hFacW')
-            self.hfac_s = rdmds(grid_dir+'hFacS')
+            if use_netcdf:
+                self.hfac = read_netcdf(path, 'hFacC')
+                self.hfac_w = read_netcdf(path, 'hFacW')
+                self.hfac_s = read_netcdf(path, 'hFacS')
+            else:
+                self.hfac = rdmds(path+'hFacC')
+                self.hfac_w = rdmds(path+'hFacW')
+                self.hfac_s = rdmds(path+'hFacS')
             self.nx = sose_nx
             self.ny = sose_ny
             self.nz = sose_nz

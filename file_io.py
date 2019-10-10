@@ -7,7 +7,7 @@ import sys
 import os
 import datetime
 
-from utils import days_per_month, real_dir
+from utils import days_per_month, real_dir, is_depth_dependent
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
@@ -449,6 +449,29 @@ class NCfile_basiclatlon:
     def close (self):
 
         self.id.close()
+
+
+# Save a super-basic NetCDF file with one variable and no information about the axes. Must be xy with possible time and depth dimensions.
+def write_netcdf_basic (data, var_name, filename, time_dependent=True, units=None):
+    import netCDF4 as nc
+    id = nc.Dataset(filename, 'w')
+    depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
+    if time_dependent:
+        id.createDimension('time', None)
+    if depth_dependent:
+        id.createDimension('Z', data.shape[-3])
+    id.createDimension('Y', data.shape[-2])
+    id.createDimension('X', data.shape[-1])
+    id.createVariable('time', 'f8', ['time'])
+    id.variables['time'][:] = np.arange(data.shape[0])+1
+    if depth_dependent:
+        id.createVariable(var_name, 'f8', ['time', 'Z', 'Y', 'X'])
+    else:
+        id.createVariable(var_name, 'f8', ['time', 'Y', 'X'])
+    if units is not None:
+        id.variables[var_name].units = units
+    id.variables[var_name][:] = data
+    id.close()
 
 
 # Given a list of output files (chronological, could concatenate to make the entire simulation) and a time index we want relative to the beginning of the simulation (0-indexed), find the individual file that time index falls within, and what that time index is relative to the beginning of that file.

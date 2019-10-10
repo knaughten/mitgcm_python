@@ -4,7 +4,7 @@
 
 from grid import Grid, grid_check_split, choose_grid
 from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
-from file_io import write_binary, read_binary, find_cmip6_files
+from file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic
 from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
 from constants import sec_per_year, gravity, sec_per_day, months_per_year
 from diagnostics import density
@@ -31,7 +31,6 @@ def calc_climatology (data):
 def make_sose_climatology (in_file, out_file):
     
     from MITgcmutils import rdmds
-    
     # Strip .data from filename before reading
     data = rdmds(in_file.replace('.data', ''))
     climatology = calc_climatology(data)    
@@ -43,28 +42,9 @@ def make_sose_climatology_netcdf (in_file, var_name, out_file, units=None):
     
     from file_io import read_netcdf
     import netCDF4 as nc
-    
     data = read_netcdf(in_file, var_name)
     climatology = calc_climatology(data)
-
-    # Set up the file
-    id = nc.Dataset(out_file, 'w')
-    id.createDimension('time', None)
-    if len(data.shape) == 4:
-        # Need a depth dimension
-        id.createDimension('Z', data.shape[1])
-    id.createDimension('Y', data.shape[-2])
-    id.createDimension('X', data.shape[-1])
-    id.createVariable('time', 'f8', ['time'])
-    id.variables['time'][:] = np.arange(12)+1
-    if len(data.shape) == 4:
-        id.createVariable(var_name, 'f8', ['time', 'Z', 'Y', 'X'])
-    else:
-        id.createVariable(var_name, 'f8', ['time', 'Y', 'X'])
-    if units is not None:
-        id.variables[var_name].units = units
-    id.variables[var_name][:] = data
-    id.close()
+    write_netcdf_basic(climatology, var_name, out_file, units=units)
 
 
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless missing_cavities=False.
