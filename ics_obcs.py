@@ -54,7 +54,7 @@ def make_sose_climatology_netcdf (in_file, var_name, out_file, units=None):
         # Need a depth dimension
         id.createDimension('Z', data.shape[1])
     id.createDimension('Y', data.shape[-2])
-    id.createDimension('X', data.shape[-3])
+    id.createDimension('X', data.shape[-1])
     id.createVariable('time', 'f8', ['time'])
     id.variables['time'][:] = np.arange(12)+1
     if len(data.shape) == 4:
