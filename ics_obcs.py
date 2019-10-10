@@ -550,7 +550,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
             in_file = input_path + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
         # Read the monthly climatology at all points
-        if source == 'SOSE':
+        if source in ['SOSE', 'BSOSE']:
             if dim[n] == 3:
                 source_data = source_grid.read_field(in_file, 'xyzt', var_name=fields[n])
             else:
