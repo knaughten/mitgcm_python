@@ -1122,9 +1122,9 @@ def ics_merge (grid_path, temp_file_deep, salt_file_deep, temp_file_shelf, salt_
     temp_shelf = read_binary(temp_file_shelf, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
     salt_shelf = read_binary(salt_file_shelf, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
     # Get 3D index of deep ocean
-    z_3d = z_to_xyz(grid.z, grid)
+    bathy_3d = xy_to_xyz(grid.bathy, grid)
     ice_mask_3d = xy_to_xyz(grid.ice_mask, grid)
-    index_deep = (z_3d <= h0)*np.invert(grid.ice_mask)
+    index_deep = (bathy_3d <= h0)*np.invert(ice_mask_3d)
     # Merge the two arrays
     temp = temp_shelf
     temp[index_deep] = temp_deep[index_deep]
