@@ -598,6 +598,28 @@ def is_depth_dependent (data, time_dependent=False):
     return (time_dependent and len(data.shape)==4) or (not time_dependent and len(data.shape)==3)
 
 
+# Mask everything outside the given bounds. The array must include latitude and longitude dimensions; depth and time are optional.
+def mask_outside_box (data, grid, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, time_dependent=False):
+    depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
+    lon, lat = self.get_lon_lat(gtype=gtype)
+    if depth_dependent:
+        lon = xy_to_xyz(lon, grid)
+        lat = xy_to_xyz(lon, grid)
+    if time_dependent:
+        lon = add_time_dim(lon, data.shape[0])
+        lat = add_time_dim(lat, data.shape[0])
+    if xmin is None:
+        xmin = np.amin(lon)
+    if xmax is None:
+        xmax = np.amax(lon)
+    if ymin is None:
+        ymin = np.amin(lat)
+    if ymax is None:
+        ymax = np.amax(lat)
+    index = np.invert((lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax))
+    return np.ma.masked_where(index, data)
+
+
 
 
     

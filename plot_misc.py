@@ -9,13 +9,15 @@ import sys
 import numpy as np
 
 from grid import choose_grid
-from file_io import check_single_time, find_variable, read_netcdf
-from plot_utils.labels import check_date_string, depth_axis, yearly_ticks
+from file_io import check_single_time, find_variable, read_netcdf, netcdf_time
+from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label
 from plot_utils.windows import finished_plot
 from plot_utils.colours import get_extend, set_colours
-from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt
+from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
 from constants import deg_string
+from interpolation import interp_bilinear
+from calculus import area_average
 
 
 # Create a temperature vs salinity distribution plot. Temperature and salinity are split into NxN bins (default N=1000) and the colour of each bin shows the log of the volume of water masses in that bin.
@@ -243,6 +245,76 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
         return img
     else:
         finished_plot(fig, fig_name=fig_name, dpi=dpi)
+
+
+def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xmax=None, ymin=None, ymax=None, x0=None, y0=None, grid=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
+
+    # Build the grid if needed
+    grid = choose_grid(grid, file_path)
+
+    if isinstance(file_paths, str):
+        # Just one file path
+        file_paths = [file_paths]
+
+    # Inner function to read and mask the data from each file path
+    def read_and_mask (var_name):
+        data = None
+        time = None
+        for file_path in file_paths:
+            data_tmp = mask_3d(read_netcdf(file_path, var_name), grid)
+            time_tmp = netcdf_time(file_path, monthly=monthly)
+            if data is None:
+                data = data_tmp
+                time = time_tmp
+            else:
+                data = np.concatenate((data, data_tmp))
+                time = np.concatenate((time, time_tmp))
+        return data, time
+
+    gtype = 't'
+    ctype = 'basic'
+    if var == 'temp':
+        data, time = read_and_mask('THETA')
+        title = 'Temperature ' + deg_string
+    elif var == 'salt':
+        data, time = read_and_mask('SALT')
+        title = 'Salinity (psu)'
+    elif var == 'u':
+        data, time = read_and_mask('UVEL')
+        title = 'Zonal velocity (m/s)'
+        gtype = 'u'
+    elif var == 'v':
+        data, time = read_and_mask('VVEL')
+        title = 'Meridional velocity (m/s)'
+        gtype = 'v'
+    if var in ['u', 'v']:
+        ctype = 'plusminus'
+
+    if option == 'box':
+        # Area-average inside the given box
+        if box is not None:
+            # Preset box
+            # TODO
+            pass        
+        data = mask_outside_box(data, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
+        data_zt = area_average(data, grid, gtype=gtype, time_dependent=True)
+    elif option == 'point':
+        # Interpolate to the given lat/lon point
+        if x0 is None or y0 is None:
+            print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"
+            sys.exit()
+        data_zt = interp_bilinear(data, x0, y0, grid, gtype=gtype)
+        title += ' at ' + lon_label(x0) + ', ' + lat_label(y0)
+    else:
+        print 'Error (read_plot_hovmoller): invalid option ' + option           
+
+    # Make the plot
+    hovmoller_plot(data_zt, time, grid, ctype=ctype, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
+        
+        
+    
+
+    
     
     
     
