@@ -1112,6 +1112,8 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
 # Merge two sets of initial conditions for temperature and salinity, to keep the values from the first set in the deep ocean, and the values for the second set on the continental shelf (defined by the 2500 m isobath plus ice shelf cavities).
 def ics_merge (grid_path, temp_file_deep, salt_file_deep, temp_file_shelf, salt_file_shelf, temp_file_out, salt_file_out, h0=-2500, prec=64, nc_out=None):
 
+    from file_io import NCfile
+
     # Build the grid
     grid = Grid(grid_path)
     # Read the existing fields
