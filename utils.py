@@ -284,6 +284,20 @@ def var_min_max (data, grid, pster=False, zoom_fris=False, xmin=None, xmax=None,
     return np.amin(data[loc]), np.amax(data[loc])
 
 
+# As above, but for a time x depth array, where the depth axis may be zoomed.
+# Assumes not on the w-grid.
+def var_min_max_zt (data, grid, zmin=None, zmax=None):
+
+    if zmin is None:
+        zmin = grid.z[-1]
+    if zmax is None:
+        zmax = grid.z[0]
+    # Make z 2D
+    z = add_time_dim(grid.z, data.shape[0])
+    loc = (z >= zmin)*(z <= zmax)
+    return np.amin(data[loc]), np.amax(data[loc])
+
+
 # Find all the factors of the integer n.
 def factors (n):
 

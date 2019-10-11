@@ -10,9 +10,10 @@ import numpy as np
 
 from grid import choose_grid
 from file_io import check_single_time, find_variable, read_netcdf
-from plot_utils.labels import check_date_string
+from plot_utils.labels import check_date_string, depth_axis, yearly_ticks
 from plot_utils.windows import finished_plot
-from utils import mask_3d, xy_to_xyz, z_to_xyz
+from plot_utils.colours import get_extend, set_colours
+from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt
 from diagnostics import tfreeze
 from constants import deg_string
 
@@ -71,7 +72,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
         # Select all unmasked points
         loc_index = grid.hfac > 0
     else:
-        print 'Error (plot_other): invalid option ' + option
+        print 'Error (plot_misc): invalid option ' + option
         sys.exit()
 
     # Inner function to set up bins for a given variable (temp or salt)
@@ -154,6 +155,96 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
     plt.text(.9, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
     plt.title(title)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Plot a Hovmoller plot of the given 2D data field.
+
+# Arguments:
+# data: 2D array of data (time x depth). Assumes it is not on the w-grid.
+# time: array of Date objects corresponding to time axis.
+# grid: Grid object.
+
+# Optional keyword arguments:
+# ax, make_cbar, ctype, vmin, vmax, title, titlesize, return_fig, fig_name, extend, fig_size, dpi: as in latlon_plot
+# zmin, zmax: bounds on depth axis to plot (negative, in metres, zmin is the deep bound).
+# monthly: as in netcdf_time
+# contours: list of values to contour in black over top
+
+def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
+
+    # Choose what the endpoints of the colourbar should do
+    if extend is None:
+        extend = get_extend(vmin=vmin, vmax=vmax)
+
+    # If we're zooming, we need to choose the correct colour bounds
+    if any([zmin, zmax]):
+        vmin_tmp, vmax_tmp = var_min_max_zt(data, grid, zmin=zmin, zmax=zmax)
+        if vmin is None:
+            vmin = vmin_tmp
+        if vmax is None:
+            vmax = vmax_tmp
+    # Get colourmap
+    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
+
+    if monthly:
+        # As in netcdf_time, the time axis will have been corrected so it is
+        # marked with the beginning of each month. So to get the boundaries of
+        # each time index, we just need to add one month to the end.
+        if time[-1].month == 12:
+            end_time = datetime.datetime(time[-1].year+1, 1, 1)
+        else:
+            end_time = datetime.datetime(time[-1].year, time[-1].month+1, 1)
+        time_edges = np.concatenate((time, [end_time]))
+    else:
+        # Following MITgcm convention, the time axis will be stamped with the
+        # first day of the next averaging period. So to get the boundaries of
+        # each time index, we just need to extrapolate to the beginning,
+        # assuming regularly spaced time intervals.
+        dt = time[1]-time[0]
+        start_time = time[0] - dt
+        time_edges = np.concatenate(([start_time], time))
+
+    # Make the figure and axes, if needed
+    existing_ax = ax is not None
+    if not existing_ax:
+        fig, ax = plt.subplots(figsize=figsize)
+        
+    # Plot the data
+    img = ax.pcolormesh(time_edges, grid.z_edges, data, cmap=cmap, vmin=vmin, vmax=vmax)
+    if contours is not None:
+        # Overlay contours
+        # Need time at the centres of each index
+        # Have to do this with a loop unfortunately
+        time_centres = []
+        for t in range(time_edges.size-1):
+            dt = (time_edges[t+1]-time_edges[t])/2
+            time_centres.append(time_edges[t]+dt)
+        plt.contour(time_centres, grid.z, data, levels=contours, colors='black', linestyles='solid')
+    
+    # Set depth limits
+    if zmin is None:
+        zmin = grid.z_edges[-1]
+    if zmax is None:
+        zmax = grid.z_edges[0]
+    ax.set_ylim([zmin, zmax])
+    # Make nice axes labels
+    yearly_ticks(ax)    
+    depth_axis(ax)
+    if make_cbar:
+        # Add a colourbar
+        plt.colorbar(img, extend=extend)
+    if title is not None:
+        # Add a title
+        plt.title(title, fontsize=titlesize)
+
+    if return_fig:
+        return fig, ax
+    elif existing_ax:
+        return img
+    else:
+        finished_plot(fig, fig_name=fig_name, dpi=dpi)
+    
+    
     
     
     

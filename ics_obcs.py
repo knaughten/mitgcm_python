@@ -175,6 +175,8 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
     # Set up a NetCDF file so the user can check the results
     if nc_out is not None:
         ncfile = NCfile(nc_out, model_grid, 'xyz')
+    else:
+        ncfile = None
 
     # Process fields
     for n in range(len(fields)):
@@ -902,7 +904,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
 # grid: Grid OR path to grid directory
 
 # Optional keyword arguments:
-# option: 'balance' or 'correct' (as above)
+# option: 'balance', 'correct', or 'dampen' (as above)
 # obcs_file_w_u, obcs_file_e_u, obcs_file_s_v, obcs_file_n_v: paths to OBCS files for UVEL (western and eastern boundaries) or VVEL (southern and northern boundaries). You only have to set the filenames for the boundaries which are actually open in your domain. They will be overwritten with corrected versions.
 # d_eta: if option='correct', change in area-averaged sea surface height over the test simulation (m)
 # d_t: if option='correct', length of the test simulation (years)
@@ -1105,3 +1107,9 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
                 for tt in range(num_months):
                     print 'Month ' + str(tt+1)
                     print_net_transport(net_transport_new[t,tt])
+
+
+# Merge 
+def ics_merge (temp_file_1, salt_file_1, temp_file_2, salt_file_2, temp_out_file, salt_out_file, h0=-2500):
+    pass
+    

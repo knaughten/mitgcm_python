@@ -133,6 +133,19 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
             ax.set_yticklabels([])
 
 
+# Give the depth axis (y-axis) nice labels.
+def depth_axis (ax):
+
+    # Set vertical tick labels
+    z_ticks = ax.get_yticks()
+    z_labels = []
+    for z in z_ticks:
+        # Will probably never have decimal places, so just format as a positive integer
+        z_labels.append(str(int(round(-z))))
+    ax.set_yticklabels(z_labels)
+    ax.set_ylabel('Depth (m)', fontsize=14)
+
+
 # Give the axes on a slice plot nice labels. Set h_axis to 'lat' (default) or 'lon' to indicate what the horizontal axis is.
 def slice_axes (ax, h_axis='lat'):
 
@@ -152,17 +165,9 @@ def slice_axes (ax, h_axis='lat'):
         labels = ax.get_xticklabels()
         for label in labels[::2]:
             label.set_visible(False)
-
-    # Set vertical tick labels
-    z_ticks = ax.get_yticks()
-    z_labels = []
-    for z in z_ticks:
-        # Will probably never have decimal places, so just format as a positive integer
-        z_labels.append(str(int(round(-z))))
-    ax.set_yticklabels(z_labels)
-    ax.set_ylabel('Depth (m)', fontsize=14)
-    if h_axis == 'trans':
         ax.set_xlabel('Distance (km)', fontsize=14)
+    # Set vertical tick labels
+    depth_axis(ax)
 
 
 # Given a date, return a nice string that can be added to plots.
