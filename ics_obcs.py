@@ -1109,7 +1109,34 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
                     print_net_transport(net_transport_new[t,tt])
 
 
-# Merge 
-def ics_merge (temp_file_1, salt_file_1, temp_file_2, salt_file_2, temp_out_file, salt_out_file, h0=-2500):
-    pass
+# Merge two sets of initial conditions for temperature and salinity, to keep the values from the first set in the deep ocean, and the values for the second set on the continental shelf (defined by the 2500 m isobath plus ice shelf cavities).
+def ics_merge (grid_path, temp_file_deep, salt_file_deep, temp_file_shelf, salt_file_shelf, temp_file_out, salt_file_out, h0=-2500, prec=64, nc_out=None):
+
+    # Build the grid
+    grid = Grid(grid_path)
+    # Read the existing fields
+    temp_deep = read_binary(temp_file_deep, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+    salt_deep = read_binary(salt_file_deep, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+    temp_shelf = read_binary(temp_file_shelf, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+    salt_shelf = read_binary(salt_file_shelf, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
+    # Get 3D index of deep ocean
+    z_3d = z_to_xyz(grid.z, grid)
+    ice_mask_3d = xy_to_xyz(grid.ice_mask, grid)
+    index_deep = (z_3d <= h0)*np.invert(grid.ice_mask)
+    # Merge the two arrays
+    temp = temp_shelf
+    temp[index_deep] = temp_deep[index_deep]
+    salt = salt_shelf
+    salt[index_deep] = salt_deep[index_deep]
+    # Write to file
+    write_binary(temp, temp_file_out, prec=prec)
+    write_binary(salt, salt_file_out, prec=prec)
+    if nc_out is not None:
+        ncfile = NCfile(nc_out, grid, 'xyz')
+        ncfile.add_variable('THETA', temp, 'xyz')
+        ncfile.add_variable('SALT', salt, 'xyz')
+        ncfile.close()
+    
+
+    
     
