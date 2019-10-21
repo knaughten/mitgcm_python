@@ -1,3 +1,13 @@
+FRIS_999:
+balance_obcs(option='balance')
+balance_obcs(option='dampen')
+balance_obcs(option='correct', d_eta=-25, d_t=2)
+Then online corrections.
+
+WSFRIS_999:
+balance_obcs(option='balance') for all years
+Then online corrections.
+
 WSK:
 balance_obcs(option='balance')
 balance_obcs(option='correct', d_eta=-1.461718, d_t=1)
