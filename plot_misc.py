@@ -248,13 +248,13 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 
 
 def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xmax=None, ymin=None, ymax=None, x0=None, y0=None, grid=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
-
-    # Build the grid if needed
-    grid = choose_grid(grid, file_path)
-
+    
     if isinstance(file_paths, str):
         # Just one file path
         file_paths = [file_paths]
+
+    # Build the grid if needed
+    grid = choose_grid(grid, file_paths[0])
 
     # Inner function to read and mask the data from each file path
     def read_and_mask (var_name):
