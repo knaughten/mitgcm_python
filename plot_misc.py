@@ -15,7 +15,7 @@ from plot_utils.windows import finished_plot
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
-from constants import deg_string
+from constants import deg_string, bounds_PIB, bounds_Dot
 from interpolation import interp_bilinear
 from calculus import area_average
 
@@ -294,8 +294,15 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
         # Area-average inside the given box
         if box is not None:
             # Preset box
-            # TODO
-            pass        
+            if box == 'PIB':
+                [xmin, xmax, ymin, ymax] = bounds_PIB
+                title += ', Pine Island Bay'
+            elif box == 'Dot':
+                [xmin, xmax, ymin, ymax] = bounds_Dot
+                title += ', Dotson'
+            else:
+                print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
+                sys.exit()
         data = mask_outside_box(data, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
         data_zt = area_average(data, grid, gtype=gtype, time_dependent=True)
     elif option == 'point':

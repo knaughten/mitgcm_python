@@ -63,4 +63,11 @@ bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
 bedmap_res = 1000    # Resolution (m)
 bedmap_missing_val = -9999    # Missing value for bathymetry north of 60S
 
+# Bounds on boxes for Amundsen Sea regions
+# In form lon_min, lon_max, lat_min, lat_max
+# Pine Island Bay
+bounds_PIB = [-105, -101, -75.2, -74.2]
+# Dotson
+bounds_Dot = [-114, -110.5, -74.1, -73.2]
+
 
