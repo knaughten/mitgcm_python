@@ -601,7 +601,7 @@ def is_depth_dependent (data, time_dependent=False):
 # Mask everything outside the given bounds. The array must include latitude and longitude dimensions; depth and time are optional.
 def mask_outside_box (data, grid, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, time_dependent=False):
     depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
-    lon, lat = self.get_lon_lat(gtype=gtype)
+    lon, lat = grid.get_lon_lat(gtype=gtype)
     if depth_dependent:
         lon = xy_to_xyz(lon, grid)
         lat = xy_to_xyz(lon, grid)
