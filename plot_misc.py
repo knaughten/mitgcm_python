@@ -261,7 +261,7 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
         data = None
         time = None
         for file_path in file_paths:
-            data_tmp = mask_3d(read_netcdf(file_path, var_name), grid)
+            data_tmp = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
             time_tmp = netcdf_time(file_path, monthly=monthly)
             if data is None:
                 data = data_tmp
