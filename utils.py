@@ -604,7 +604,7 @@ def mask_outside_box (data, grid, gtype='t', xmin=None, xmax=None, ymin=None, ym
     lon, lat = grid.get_lon_lat(gtype=gtype)
     if depth_dependent:
         lon = xy_to_xyz(lon, grid)
-        lat = xy_to_xyz(lon, grid)
+        lat = xy_to_xyz(lat, grid)
     if time_dependent:
         lon = add_time_dim(lon, data.shape[0])
         lat = add_time_dim(lat, data.shape[0])

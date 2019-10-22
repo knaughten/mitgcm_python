@@ -91,7 +91,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     fig_dir = real_dir(fig_dir)
     
     # Build the list of output files in this directory (use them all for timeseries)
-    if key == 'WSFRIS':
+    if key in ['WSFRIS', 'FRIS']:
         # Coupled
         segment_dir = get_segment_dir(output_dir)
         output_files = segment_file_paths(output_dir, segment_dir, 'output.nc')
@@ -114,6 +114,8 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     elif key == 'WSFRIS':
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+    elif key == 'FRIS':
+        var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
@@ -434,10 +436,13 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 # file_name: name of the output NetCDF file within the output/XXXXXX/MITgcm/ directories. Default 'output.nc'.
 # segment_dir: list of date codes, in chronological order, corresponding to the subdirectories within output_dir. This must be specified if timeseries_file already exists. If it is not specified, all available subdirectories of output_dir will be used.
 # timeseries_types: as in precompute_timeseries
-def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None):
+def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None, key='WSFRIS'):
 
     if timeseries_types is None:
-        timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        if key == 'WSFRIS':
+            timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        elif key == 'FRIS':
+            timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
     output_dir = real_dir(output_dir)
 

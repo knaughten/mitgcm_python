@@ -278,39 +278,35 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
     # Update the colourmap if needed
     if var in ['u', 'v']:
         ctype = 'plusminus'
-    
+
     data = None
     time = None
     # Read and process data for each file. Loop over timesteps to save memory.
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print 'Reading ' + file_path
         time_tmp = netcdf_time(file_path, monthly=monthly)
-        num_time = time_tmp.size
-        data_tmp = np.empty([num_time, grid.nz])
-        for t in range(num_time):
-            print '...time index ' + str(t+1) + ' of ' + str(num_time)
-            data_3d = mask_3d(read_netcdf(file_path, var_name, time_index=t), grid)
-            if option == 'box':
-                # Average over box
-                if box is not None:
-                    # Preset box
-                    if box == 'PIB':
-                        [xmin, xmax, ymin, ymax] = bounds_PIB
-                    elif box == 'Dot':
-                        [xmin, xmax, ymin, ymax] = bounds_Dot
-                    else:
-                        print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
-                        sys.exit()
-                data_3d = mask_outside_box(data_3d, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-                data_tmp[t,:] = area_average(data_3d, grid, gtype=gtype)
-            elif option == 'point':
-                if x0 is None or y0 is None:
-                    print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"
+        data_3d = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
+        if option == 'box':
+            print 'Averaging over box'
+            if box is not None:
+                # Preset box
+                if box == 'PIB':
+                    [xmin, xmax, ymin, ymax] = bounds_PIB
+                elif box == 'Dot':
+                    [xmin, xmax, ymin, ymax] = bounds_Dot
+                else:
+                    print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
                     sys.exit()
-                data_tmp[t,:] = interp_bilinear(data_3d, x0, y0, grid, gtype=gtype)
-            else:
-                print 'Error (read_plot_hovmoller): invalid option ' + option
+            data_3d = mask_outside_box(data_3d, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
+            data_tmp[t,:] = area_average(data_3d, grid, gtype=gtype, time_dependent=True)
+        elif option == 'point':
+            if x0 is None or y0 is None:
+                print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"
                 sys.exit()
+            data_tmp[t,:] = interp_bilinear(data_3d, x0, y0, grid, gtype=gtype)
+        else:
+            print 'Error (read_plot_hovmoller): invalid option ' + option
+            sys.exit()
         if data is None:
             data = data_tmp
             time = time_tmp
