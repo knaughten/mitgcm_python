@@ -249,7 +249,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS'):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
