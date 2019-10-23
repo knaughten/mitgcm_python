@@ -249,7 +249,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSS'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path='../grid/', fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS'):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -263,8 +263,16 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     fig_dir = real_dir(fig_dir)
 
     # Build lists of output files in each directory
-    output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
-    output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
+    if key in ['WSFRIS', 'FRIS']:
+        # Coupled
+        segment_dir_1 = get_segment_dir(output_dir_1)
+        output_files_1 = segment_file_paths(output_dir_1, segment_dir_1, 'output.nc')
+        segment_dir_2 = get_segment_dir(output_dir_2)
+        output_files_2 = segment_file_paths(output_dir_2, segment_dir_2, 'output.nc')
+    else:
+        # Uncoupled
+        output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
+        output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
     # Build the grid
     grid = Grid(grid_path)
@@ -274,6 +282,10 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         var_names = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
     elif key == 'WSK':
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+    elif key == 'WSFRIS':
+        var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+    elif key == 'FRIS':
+        var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
@@ -286,8 +298,10 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
 
     # Now make lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'bwage', 'iceprod']
-    if key == 'WSK':
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod']
+    if key in ['WSK', 'WSS']:
+        var_names += 'bwage'
+    if key in ['WSK', 'WSFRIS']:
         figsize = (10,6)
     else:
         figsize = (8,6)
@@ -300,7 +314,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
             vmax = None
         read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
         # Zoom into some variables
-        if key=='WSK' and var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
+        if key in['WSK', 'WSFRIS'] and var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
             if var == 'bwage':
                 vmin = -5
                 vmax = None
@@ -316,7 +330,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Slice plots
     read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_filchner_diff.png')
     read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-55, hmax=-72, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_ronne_diff.png')
-    if key == 'WSK':
+    if key in ['WSK', 'WSFRIS']:
         read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=0, zmin=-2000, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_eweddell_diff.png')    
     
 
