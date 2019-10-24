@@ -423,6 +423,7 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmax=-55, ymin=-74.5)
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-40, ymin=-78)
         # Also a few 1-cell ocean points surrounded by ice shelf draft. Fill them with the ice shelf draft of their neighbours.
+        draft_w, draft_e, draft_s, draft_n = neighbours(draft)[:4]
         imask_w, imask_e, imask_s, imask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(imask, missing_val=0)
         index = (imask==0)*(num_valid_neighbours==4)
         imask[index] = 1
@@ -441,6 +442,7 @@ def edit_mask (nc_in, nc_out, key='WSK'):
             # Turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
         # Also a few 1-cell ocean points surrounded by ice shelf draft. Fill them with the ice shelf draft of their neighbours.
+        draft_w, draft_e, draft_s, draft_n = neighbours(draft)[:4]
         imask_w, imask_e, imask_s, imask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(imask, missing_val=0)
         index = (imask==0)*(num_valid_neighbours==4)
         imask[index] = 1
