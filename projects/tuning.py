@@ -8,13 +8,14 @@ import matplotlib.pyplot as plt
 import netCDF4 as nc
 import numpy as np
 import sys
+import datetime
 
 from MITgcmutils.mdjwf import densmdjwf
 
-from ..grid import Grid
+from ..grid import Grid, ERA5Grid, UKESMGrid
 from ..file_io import read_netcdf, netcdf_time, read_binary, NCfile
 from ..utils import real_dir, select_bottom, mask_3d, var_min_max, convert_ismr, days_per_month, add_time_dim, xy_to_xyz, z_to_xyz, mask_land_ice, fix_lon_range, split_longitude
-from ..constants import deg_string, gravity, sec_per_day, rho_fw
+from ..constants import deg_string, gravity, sec_per_day, rho_fw, sec_per_year
 from ..plot_latlon import latlon_plot, plot_empty
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.latlon import prepare_vel, overlay_vectors
@@ -472,11 +473,94 @@ def evap_compare (file_path_1, file_path_2, file_path_era, month=None, vmin=None
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
     plt.suptitle('Evaporation (mm/12h), 1979'+suffix, fontsize=24)
     finished_plot(fig, fig_name)
-    
 
-    
-    
 
+# Calculate timeseries of atmospheric forcing variables (ERA5 vs UKESM) averaged/integrated/maximised over the southern Weddell Sea continental shelf. Plot, and also save to two NetCDF files.
+def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
+
+    # Lat-lon boundaries on SWS continental shelf region
+    # Lon is in range (0, 360)
+    [xmin, xmax, ymin, ymax] = [-65+360, -25+360, -78.5, -71]
+    # Beginning of file names for atmospheric forcing files
+    file_heads = ['ERA5_', 'piControl_']
+    # Final year of output for each (start year is already saved in grid objects)
+    end_years = [2018, 2710]
+    # Output variable names
+    var_names_out = ['max_wind', 'avg_atemp', 'total_precip', 'avg_shum', 'avg_swrad', 'avg_lwrad']
+    # and units
+    units = ['m/s', 'degC', 'm^3/s', '1', 'W/m^2', 'W/m^2']
+    num_vars = len(var_names_out)
+    # Corresponding input variable names for each data source (stamped in file names)
+    var_names_in = [['uwind', 'atemp', 'precip', 'aqh', 'swdown', 'lwdown'], ['uas', 'tas', 'pr', 'huss', 'rsds', 'rlds']]
+
+    directories = [real_dir(era5_dir), real_dir(ukesm_dir)]
+    # Build forcing grids
+    grids = [ERA5Grid(), UKESMGrid()]
+    start_years = [grid.start_year for grid in grids]        
+    # Build masks for the SWS continental shelf
+    masks = [(grid.lon >= xmin)*(grid.lon <= xmax)*(grid.lat >= ymin)*(grid.lat <= ymax) for grid in grids]
+
+    # Build time axes (years since start date)
+    # ERA5 is on the "real" calendar, so use datetime objects
+    # Build this up with a loop
+    era5_date = datetime.datetime(era5_grid.start_year, 1, 1)
+    era5_dt = datetime.timedelta(seconds=era5_grid.period)
+    era5_time = [0]
+    while (era5_date + era5_dt).year <= era5_end_year:
+        era5_time.append(era5_time[-1]+era5_grid.period/sec_per_year)
+        era5_date += era5_dt
+    era5_time = np.array(era5_time)
+    # UKESM has 30-day months, so it's easier
+    ukesm_time = np.arange(0, ukesm_end_year-ukesm_grid.start_year+1, ukesm_grid.period/sec_per_year)
+    times = [era5_time, ukesm_time]
+
+    # Set up NetCDF files
+    ncfiles = [NCfile(era5_out_file, None, 't'), NCfile(ukesm_out_file, None, 't')]
+    for i in range(2):
+        ncfiles[i].add_time(times[i], units='years')
+
+    # Inner function to read and process forcing file for a single year, forcing product, and variable
+    def process_file (directory, file_head, var_name_in, year, var_name_out, grid, mask):
+        # Construct file name
+        file_path = directory + file_head + var_name + '_' + year
+        # Read all the data
+        data = read_binary(file_path, [grid.nx, grid.ny], 'xyt')
+        if var_name in ['uwind', 'uas']:
+            # Need to read the v-component too
+            file_path_v = directory + file_head + var_name.replace('u', 'v') + '_' + year
+            data_v = read_binary(file_path_v, [grid.nx, grid.ny], 'xyt')
+            # Calculate speed
+            data = np.sqrt(data**2 + data_v**2)
+        # Loop over time indices to save memory
+        num_time = data.shape[0]
+        timeseries = np.empty(num_time)
+        for t in range(num_time):
+            # Do the correct transformation
+            if var_name_out.startswith('max'):
+                timeseries[t] = np.max(data[t]*mask)
+            elif var_name_out.startswith('avg'):
+                timeseries[t] = np.sum(data[t]*grid.dA*mask)/np.sum(grid.dA*mask)
+            elif var_name_out.startswith('total'):
+                timeseries[t] = np.sum(data[t]*grid.dA*mask)
+        return timeseries
+
+    # Now loop over all the variables and years
+    for n in range(num_vars):
+        print 'Processing variable ' + var_names_out[n]
+        for i in range(2):
+            data = None
+            for year in range(start_years[i], end_years[i]+1):
+                data_tmp = process_file(directories[i], file_heads[i], var_names_in[i][n], year, var_names_out[n], grids[i], masks[i])
+                if data is None:
+                    data = data_tmp
+                else:
+                    data = np.concatenate((data, data_tmp))
+            ncfiles[i].add_variable(var_names[n], data, 't', units=units[n])
+
+    for i in range(2):
+        ncfiles[i].close()
+    
+        
     
     
 

@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad
 
 
 # Grid object containing lots of grid variables:
@@ -732,6 +732,60 @@ class CMIPGrid:
             return mask_3d[0,:]
         else:
             return mask_3d
+
+
+# Helper function for ERA5Grid and UKESMGrid to assemble the lat, lon, and dA arrays from the parameters as stored in data.exf.
+def build_forcing_grid (lon0, lon_inc, lat0, lat_inc, nlon, nlat):
+
+    lon_1d = np.arange(lon0, lon0+nlon*lon_inc, lon_inc)
+    lat_1d = np.arange(lat0, lat0+nlat*lat_inc, lat_inc)
+    lon, lat = np.meshgrid(lon_1d, lat_1d)
+    dx = rEarth*np.cos(lat*deg2rad)*lon_inc*deg2rad
+    dy = rEarth*lat_inc*deg2rad
+    dA = dx*dy
+    return lon, lat, dA    
+
+
+# ERA5Grid object containing basic surface grid variables and calendar variables for ERA5, processed as in forcing.py (everywhere south of 30S, 6-hourly)
+class ERA5Grid:
+
+    def __init__ (self, start_year=1979):
+
+        lon0 = 0
+        lon_inc = 0.25
+        lat0 = -90
+        lat_inc = 0.25
+        nlon = 1440
+        nlat = 241
+        self.max_lon = 360
+        self.lon, self.lat, self.dA = build_forcing_grid(lon0, lon_inc, lat0, lat_inc, nlon, nlat)
+        self.nx = nlon
+        self.ny = nlat
+        self.start_year = start_year
+        self.period = 21600.
+        self.calendar = 'standard'
+
+
+# Similarly, UKESMGrid object. Contains full globe and daily forcing with 30-day months.
+class UKESMGrid:
+
+    def __init__ (self, start_year=2680):
+
+        lon0 = 0.9375
+        lon_inc = 1.875
+        lat0 = -89.375
+        lat_inc = 1.25
+        nlon = 192
+        nlat = 144
+        self.max_lon = 360
+        self.lon, self.lat, self.dA = build_forcing_grid(lon0, lon_inc, lat0, lat_inc, nlon, nlat)
+        self.nx = nlon
+        self.ny = nlat
+        self.start_year = start_year
+        self.period = 86400.
+        self.calendar = '360_day'
+
+        
         
 
 

@@ -148,7 +148,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
 
 # Convert one year of ERA5 data to the format and units required by MITgcm.
-def process_era5 (in_dir, out_dir, year, six_hourly=False, first_year=False, last_year=False, prec=32):
+def process_era5 (in_dir, out_dir, year, six_hourly=True, first_year=False, last_year=False, prec=32):
 
     in_dir = real_dir(in_dir)
     out_dir = real_dir(out_dir)
