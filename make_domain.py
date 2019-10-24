@@ -422,6 +422,11 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         # Fill all non-FRIS ice shelves with land
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmax=-55, ymin=-74.5)
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-40, ymin=-78)
+        # Also a few 1-cell ocean points surrounded by ice shelf draft. Fill them with the ice shelf draft of their neighbours.
+        imask_w, imask_e, imask_s, imask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(imask, missing_val=0)
+        index = (imask==0)*(num_valid_neighbours==4)
+        imask[index] = 1
+        draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
     elif key == 'WSFRIS':
         # Big Weddell Sea domain used for coupling
         # Similar to WSK
@@ -435,6 +440,11 @@ def edit_mask (nc_in, nc_out, key='WSK'):
             omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
             # Turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
+        # Also a few 1-cell ocean points surrounded by ice shelf draft. Fill them with the ice shelf draft of their neighbours.
+        imask_w, imask_e, imask_s, imask_n, valid_w, valid_e, valid_s, valid_n, num_valid_neighbours = neighbours(imask, missing_val=0)
+        index = (imask==0)*(num_valid_neighbours==4)
+        imask[index] = 1
+        draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
     elif key == 'WSS_old_smaller':
         # Small Weddell Sea domain - temporary before coupling      
         # Block out everything west of the peninsula
