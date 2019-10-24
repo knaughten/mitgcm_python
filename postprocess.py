@@ -152,7 +152,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         if var == 'iceprod':
             vmin = 0
             vmax = 5
-        if var == 'psi' and key=='WSS':
+        if var == 'psi' and key in ['WSS', 'FRIS']:
             vmin = -0.5
             vmax = 0.5
         if var in ['vel', 'velice'] and key=='WSS':

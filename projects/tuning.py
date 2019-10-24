@@ -503,15 +503,15 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
     # Build time axes (years since start date)
     # ERA5 is on the "real" calendar, so use datetime objects
     # Build this up with a loop
-    era5_date = datetime.datetime(era5_grid.start_year, 1, 1)
-    era5_dt = datetime.timedelta(seconds=era5_grid.period)
+    era5_date = datetime.datetime(start_years[0], 1, 1)
+    era5_dt = datetime.timedelta(seconds=grids[0].period)
     era5_time = [0]
-    while (era5_date + era5_dt).year <= era5_end_year:
-        era5_time.append(era5_time[-1]+era5_grid.period/sec_per_year)
+    while (era5_date + era5_dt).year <= end_years[0]:
+        era5_time.append(era5_time[-1]+grids[0].period/sec_per_year)
         era5_date += era5_dt
     era5_time = np.array(era5_time)
     # UKESM has 30-day months, so it's easier
-    ukesm_time = np.arange(0, ukesm_end_year-ukesm_grid.start_year+1, ukesm_grid.period/sec_per_year)
+    ukesm_time = np.arange(0, end_years[1]-start_years[1]+1, grids[1].period/sec_per_year)
     times = [era5_time, ukesm_time]
 
     # Set up NetCDF files
@@ -522,12 +522,12 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
     # Inner function to read and process forcing file for a single year, forcing product, and variable
     def process_file (directory, file_head, var_name_in, year, var_name_out, grid, mask):
         # Construct file name
-        file_path = directory + file_head + var_name + '_' + year
+        file_path = directory + file_head + var_name_in + '_' + str(year)
         # Read all the data
         data = read_binary(file_path, [grid.nx, grid.ny], 'xyt')
-        if var_name in ['uwind', 'uas']:
+        if var_name_in in ['uwind', 'uas']:
             # Need to read the v-component too
-            file_path_v = directory + file_head + var_name.replace('u', 'v') + '_' + year
+            file_path_v = directory + file_head + var_name_in.replace('u', 'v') + '_' + str(year)
             data_v = read_binary(file_path_v, [grid.nx, grid.ny], 'xyt')
             # Calculate speed
             data = np.sqrt(data**2 + data_v**2)
@@ -555,22 +555,22 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
                     data = data_tmp
                 else:
                     data = np.concatenate((data, data_tmp))
-            ncfiles[i].add_variable(var_names[n], data, 't', units=units[n])
+            ncfiles[i].add_variable(var_names_out[n], data, 't', units=units[n])
 
     for i in range(2):
         ncfiles[i].close()
-    
-        
-    
-    
 
 
 
-        
 
 
-    
-    
+
+
+
+
+
+
+
 
 
 
