@@ -526,11 +526,22 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
         # Read all the data
         data = read_binary(file_path, [grid.nx, grid.ny], 'xyt')
         if var_name_in in ['uwind', 'uas']:
+            is_ukesm = var_name_in=='uas'
+            if is_ukesm:
+                # Interpolate to the t-grid (first need to wrap the periodic boundary)
+                data_u = np.concatenate((data, np.expand_dims(data[:,:,0],2)), axis=2)
+                data_u = 0.5*(data_u[:,:,:-1] + data_u[:,:,1:])
+            else:
+                data_u = data
             # Need to read the v-component too
             file_path_v = directory + file_head + var_name_in.replace('u', 'v') + '_' + str(year)
-            data_v = read_binary(file_path_v, [grid.nx, grid.ny], 'xyt')
+            if is_ukesm:
+                data_v = read_binary(file_path_v, [grid.nx, grid.ny+1], 'xyt')
+                data_v = 0.5*(data_v[:,:-1,:] + data_v[:,1:,:])
+            else:
+                data_v = read_binary(file_path_v, [grid.nx, grid.ny], 'xyt')
             # Calculate speed
-            data = np.sqrt(data**2 + data_v**2)
+            data = np.sqrt(data_u**2 + data_v**2)
         # Loop over time indices to save memory
         num_time = data.shape[0]
         timeseries = np.empty(num_time)
