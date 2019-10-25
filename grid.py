@@ -125,6 +125,10 @@ class Grid:
             if not np.all(np.diff(self.lon_1d)>0):
                 print 'Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).'
                 sys.exit()
+        if max_lon = 360:
+            self.split = 0
+        elif max_lon = 180:
+            self.split = 180
         self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
         self.lon_corners_1d = fix_lon_range(self.lon_corners_1d, max_lon=max_lon)
         self.lon_2d = fix_lon_range(self.lon_2d, max_lon=max_lon)
@@ -204,7 +208,16 @@ class Grid:
     # 3. not ice shelf or land points.
     def build_sws_shelf_mask(self, land_mask, ice_mask, lon, lat, bathy):
 
-        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= sws_shelf_bounds[0])*(lon <= sws_shelf_bounds[1])*(lat >= sws_shelf_bounds[2])*(lat <= sws_shelf_bounds[3])
+        [xmin, xmax, ymin, ymax] = sws_shelf_bounds
+
+        if self.split == 0:
+            # Need to adjust the longitude bounds so in range 0-360
+            if xmin < 0:
+                xmin += 360
+            if xmax < 0:
+                xmax += 360
+
+        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
 
 
     # Split this mask into inner and outer sections, based on a straight line cutting across the shelf.
@@ -374,6 +387,8 @@ def grid_check_split (grid_path, split):
 class SOSEGrid(Grid):
 
     def __init__ (self, path, model_grid=None, split=0):
+
+        self.split = split
 
         if path.endswith('.nc'):
             use_netcdf=True
