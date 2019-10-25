@@ -616,11 +616,15 @@ class SOSEGrid(Grid):
             self.hfac_w = self.read_field(path, 'xyz', var_name='hFacW', fill_value=0)
             self.hfac_s = self.read_field(path, 'xyz', var_name = 'hFacS', fill_value=0)
             self.dA = self.read_field(path, 'xy', var_name='rA', fill_value=0)
+            self.dz = self.read_field(path, 'z', var_name='drF', fill_value=0)
         else:
             self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
             self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
             self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
             self.dA = self.read_field(path+'RAC', 'xyz', fill_value=0)
+            self.dz = self.read_field(path+'DRF', 'z', fill_value=0)
+        # Calculate volume
+        self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
 
         # Mesh lat and lon
         self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
@@ -640,7 +644,7 @@ class SOSEGrid(Grid):
 
 
     # Read a field from an MDS or NetCDF file and split, trim, extend as needed.
-    # The field can be time dependent: dimensions must be one of 'xy', 'xyt', 'xyz', or 'xyzt'.
+    # The field can be time dependent: dimensions must be one of 'z', 'xy', 'xyt', 'xyz', or 'xyzt'.
     # Extended regions will just be filled with fill_value for now. See function discard_and_fill in interpolation.py for how to extrapolate data into these regions.
     def read_field (self, path, dimensions, var_name=None, fill_value=-9999):
 
@@ -654,22 +658,29 @@ class SOSEGrid(Grid):
             data_orig = rdmds(path.replace('.data', ''))
         
         if self.trim_extend:
-            # Split along longitude
-            data_orig = split_longitude(data_orig, self.i_split)
-            # Create a new array of the correct dimension (including extended regions)
-            data_shape = [self.ny, self.nx]
-            if 'z' in dimensions:
-                data_shape = [self.nz] + data_shape        
-            if 't' in dimensions:
-                num_time = data_orig.shape[0]
-                data_shape = [num_time] + data_shape
+            if dimensions == 'z':
+                # 1D depth field
+                data_shape = [self.nz]
+            else:
+                # Split along longitude
+                data_orig = split_longitude(data_orig, self.i_split)
+                # Create a new array of the correct dimension (including extended regions)
+                data_shape = [self.ny, self.nx]
+                if 'z' in dimensions:
+                    data_shape = [self.nz] + data_shape        
+                if 't' in dimensions:
+                    num_time = data_orig.shape[0]
+                    data_shape = [num_time] + data_shape
             data = np.zeros(data_shape) + fill_value
 
             # Trim
-            if 'z' in dimensions:
-                data[..., self.k0_after:self.k1_after, self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.k0_before:self.k1_before, self.j0_before:self.j1_before, self.i0_before:self.i1_before]
+            if dimensions == 'z':
+                data[self.k0_after:self.k1_after] = data_orig[self.k0_before:self.k1_before]
             else:
-                data[..., self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.j0_before:self.j1_before, self.i0_before:self.i1_before]
+                if 'z' in dimensions:
+                    data[..., self.k0_after:self.k1_after, self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.k0_before:self.k1_before, self.j0_before:self.j1_before, self.i0_before:self.i1_before]
+                else:
+                    data[..., self.j0_after:self.j1_after, self.i0_after:self.i1_after] = data_orig[..., self.j0_before:self.j1_before, self.i0_before:self.i1_before]
         else:
             data = data_orig
 
