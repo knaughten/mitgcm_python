@@ -54,14 +54,14 @@ def bsose_pico_input (bsose_dir, out_file):
     bsose_dir = real_dir(bsose_dir)
 
     print 'Building B-SOSE grid'
-    grid = SOSEGrid(bsose_dir)
+    grid = SOSEGrid(bsose_dir+'grid.nc')
 
     f = open(out_file, 'w')
     for i in range(2):
         print 'Processing ' + var_names[i]
         f.write(var_names[i]+'\n')
         # Read the data for all months
-        data = grid.read_field(bsose_dir+var_names[i]+file_tail, 'xyzt', var_name=var_names[i])
+        data = grid.read_field(bsose_dir+var_names[i]+file_tail, 'xyzt', var_name=var_names[i])        
         # Select the bottom layer
         data = select_bottom(data, masked=False, grid=grid, time_dependent=True)
         # Mask out everything except the SWS continental shelf
