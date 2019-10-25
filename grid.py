@@ -624,7 +624,7 @@ class SOSEGrid(Grid):
             self.dA = self.read_field(path+'RAC', 'xyz', fill_value=0)
             self.dz = self.read_field(path+'DRF', 'z', fill_value=0)
         # Calculate volume
-        self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
+        #self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
 
         # Mesh lat and lon
         self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
