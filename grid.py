@@ -616,7 +616,7 @@ class SOSEGrid(Grid):
             self.hfac_w = self.read_field(path, 'xyz', var_name='hFacW', fill_value=0)
             self.hfac_s = self.read_field(path, 'xyz', var_name = 'hFacS', fill_value=0)
             self.dA = self.read_field(path, 'xy', var_name='rA', fill_value=0)
-            self.dz = self.read_field(path, 'z', var_name='drF', fill_value=0)
+            self.dz = self.read_field(path, 'z', var_name='DRF', fill_value=0)
         else:
             self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
             self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)

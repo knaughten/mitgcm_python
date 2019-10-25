@@ -47,4 +47,8 @@ def extend_moholdt_data (old_file, new_file, ua_mesh_file):
 def bsose_pico_input (bsose_dir, out_file):
 
     # Build grid
-    # Read 
+    # Read data
+    # Open file and start printing to screen
+    # Loop over timesteps
+    # Volume-average over sws_shelf_mask
+    # 
