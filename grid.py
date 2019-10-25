@@ -415,12 +415,14 @@ class SOSEGrid(Grid):
             self.lat_1d = read_netcdf(path, 'YC')[:,0]
             self.lat_corners_1d = read_netcdf(path, 'YG')[:,0]
             self.z = read_netcdf(path, 'Z')
+            self.z_edges = read_netcdf(path, 'RF')
         else:
             self.lon_1d = rdmds(path+'XC')[0,:]
             self.lon_corners_1d = rdmds(path+'XG')[0,:]
             self.lat_1d = rdmds(path+'YC')[:,0]
             self.lat_corners_1d = rdmds(path+'YG')[:,0]
             self.z = rdmds(path+'RC').squeeze()
+            self.z_edges = rdmds(path+'RF').squeeze()
 
         # Fix longitude range
         self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
@@ -561,8 +563,10 @@ class SOSEGrid(Grid):
             # Depth: can extend on both sides (depth 0 at top and extrapolated at bottom to clear the deepest model depth), trim on deep side
             z_above = 0*np.ones([self.k0_after])  # Will either be [0] or empty
             z_middle = self.z[self.k0_before:self.k1_before]
+            z_edges_middle = self.z_edges[self.k0_before:self.k1_before]
             z_below = (2*model_grid.z[-1] - model_grid.z[-2])*np.ones([self.nz-self.k1_after])   # Will either be [something deeper than z_deep] or empty
             self.z = np.concatenate((z_above, z_middle, z_below))
+            self.z_edges = np.concatenate((z_above, z_edges_middle, z_below))
 
             # Make sure we cleared those bounds
             if self.lon_corners_1d[0] > xmin:
@@ -605,6 +609,9 @@ class SOSEGrid(Grid):
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
         self.land_mask_v = self.build_land_mask(self.hfac_s)
+
+        # Calculate bathymetry
+        self.bathy = bdry_from_hfac('bathy', self.hfac, self.z_edges)
     
 
 
