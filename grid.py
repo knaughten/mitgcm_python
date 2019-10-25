@@ -600,18 +600,27 @@ class SOSEGrid(Grid):
             self.hfac = self.read_field(path, 'xyz', var_name='hFacC', fill_value=0)
             self.hfac_w = self.read_field(path, 'xyz', var_name='hFacW', fill_value=0)
             self.hfac_s = self.read_field(path, 'xyz', var_name = 'hFacS', fill_value=0)
+            self.dA = self.read_field(path, 'xy', var_name='rA', fill_value=0)
         else:
             self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
             self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
             self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
+            self.dA = self.read_field(path+'RAC', 'xyz', fill_value=0)
+
+        # Mesh lat and lon
+        self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
+        self.lon_corners_2d, self.lat_corners_2d = np.meshgrid(self.lon_corners_1d, self.lat_corners_1d)
+
+        # Calculate bathymetry
+        self.bathy = bdry_from_hfac('bathy', self.hfac, self.z_edges)
             
         # Create land masks
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
         self.land_mask_v = self.build_land_mask(self.hfac_s)
-
-        # Calculate bathymetry
-        self.bathy = bdry_from_hfac('bathy', self.hfac, self.z_edges)
+        # Southern Weddell Sea continental shelf land mask
+        # Pass dummy ice mask with all False
+        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape).astype(bool), self.lon_2d, self.lat_2d, self.bathy)
     
 
 
@@ -650,27 +659,6 @@ class SOSEGrid(Grid):
             data = data_orig
 
         return data
-            
-
-    # Return the longitude and latitude arrays for the given grid type.
-    def get_lon_lat (self, gtype='t', dim=1):
-
-        # We need to have dim as a keyword argument so this agrees with the Grid class function, but there is no option for dim=2
-        if dim != 1:
-            print 'Error (get_lon_lat): must have dim=1 for SOSE grid'
-            sys.exit()
-
-        if gtype in ['t', 'w']:
-            return self.lon_1d, self.lat_1d
-        elif gtype == 'u':
-            return self.lon_corners_1d, self.lat_1d
-        elif gtype == 'v':
-            return self.lon_1d, self.lat_corners_1d
-        elif gtype == 'psi':
-            return self.lon_corners_1d, self.lat_corners_1d
-        else:
-            print 'Error (get_lon_lat): invalid gtype ' + gtype
-            sys.exit()
 
 
     # Dummy definitions for functions we don't want, which would otherwise be inhertied from Grid

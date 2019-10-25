@@ -41,4 +41,9 @@ def extend_moholdt_data (old_file, new_file, ua_mesh_file):
     id = nc.Dataset(new_file, 'a')
     id.variables[var_name][:] = melt
     id.close()
-    
+
+
+# Calculate the monthly climatology of B-SOSE's bottom temperature and salinity on the continental shelf in front of FRIS, as inputs to PICO. The results (24 values) will be printed on screen and also written to an ASCII file.
+def bsose_pico_input (bsose_dir, out_file):
+
+    # Build grid
