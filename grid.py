@@ -125,9 +125,9 @@ class Grid:
             if not np.all(np.diff(self.lon_1d)>0):
                 print 'Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).'
                 sys.exit()
-        if max_lon = 360:
+        if max_lon == 360:
             self.split = 0
-        elif max_lon = 180:
+        elif max_lon == 180:
             self.split = 180
         self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
         self.lon_corners_1d = fix_lon_range(self.lon_corners_1d, max_lon=max_lon)
