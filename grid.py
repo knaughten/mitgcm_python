@@ -209,6 +209,7 @@ class Grid:
     def build_sws_shelf_mask(self, land_mask, ice_mask, lon, lat, bathy):
 
         [xmin, xmax, ymin, ymax] = sws_shelf_bounds
+        h0 = -1250
 
         if self.split == 0:
             # Need to adjust the longitude bounds so in range 0-360
@@ -216,8 +217,10 @@ class Grid:
                 xmin += 360
             if xmax < 0:
                 xmax += 360
+            # This is SOSE, so choose a shallower bound - bit of a dangerous hack
+            h0 = -1200
 
-        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= h0)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
 
 
     # Split this mask into inner and outer sections, based on a straight line cutting across the shelf.
