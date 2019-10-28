@@ -16,7 +16,7 @@ from plot_utils.labels import latlon_axes, check_date_string, parse_date
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background, clear_ocean
 from diagnostics import t_minus_tf, find_aice_min_max, potential_density
-from constants import deg_string, sec_per_year
+from constants import deg_string, sec_per_year, temp_C2K
 from calculus import vertical_average
 
 
@@ -866,6 +866,20 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
                 return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
             elif var == 'bwrho':
                 return select_bottom(mask_3d(rho_3d,grid)), r'Bottom density (kg/m$^3$-1000)'
+        elif var == 'atemp':
+            return mask_land_ice(read_netcdf(file_path, 'EXFatemp', time_index=0), grid)-temp_C2K, 'Air temperature ('+deg_string+'C)'
+        elif var == 'precip':
+            return mask_land_ice(read_netcdf(file_path, 'EXFpreci', time_index=0), grid), 'Precipitation (m/s)'
+        elif var == 'aqh':
+            return mask_land_ice(read_netcdf(file_path, 'EXFaqh', time_index=0), grid), 'Specific humidity (fraction)'
+        elif var == 'wind':
+            uwind = read_netcdf(file_path, 'EXFuwind', time_index=0)
+            vwind = read_netcdf(file_path, 'EXFvwind', time_index=0)
+            return mask_land_ice(np.sqrt(uwind**2 + vwind**2), grid), 'Wind speed (m/s)'
+        elif var == 'stress':
+            taux = read_netcdf(file_path, 'EXFtaux', time_index=0)
+            tauy = read_netcdf(file_path, 'EXFtauy', time_index=0)
+            return mask_land_ice(np.sqrt(taux**2 + tauy**2), grid), r'Wind stress (N/m$^2$)'
 
     # Call this for each simulation
     if var == 'vel':

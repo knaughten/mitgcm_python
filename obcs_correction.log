@@ -3,6 +3,7 @@ balance_obcs(option='balance')
 balance_obcs(option='dampen')
 balance_obcs(option='correct', d_eta=-25, d_t=2)
 balance_obcs(option='correct', d_eta=-10, d_t=5)
+balance_obcs(option='correct', d_eta=-7, d_t=14)
 
 WSFRIS_999:
 balance_obcs(option='balance') for all years
