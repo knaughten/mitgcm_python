@@ -819,8 +819,12 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
 
 
 # NetCDF interface to latlon_comparison_plot.
-# Assumes the two simulations have the same output filename with a single time record.
-def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None):
+# Assumes the two simulations have the same output filename with a single time record, or to be time-averaged.
+def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None, time_index=None, time_average=False):
+
+    if time_index is None and not time_average:
+        print 'Error (read_plot_latlon_comparison): either select a time_index or set time_average=True.'
+        sys.exit()
 
     directory1 = real_dir(directory1)
     directory2 = real_dir(directory2)
@@ -831,55 +835,58 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
     # Inner function to read and process the variable from the given NetCDF file, and also return the variable title.
     def read_and_process (file_path):
         if var == 'ismr':
-            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid)), 'Ice shelf melt rate (m/y)'
+            return convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, time_average=time_average), grid)), 'Ice shelf melt rate (m/y)'
         elif var == 'bwtemp':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)), 'Bottom water temperature ('+deg_string+'C)'
+            return select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, time_average=time_average), grid)), 'Bottom water temperature ('+deg_string+'C)'
         elif var == 'bwsalt':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)), 'Bottom water salinity (psu)'
+            return select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, time_average=time_average), grid)), 'Bottom water salinity (psu)'
         elif var == 'bwage':
-            return select_bottom(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=0), grid)), 'Bottom water age (years)'
+            return select_bottom(mask_3d(read_netcdf(file_path, 'TRAC01', time_index=time_index, time_average=time_average), grid)), 'Bottom water age (years)'
         elif var == 'sst':
-            return mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)[0], 'Sea surface temperature ('+deg_string+'C)'
+            return mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, time_average=time_average), grid)[0], 'Sea surface temperature ('+deg_string+'C)'
         elif var == 'sss':
-            return mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)[0], 'Sea surface salinity (psu)'
+            return mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, time_average=time_average), grid)[0], 'Sea surface salinity (psu)'
         elif var == 'aice':
-            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=0), grid), 'Sea ice concentration'
+            return mask_land_ice(read_netcdf(file_path, 'SIarea', time_index=time_index, time_average=time_average), grid), 'Sea ice concentration'
         elif var == 'hice':
-            return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=0), grid), 'Sea ice thickness'
+            return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=time_index, time_average=time_average), grid), 'Sea ice thickness'
         elif var == 'iceprod':
-            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0), grid)*sec_per_year, 'Net sea ice production (m/y)'
+            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbATC', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbATO', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbFLO', time_index=time_index, time_average=time_average), grid)*sec_per_year, 'Net sea ice production (m/y)'
         elif var == 'mld':
-            return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=0), grid), 'Mixed layer depth (m)'
+            return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, time_average=time_average), grid), 'Mixed layer depth (m)'
         elif var == 'vel':
-            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
-            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+            u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=time_index, time_average=time_average), grid, gtype='u')
+            v = mask_3d(read_netcdf(file_path, 'VVEL', time_index=time_index, time_average=time_average), grid, gtype='v')
             speed, u, v = prepare_vel(u, v, grid, vel_option='avg')
             return speed, u, v, 'Barotropic velocity (m/s)'
         elif var == 'psi':
-            return np.sum(mask_3d(read_netcdf(file_path, 'PsiVEL', time_index=0), grid), axis=0)*1e-6, 'Velocity streamfunction (Sv)'
+            return np.sum(mask_3d(read_netcdf(file_path, 'PsiVEL', time_index=time_index, time_average=time_average), grid), axis=0)*1e-6, 'Velocity streamfunction (Sv)'
         elif var in ['rho_vavg', 'bwrho']:
             # Assumes MDJWF density
-            temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
-            salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
+            temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=time_index, time_average=time_average), grid)
+            salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=time_index, time_average=time_average), grid)
             rho_3d = potential_density('MDJWF', salt, temp)-1000
             if var == 'rho_vavg':
                 return mask_land(vertical_average(rho_3d, grid), grid), r'Vertically averaged density (kg/m$^3$-1000)'
             elif var == 'bwrho':
                 return select_bottom(mask_3d(rho_3d,grid)), r'Bottom density (kg/m$^3$-1000)'
         elif var == 'atemp':
-            return mask_land_ice(read_netcdf(file_path, 'EXFatemp', time_index=0), grid)-temp_C2K, 'Air temperature ('+deg_string+'C)'
+            return mask_land_ice(read_netcdf(file_path, 'EXFatemp', time_index=time_index, time_average=time_average), grid)-temp_C2K, 'Air temperature ('+deg_string+'C)'
         elif var == 'precip':
-            return mask_land_ice(read_netcdf(file_path, 'EXFpreci', time_index=0), grid), 'Precipitation (m/s)'
+            return mask_land_ice(read_netcdf(file_path, 'EXFpreci', time_index=time_index, time_average=time_average), grid), 'Precipitation (m/s)'
         elif var == 'aqh':
-            return mask_land_ice(read_netcdf(file_path, 'EXFaqh', time_index=0), grid), 'Specific humidity (fraction)'
+            return mask_land_ice(read_netcdf(file_path, 'EXFaqh', time_index=time_index, time_average=time_average), grid), 'Specific humidity (fraction)'
         elif var == 'wind':
-            uwind = read_netcdf(file_path, 'EXFuwind', time_index=0)
-            vwind = read_netcdf(file_path, 'EXFvwind', time_index=0)
+            uwind = read_netcdf(file_path, 'EXFuwind', time_index=time_index, time_average=time_average)
+            vwind = read_netcdf(file_path, 'EXFvwind', time_index=time_index, time_average=time_average)
             return mask_land_ice(np.sqrt(uwind**2 + vwind**2), grid), 'Wind speed (m/s)'
         elif var == 'stress':
-            taux = read_netcdf(file_path, 'EXFtaux', time_index=0)
-            tauy = read_netcdf(file_path, 'EXFtauy', time_index=0)
+            taux = read_netcdf(file_path, 'EXFtaux', time_index=time_index, time_average=time_average)
+            tauy = read_netcdf(file_path, 'EXFtauy', time_index=time_index, time_average=time_average)
             return mask_land_ice(np.sqrt(taux**2 + tauy**2), grid), r'Wind stress (N/m$^2$)'
+        else:
+            print 'Error (read_plot_latlon_comparison): no such variable ' + var.
+            sys.exit()
 
     # Call this for each simulation
     if var == 'vel':
