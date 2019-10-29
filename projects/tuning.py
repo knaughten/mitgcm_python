@@ -536,7 +536,7 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
             # Need to read the v-component too
             file_path_v = directory + file_head + var_name_in.replace('u', 'v') + '_' + str(year)
             if is_ukesm:
-                data_v = read_binary(file_path_v, [grid.nx, grid.ny+1], 'xyt')
+                data_v = read_binary(file_path_v, [grid.nx, grid.ny_v], 'xyt')
                 data_v = 0.5*(data_v[:,:-1,:] + data_v[:,1:,:])
             else:
                 data_v = read_binary(file_path_v, [grid.nx, grid.ny], 'xyt')

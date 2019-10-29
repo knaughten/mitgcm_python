@@ -795,18 +795,48 @@ class UKESMGrid:
     def __init__ (self, start_year=2680):
 
         lon0 = 0.9375
+        lon0_u = 0.
         lon_inc = 1.875
         lat0 = -89.375
+        lat0_v = -90
         lat_inc = 1.25
         nlon = 192
         nlat = 144
+        nlat_v = 145
         self.max_lon = 360
         self.lon, self.lat, self.dA = build_forcing_grid(lon0, lon_inc, lat0, lat_inc, nlon, nlat)
+        self.lon_u, self.lat_u = build_forcing_grid(lon0_u, lon_inc, lat0, lat_inc, nlon, nlat)[:2]
+        self.lon_v, self.lat_v = build_forcing_grid(lon0, lon_inc, lat0_v, lat_inc, nlon, nlat_v)[:2]
         self.nx = nlon
         self.ny = nlat
+        self.ny_v = nlat_v
         self.start_year = start_year
         self.period = 86400.
         self.calendar = '360_day'
+
+        
+    def get_lon_lat (self, gtype='t', dim=2):
+        
+        if gtype == 't':
+            lon = self.lon
+            lat = self.lat
+        elif gtype == 'u':
+            lon = self.lon_u
+            lat = self.lat_u
+        elif gtype == 'v':
+            lon = self.lon_v
+            lat = self.lat_v
+        else:
+            print 'Error (get_lon_lat): invalid gtype ' + gtype
+            sys.exit()
+            
+        if dim == 1:
+            return lon[0,:], lat[:,0]
+        elif dim == 2:
+            return lon, lat
+        else:
+            print 'Error (get_lon_lat): invalid dim ' + str(dim)
+            sys.exit()
 
         
         
