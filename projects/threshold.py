@@ -26,7 +26,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
     # Build grids
     ukesm_grid = UKESMGrid(start_year=start_year)
     # Make sure MITgcm longitude is in the range 0-360 to match UKESM
-    model_grid = Grid(model_grid_dir, max_lon=360)
+    model_grid = Grid(mit_grid_dir, max_lon=360)
 
     # Open NetCDF file
     ncfile = NCfile(out_file, model_grid, 'xy')
