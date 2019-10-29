@@ -30,6 +30,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         if source_dir is None:
             source_dir = '/work/n02/n02/shared/baspog/MITgcm/reanalysis/ERA5/'
         file_head = 'ERA5_'
+        gtype = ['t', 't']
     else:
         print 'Error (process_wind_forcing); invalid option ' + option
         sys.exit()
@@ -94,7 +95,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         data /= num_time
         
         # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing
-        forcing_lon, forcing_lat = forcing_grid.get_lon_lat(dim=1)
+        forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
         forcing_lon = fix_lon_range(forcing_lon)
         i_split = np.nonzero(forcing_lon < 0)[0][0]
         forcing_lon = split_longitude(forcing_lon, i_split)
