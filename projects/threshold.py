@@ -50,7 +50,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
                 if year >= start_year and year <= end_year:
                     print 'Processing ' + str(year)
                     # Read data
-                    print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '0' + str(t_end)
+                    print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
                     data_tmp = read_netcdf(file_path, var_names_in[n], t_start=t_start, t_end=t_end)
                     if data is None:
                         data = np.sum(data_tmp, axis=0)
