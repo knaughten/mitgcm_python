@@ -23,7 +23,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
     gtype = ['u', 'v']
     days_per_year = 12*30
 
-    # Build grids
+    print 'Building grids'
     ukesm_grid = UKESMGrid(start_year=start_year)
     # Make sure MITgcm longitude is in the range 0-360 to match UKESM
     model_grid = Grid(mit_grid_dir, max_lon=360)
@@ -47,7 +47,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
             t_start = 0  # Time index in file
             t_end = t_start+days_per_year
             for year in range(start_years[t], end_years[t]+1):
-                if years >= start_year and year <= end_year:
+                if year >= start_year and year <= end_year:
                     print 'Processing ' + str(year)
                     # Read data
                     print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '0' + str(t_end)
