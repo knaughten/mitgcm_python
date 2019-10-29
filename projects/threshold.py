@@ -52,7 +52,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         print 'Processing variable ' + var_names[n]
         # Read the data, time-integrating as we go
         data = None
-        num_time = None
+        num_time = 0
         
         if option == 'UKESM':
             in_files, start_years, end_years = find_cmip6_files(source_dir, expt, ensemble_member, var_names_in[n], 'day')
