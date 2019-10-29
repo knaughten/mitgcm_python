@@ -8,6 +8,7 @@ import sys
 from ..grid import Grid, UKESMGrid
 from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf
 from ..interpolation import interp_reg_xy
+from ..utils import fix_lon_range, split_longitude
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -25,8 +26,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
 
     print 'Building grids'
     ukesm_grid = UKESMGrid(start_year=start_year)
-    # Make sure MITgcm longitude is in the range 0-360 to match UKESM
-    mit_grid = Grid(mit_grid_dir, max_lon=360)
+    mit_grid = Grid(mit_grid_dir)
 
     # Open NetCDF file
     ncfile = NCfile(out_file, mit_grid, 'xy')
@@ -50,7 +50,7 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
                 if year >= start_year and year <= end_year:
                     print 'Processing ' + str(year)
                     # Read data
-                    print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
+                    print 'Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)
                     data_tmp = read_netcdf(file_path, var_names_in[n], t_start=t_start, t_end=t_end)
                     if data is None:
                         data = np.sum(data_tmp, axis=0)
@@ -63,8 +63,13 @@ def process_ukesm_wind (mit_grid_dir, out_file, model_path='/badc/cmip6/data/CMI
         # Now convert from time-integral to time-average
         data /= num_time
 
-        # Interpolate to MITgcm tracer grid
-        ukesm_lon, ukesm_lat = ukesm_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing
+        ukesm_lon, ukesm_lat = ukesm_grid.get_lon_lat(gtype=gtype[n], dim=1)    
+        ukesm_lon = fix_lon_range(ukesm_lon)
+        i_split = np.nonzero(ukesm_lon < 0)[0][0]
+        ukesm_lon = split_longitude(ukesm_lon, i_split)
+        data = split_longitude(data, i_split)
+        # Now interpolate to MITgcm tracer grid        
         mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
         print 'Interpolating'
         data_interp = interp_reg_xy(ukesm_lon, ukesm_lat, data, mit_lon, mit_lat)
