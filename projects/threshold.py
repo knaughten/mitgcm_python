@@ -84,7 +84,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
             # Loop over years
             for year in range(start_year, end_year+1):
                 file_path = source_dir + file_head + var_names[n] + '_' + str(year)
-                data_tmp = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
+                data_tmp = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
                 if data is None:
                     data = np.sum(data_tmp, axis=0)
                 else:
