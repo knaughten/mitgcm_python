@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 from ..grid import Grid, UKESMGrid
-from ..file_io import read_binary, find_cmip6_files, NCfile
+from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf
 from ..interpolation import interp_reg_xy
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
