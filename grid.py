@@ -789,7 +789,10 @@ class ERA5Grid:
         self.calendar = 'standard'
 
         
-    def get_lon_lat (self, dim=2):
+    def get_lon_lat (self, gtype='t', dim=2):
+        if gtype != 't':
+            print 'Error (get_lon_lat): there is only the t-grid.'
+            sys.exit()
         if dim == 1:
             return self.lon[0,:], self.lat[:,0]
         elif dim == 2:
