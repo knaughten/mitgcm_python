@@ -21,6 +21,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
     if option == 'UKESM':
         if source_dir is None:
             source_dir = '/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/'
+        expt = 'historical'
         ensemble_member = 'r1i1p1f2'
         var_names_in = ['uas', 'vas']
         gtype = ['u', 'v']
