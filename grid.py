@@ -788,6 +788,16 @@ class ERA5Grid:
         self.period = 21600.
         self.calendar = 'standard'
 
+        
+    def get_lon_lat (self, dim=2):
+        if dim == 1:
+            return self.lon[0,:], self.lat[:,0]
+        elif dim == 2:
+            return self.lon, self.lat
+        else:
+            print 'Error (get_lon_lat): invalid dim ' + str(dim)
+            sys.exit()
+
 
 # Similarly, UKESMGrid object. Contains full globe and daily forcing with 30-day months.
 class UKESMGrid:
