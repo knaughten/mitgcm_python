@@ -120,6 +120,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
 def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
 
     fig_name = None
+    fig_dir = real_dir(fig_dir)
 
     print 'Selecting coastal points'
     grid = Grid(grid_dir)
@@ -131,6 +132,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         # Read the data and select coastal points only
         ukesm_wind = (read_netcdf(ukesm_file, var_names[n])[coast_mask]).ravel()
         era5_wind = (read_netcdf(era5_file, var_names[n])[coast_mask]).ravel()
+        ratio = np.abs(era5_wind/ukesm_wind)
 
         print 'Making scatterplot'
         fig, ax = plt.subplots()
@@ -146,16 +148,15 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         finished_plot(fig, fig_name=fig_name)
 
         print 'Analysing ratios'
-        ratio = np.abs(era5_wind/ukesm_wind)
         percent_exceed = np.empty(100)
-        for i in range(100):
-            percent_exceed[i] = np.count_nonzero(ratio > i)/ratio.size*100
+        for i in range(20):
+            percent_exceed[i] = float(np.count_nonzero(ratio > i+1))/ratio.size*100
         # Find first value of ratio which includes >90% of points
         i_cap = np.nonzero(percent_exceed < 10)[0][0]
-        print 'A ratio cap of ' + str(i_cap) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
+        print 'A ratio cap of ' + str(i_cap+1) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
         # Plot the percentage of points that exceed each threshold ratio
         fig, ax = plt.subplots()
-        ax.plot(range(100), percent_exceed, color='blue')
+        ax.plot(np.arange(20)+1, percent_exceed, color='blue')
         ax.axhline(y=10, color='red')
         plt.xlabel('Ratio', fontsize=16)
         plt.ylabel('%', fontsize=16)
