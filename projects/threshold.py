@@ -153,10 +153,11 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         # Plot the percentage of points that exceed each threshold ratio
         fig, ax = plt.subplots()
         ax.plot(np.arange(20)+1, percent_exceed, color='blue')
+        ax.grid(True)
         ax.axhline(y=10, color='red')
         plt.xlabel('Ratio', fontsize=16)
         plt.ylabel('%', fontsize=16)
-        plt.title('Percentage of points exceeding given ratios', fontsize=18)
+        plt.title('Percentage of ' + var_names[n] + ' points exceeding given ratios', fontsize=18)
         if save_fig:
             fig_name = fig_dir + 'ratio_caps.png'
         finished_plot(fig, fig_name=fig_name)
@@ -171,7 +172,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         # Plot the y=x diagonal line in red
         ax.plot(xlim, xlim, color='red')
         # Plot the ratio cap in green
-        ax.plot(xlim, i_cap*xlim, color='green')
+        ax.plot(i_cap*xlim, xlim, color='green')
         ax.set_ylim(ylim)
         plt.xlabel('ERA5', fontsize=16)
         plt.ylabel('UKESM', fontsize=16)
