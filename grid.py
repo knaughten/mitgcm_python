@@ -341,6 +341,7 @@ class Grid:
 
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
     def get_coast_mask (self, gtype='t'):
+        from interpolation import neighbours
         open_ocean = self.get_open_ocean_mask(gtype=gtype)
         land_ice = 1 - open_ocean
         num_coast_neighbours = neighbours(land_ice, missing_val=0)[-1]
