@@ -12,7 +12,8 @@ from ..grid import Grid, UKESMGrid, ERA5Grid
 from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf
 from ..interpolation import interp_reg_xy
 from ..utils import fix_lon_range, split_longitude, real_dir
-from ..plot_utils.windows import finished_plot
+from ..plot_utils.windows import finished_plot, set_panels
+from ..plot_utils.latlon import shade_land_ice
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -142,8 +143,8 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         era5_wind_vectors.append(era5_wind)
 
         # Figure out how many are in opposite directions
-        percent_opposite = float(np.count_nonzero(ukesm_wind*era5_wind < 0))/ukesm_wind.size
-        print str(percent_opposite) + '% of points have ' + var_names[n] + ' components in oppoiste directions'
+        percent_opposite = float(np.count_nonzero(ukesm_wind*era5_wind < 0))/ukesm_wind.size*100
+        print str(percent_opposite) + '% of points have ' + var_names[n] + ' components in opposite directions'
 
         print 'Analysing ratios'
         print 'Minimum ratio of ' + str(np.amin(ratio))
@@ -188,6 +189,24 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
             fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
         finished_plot(fig, fig_name=fig_name)
 
+    print 'Plotting coastal wind vectors'
+    scale = 5
+    lon_coast = grid.lon_2d[coast_mask].ravel()
+    lat_coast = grid.lat_2d[coast_mask].ravel()
+    fig, gs, cax = set_panels('1x3C1')
+    # Panels for UKESM, ERA5, and ERA5 minus UKESM
+    [uwind, vwind] = [[ukesm_wind_vectors[i], era5_wind_vectors[i], era5_wind_vectors[i]-ukesm_wind_vectors[i]] for i in range(2)]
+    titles = ['UKESM', 'ERA5', 'ERA5 minus UKESM']
+    for i in range(3):
+        ax = plt.subplot(gs[0,i])
+        shade_land_ice(ax, grid)
+        q = ax.quiver(lon_coast, lat_coast, uwind[i], vwind[i], scale=scale)
+        plt.title(titles[i])
+    ax.quiverkey(q, label=str(scale)+' m/s')
+    plt.suptitle('Coastal winds')
+    if save_fig:
+        fig_name = fig_dir + 'coastal_vectors.png'
+    finished_plot(fig, fig_name=fig_name)
         
             
         
