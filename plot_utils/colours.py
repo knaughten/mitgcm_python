@@ -47,7 +47,7 @@ def plusminus_cmap (vmin, vmax):
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
 def special_cmap (cmap_vals, cmap_colours, vmin, vmax, name):
 
-    vmin_tmp = min(vmin, np.amin(cmip_vals))
+    vmin_tmp = min(vmin, np.amin(cmap_vals))
     vmax_tmp = max(vmax, np.amax(cmap_vals))
 
     cmap_vals_norm = (cmap_vals-vmin_tmp)/(vmax_tmp-vmin_tmp)
