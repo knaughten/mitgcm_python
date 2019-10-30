@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad, a23a_bounds
 
 
 # Grid object containing lots of grid variables:
@@ -340,12 +340,19 @@ class Grid:
 
 
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
-    def get_coast_mask (self, gtype='t'):
+    def get_coast_mask (self, gtype='t', ignore_iceberg=True):
         from interpolation import neighbours
         open_ocean = self.get_open_ocean_mask(gtype=gtype)
         land_ice = 1 - open_ocean
         num_coast_neighbours = neighbours(land_ice, missing_val=0)[-1]
-        return open_ocean*(num_coast_neighbours > 0)        
+        coast_mask = open_ocean*(num_coast_neighbours > 0)
+        if ignore_iceberg:
+            # Grounded iceberg A23A should not be considered the coast
+            lon, lat = self.get_lon_lat(gtype=type)
+            [xmin, xmax, ymin, ymax] = a23a_bounds
+            index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+            coast_mask[index] = False
+        return coast_mask
 
 
 # Interface to Grid for situations such as read_plot_latlon where there are three possibilities:
