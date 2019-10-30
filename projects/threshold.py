@@ -4,11 +4,13 @@
 
 import numpy as np
 import sys
+import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
 from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf
 from ..interpolation import interp_reg_xy
 from ..utils import fix_lon_range, split_longitude, real_dir
+from ..plot_utils.windows import finished_plot
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -108,3 +110,32 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         ncfile.add_variable(var_names[n], data_interp, 'xy', units='m/s')
 
     ncfile.close()
+
+
+# Make scatterplots of UKESM vs ERA5 winds (both vector components) at coastal points.
+def wind_scatterplots (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
+
+    print 'Selecting coastal points'
+    grid = Grid(grid_dir)
+    coast_mask = grid.get_coast_mask(ignore_iceberg=True)
+    var_names = ['uwind', 'vwind']
+
+    for n in range(2):
+        print 'Processing ' + var_names[n]
+        # Read the data
+        ukesm_wind = read_netcdf(ukesm_file, var_names[n])
+        era5_wind = read_netcdf(era5_file, var_names[n])
+        # Construct figure name, if needed
+        if save_fig:
+            fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
+        else:
+            fig_name = None
+        # Make the scatterplot
+        fig, ax = plt.subplots()
+        ax.scatter(np.ravel(era5_wind[coast_mask]), np.ravel(ukesm_wind[coast_mask]), color='blue')
+        # Plot a diagonal line
+        ax.plot(ax.get_xlim(), ax.get_xlim(), color='red')
+        plt.xlabel('ERA5', fontsize=16)
+        plt.ylabel('UKESM', fontsize=16)
+        plt.title(var_names[n] + ' (m/s) at coastal points, 1979-2014 mean', fontsize=18)
+        finished_plot(fig, fig_name=fig_name)
