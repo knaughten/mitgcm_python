@@ -47,12 +47,22 @@ def plusminus_cmap (vmin, vmax):
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
 def special_cmap (cmap_vals, cmap_colours, vmin, vmax, name):
 
-    cmap_vals_norm = (cmap_vals-vmin)/(vmax-vmin)
+    vmin_tmp = min(vmin, np.amin(cmip_vals))
+    vmax_tmp = max(vmax, np.amax(cmap_vals))
+
+    cmap_vals_norm = (cmap_vals-vmin_tmp)/(vmax_tmp-vmin_tmp)
     cmap_vals_norm[-1] = 1
     cmap_list = []
     for i in range(cmap_vals.size):
         cmap_list.append((cmap_vals_norm[i], cmap_colours[i]))
-    return cl.LinearSegmentedColormap.from_list(name, cmap_list)
+    cmap = cl.LinearSegmentedColormap.from_list(name, cmap_list)
+
+    if vmin > vmin_tmp or vmax < vmax_tmp:
+        min_colour = (vmin - vmin_tmp)/(vmax_tmp - vmin_tmp)
+        max_colour = (vmax - vmin_tmp)/(vmax_tmp - vmin_tmp)
+        cmap = truncate_colourmap(cmap, min_colour, max_colour)
+
+    return cmap
 
 
 def ismr_cmap (vmin, vmax, change_points=None):
@@ -81,7 +91,7 @@ def ismr_cmap (vmin, vmax, change_points=None):
         # No refreezing; start at 0
         cmap_vals = np.concatenate(([0], change_points, [vmax]))
         cmap_colours = [ismr_white, ismr_yellow, ismr_orange, ismr_red, ismr_pink]
-        return special_cmap(cmap_vals, cmap_colours, 0, vmax, 'ismr')
+        return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ismr')
 
 
 def psi_cmap (vmin, vmax, change_points=None):
@@ -113,7 +123,7 @@ def ratio_cmap (vmin, vmax):
     # 0 is dark blue, 1 is white, vmax is dark red
     cmap_vals = np.array([0, 1, vmax])
     cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
-    return special_cmap(cmap_vals, cmap_colours, 0, vmax, 'ratio')
+    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
@@ -140,8 +150,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         return plt.get_cmap('cool'), 0, vmax
 
     elif ctype == 'ismr':
-        # Make sure vmin isn't larger than 0
-        return ismr_cmap(vmin, vmax, change_points=change_points), min(vmin,0), vmax
+        return ismr_cmap(vmin, vmax, change_points=change_points), vmin, vmax
 
     elif ctype == 'psi':
         if vmin >= 0 or vmax <= 0:
@@ -156,7 +165,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         if vmax < 1:
             print 'Error (set_colours): ratio colourmap needs values greater than 1'
             sys.exit()
-        return ratio_cmap(vmin, vmax), 0, vmax
+        return ratio_cmap(vmin, vmax), vmin, vmax
 
     else:
         print 'Error (set_colours): invalid ctype ' + ctype
