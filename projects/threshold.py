@@ -173,6 +173,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         ax.plot(xlim, xlim, color='red')
         # Plot the ratio cap in green
         ax.plot(i_cap*xlim, xlim, color='green')
+        ax.set_xlim(xlim)
         ax.set_ylim(ylim)
         plt.xlabel('ERA5', fontsize=16)
         plt.ylabel('UKESM', fontsize=16)
