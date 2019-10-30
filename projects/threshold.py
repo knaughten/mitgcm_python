@@ -115,9 +115,10 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
 
 
 # Analyse the coastal winds in UKESM vs ERA5:
-#   1. Suggest possible caps on the ERA5/UKESM ratio
-#   2. Make scatterplots of both components
-#   3. Plot the wind vectors and their differences along the coast
+#   1. Figure out what percentage of points have winds in the opposite directions
+#   2. Suggest possible caps on the ERA5/UKESM ratio
+#   3. Make scatterplots of both components
+#   4. Plot the wind vectors and their differences along the coast
 def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
 
     fig_name = None
@@ -139,6 +140,10 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         # Save this component
         ukesm_wind_vectors.append(ukesm_wind)
         era5_wind_vectors.append(era5_wind)
+
+        # Figure out how many are in opposite directions
+        percent_opposite = float(np.count_nonzero(ukesm_wind*era5_wind < 0))/ukesm_wind.size
+        print str(percent_opposite) + '% of points have ' + var_names[n] + ' components in oppoiste directions'
 
         print 'Analysing ratios'
         print 'Minimum ratio of ' + str(np.amin(ratio))
