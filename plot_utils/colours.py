@@ -13,6 +13,7 @@ import sys
 # Set up colourmaps of type ctype. Options for ctype are:
 # 'basic': just the 'jet' colourmap
 # 'plusminus': a red/blue colour map where 0 is white
+# 'ratio': as above, but 1 is white and the data does not go below 0
 # 'vel': the 'cool' colourmap starting at 0; good for plotting velocity
 # 'ismr': a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink.
 # 'psi': a special colour map for streamfunction contours, with negative values in blue and positive values in red, but small values more visible than regular plus-minus.
@@ -108,6 +109,13 @@ def psi_cmap (vmin, vmax, change_points=None):
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'psi')
 
 
+def ratio_cmap (vmin, vmax):
+    # 0 is dark blue, 1 is white, vmax is dark red
+    cmap_vals = [0, 1, vmax]
+    cmap_colours = [(0, 0, 0.3), (1, 1, 1), (0.3, 0, 0)]
+    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
+
+
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
     # Work out bounds
@@ -140,6 +148,12 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
             print 'Error (set_colours): streamfunction limits do not cross 0.'
             sys.exit()
         return psi_cmap(vmin, vmax, change_points=change_points), vmin, vmax
+
+    elif ctype == 'ratio':
+        if vmin < 0:
+            print 'Error (set_colours): ratio colourmap only accepts positive values.'
+            sys.exit()
+        return ratio_cmap(vmin, vmax), vmin, vmax
 
     else:
         print 'Error (set_colours): invalid ctype ' + ctype

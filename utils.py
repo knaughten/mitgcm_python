@@ -527,6 +527,7 @@ def str_is_int (s):
 
 
 # Find the Cartesian distance between two lon-lat points.
+# This also works if one of point0, point1 is a 2D array of many points.
 def dist_btw_points (point0, point1):
     [lon0, lat0] = point0
     [lon1, lat1] = point1
