@@ -4,6 +4,8 @@
 
 import numpy as np
 import sys
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
@@ -112,8 +114,12 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
     ncfile.close()
 
 
-# Make scatterplots of UKESM vs ERA5 winds (both vector components) at coastal points.
-def wind_scatterplots (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
+# Analyse the coastal winds in UKESM vs ERA5:
+#   1. Make scatterplots of both components
+#   2. Suggest possible caps on the ERA5/UKESM ratio
+def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
+
+    fig_name = None
 
     print 'Selecting coastal points'
     grid = Grid(grid_dir)
@@ -122,20 +128,40 @@ def wind_scatterplots (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir=
 
     for n in range(2):
         print 'Processing ' + var_names[n]
-        # Read the data
-        ukesm_wind = read_netcdf(ukesm_file, var_names[n])
-        era5_wind = read_netcdf(era5_file, var_names[n])
-        # Construct figure name, if needed
-        if save_fig:
-            fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
-        else:
-            fig_name = None
-        # Make the scatterplot
+        # Read the data and select coastal points only
+        ukesm_wind = (read_netcdf(ukesm_file, var_names[n])[coast_mask]).ravel()
+        era5_wind = (read_netcdf(era5_file, var_names[n])[coast_mask]).ravel()
+
+        print 'Making scatterplot'
         fig, ax = plt.subplots()
-        ax.scatter(np.ravel(era5_wind[coast_mask]), np.ravel(ukesm_wind[coast_mask]), color='blue')
+        ax.scatter(era5_wind, ukesm_wind, color='blue')
         # Plot a diagonal line
         ax.plot(ax.get_xlim(), ax.get_xlim(), color='red')
         plt.xlabel('ERA5', fontsize=16)
         plt.ylabel('UKESM', fontsize=16)
         plt.title(var_names[n] + ' (m/s) at coastal points, 1979-2014 mean', fontsize=18)
+        # Construct figure name, if needed
+        if save_fig:
+            fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
         finished_plot(fig, fig_name=fig_name)
+
+        print 'Analysing ratios'
+        ratio = np.abs(era5_wind/ukesm_wind)
+        percent_exceed = np.empty(100)
+        for i in range(100):
+            percent_exceed[i] = np.count_nonzero(ratio > i)/ratio.size*100
+        # Find first value of ratio which includes >90% of points
+        i_cap = np.nonzero(percent_exceed < 10)[0][0]
+        print 'A ratio cap of ' + str(i_cap) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
+        # Plot the percentage of points that exceed each threshold ratio
+        fig, ax = plt.subplots()
+        ax.plot(range(100), percent_exceed, color='blue')
+        ax.axhline(y=10, color='red')
+        plt.xlabel('Ratio', fontsize=16)
+        plt.ylabel('%', fontsize=16)
+        plt.title('Percentage of points exceeding given ratios', fontsize=18)
+        if save_fig:
+            fig_name = fig_dir + 'ratio_caps.png'
+        finished_plot(fig, fig_name=fig_name)
+            
+        

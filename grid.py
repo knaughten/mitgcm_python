@@ -345,7 +345,7 @@ class Grid:
         open_ocean = self.get_open_ocean_mask(gtype=gtype)
         land_ice = 1 - open_ocean
         num_coast_neighbours = neighbours(land_ice, missing_val=0)[-1]
-        coast_mask = open_ocean*(num_coast_neighbours > 0)
+        coast_mask = (open_ocean*(num_coast_neighbours > 0)).astype(bool)
         if ignore_iceberg:
             # Grounded iceberg A23A should not be considered the coast
             lon, lat = self.get_lon_lat(gtype=gtype)
