@@ -166,9 +166,11 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         ax.scatter(era5_wind, ukesm_wind, color='blue')
         # Plot the y=x diagonal line in red
         xlim = np.array(ax.get_xlim())
+        ylim = np.array(ax.get_ylim())
         ax.plot(xlim, xlim, color='red')
         # Plot the ratio cap in green
         ax.plot(xlim, i_cap*xlim, color='green')
+        ax.set_ylim(ylim)
         plt.xlabel('ERA5', fontsize=16)
         plt.ylabel('UKESM', fontsize=16)
         plt.title(var_names[n] + ' (m/s) at coastal points, 1979-2014 mean', fontsize=18)
