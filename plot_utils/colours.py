@@ -156,7 +156,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
         if vmax < 1:
             print 'Error (set_colours): ratio colourmap needs values greater than 1'
             sys.exit()
-        return ratio_cmap(vmin, vmax), vmin, vmax
+        return ratio_cmap(vmin, vmax), 0, vmax
 
     else:
         print 'Error (set_colours): invalid ctype ' + ctype

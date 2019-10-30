@@ -218,6 +218,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=32):
 
     var_names = ['uwind', 'vwind']
+    scale_dist = 150.
 
     print 'Building grid'
     grid = Grid(grid_dir)
@@ -242,7 +243,8 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     nearest_vscale = None
     # Loop over all the coastal points
     for i in range(lon_coast.size):
-        dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])
+        # Calculate distance of every point in the model grid to this specific coastal point, in km
+        dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])*1e-3
         if min_dist is None:
             # Initialise the arrays
             min_dist = dist_to_pt
@@ -258,15 +260,21 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     min_dist = mask_land_ice(min_dist, grid)
     nearest_uscale = mask_land_ice(nearest_uscale, grid)
     nearest_vscale = mask_land_ice(nearest_vscale, grid)
-    # Calculate combined scaling factor
-    combined_scale = np.sqrt(nearest_uscale**2 + nearest_vscale**2)
 
-    # Plot the results so far
-    data_to_plot = [min_dist, nearest_uscale, nearest_vscale, combined_scale]
-    titles = ['Distance to coast (m)', 'Nearest u-scaling factor', 'Nearest v-scaling factor', 'Combined scaling factor']
+    print 'Extending scale factors offshore'
+    # Cosine function moving from scaling factor to 1 over distance of 150 km offshore
+    uscale_extend = (min_dist < scale_dist)*(nearest_uscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    vscale_extend = (min_dist < scale_dist)*(nearest_vscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    combined_scale_extend = np.sqrt(uscale_extend**2 + vscale_extend**2)
+
+    print 'Plotting'
+    data_to_plot = [min_dist, uscale_extend, vscale_extend, combined_scale_extend]
+    titles = ['Distance to coast (km)', 'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
     ctype = ['basic', 'ratio', 'ratio', 'ratio']
     for i in range(len(data_to_plot)):
         latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
+        
+    
             
     
     
