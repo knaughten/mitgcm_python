@@ -348,7 +348,7 @@ class Grid:
         coast_mask = open_ocean*(num_coast_neighbours > 0)
         if ignore_iceberg:
             # Grounded iceberg A23A should not be considered the coast
-            lon, lat = self.get_lon_lat(gtype=type)
+            lon, lat = self.get_lon_lat(gtype=gtype)
             [xmin, xmax, ymin, ymax] = a23a_bounds
             index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
             coast_mask[index] = False
