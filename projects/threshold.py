@@ -115,8 +115,9 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
 
 
 # Analyse the coastal winds in UKESM vs ERA5:
-#   1. Make scatterplots of both components
-#   2. Suggest possible caps on the ERA5/UKESM ratio
+#   1. Suggest possible caps on the ERA5/UKESM ratio
+#   2. Make scatterplots of both components
+#   3. Plot the wind vectors and their differences along the coast
 def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_dir='./'):
 
     fig_name = None
@@ -127,25 +128,17 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     var_names = ['uwind', 'vwind']
 
+    ukesm_wind_vectors = []
+    era5_wind_vectors = []
     for n in range(2):
         print 'Processing ' + var_names[n]
         # Read the data and select coastal points only
         ukesm_wind = (read_netcdf(ukesm_file, var_names[n])[coast_mask]).ravel()
         era5_wind = (read_netcdf(era5_file, var_names[n])[coast_mask]).ravel()
         ratio = np.abs(era5_wind/ukesm_wind)
-
-        print 'Making scatterplot'
-        fig, ax = plt.subplots()
-        ax.scatter(era5_wind, ukesm_wind, color='blue')
-        # Plot a diagonal line
-        ax.plot(ax.get_xlim(), ax.get_xlim(), color='red')
-        plt.xlabel('ERA5', fontsize=16)
-        plt.ylabel('UKESM', fontsize=16)
-        plt.title(var_names[n] + ' (m/s) at coastal points, 1979-2014 mean', fontsize=18)
-        # Construct figure name, if needed
-        if save_fig:
-            fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
-        finished_plot(fig, fig_name=fig_name)
+        # Save this component
+        ukesm_wind_vectors.append(ukesm_wind)
+        era5_wind_vectors.append(era5_wind)
 
         print 'Analysing ratios'
         print 'Minimum ratio of ' + str(np.amin(ratio))
@@ -155,8 +148,8 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         for i in range(20):
             percent_exceed[i] = float(np.count_nonzero(ratio > i+1))/ratio.size*100
         # Find first value of ratio which includes >90% of points
-        i_cap = np.nonzero(percent_exceed < 10)[0][0]
-        print 'A ratio cap of ' + str(i_cap+1) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
+        i_cap = np.nonzero(percent_exceed < 10)[0][0] + 1
+        print 'A ratio cap of ' + str(i_cap) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
         # Plot the percentage of points that exceed each threshold ratio
         fig, ax = plt.subplots()
         ax.plot(np.arange(20)+1, percent_exceed, color='blue')
@@ -167,5 +160,23 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         if save_fig:
             fig_name = fig_dir + 'ratio_caps.png'
         finished_plot(fig, fig_name=fig_name)
+
+        print 'Making scatterplot'
+        fig, ax = plt.subplots()
+        ax.scatter(era5_wind, ukesm_wind, color='blue')
+        # Plot the y=x diagonal line in red
+        xlim = np.array(ax.get_xlim())
+        ax.plot(xlim, xlim, color='red')
+        # Plot the ratio cap in green
+        ax.plot(xlim, i_cap*xlim, color='green')
+        plt.xlabel('ERA5', fontsize=16)
+        plt.ylabel('UKESM', fontsize=16)
+        plt.title(var_names[n] + ' (m/s) at coastal points, 1979-2014 mean', fontsize=18)
+        # Construct figure name, if needed
+        if save_fig:
+            fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
+        finished_plot(fig, fig_name=fig_name)
+
+        
             
         
