@@ -112,7 +112,7 @@ def psi_cmap (vmin, vmax, change_points=None):
 def ratio_cmap (vmin, vmax):
     # 0 is dark blue, 1 is white, vmax is dark red
     cmap_vals = np.array([0, 1, vmax])
-    cmap_colours = [(0, 0, 0.3), (1, 1, 1), (0.3, 0, 0)]
+    cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
     return special_cmap(cmap_vals, cmap_colours, 0, vmax, 'ratio')
 
 

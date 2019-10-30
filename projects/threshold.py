@@ -258,11 +258,13 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     min_dist = mask_land_ice(min_dist, grid)
     nearest_uscale = mask_land_ice(nearest_uscale, grid)
     nearest_vscale = mask_land_ice(nearest_vscale, grid)
+    # Calculate combined scaling factor
+    combined_scale = np.sqrt(nearest_uscale**2 + nearest_vscale**2)
 
     # Plot the results so far
-    data_to_plot = [min_dist, nearest_uscale, nearest_vscale]
-    titles = ['Distance to coast (m)', 'Nearest u-scaling factor', 'Nearest v-scaling factor']
-    ctype = ['basic', 'ratio', 'ratio']
+    data_to_plot = [min_dist, nearest_uscale, nearest_vscale, combined_scale]
+    titles = ['Distance to coast (m)', 'Nearest u-scaling factor', 'Nearest v-scaling factor', 'Combined scaling factor']
+    ctype = ['basic', 'ratio', 'ratio', 'ratio']
     for i in range(len(data_to_plot)):
         latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
             
