@@ -113,7 +113,7 @@ def ratio_cmap (vmin, vmax):
     # 0 is dark blue, 1 is white, vmax is dark red
     cmap_vals = np.array([0, 1, vmax])
     cmap_colours = [(0, 0, 0.3), (1, 1, 1), (0.3, 0, 0)]
-    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
+    return special_cmap(cmap_vals, cmap_colours, 0, vmax, 'ratio')
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
@@ -152,6 +152,9 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
     elif ctype == 'ratio':
         if vmin < 0:
             print 'Error (set_colours): ratio colourmap only accepts positive values.'
+            sys.exit()
+        if vmax < 1:
+            print 'Error (set_colours): ratio colourmap needs values greater than 1'
             sys.exit()
         return ratio_cmap(vmin, vmax), vmin, vmax
 
