@@ -13,7 +13,7 @@ from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf, write_
 from ..interpolation import interp_reg_xy
 from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice
 from ..plot_utils.windows import finished_plot, set_panels
-from ..plot_utils.latlon import shade_land_ice
+from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
 from ..plot_latlon import latlon_plot
 
@@ -265,16 +265,42 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     # Cosine function moving from scaling factor to 1 over distance of 150 km offshore
     uscale_extend = (min_dist < scale_dist)*(nearest_uscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     vscale_extend = (min_dist < scale_dist)*(nearest_vscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
-    combined_scale_extend = np.sqrt(uscale_extend**2 + vscale_extend**2)
+    scale_extend = [uscale_extend, vscale_extend]
+    # Combine (just for plotting purposes), and scale by sqrt(2) so all 1s map to 1
+    scale_combined = np.sqrt((uscale_extend**2 + vscale_extend**2)/2)
 
     print 'Plotting'
-    data_to_plot = [min_dist, uscale_extend, vscale_extend, combined_scale_extend]
+    data_to_plot = [min_dist, uscale_extend, vscale_extend, scale_combined]
     titles = ['Distance to coast (km)', 'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
     ctype = ['basic', 'ratio', 'ratio', 'ratio']
     for i in range(len(data_to_plot)):
         latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
-        
-    
+    # Plot coastal wind vectors pre and post correction, and difference
+    ukesm_raw = [read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel() for n in range(2)]
+    ukesm_correct = [scale[n]*ukesm_raw[n] for n in range(2)]
+    [uwind, vwind] = [[ukesm_raw[n], ukesm_correct[n], ukesm_correct[n]-ukesm_raw[n]] for n in range(2)]
+    fig, gs = set_panels('1x3C0')
+    titles = ['Before', 'After', 'Difference']
+    for i in range(3):
+        ax = plt.subplot(gs[0,i])
+        shade_land_ice(ax, grid)
+        ax.quiver(lon_coast, lat_coast, uwind[i], vwind[i], scale=30)
+        latlon_axes(ax, grid.lon_corners_2d, grid.lat_corners_2d)
+        plt.title(titles[i], fontsize=16)
+        if i > 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    plt.suptitle('Coastal winds', fontsize=20)
+    finished_plot(fig)
+
+    print 'Writing to file'
+    for n in range(2):
+        scale_data = scale_extend[n]
+        # Replace mask with zeros
+        mask = scale_data.mask
+        scale_data = scale_data.data
+        scale_data[mask] = 0
+        write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)
             
     
     
