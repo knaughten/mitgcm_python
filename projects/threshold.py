@@ -217,54 +217,54 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 # Build a katabatic wind correction, with scale factors for each wind component. Save to binary files for MITgcm to read, and also plot the results.
 def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=32):
 
-var_names = ['uwind', 'vwind']
+    var_names = ['uwind', 'vwind']
 
-print 'Building grid'
-grid = Grid(grid_dir)
-print 'Selecting coastal points'
-coast_mask = grid.get_coast_mask(ignore_iceberg=True)
-lon_coast = grid.lon_2d[coast_mask].ravel()
-lat_coast = grid.lat_2d[coast_mask].ravel()
+    print 'Building grid'
+    grid = Grid(grid_dir)
+    print 'Selecting coastal points'
+    coast_mask = grid.get_coast_mask(ignore_iceberg=True)
+    lon_coast = grid.lon_2d[coast_mask].ravel()
+    lat_coast = grid.lat_2d[coast_mask].ravel()
 
-print 'Calculating scale factors'
-scale = []
-for n in range(2):
-    # Read data
-    ukesm_wind = read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel()
-    era5_wind = read_netcdf(era5_file, var_names[n])[coast_mask].ravel()
-    # Take minimum of the ratio of ERA5 to UKESM wind, and the scale cap
-    scale.append(np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap))
-[uscale, vscale] = scale
+    print 'Calculating scale factors'
+    scale = []
+    for n in range(2):
+        # Read data
+        ukesm_wind = read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel()
+        era5_wind = read_netcdf(era5_file, var_names[n])[coast_mask].ravel()
+        # Take minimum of the ratio of ERA5 to UKESM wind, and the scale cap
+        scale.append(np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap))
+    [uscale, vscale] = scale
 
-print 'Calculating distance from the coast'
-min_dist = None
-nearest_uscale = None
-nearest_vscale = None
-# Loop over all the coastal points
-for i in range(lon_coast.size):
-    dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])
-    if min_dist is None:
-        # Initialise the arrays
-        min_dist = dist_to_pt
-        nearest_uscale = np.zeros(min_dist.shape) + uscale[i]
-        nearest_vscale = np.zeros(min_dist.shape) + vscale[i]
-    else:
-        # Figure out which cells have this coastal point as the closest one yet, and update the arrays
-        index = dist_to_pt < min_dist
-        min_dist[index] = dist_to_pt[index]
-        nearest_uscale[index] = uscale[i]
-        nearest_vscale[index] = vscale[i]
-# Mask out the land and ice shelves
-min_dist = mask_land_ice(min_dist, grid)
-nearest_uscale = mask_land_ice(nearest_uscale, grid)
-nearest_vscale = mask_land_ice(nearest_vscale, grid)
+    print 'Calculating distance from the coast'
+    min_dist = None
+    nearest_uscale = None
+    nearest_vscale = None
+    # Loop over all the coastal points
+    for i in range(lon_coast.size):
+        dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])
+        if min_dist is None:
+            # Initialise the arrays
+            min_dist = dist_to_pt
+            nearest_uscale = np.zeros(min_dist.shape) + uscale[i]
+            nearest_vscale = np.zeros(min_dist.shape) + vscale[i]
+        else:
+            # Figure out which cells have this coastal point as the closest one yet, and update the arrays
+            index = dist_to_pt < min_dist
+            min_dist[index] = dist_to_pt[index]
+            nearest_uscale[index] = uscale[i]
+            nearest_vscale[index] = vscale[i]
+    # Mask out the land and ice shelves
+    min_dist = mask_land_ice(min_dist, grid)
+    nearest_uscale = mask_land_ice(nearest_uscale, grid)
+    nearest_vscale = mask_land_ice(nearest_vscale, grid)
 
-# Plot the results so far
-data_to_plot = [min_dist, nearest_uscale, nearest_vscale]
-titles = ['Distance to coast (m)', 'Nearest u-scaling factor', 'Nearest v-scaling factor']
-ctype = ['basic', 'ratio', 'ratio']
-for i in range(len(data_to_plot)):
-    latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
+    # Plot the results so far
+    data_to_plot = [min_dist, nearest_uscale, nearest_vscale]
+    titles = ['Distance to coast (m)', 'Nearest u-scaling factor', 'Nearest v-scaling factor']
+    ctype = ['basic', 'ratio', 'ratio']
+    for i in range(len(data_to_plot)):
+        latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
             
     
     
