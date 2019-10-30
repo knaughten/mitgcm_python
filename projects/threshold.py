@@ -148,7 +148,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         finished_plot(fig, fig_name=fig_name)
 
         print 'Analysing ratios'
-        percent_exceed = np.empty(100)
+        percent_exceed = np.empty(20)
         for i in range(20):
             percent_exceed[i] = float(np.count_nonzero(ratio > i+1))/ratio.size*100
         # Find first value of ratio which includes >90% of points
