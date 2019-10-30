@@ -337,7 +337,14 @@ class Grid:
         lon, lat = self.get_lon_lat(gtype=gtype)
         [lon0, lon1, lat0, lat1] = berkner_island_bounds
         return (lon>=lon0)*(lon<=lon1)*(lat>=lat0)*(lat<=lat1)*self.get_land_mask(gtype=gtype)
-        
+
+
+    # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
+    def get_coast_mask (self, gtype='t'):
+        open_ocean = self.get_open_ocean_mask(gtype=gtype)
+        land_ice = 1 - open_ocean
+        num_coast_neighbours = neighbours(land_ice, missing_val=0)[-1]
+        return open_ocean*(num_coast_neighbours > 0)        
 
 
 # Interface to Grid for situations such as read_plot_latlon where there are three possibilities:
