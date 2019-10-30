@@ -14,6 +14,7 @@ from ..interpolation import interp_reg_xy
 from ..utils import fix_lon_range, split_longitude, real_dir
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice
+from ..plot_utils.labels import latlon_axes
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -190,10 +191,10 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         finished_plot(fig, fig_name=fig_name)
 
     print 'Plotting coastal wind vectors'
-    scale = 5
+    scale = 30
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
-    fig, gs, cax = set_panels('1x3C1')
+    fig, gs = set_panels('1x3C0')
     # Panels for UKESM, ERA5, and ERA5 minus UKESM
     [uwind, vwind] = [[ukesm_wind_vectors[i], era5_wind_vectors[i], era5_wind_vectors[i]-ukesm_wind_vectors[i]] for i in range(2)]
     titles = ['UKESM', 'ERA5', 'ERA5 minus UKESM']
@@ -201,9 +202,12 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
         ax = plt.subplot(gs[0,i])
         shade_land_ice(ax, grid)
         q = ax.quiver(lon_coast, lat_coast, uwind[i], vwind[i], scale=scale)
-        plt.title(titles[i])
-    ax.quiverkey(q, label=str(scale)+' m/s')
-    plt.suptitle('Coastal winds')
+        latlon_axes(ax, grid.lon_corners_2d, grid.lat_corners_2d)
+        plt.title(titles[i], fontsize=16)
+        if i > 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    plt.suptitle('Coastal winds', fontsize=20)
     if save_fig:
         fig_name = fig_dir + 'coastal_vectors.png'
     finished_plot(fig, fig_name=fig_name)
