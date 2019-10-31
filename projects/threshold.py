@@ -215,7 +215,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 
 
 # Build a katabatic wind correction, with scale factors for each wind component. Save to binary files for MITgcm to read, and also plot the results.
-def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=32):
+def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=64):
 
     var_names = ['uwind', 'vwind']
     scale_dist = 150.
