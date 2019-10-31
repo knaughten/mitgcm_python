@@ -7,7 +7,6 @@ import sys
 import numpy as np
 import shutil
 import netCDF4 as nc
-import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 
 from grid import Grid
@@ -478,6 +477,8 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
 # Make animations of lat-lon variables throughout a coupled UaMITgcm simulation, and also images of the first and last frames.
 # Currently supported: ismr, bwtemp, bwsalt, draft, aice, hice, mld, eta, psi.
 def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6)):
+
+    import matplotlib.animation as animation
 
     output_dir = real_dir(output_dir)
     segment_dir = check_segment_dir(output_dir, segment_dir)
