@@ -410,9 +410,9 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     # Longitude bounds on each region
     rd_bounds = [-80, -57] #[-80, -58]  # Western bound is well into land
     bb_bounds = [-58, -49] #[-49, -45]
-    ft_bounds = [-48, -39] #[-42, -38]
+    ft_bounds = [-48, -30] #[-42, -38]  # Eastern bound is well into land
     # Max distance from the ice front (km)
-    max_dist = 300 #100
+    max_dist = 150 #100
 
     print 'Building grid'
     grid = Grid(grid_path)
