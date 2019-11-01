@@ -237,7 +237,7 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         era5_wind.append(read_netcdf(era5_file, var_names[n])[coast_mask].ravel())
     ukesm_wind2 = ukesm_wind[0]**2 + ukesm_wind[1]**2
     era5_wind2 = era5_wind[0]**2 + era5_wind[1]**2
-    scale = np.minimum(np.abs(era5_wind2/ukesm_wind2), scale_cap**2)
+    scale = np.minimum(np.abs(era5_wind2/ukesm_wind2), scale_cap)
     '''scale = []
     for n in range(2):
         # Read data
