@@ -218,7 +218,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=64):
 
     var_names = ['uwind', 'vwind']
-    scale_dist = 300.
+    scale_dist = 150. #300
     # Radius for smoothing
     sigma = 2
 
