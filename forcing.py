@@ -407,6 +407,8 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 # The arguments rd_scale, bb_scale, and ft_scale are the scaling factors to set over Ronne Depression, Berkner Bank, and Filchner Trough respectively. They must be positive. The code will smooth the mask so there are no sharp boundaries in the scaling.
 def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
+    # Cutoff latitude
+    max_lat = -74
     # Longitude bounds on each region
     rd_bounds = [-62, -58]
     bb_bounds = [-57, -49]
@@ -428,7 +430,7 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     print 'Selecting regions'
     scale_coast = np.ones(lon_coast.shape)
     for n in range(3):
-        index = (lon_coast >= bounds[n][0])*(lon_coast <= bounds[n][1])
+        index = (lon_coast >= bounds[n][0])*(lon_coast <= bounds[n][1])*(lat_coast <= max_lat)
         scale_coast[index] = scale_factors[n]
 
     print 'Calculating distance from the coast'
