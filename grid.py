@@ -728,6 +728,7 @@ class WOAGrid(Grid):
         if split != 180:
             print "Error (WOA_grid): Haven't coded for values of split other than 180."
             sys.exit()
+        self.split = split
         self.lon_1d = read_netcdf(file_path, 'lon')
         self.lat_1d = read_netcdf(file_path, 'lat')        
         self.depth = -1*read_netcdf(file_path, 'depth')
