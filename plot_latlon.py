@@ -770,7 +770,7 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 
 # Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
-def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=percent_anomaly):
+def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=False):
 
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
