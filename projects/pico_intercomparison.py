@@ -9,7 +9,7 @@ import shutil
 from ..file_io import read_netcdf
 from ..interpolation import discard_and_fill
 from ..plot_ua import read_ua_mesh
-from ..utils import real_dir, apply_mask, select_bottom
+from ..utils import real_dir, apply_mask, select_bottom, days_per_month
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
 from ..grid import WOAGrid
@@ -53,32 +53,54 @@ def woa18_pico_input (woa_dir, out_file):
     file_tail = '_04.nc'
     var_names = ['t', 's']
     var_name_tail = '_an'
+    var_names_long = ['Temperature', 'Salinity']
     woa_dir = real_dir(woa_dir)
 
     print 'Building WOA grid'
     # Use the January temperature file
     grid = WOAGrid(woa_dir + file_head + var_names[0] + '01' + file_tail)
 
-    f = open(out_file, 'w')
+    # Build array of days per month, with February as 28.25
+    ndays = np.array([days_per_month(t+1, 1) for t in range(12)])
+    ndays[1] += 0.25
+
+    monthly_data = np.zeros([2, 12])
+    annual_data = np.zeros(2)
     # Loop over variables
     for n in range(2):
         print 'Processing ' + var_names[n]
-        f.write(var_names[i]+'\n')
         # Loop over months
         for t in range(12):
+            print 'Month ' + str(t+1)
             # Construct the filename
             file_path = woa_dir + file_head + var_names[n] + str(t+1).zfill(2) + file_tail
             # Read the data
             data = read_netcdf(file_path, var_names[n]+var_name_tail)
             # Select the bottom layer
             data = select_bottom(data)
-            # Mask out everything except the SWS continental s helf
+            # Mask out everything except the SWS continental shelf
             data = apply_mask(data, np.invert(grid.sws_shelf_mask))
-            # Area-average
+            # Area-average and save
             data = area_average(data, grid)
-            # Format as a nice string
-            data_val = round_to_decimals(data, 2)
-            print data_val
-            f.write(data+val+'\n')
+            # Save monthly data
+            monthly_data[n,t] = data
+            # Accumulate annual data
+            annual_data[n] += data*ndays[t]/np.sum(ndays)
+
+    # Save results to file
+    f = open(out_file, 'w')
+    for n in range(2):
+        f.write(var_names_long[n]+'\n')
+        f.write('Monthly values:\n')
+        for t in range(12):
+            f.write(round_to_decimals(monthly_data[n,t], 2)+'\n')
+        f.write('Annual value: ')
+        f.write(round_to_decimals(annual_data[n], 2)+'\n')
     f.close()
+
+    # Print the contents of that file
+    f = open(out_file, 'r')
+    for line in f:
+        print line
+    f.close()    
     print 'Data saved in ' + out_file
