@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
 from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf, write_binary
-from ..interpolation import interp_reg_xy
+from ..interpolation import interp_reg_xy, smooth_xy
 from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, overlay_vectors
@@ -218,7 +218,9 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=64):
 
     var_names = ['uwind', 'vwind']
-    scale_dist = 150.
+    scale_dist = 300.
+    # Radius for smoothing
+    sigma = 2
 
     print 'Building grid'
     grid = Grid(grid_dir)
@@ -256,13 +258,13 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
             min_dist[index] = dist_to_pt[index]
             nearest_uscale[index] = uscale[i]
             nearest_vscale[index] = vscale[i]
-    # Mask out the land and ice shelves
+    # Smooth the result, and mask out the land and ice shelves
     min_dist = mask_land_ice(min_dist, grid)
-    nearest_uscale = mask_land_ice(nearest_uscale, grid)
-    nearest_vscale = mask_land_ice(nearest_vscale, grid)
+    nearest_uscale = mask_land_ice(smooth_xy(nearest_uscale, sigma=sigma), grid)
+    nearest_vscale = mask_land_ice(smooth_xy(nearest_vscale, sigma=sigma), grid)
 
     print 'Extending scale factors offshore'
-    # Cosine function moving from scaling factor to 1 over distance of 150 km offshore
+    # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
     uscale_extend = (min_dist < scale_dist)*(nearest_uscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     vscale_extend = (min_dist < scale_dist)*(nearest_vscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     scale_extend = [uscale_extend, vscale_extend]
