@@ -230,19 +230,28 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     lat_coast = grid.lat_2d[coast_mask].ravel()
 
     print 'Calculating scale factors'
-    scale = []
+    ukesm_wind = []
+    era5_wind = []
+    for n in range(2):
+        ukesm_wind.append(read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel())
+        era5_wind.append(read_netcdf(era5_file, var_names[n])[coast_mask].ravel())
+    ukesm_wind2 = ukesm_wind[0]**2 + ukesm_wind[1]**2
+    era5_wind2 = era5_wind[0]**2 + era5_wind[1]**2
+    scale = np.minimum(np.abs(era5_wind2/ukesm_wind2), scale_cap**2)
+    '''scale = []
     for n in range(2):
         # Read data
         ukesm_wind = read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel()
         era5_wind = read_netcdf(era5_file, var_names[n])[coast_mask].ravel()
         # Take minimum of the ratio of ERA5 to UKESM wind, and the scale cap
         scale.append(np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap))
-    [uscale, vscale] = scale
+    [uscale, vscale] = scale'''
 
     print 'Calculating distance from the coast'
     min_dist = None
-    nearest_uscale = None
-    nearest_vscale = None
+    nearest_scale = None
+    '''nearest_uscale = None
+    nearest_vscale = None'''
     # Loop over all the coastal points
     for i in range(lon_coast.size):
         # Calculate distance of every point in the model grid to this specific coastal point, in km
@@ -250,34 +259,38 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         if min_dist is None:
             # Initialise the arrays
             min_dist = dist_to_pt
-            nearest_uscale = np.zeros(min_dist.shape) + uscale[i]
-            nearest_vscale = np.zeros(min_dist.shape) + vscale[i]
+            nearest_scale = np.zeros(min_dist.shape) + scale[i]
+            '''nearest_uscale = np.zeros(min_dist.shape) + uscale[i]
+            nearest_vscale = np.zeros(min_dist.shape) + vscale[i]'''
         else:
             # Figure out which cells have this coastal point as the closest one yet, and update the arrays
             index = dist_to_pt < min_dist
             min_dist[index] = dist_to_pt[index]
-            nearest_uscale[index] = uscale[i]
-            nearest_vscale[index] = vscale[i]
+            nearest_scale[index] = scale[i]
+            '''nearest_uscale[index] = uscale[i]
+            nearest_vscale[index] = vscale[i]'''
     # Smooth the result, and mask out the land and ice shelves
     min_dist = mask_land_ice(min_dist, grid)
-    nearest_uscale = mask_land_ice(smooth_xy(nearest_uscale, sigma=sigma), grid)
-    nearest_vscale = mask_land_ice(smooth_xy(nearest_vscale, sigma=sigma), grid)
+    nearest_scale = mask_land_ice(smooth_xy(nearest_scale, sigma=sigma), grid)
+    '''nearest_uscale = mask_land_ice(smooth_xy(nearest_uscale, sigma=sigma), grid)
+    nearest_vscale = mask_land_ice(smooth_xy(nearest_vscale, sigma=sigma), grid)'''
 
     print 'Extending scale factors offshore'
     # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
-    uscale_extend = (min_dist < scale_dist)*(nearest_uscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    scale_extend = (min_dist < scale_dist)*(nearest_scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    '''uscale_extend = (min_dist < scale_dist)*(nearest_uscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     vscale_extend = (min_dist < scale_dist)*(nearest_vscale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     scale_extend = [uscale_extend, vscale_extend]
     # Combine (just for plotting purposes), and scale by sqrt(2) so all 1s map to 1
-    scale_combined = np.sqrt((uscale_extend**2 + vscale_extend**2)/2)
+    scale_combined = np.sqrt((uscale_extend**2 + vscale_extend**2)/2)'''
 
     print 'Plotting'
-    data_to_plot = [min_dist, uscale_extend, vscale_extend, scale_combined]
-    titles = ['Distance to coast (km)', 'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
-    ctype = ['basic', 'ratio', 'ratio', 'ratio']
+    data_to_plot = [min_dist, scale_extend] #uscale_extend, vscale_extend, scale_combined]
+    titles = ['Distance to coast (km)', 'Scaling factor'] #'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
+    ctype = ['basic', 'ratio'] #, 'ratio', 'ratio']
     for i in range(len(data_to_plot)):
         latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
-    # Plot coastal wind vectors pre and post correction, and difference
+    '''# Plot coastal wind vectors pre and post correction, and difference
     ukesm_raw = [read_netcdf(ukesm_file, var_names[n])[coast_mask].ravel() for n in range(2)]
     ukesm_correct = [scale[n]*ukesm_raw[n] for n in range(2)]
     [uwind, vwind] = [[ukesm_raw[n], ukesm_correct[n], ukesm_correct[n]-ukesm_raw[n]] for n in range(2)]
@@ -293,16 +306,20 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
             ax.set_xticklabels([])
             ax.set_yticklabels([])
     plt.suptitle('Coastal winds', fontsize=20)
-    finished_plot(fig)
+    finished_plot(fig)'''
 
     print 'Writing to file'
-    for n in range(2):
+    mask = scale_extend.mask
+    scale_extend = scale_extend.data
+    scale_extend[mask] = 0
+    write_binary(scale_data, out_file_head, prec=prec)
+    '''for n in range(2):
         scale_data = scale_extend[n]
         # Replace mask with zeros
         mask = scale_data.mask
         scale_data = scale_data.data
         scale_data[mask] = 0
-        write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)
+        write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)'''
             
     
     

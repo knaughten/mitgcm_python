@@ -405,6 +405,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 
 # Create a file with scaling factors for atmosphere/sea-ice drag in each cell (SEAICE_scaleDragFile in input/data.seaice; also switch on SEAICE_scaleDrag). The value of SEAICE_drag will be multiplied by the scaling factor in each cell.
 # The arguments rd_scale, bb_scale, and ft_scale are the scaling factors to set over Ronne Depression, Berkner Bank, and Filchner Trough respectively. They must be positive. The code will smooth the mask so there are no sharp boundaries in the scaling.
+# Settings from UKESM correction: rd_scale = ft_scale = 2.5, bb_scale = 0.5
 def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
     # Cutoff latitude
@@ -458,8 +459,8 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     scale_extend = (min_dist < scale_dist)*(nearest_scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
 
     print 'Plotting'
-    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling fator', figsize=(10,6))
-    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling fator', zoom_fris=True)
+    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling factor', figsize=(10,6))
+    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling factor', zoom_fris=True)
 
     print 'Writing to file'
     # Replace mask with zeros
