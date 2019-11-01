@@ -12,8 +12,8 @@ import sys
 import os
 
 from file_io import read_netcdf, find_cmip6_files
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad, a23a_bounds
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom
+from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_h0, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad, a23a_bounds
 
 
 # Grid object containing lots of grid variables:
@@ -217,7 +217,7 @@ class Grid:
             if xmax < 0:
                 xmax += 360
 
-        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= -1250)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= sws_shelf_h0)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
 
 
     # Split this mask into inner and outer sections, based on a straight line cutting across the shelf.
@@ -718,6 +718,48 @@ class SOSEGrid(Grid):
         print 'Error (SOSEGrid): no ice shelves to mask'
         sys.exit()
 
+
+# WOAGrid object containing basic grid variables
+# Only inherits Grid for the build_sws_shelf_mask function - this is probably sloppy
+class WOAGrid(Grid):
+
+    def __init__ (self, file_path, split=180):
+
+        if split != 180:
+            print "Error (WOA_grid): Haven't coded for values of split other than 180."
+            sys.exit()
+        self.lon_1d = read_netcdf(file_path, 'lon')
+        self.lat_1d = read_netcdf(file_path, 'lat')        
+        self.depth = -1*read_netcdf(file_path, 'depth')
+        self.nx = self.lon_1d.size
+        self.ny = self.lat_1d.size
+        self.nz = self.depth.size
+        self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
+        # Assume constant resolution - in practice this is 0.25
+        dlon = self.lon_1d[1] - self.lon_1d[0]
+        dlat = self.lat_1d[1] - self.lat_1d[0]
+        dx = rEarth*np.cos(self.lat_2d*deg2rad)*dlon*deg2rad
+        dy = rEarth*dlat*deg2rad
+        self.dA = dx*dy
+        # Find the bathymetry
+        depth_3d = z_to_xyz(self.depth, self)
+        # Get mask from either temperature or salinity
+        try:
+            data = id.variables['t_an'][0,:]
+        except(KeyError):
+            try:
+                data = id.variables['s_an'][0,:]
+            except(KeyError):
+                print 'Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.'
+                sys.exit()
+        mask = data.mask
+        depth_masked = np.ma.masked_where(data.mask, depth_3d)
+        self.bathy = select_bottom(depth_masked, return_masked=False)
+        # Build land mask
+        self.land_mask = np.amin(mask, axis=0)
+        # Now build sws_shelf_mask
+        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape), self.lon_2d, self.lat_2d, self.bathy)        
+    
 
 # CMIPGrid object containing basic grid variables for a CMIP6 ocean grid.
 class CMIPGrid:

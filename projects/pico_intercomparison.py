@@ -9,7 +9,6 @@ import shutil
 from ..file_io import read_netcdf
 from ..interpolation import discard_and_fill
 from ..plot_ua import read_ua_mesh
-from ..grid import SOSEGrid
 from ..utils import real_dir, apply_mask, select_bottom
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
@@ -46,8 +45,12 @@ def extend_moholdt_data (old_file, new_file, ua_mesh_file):
     id.close()
 
 
-# Calculate the monthly climatology of B-SOSE's bottom temperature and salinity on the continental shelf in front of FRIS, as inputs to PICO. The results (24 values) will be printed on screen and also written to an ASCII file.
-def bsose_pico_input (bsose_dir, out_file):
+# Calculate the annual mean and monthly climatology of WOA 2018's bottom temperature and salinity on the continental shelf in front of FRIS, as inputs to PICO. The results (24 values) will be printed on screen and also written to an ASCII file.
+def woa18_pico_input (woa_dir, out_file):
+
+    
+
+    
 
     var_names = ['THETA', 'SALT']
     file_tail = '_climatology.nc'

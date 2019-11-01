@@ -47,6 +47,8 @@ ewed_bounds = [-30., 40., -77., -65.]
 wed_gyre_bounds = [-60., 30., -90., -50.]
 # Bounds on continental shelf in front of FRIS.
 sws_shelf_bounds = [-70., -30., -79., -72.]
+# Threshold bathymetry delineating shelf
+sws_shelf_h0 = -1250
 # Endpoints of line dividing the inner and outer shelf (lon0, lon1, lat0, lat1)
 sws_shelf_line = [-70., -15., -72., -80.]
 # Bounds on location to search for grounded iceberg A-23A
