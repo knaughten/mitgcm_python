@@ -770,7 +770,7 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 
 # Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
-def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8):
+def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=percent_anomaly):
 
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
@@ -794,12 +794,16 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     fig, gs, cax1, cax2 = set_panels('1x3C2')
     # Wrap things up in lists for easier iteration
     data = [data1, data2, data2-data1]
+    if percent_anomaly:
+        data[-1] = (data2-data1)/data1*1e2
     u = [u_1, u_2, None]
     v = [v_1, v_2, None]
     vmin0 = [vmin, vmin, vmin_diff]
     vmax0 = [vmax, vmax, vmax_diff]
     ctype0 = [ctype, ctype, 'plusminus']
     title = [title1, title2, 'Anomaly']
+    if percent_anomaly:
+        title[-1] = '% Anomaly'
     cax = [cax1, None, cax2]
     extend0 = [extend, None, extend_diff]
     label_latlon = [True, False, False]
@@ -820,7 +824,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
 
 # NetCDF interface to latlon_comparison_plot.
 # Assumes the two simulations have the same output filename with a single time record, or to be time-averaged.
-def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None, time_index=None, time_average=False):
+def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None, time_index=None, time_average=False, percent_anomaly=False):
 
     if time_index is None and not time_average:
         print 'Error (read_plot_latlon_comparison): either select a time_index or set time_average=True.'
@@ -910,7 +914,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         include_shelf = False
 
     # Make the plot
-    latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2)
+    latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2, percent_anomaly=percent_anomaly)
     
     
         
