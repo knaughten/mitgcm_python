@@ -745,10 +745,10 @@ class WOAGrid(Grid):
         depth_3d = z_to_xyz(self.depth, self)
         # Get mask from either temperature or salinity
         try:
-            data = id.variables['t_an'][0,:]
+            data = read_netcdf(file_path, 's_an')[0,:]
         except(KeyError):
             try:
-                data = id.variables['s_an'][0,:]
+                data = read_netcdf(file_path, 't_an')[0,:]
             except(KeyError):
                 print 'Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.'
                 sys.exit()
