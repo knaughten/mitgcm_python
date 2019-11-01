@@ -312,7 +312,7 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     mask = scale_extend.mask
     scale_extend = scale_extend.data
     scale_extend[mask] = 0
-    write_binary(scale_data, out_file_head, prec=prec)
+    write_binary(scale_extend, out_file_head, prec=prec)
     '''for n in range(2):
         scale_data = scale_extend[n]
         # Replace mask with zeros
