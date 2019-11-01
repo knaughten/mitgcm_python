@@ -408,56 +408,63 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
     # Longitude bounds on each region
-    rd_bounds = [-80, -57] #[-80, -58]  # Western bound is well into land
-    bb_bounds = [-58, -49] #[-49, -45]
-    ft_bounds = [-48, -30] #[-42, -38]  # Eastern bound is well into land
-    # Max distance from the ice front (km)
-    max_dist = 150 #100
+    rd_bounds = [-62, -58]
+    bb_bounds = [-57, -49]
+    ft_bounds = [-48, -35]
+    bounds = [rd_bounds, bb_bounds, ft_bounds]
+    scale_factors = [rd_scale, bb_scale, ft_scale]
+    # Max distance from the coast (km)
+    scale_dist = 150
+    # Sigma for smoothing
+    sigma = 2
 
     print 'Building grid'
     grid = Grid(grid_path)
-    lon, lat = grid.get_lon_lat()
+    print 'Selecting coastal points'
+    coast_mask = grid.get_coast_mask(ignore_iceberg=True)
+    lon_coast = grid.lon_2d[coast_mask].ravel()
+    lat_coast = grid.lat_2d[coast_mask].ravel()
 
     print 'Selecting regions'
-    # First find ice shelf front points
-    front_points = ice_shelf_front_points(grid, ice_mask=grid.fris_mask)
-    # Also coastal points for Berkner Island
-    bi_front_points = ice_shelf_front_points(grid, ice_mask=grid.get_bi_mask())
-    # Combine the two arrays
-    front_points = np.maximum(front_points, bi_front_points)
-    # Now get i and j indices of these points
-    i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
-    i_front = i_vals[front_points]
-    j_front = j_vals[front_points]
-    num_points = len(i_front)
-    # Find the distance from each point in the domain to the closest ice shelf front point, by looping over all the ice shelf front points.
-    # Start with an array of infinity, and update it with any smaller values each iteration. So the first iteration will fully overwrite it.
-    dist_to_front = np.zeros([grid.ny, grid.nx]) + np.inf
-    for posn in range(num_points):
-        # Calculate the distance of each point to this point, and convert to km
-        dist_to_point = dist_btw_points((grid.lon_1d[i_front[posn]], grid.lat_1d[j_front[posn]]), (lon, lat))*1e-3
-        dist_to_front = np.minimum(dist_to_front, dist_to_point)
-        # Now select the three regions
-        # Must be between the given longitude bounds and not more than max_dist km away from the ice shelf front
-        rd_mask = (lon >= rd_bounds[0])*(lon <= rd_bounds[1])*(dist_to_front <= max_dist)
-        bb_mask = (lon >= bb_bounds[0])*(lon <= bb_bounds[1])*(dist_to_front <= max_dist)
-        ft_mask = (lon >= ft_bounds[0])*(lon <= ft_bounds[1])*(dist_to_front <= max_dist)
+    scale_coast = np.ones(lon_coast.shape)
+    for n in range(3):
+        index = (lon_coast >= bounds[n][0])*(lon_coast <= bounds[n][1])
+        scale_coast[index] = scale_factors[n]
 
-    print 'Setting scaling factors'
-    scale = np.ones([grid.ny, grid.nx])
-    scale[rd_mask] = rd_scale
-    scale[bb_mask] = bb_scale
-    scale[ft_mask] = ft_scale
-    # Smooth
-    scale = smooth_xy(scale, sigma=2)
-    # Reset ice shelf points
-    scale[grid.ice_mask] = 1
+    print 'Calculating distance from the coast'
+    min_dist = None
+    nearest_scale = None
+    # Loop over all the coastal points
+    for i in range(lon_coast.size):
+        # Calculate distance of every point in the model grid to this specific coastal point, in km
+        dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])*1e-3
+        if min_dist is None:
+            # Initialise the arrays
+            min_dist = dist_to_pt
+            nearest_scale = np.zeros(min_dist.shape) + scale_coast[i]
+        else:
+            # Figure out which cells have this coastal point as the closest one yet, and update the arrays
+            index = dist_to_pt < min_dist
+            min_dist[index] = dist_to_pt[index]
+            nearest_scale[index] = scale_coast[i]
+    # Smooth the result, and mask out the land and ice shelves
+    min_dist = mask_land_ice(min_dist, grid)
+    nearest_scale = mask_land_ice(smooth_xy(nearest_scale, sigma=sigma), grid)
 
-    # Plot
-    latlon_plot(mask_land_ice(scale, grid), grid, include_shelf=False, title='Sea ice drag scaling', ctype='ratio')
+    print 'Extending scale factors offshore'
+    # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
+    scale_extend = (min_dist < scale_dist)*(nearest_scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
 
-    # Write to file
-    write_binary(scale, output_file, prec=prec)
+    print 'Plotting'
+    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling fator', figsize=(10,6))
+    latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling fator', zoom_fris=True)
+
+    print 'Writing to file'
+    # Replace mask with zeros
+    mask = scale_extend.mask
+    scale_extend = scale_extend.data
+    scale_extend[mask] = 0
+    write_binary(scale_extend, output_file, prec=prec)
 
 
 # Process one year of daily CMIP6 atmospheric data (in practice, from UKESM1-0-LL) and convert to MITgcm EXF format for forcing simulations.
