@@ -12,6 +12,7 @@ from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
 from calculus import area_integral
+from plot_latlon import latlon_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -24,8 +25,6 @@ from calculus import area_integral
 # nc_out: path to a NetCDF file to save the interpolated data in, so you can easily check that it looks okay. (The annual mean will also be plotted and shown on screen whether or not you define nc_out.)
 # prec: precision to write output_file. Must match exf_iprec in the "data.exf" namelist (default 32)
 def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
-
-    from plot_latlon import latlon_plot
 
     input_dir = real_dir(input_dir)
     file_head = 'icebergs_'
