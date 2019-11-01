@@ -409,11 +409,11 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
     # Longitude bounds on each region
-    rd_bounds = [-80, -58]  # Western bound is well into land
-    bb_bounds = [-49, -45]
-    ft_bounds = [-42, -38]
+    rd_bounds = [-80, -57] #[-80, -58]  # Western bound is well into land
+    bb_bounds = [-58, -49] #[-49, -45]
+    ft_bounds = [-48, -39] #[-42, -38]
     # Max distance from the ice front (km)
-    max_dist = 100
+    max_dist = 300 #100
 
     print 'Building grid'
     grid = Grid(grid_path)
@@ -453,6 +453,9 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     scale = smooth_xy(scale, sigma=2)
     # Reset ice shelf points
     scale[grid.ice_mask] = 1
+
+    # Plot
+    latlon_plot(mask_land_ice(scale, grid), grid, include_shelf=False, title='Sea ice drag scaling', ctype='ratio')
 
     # Write to file
     write_binary(scale, output_file, prec=prec)
