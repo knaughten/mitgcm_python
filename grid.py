@@ -759,7 +759,7 @@ class WOAGrid(Grid):
         # Build land mask
         self.land_mask = np.amin(mask, axis=0)
         # Now build sws_shelf_mask
-        #self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape), self.lon_2d, self.lat_2d, self.bathy)        
+        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape).astype(bool), self.lon_2d, self.lat_2d, self.bathy)        
     
 
 # CMIPGrid object containing basic grid variables for a CMIP6 ocean grid.
