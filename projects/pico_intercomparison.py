@@ -68,7 +68,7 @@ def woa18_pico_input (woa_dir, out_file):
     annual_data = np.zeros(2)
     # Loop over variables
     for n in range(2):
-        print 'Processing ' + var_names[n]
+        print 'Processing ' + var_names_long[n]
         # Loop over months
         for t in range(12):
             print 'Month ' + str(t+1)
