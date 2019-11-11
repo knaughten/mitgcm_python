@@ -248,8 +248,8 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     [uscale, vscale] = scale
 
     print 'Calculating distance from the coast'
-    '''min_dist = None
-    nearest_scale = None'''
+    min_dist = None
+    '''nearest_scale = None'''
     nearest_uscale = None
     nearest_vscale = None
     # Loop over all the coastal points
