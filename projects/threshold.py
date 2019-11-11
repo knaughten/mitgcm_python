@@ -258,8 +258,8 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])*1e-3
         if min_dist is None:
             # Initialise the arrays
-            '''min_dist = dist_to_pt
-            nearest_scale = np.zeros(min_dist.shape) + scale[i]'''
+            min_dist = dist_to_pt
+            '''nearest_scale = np.zeros(min_dist.shape) + scale[i]'''
             nearest_uscale = np.zeros(min_dist.shape) + uscale[i]
             nearest_vscale = np.zeros(min_dist.shape) + vscale[i]
         else:
