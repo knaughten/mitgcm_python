@@ -480,6 +480,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris',
 #      'mwdw_vol': volume of MWDW (-1.5 to 0 C, 34.25-34.55 psu)
 #      'ocean_vol': volume of entire ocean domain (m^3)
 #      'filchner_trans': transport across the Filchner Ice Shelf front into the cavity (Sv)
+#      'atemp_avg': area-averaged surface air temperature (C)
 def set_parameters (var):
 
     var_name = None
@@ -646,6 +647,11 @@ def set_parameters (var):
         point0 = (-45, -78.05)
         point1 = (-34.8, -78.2)
         direction = 'S'
+    elif var == 'atemp_avg':
+        option = 'avg_sfc'
+        var_name = 'EXFatemp'
+        title = 'Area-averaged surface air temperature'
+        units = deg_string+'C'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
