@@ -19,19 +19,32 @@ from ..plot_latlon import latlon_plot
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
-# Read the daily wind output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid and save the output to a NetCDF file.
-def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
+# Read the wind forcing output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid and save the output to a NetCDF file.
+# If option='atemp' instead of 'wind' (default), do the same for surface air temperature.
+def process_forcing (mit_grid_dir, out_file, source_dir=None, option='wind'):
 
     start_year = 1979
     end_year = 2014
-    var_names = ['uwind', 'vwind']
+    if option == 'wind':
+        var_names = ['uwind', 'vwind']
+        units = 'm/s'
+    elif option == 'atemp':
+        var_names = ['atemp']
+        units = 'degC'
+    else:
+        print 'Error (process_forcing): invalid option ' + option
+        sys.exit()
     if option == 'UKESM':
         if source_dir is None:
             source_dir = '/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/'
         expt = 'historical'
         ensemble_member = 'r1i1p1f2'
-        var_names_in = ['uas', 'vas']
-        gtype = ['u', 'v']
+        if option == 'wind':
+            var_names_in = ['uas', 'vas']
+            gtype = ['u', 'v']
+        elif option == 'atemp':
+            var_names_in = ['tas']
+            gtype = ['t']
         days_per_year = 12*30
     elif option == 'ERA5':
         if source_dir is None:
@@ -39,7 +52,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         file_head = 'ERA5_'
         gtype = ['t', 't']
     else:
-        print 'Error (process_wind_forcing); invalid option ' + option
+        print 'Error (process_forcing); invalid option ' + option
         sys.exit()
 
     mit_grid_dir = real_dir(mit_grid_dir)
@@ -56,7 +69,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
     ncfile = NCfile(out_file, mit_grid, 'xy')
 
     # Loop over variables
-    for n in range(2):
+    for n in range(len(var_names_in)):
         print 'Processing variable ' + var_names[n]
         # Read the data, time-integrating as we go
         data = None
@@ -112,7 +125,7 @@ def process_wind_forcing (option, mit_grid_dir, out_file, source_dir=None):
         print 'Interpolating'
         data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
         print 'Saving to ' + out_file
-        ncfile.add_variable(var_names[n], data_interp, 'xy', units='m/s')
+        ncfile.add_variable(var_names[n], data_interp, 'xy', units=units)
 
     ncfile.close()
 
@@ -320,13 +333,9 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         scale_data = scale_data.data
         scale_data[mask] = 0
         write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)
-            
-    
     
 
-    
 
-    
 
 
         
