@@ -20,29 +20,29 @@ from ..plot_latlon import latlon_plot
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
 # Read the wind forcing output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid and save the output to a NetCDF file.
-# If option='atemp' instead of 'wind' (default), do the same for surface air temperature.
-def process_forcing (mit_grid_dir, out_file, source_dir=None, option='wind'):
+# If var='atemp' instead of 'wind' (default), do the same for surface air temperature.
+def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'):
 
     start_year = 1979
     end_year = 2014
-    if option == 'wind':
+    if var == 'wind':
         var_names = ['uwind', 'vwind']
         units = 'm/s'
-    elif option == 'atemp':
+    elif var == 'atemp':
         var_names = ['atemp']
         units = 'degC'
     else:
-        print 'Error (process_forcing): invalid option ' + option
+        print 'Error (process_forcing): invalid var ' + var
         sys.exit()
     if option == 'UKESM':
         if source_dir is None:
             source_dir = '/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/'
         expt = 'historical'
         ensemble_member = 'r1i1p1f2'
-        if option == 'wind':
+        if var == 'wind':
             var_names_in = ['uas', 'vas']
             gtype = ['u', 'v']
-        elif option == 'atemp':
+        elif var == 'atemp':
             var_names_in = ['tas']
             gtype = ['t']
         days_per_year = 12*30
