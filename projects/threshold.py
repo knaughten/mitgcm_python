@@ -69,7 +69,7 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
     ncfile = NCfile(out_file, mit_grid, 'xy')
 
     # Loop over variables
-    for n in range(len(var_names_in)):
+    for n in range(len(var_names)):
         print 'Processing variable ' + var_names[n]
         # Read the data, time-integrating as we go
         data = None
