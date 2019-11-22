@@ -250,7 +250,9 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         ukesm_wind = read_netcdf(ukesm_file, var_names[n])
         era5_wind = read_netcdf(era5_file, var_names[n])
         # Take minimum of the ratio of ERA5 to UKESM wind mangitude (in this coordinate), and the scale cap
-        scale.append(mask_land_ice(np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap), grid))
+        scale_tmp = np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap)
+        # Smooth and mask the land and ice shelf
+        scale.append(mask_land_ice(smooth_xy(scale_tmp, sigma=sigma), grid))
 
     print 'Calculating distance from the coast'
     min_dist = None
@@ -278,8 +280,10 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     data_to_plot = [min_dist, scale_tapered[0], scale_tapered[1], scale_combined]
     titles = ['Distance to coast (km)', 'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
     ctype = ['basic', 'ratio', 'ratio', 'ratio']
+    fig_names = ['min_dist.png', 'uscale.png', 'vscale.png', 'scale.png']
     for i in range(len(data_to_plot)):
-        latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6))
+        for fig_name in [None, fig_names[i]]:
+            latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6), fig_name=fig_name)
 
     print 'Writing to file'
     for n in range(2):
