@@ -25,7 +25,7 @@ from grid import Grid
 
 # Output: array of the same dimension as "data", interpolated to the new grid type
 
-def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_shelf=False, mask_with_zeros=False, periodic=False):
+def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask=True, mask_shelf=False, mask_with_zeros=False, periodic=False):
 
     depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
     # Make sure we're not trying to mask the ice shelf from a depth-dependent field
@@ -73,19 +73,20 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask_she
         print 'Error (interp_grid): interpolation from the ' + gtype_in + '-grid to the ' + gtype_out + '-grid is not yet supported'
         sys.exit()
 
-    # Now apply the mask
-    if depth_dependent:
-        data_interp = mask_3d(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
-    else:
-        if mask_shelf:
-            data_interp = mask_land_ice(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
+    if mask:
+        # Now apply the mask
+        if depth_dependent:
+            data_interp = mask_3d(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
         else:
-            data_interp = mask_land(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
+            if mask_shelf:
+                data_interp = mask_land_ice(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
+            else:
+                data_interp = mask_land(data_interp, grid, gtype=gtype_out, time_dependent=time_dependent)
 
-    if mask_with_zeros:
-        # Remove mask and fill with zeros
-        data_interp[data_interp.mask] = 0
-        data_interp = data_interp.data
+        if mask_with_zeros:
+            # Remove mask and fill with zeros
+            data_interp[data_interp.mask] = 0
+            data_interp = data_interp.data
 
     return data_interp
 

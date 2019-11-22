@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
 from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary
-from ..interpolation import interp_reg_xy, smooth_xy
-from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice
+from ..interpolation import interp_reg_xy, smooth_xy, interp_grid
+from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice, polar_stereo
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
@@ -115,9 +115,17 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
 
         # Now convert from time-integral to time-average
         data /= num_time
-        
-        # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing
-        forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
+
+        if not interpolate and option == 'UKESM':
+            # Need to interpolate to the tracer grid still
+            forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype='t', dim=1)
+            data = interp_grid(data, forcing_grid, gtype[n], 't', periodic=True, mask=False)
+            if gtype[n] == 'v':
+                # Delete the northernmost row (which was extended)
+                data = data[:,:-1]
+        else:
+            forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing        
         forcing_lon = fix_lon_range(forcing_lon)
         i_split = np.nonzero(forcing_lon < 0)[0][0]
         forcing_lon = split_longitude(forcing_lon, i_split)
@@ -126,8 +134,8 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
             # Now interpolate to MITgcm tracer grid        
             mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
             print 'Interpolating'
-            data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
-        else:
+            data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)            
+        elif n==0:
             # Just set up new file
             ncfile = NCfile_basiclatlon(out_file, forcing_lon, forcing_lat)
         print 'Saving to ' + out_file
@@ -302,3 +310,8 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
         scale_data = scale_data.data
         scale_data[mask] = 0
         write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)
+
+
+# Make figures of the winds over Antarctica (polar stereographic projection) in ERA5 and UKESM, with vectors and streamlines.
+# First create era5_file and ukesm_file in process_forcing, with 
+def plot_continent_wind (era5_file, ukesm_file, 
