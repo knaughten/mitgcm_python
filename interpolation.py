@@ -33,13 +33,13 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask=Tru
         print "Error (interp_grid): can't set mask_shelf=True for a depth-dependent field."
         sys.exit()
 
-    if gtype_in in ['u', 'v', 'psi', 'w']:
+    if mask and gtype_in in ['u', 'v', 'psi', 'w']:
         # Fill the mask with zeros (okay because no-slip boundary condition)
         data_tmp = np.copy(data)
         data_tmp[data.mask] = 0.0
     else:
         # Tracer land mask is the least restrictive, so it doesn't matter what the masked values are - they will definitely get re-masked at the end.
-        data_tmp = data
+        data_tmp = data        
 
     # Interpolate
     data_interp = np.empty(data_tmp.shape)
