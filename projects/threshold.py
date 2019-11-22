@@ -9,7 +9,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
-from ..file_io import read_binary, find_cmip6_files, NCfile, read_netcdf, write_binary
+from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary
 from ..interpolation import interp_reg_xy, smooth_xy
 from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice
 from ..plot_utils.windows import finished_plot, set_panels
