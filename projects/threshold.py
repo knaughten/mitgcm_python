@@ -122,10 +122,7 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
             data = interp_grid(data, forcing_grid, gtype[n], 't', periodic=True, mask=False)
             if gtype[n] == 'v':
                 # Delete the northernmost row (which was extended)
-                data = data[:,:-1]
-            print forcing_lon.shape
-            print forcing_lat.shape
-            print data.shape
+                data = data[:-1,:]
         else:
             forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
         # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing        
