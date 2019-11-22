@@ -19,9 +19,9 @@ from ..plot_latlon import latlon_plot
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
-# Read the wind forcing output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid and save the output to a NetCDF file.
+# Read the wind forcing output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid (if interpolate=True) and save the output to a NetCDF file.
 # If var='atemp' instead of 'wind' (default), do the same for surface air temperature.
-def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'):
+def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind', interpolate=True):
 
     start_year = 1979
     end_year = 2014
@@ -63,10 +63,12 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
         forcing_grid = UKESMGrid()
     elif option == 'ERA5':
         forcing_grid = ERA5Grid()
-    mit_grid = Grid(mit_grid_dir)
+    if interpolate:
+        mit_grid = Grid(mit_grid_dir)
 
     # Open NetCDF file
-    ncfile = NCfile(out_file, mit_grid, 'xy')
+    if interpolate:
+        ncfile = NCfile(out_file, mit_grid, 'xy')
 
     # Loop over variables
     for n in range(len(var_names)):
@@ -120,12 +122,19 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
         i_split = np.nonzero(forcing_lon < 0)[0][0]
         forcing_lon = split_longitude(forcing_lon, i_split)
         data = split_longitude(data, i_split)
-        # Now interpolate to MITgcm tracer grid        
-        mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
-        print 'Interpolating'
-        data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
+        if interpolate:
+            # Now interpolate to MITgcm tracer grid        
+            mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
+            print 'Interpolating'
+            data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
+        else:
+            # Just set up new file
+            ncfile = NCfile_basiclatlon(out_file, forcing_lon, forcing_lat)
         print 'Saving to ' + out_file
-        ncfile.add_variable(var_names[n], data_interp, 'xy', units=units)
+        if interpolate:
+            ncfile.add_variable(var_names[n], data_interp, 'xy', units=units)
+        else:
+            ncfile.add_variable(var_names[n], data, units=units)
 
     ncfile.close()
 
