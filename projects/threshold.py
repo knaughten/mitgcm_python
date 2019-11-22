@@ -314,4 +314,4 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
 
 # Make figures of the winds over Antarctica (polar stereographic projection) in ERA5 and UKESM, with vectors and streamlines.
 # First create era5_file and ukesm_file in process_forcing, with 
-def plot_continent_wind (era5_file, ukesm_file, 
+#def plot_continent_wind (era5_file, ukesm_file, 
