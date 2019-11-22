@@ -123,6 +123,9 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
             if gtype[n] == 'v':
                 # Delete the northernmost row (which was extended)
                 data = data[:,:-1]
+            print forcing_lon.shape
+            print forcing_lat.shape
+            print data.shape
         else:
             forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
         # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing        
@@ -313,5 +316,5 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
 
 
 # Make figures of the winds over Antarctica (polar stereographic projection) in ERA5 and UKESM, with vectors and streamlines.
-# First create era5_file and ukesm_file in process_forcing, with 
-#def plot_continent_wind (era5_file, ukesm_file, 
+# First create era5_file and ukesm_file in process_forcing, with interpolate=False.
+#def plot_continent_wind (era5_file, ukesm_file, fig_name=None):
