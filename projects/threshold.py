@@ -102,10 +102,10 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
                     # Update time range for next time
                     t_start = t_end
                     t_end = t_start + days_per_year
-            if var_name[n] == 'atemp':
+            if var_names[n] == 'atemp':
                 # Convert from K to C
                 data -= temp_C2K
-            elif var_name[n] == 'precip':
+            elif var_names[n] == 'precip':
                 # Convert from kg/m^2/s to m/s
                 data /= rho_fw
 
