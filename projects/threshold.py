@@ -9,28 +9,29 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
-from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary
+from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary, read_netcdf_list
 from ..interpolation import interp_reg_xy, smooth_xy, interp_grid
-from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice, polar_stereo
+from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice, polar_stereo, wrap_periodic
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
 from ..plot_latlon import latlon_plot
+from ..constants import temp_C2K, rho_fw
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
 # Read the wind forcing output from either UKESM's historical simulation (option='UKESM') or ERA5 (option='ERA5') over the period 1979-2014, and time-average. Interpolate to the MITgcm grid (if interpolate=True) and save the output to a NetCDF file.
-# If var='atemp' instead of 'wind' (default), do the same for surface air temperature.
+# If var='thermo' instead of 'wind' (default), do the same for surface air temperature, specific humidity, and precipitation.
 def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind', interpolate=True):
 
     start_year = 1979
     end_year = 2014
     if var == 'wind':
         var_names = ['uwind', 'vwind']
-        units = 'm/s'
-    elif var == 'atemp':
-        var_names = ['atemp']
-        units = 'degC'
+        units = ['m/s', 'm/s']
+    elif var == 'thermo':
+        var_names = ['atemp', 'aqh', 'precip']
+        units = ['degC', '1', 'm/s']
     else:
         print 'Error (process_forcing): invalid var ' + var
         sys.exit()
@@ -42,9 +43,9 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
         if var == 'wind':
             var_names_in = ['uas', 'vas']
             gtype = ['u', 'v']
-        elif var == 'atemp':
-            var_names_in = ['tas']
-            gtype = ['t']
+        elif var == 'thermo':
+            var_names_in = ['tas', 'huss', 'pr']
+            gtype = ['t', 't', 't']
         days_per_year = 12*30
     elif option == 'ERA5':
         if source_dir is None:
@@ -100,7 +101,13 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
                         num_time += days_per_year
                     # Update time range for next time
                     t_start = t_end
-                    t_end = t_start + days_per_year        
+                    t_end = t_start + days_per_year
+            if var_name[n] == 'atemp':
+                # Convert from K to C
+                data -= temp_C2K
+            elif var_name[n] == 'precip':
+                # Convert from kg/m^2/s to m/s
+                data /= rho_fw
 
         elif option == 'ERA5':
             # Loop over years
@@ -140,9 +147,9 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
             ncfile = NCfile_basiclatlon(out_file, forcing_lon, forcing_lat)
         print 'Saving to ' + out_file
         if interpolate:
-            ncfile.add_variable(var_names[n], data_interp, 'xy', units=units)
+            ncfile.add_variable(var_names[n], data_interp, 'xy', units=units[n])
         else:
-            ncfile.add_variable(var_names[n], data, units=units)
+            ncfile.add_variable(var_names[n], data, units=units[n])
 
     ncfile.close()
 
@@ -314,4 +321,27 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
 
 # Make figures of the winds over Antarctica (polar stereographic projection) in ERA5 and UKESM, with vectors and streamlines.
 # First create era5_file and ukesm_file in process_forcing, with interpolate=False.
-#def plot_continent_wind (era5_file, ukesm_file, fig_name=None):
+def plot_continent_wind (era5_file, ukesm_file, fig_name=None):
+
+    # Read files
+    var_list = ['lon', 'lat', 'uwind', 'vwind']
+    era5_lon, era5_lat, era5_uwind, era5_vwind = read_netcdf_list(era5_file, var_list)
+    ukesm_lon, ukesm_lat, ukesm_uwind, ukesm_vwind = read_netcdf_list(ukesm_file, var_list)
+
+    # Interpolate UKESM to ERA5 grid
+    # First wrap the longitude axis around so there are no missing values in the gap
+    ukesm_lon = wrap_periodic(ukesm_lon, is_lon=True)
+    for data in [ukesm_uwind, ukesm_vwind]:
+        data = wrap_periodic(data)
+        data = interp_reg_xy(ukesm_lon, ukesm_lat, data, era5_lon, era5_lat)
+
+    # Get stereographic coordinates
+    x, y = polar_stereo(era5_lon, era5_lat)
+
+    
+
+    
+    # Plot outline of Antarctica? How? Need mask file from ERA5?
+    # Vector plots - how many points? Every second point?
+    # Also vector anomaly.
+    # Streamplots - every fifth point?

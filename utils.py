@@ -621,6 +621,24 @@ def mask_outside_box (data, grid, gtype='t', xmin=None, xmax=None, ymin=None, ym
     return np.ma.masked_where(index, data)
 
 
+# Given a field with a periodic boundary (in longitude), wrap it on either end so we can interpolate with  no gaps in the middle. If is_lon, add/subtract 360 from these values so it is periodic.
+def wrap_periodic (data, is_lon=False):
+
+    # Add 1 column to the beginning and 1 to the end of the longitude dimension
+    new_shape = list(data.shape[:-1]) + [data.shape[-1]+2]
+    data_wrap = np.empty(new_shape)
+    # Copy the middle
+    data_wrap[...,1:-1] = data
+    # Wrap the edges from either end
+    data_wrap[...,0] = data[...,-1]
+    data_wrap[...,-1] = data[...,0]
+    if is_lon:
+        # Add/subtract 360 so monotonic
+        data_wrap[...,0] -= 360
+        data_wrap[...,-1] += 360
+    return data_wrap
+
+
 
 
     

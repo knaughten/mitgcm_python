@@ -547,6 +547,14 @@ def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
 
     return in_files, start_years, end_years
 
+
+# Read a list of variables from the same NetCDF file. They all must have the same time index / averaging / etc.
+def read_netcdf_list (file_path, var_list, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    data = []
+    for var in var_list:
+        data.append(read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
+    return data
     
 
     
