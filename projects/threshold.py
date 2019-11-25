@@ -51,7 +51,7 @@ def process_forcing (option, mit_grid_dir, out_file, source_dir=None, var='wind'
         if source_dir is None:
             source_dir = '/work/n02/n02/shared/baspog/MITgcm/reanalysis/ERA5/'
         file_head = 'ERA5_'
-        gtype = ['t', 't']
+        gtype = ['t', 't', 't']
     else:
         print 'Error (process_forcing); invalid option ' + option
         sys.exit()
