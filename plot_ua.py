@@ -98,6 +98,8 @@ def read_plot_ua_tri (var, file_path, title=None, vmin=None, vmax=None, xmin=Non
         # Choose title
         if var == 'b':
             title = 'Ice base elevation (m)'
+        elif var == 'ab':
+            title = 'Basal melt rate (m/y)'
         elif var == 'B':
             title = 'Bedrock elevation (m)'
         elif var == 'dhdt':
