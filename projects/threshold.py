@@ -16,7 +16,7 @@ from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
 from ..plot_latlon import latlon_plot
-from ..constants import temp_C2K, rho_fw
+from ..constants import temp_C2K, rho_fw, deg2rad
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -251,9 +251,10 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
     finished_plot(fig, fig_name=fig_name)
 
 
-# Build a katabatic wind correction, with scale factors for each wind component. Save to binary files for MITgcm to read, and also plot the results.
+# Build a katabatic wind correction.
 # New (22 Nov 2019): Correct on band around coast, rather than just coastal points extended outwards.
-def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_cap=3, prec=64):
+# New (29 Nov 2019): Correct in polar coordinates, with a scale factor for the magnitude and a rotation for the angle.
+def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_scale, out_file_rotate, scale_cap=3, prec=64):
 
     var_names = ['uwind', 'vwind']
     scale_dist = 150.
@@ -266,17 +267,25 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
-    
-    print 'Calculating scale factors'
-    scale = []
-    for n in range(2):
-        # Read data
-        ukesm_wind = read_netcdf(ukesm_file, var_names[n])
-        era5_wind = read_netcdf(era5_file, var_names[n])
-        # Take minimum of the ratio of ERA5 to UKESM wind mangitude (in this coordinate), and the scale cap
-        scale_tmp = np.minimum(np.abs(era5_wind/ukesm_wind), scale_cap)
-        # Smooth and mask the land and ice shelf
-        scale.append(mask_land_ice(smooth_xy(scale_tmp, sigma=sigma), grid))
+
+    print 'Calculating winds in polar coordinates'
+    magnitudes = []
+    angles = []
+    for fname in [ukesm_file, era5_file]:
+        u = read_netcdf(fname, var_names[0])
+        v = read_netcdf(fname, var_names[1])
+        magnitudes.append(np.sqrt(u**2 + v**2))
+        angles.append(np.arctan2(v, u))
+
+    print 'Calculating corrections'
+    # Take minimum of the ratio of ERA5 to UKESM wind magnitude, and the scale cap
+    scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
+    # Smooth and mask the land and ice shelf
+    scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
+    # Take difference in angles
+    rotate = angles[1] - angles[0]
+    # Smoothing would be weird with the periodic angle, so just mask
+    rotate = mask_land_ice(rotate, grid)
 
     print 'Calculating distance from the coast'
     min_dist = None
@@ -294,29 +303,28 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_head, scale_
 
     print 'Tapering function offshore'
     # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
-    scale_tapered = []
-    for n in range(2):
-        scale_tapered.append((min_dist < scale_dist)*(scale[n] - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1)
-    # Combine (just for plotting purposes), and scale by sqrt(2) so all 1s map to 1
-    scale_combined = np.sqrt((scale_tapered[0]**2 + scale_tapered[1]**2)/2)
+    scale_tapered = (min_dist < scale_dist)*(scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    # For the rotation, move from scaling factor to 0
+    rotate_tapered = (min_dist < scale_dist)*rotate*np.cos(np.pi/2*min_dist/scale_dist)    
 
     print 'Plotting'
-    data_to_plot = [min_dist, scale_tapered[0], scale_tapered[1], scale_combined]
-    titles = ['Distance to coast (km)', 'u-scaling factor', 'v-scaling factor', 'Combined scaling factor']
-    ctype = ['basic', 'ratio', 'ratio', 'ratio']
-    fig_names = ['min_dist.png', 'uscale.png', 'vscale.png', 'scale.png']
+    data_to_plot = [min_dist, scale_tapered, rotate_tapered]
+    titles = ['Distance to coast (km)', 'Scaling factor', 'Rotation factor']
+    ctype = ['basic', 'ratio', 'plusminus']
+    fig_names = ['min_dist.png', 'scale.png', 'rotate.png']
     for i in range(len(data_to_plot)):
         for fig_name in [None, fig_names[i]]:
             latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6), fig_name=fig_name)
 
     print 'Writing to file'
-    for n in range(2):
-        scale_data = scale_tapered[n]
+    fields = [scale_tapered, rotate_tapered]
+    out_files = [out_file_scale, out_file_rotate]
+    for n in range(len(fields)):
         # Replace mask with zeros
-        mask = scale_data.mask
-        scale_data = scale_data.data
-        scale_data[mask] = 0
-        write_binary(scale_data, out_file_head+'_'+var_names[n], prec=prec)
+        mask = fields[n].mask
+        data = fields[n].data
+        data[mask] = 0
+        write_binary(data, out_files[n], prec=prec)
 
 
 # Make figures of the winds over Antarctica (polar stereographic projection) in ERA5 and UKESM, with vectors and streamlines.
