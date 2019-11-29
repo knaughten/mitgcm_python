@@ -280,7 +280,7 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_scale, out_f
         angles.append(np.copy(angle))
         # Also convert to 0-2pi space
         index = angle < 0
-        angle[index] = angle[index] + 2*pi
+        angle[index] = angle[index] + 2*np.pi
         angles_2pi.append(angle)
 
     print 'Calculating corrections'
