@@ -271,17 +271,12 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_scale, out_f
     print 'Calculating winds in polar coordinates'
     magnitudes = []
     angles = []
-    angles_2pi = []
     for fname in [ukesm_file, era5_file]:
         u = read_netcdf(fname, var_names[0])
         v = read_netcdf(fname, var_names[1])
         magnitudes.append(np.sqrt(u**2 + v**2))
         angle = np.arctan2(v,u)
-        angles.append(np.copy(angle))
-        # Also convert to 0-2pi space
-        index = angle < 0
-        angle[index] = angle[index] + 2*np.pi
-        angles_2pi.append(angle)
+        angles.append(angle)
 
     print 'Calculating corrections'
     # Take minimum of the ratio of ERA5 to UKESM wind magnitude, and the scale cap
@@ -289,14 +284,12 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_scale, out_f
     # Smooth and mask the land and ice shelf
     scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
     # Take difference in angles
-    # First in (-pi, pi) space
-    rotate1 = angles[1] - angles[0]
-    # Now in (0, 2pi) space
-    rotate2 = angles_2pi[1] - angles_2pi[0]
-    # Figure out which is smaller
-    rotate = rotate1
-    index = np.abs(rotate2) < np.abs(rotate1)
-    rotate[index] = rotate2[index]
+    rotate = angles[1] - angles[0]
+    # Take mod 2pi when necessary
+    index = rotate < -np.pi
+    rotate[index] += 2*np.pi
+    index = rotate > np.pi
+    rotate[index] -= 2*np.pi
     # Smoothing would be weird with the periodic angle, so just mask
     rotate = mask_land_ice(rotate, grid)
 
