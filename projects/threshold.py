@@ -309,9 +309,9 @@ def katabatic_correction (grid_dir, ukesm_file, era5_file, out_file_scale, out_f
 
     print 'Tapering function offshore'
     # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
-    scale_tapered = (min_dist < scale_dist)*(scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    scale_tapered = scale #(min_dist < scale_dist)*(scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     # For the rotation, move from scaling factor to 0
-    rotate_tapered = (min_dist < scale_dist)*rotate*np.cos(np.pi/2*min_dist/scale_dist)    
+    rotate_tapered = rotate #(min_dist < scale_dist)*rotate*np.cos(np.pi/2*min_dist/scale_dist)    
 
     print 'Plotting'
     data_to_plot = [min_dist, scale_tapered, rotate_tapered]
