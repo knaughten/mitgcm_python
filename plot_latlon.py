@@ -920,7 +920,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         v_2 = None
         
     ctype = 'basic'
-    if var in ['iceprod', 'psi']:
+    if var in ['iceprod', 'psi', 'uwind', 'vwind', 'windangle']:
         ctype = 'plusminus'
     if var in ['ismr', 'vel']:
         ctype = var
