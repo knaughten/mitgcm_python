@@ -770,7 +770,7 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 
 # Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
-def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=False):
+def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=False, angle_anomaly=False):
 
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
@@ -796,6 +796,12 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     data = [data1, data2, data2-data1]
     if percent_anomaly:
         data[-1] = (data2-data1)/data1*1e2
+    if angle_anomaly:
+        # Take mod 2pi when necessary
+        index = data[-1] < -np.pi
+        data[-1][index] += 2*np.pi
+        index = data[-1] > np.pi
+        data[-1][index] -= 2*np.pi
     u = [u_1, u_2, None]
     v = [v_1, v_2, None]
     vmin0 = [vmin, vmin, vmin_diff]
@@ -835,6 +841,8 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
 
     # Build the grid if needed
     grid = choose_grid(grid, directory1+fname)
+
+    angle_anomaly = var=='windangle'
 
     # Inner function to read and process the variable from the given NetCDF file, and also return the variable title.
     def read_and_process (file_path):
@@ -921,7 +929,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         include_shelf = False
 
     # Make the plot
-    latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2, percent_anomaly=percent_anomaly)
+    latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2, percent_anomaly=percent_anomaly, angle_anomaly=angle_anomaly)
     
     
         
