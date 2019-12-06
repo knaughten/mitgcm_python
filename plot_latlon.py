@@ -897,7 +897,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
                 return mask_land_ice(uwind, grid), 'Zonal wind (m/s)'
             elif var == 'vwind':
                 return mask_land_ice(vwind, grid), 'Meridional wind (m/s)'
-            elif var == 'wind_angle':
+            elif var == 'windangle':
                 return mask_land_ice(np.arctan2(vwind, uwind), grid), 'Wind angle (radians)'            
         elif var == 'stress':
             taux = read_netcdf(file_path, 'EXFtaux', time_index=time_index, time_average=time_average)
