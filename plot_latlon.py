@@ -895,7 +895,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
                 return mask_land_ice(np.sqrt(uwind**2 + vwind**2), grid), 'Wind speed (m/s)'
             elif var == 'uwind':
                 return mask_land_ice(uwind, grid), 'Zonal wind (m/s)'
-            elif var === 'vwind':
+            elif var == 'vwind':
                 return mask_land_ice(vwind, grid), 'Meridional wind (m/s)'
             elif var == 'wind_angle':
                 return mask_land_ice(np.arctan2(vwind, uwind), grid), 'Wind angle (radians)'            
