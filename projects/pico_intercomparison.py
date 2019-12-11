@@ -126,7 +126,7 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
             print 'Reading ' + file_path
             data_full = read_netcdf(file_path, var_names[n])
             # Loop over timesteps
-            num_time = data.shape[0]
+            num_time = data_full.shape[0]
             for t in range(num_time):
                 print '...processing timestep ' + str(t+1) + ' of ' + str(num_time)
                 data = data_full[t,:]
