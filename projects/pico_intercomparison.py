@@ -12,7 +12,7 @@ from ..plot_ua import read_ua_mesh
 from ..utils import real_dir, apply_mask, select_bottom, days_per_month
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
-from ..grid import WOAGrid
+from ..grid import WOAGrid, Grid
 from ..postprocess import segment_file_paths
 
 # Given the Moholdt basal melt rate data, extend into the mask until the entire Ua domain is covered.
