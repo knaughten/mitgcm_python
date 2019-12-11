@@ -13,6 +13,7 @@ from ..utils import real_dir, apply_mask, select_bottom, days_per_month
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
 from ..grid import WOAGrid
+from ..postprocess import segment_file_paths
 
 # Given the Moholdt basal melt rate data, extend into the mask until the entire Ua domain is covered.
 def extend_moholdt_data (old_file, new_file, ua_mesh_file):
@@ -104,3 +105,37 @@ def woa18_pico_input (woa_dir, out_file):
         print line
     f.close()    
     print 'Data saved in ' + out_file
+
+
+# Calculate the monthly transient values for MITgcm's bottom temperature and salinity on the continental shelf in front of FRIS, as inputs to PICO. Write the results to ASCII files.
+def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
+
+    # Get paths to all the output files from UaMITgcm
+    mit_files = segment_file_paths(uamit_out_dir)
+    # Build the grid just from the first file - the mask will be unchanged since we don't care about the ice shelf cavity and it is a fixed calving front.
+    grid = Grid(mit_files[0])
+
+    var_names = ['THETA', 'SALT']
+    out_files = [out_file_temp, out_file_salt]
+    # Loop over variables
+    for n in range(2):
+        print 'Processing ' + var_names[n]
+        f = open(out_files[n], 'w')
+        # Loop over files
+        for file_path in mit_files:
+            print 'Reading ' + file_path
+            data_full = read_netcdf(file_path, var_names[n])
+            # Loop over timesteps
+            num_time = data.shape[0]
+            for t in range(num_time):
+                print '...processing timestep ' + str(t+1) + ' of ' + str(num_time)
+                data = data_full[t,:]
+                data = select_bottom(data)
+                data = apply_mask(data, np.invert(grid.sws_shelf_mask))
+                data = area_average(data, grid)
+                f.write(round_to_decimals(data, 2)+'\n')
+        f.close()
+                
+        
+
+    

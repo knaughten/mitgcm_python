@@ -60,8 +60,10 @@ def check_segment_dir (output_dir, segment_dir):
 
 
 # Get the path to the MITgcm output file for each segment.
-def segment_file_paths (output_dir, segment_dir, file_name):
+def segment_file_paths (output_dir, segment_dir=None, file_name='output.nc'):
 
+    if segment_dir is None:
+        segment_dir = get_segment_dir(output_dir)
     file_paths = []
     for sdir in segment_dir:
         file_paths.append(output_dir + sdir + '/MITgcm/' + file_name)
