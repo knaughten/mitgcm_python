@@ -9,7 +9,7 @@ import shutil
 from ..file_io import read_netcdf
 from ..interpolation import discard_and_fill
 from ..plot_ua import read_ua_mesh
-from ..utils import real_dir, apply_mask, select_bottom, days_per_month
+from ..utils import real_dir, apply_mask, select_bottom, days_per_month, mask_3d
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
 from ..grid import WOAGrid, Grid
@@ -128,12 +128,13 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
             # Loop over timesteps
             num_time = data_full.shape[0]
             for t in range(num_time):
-                print '...processing timestep ' + str(t+1) + ' of ' + str(num_time)
-                data = data_full[t,:]
+                data = mask_3d(data_full[t,:], grid)
                 data = select_bottom(data)
                 data = apply_mask(data, np.invert(grid.sws_shelf_mask))
                 data = area_average(data, grid)
-                f.write(round_to_decimals(data, 2)+'\n')
+                data_print = str(round_to_decimals(data, 2))
+                print data_print
+                f.write(data_print+'\n')
         f.close()
                 
         
