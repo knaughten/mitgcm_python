@@ -6,10 +6,10 @@ import numpy as np
 import netCDF4 as nc
 import shutil
 
-from ..file_io import read_netcdf
-from ..interpolation import discard_and_fill
+from ..file_io import read_netcdf, NCfile
+from ..interpolation import discard_and_fill, extend_into_mask
 from ..plot_ua import read_ua_mesh
-from ..utils import real_dir, apply_mask, select_bottom, days_per_month, mask_3d
+from ..utils import real_dir, apply_mask, select_bottom, days_per_month, mask_3d, convert_ismr, mask_except_fris
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
 from ..grid import WOAGrid, Grid
@@ -136,7 +136,48 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
                 print data_print
                 f.write(data_print+'\n')
         f.close()
-                
+
+
+# Process the melt rate fields from the UaMITgcm simulation at each output step (i.e. swap the sign, remove any non-FRIS regions, and then extend into the mask a bunch of times) and concatenate them into a single NetCDF file. A separate Matlab script will make Matlab interpolants that Ua can read.
+def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
+
+    missing_val = -9999
+    num_iters = 100
+    num_months = num_years*12
+
+    # Get paths to all the MITgcm files
+    file_paths = segment_file_paths(mit_output_dir)
+    # Make the Grid object from the first one
+    grid = Grid(file_paths[0])
+    
+    # Initialise the array for the result
+    ismr_concat = np.empty([num_months, grid.ny, grid.nx])
+    t = 0
+    # Loop over files
+    for in_file in file_paths:
+        print 'Processing ' + in_file
+        # Read the data, convert to m/y, and swap the sign
+        ismr = -1*convert_ismr(read_netcdf(in_file, 'SHIfwFlx'))
+        # Throw away everything except FRIS
+        ismr = mask_except_fris(ismr, grid, time_dependent=True)
+        # Fill the mask with missing value
+        mask = ismr.mask
+        ismr = ismr.data
+        ismr[mask] = missing_val
+        # Loop over timesteps
+        num_time = ismr_tmp.shape[0]
+        for tt in range(num_time):
+            print '...timestep ' + str(tt+1) + ' of ' + str(num_time)
+            # Extend into mask a bunch of times
+            ismr_concat[t,:] = extend_into_mask(ismr[tt,:], missing_val=missing_val, num_iters=num_iters)
+            t += 1
+
+    # Now save to file
+    ncfile = NCfile(out_file, grid, 'xyt')
+    ncfile.add_time(np.arange(num_months)+1, units='months')
+    ncfile.add_variable('bmb', ismr_concat, 'xyt', units='m/y')
+    ncfile.close()
+    
         
 
     
