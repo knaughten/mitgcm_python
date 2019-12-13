@@ -7,9 +7,9 @@ import netCDF4 as nc
 import shutil
 
 from ..file_io import read_netcdf, NCfile
-from ..interpolation import discard_and_fill, extend_into_mask
+from ..interpolation import discard_and_fill
 from ..plot_ua import read_ua_mesh
-from ..utils import real_dir, apply_mask, select_bottom, days_per_month, mask_3d, convert_ismr, mask_except_fris
+from ..utils import real_dir, apply_mask, select_bottom, days_per_month, mask_3d, convert_ismr
 from ..calculus import area_average
 from ..plot_utils.labels import round_to_decimals
 from ..grid import WOAGrid, Grid
@@ -138,11 +138,9 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
         f.close()
 
 
-# Process the melt rate fields from the UaMITgcm simulation at each output step (i.e. swap the sign, remove any non-FRIS regions, and then extend into the mask a bunch of times) and concatenate them into a single NetCDF file. A separate Matlab script will make Matlab interpolants that Ua can read.
+# Process the melt rate fields from the UaMITgcm simulation at each output step (i.e. swap the sign, remove any non-FRIS regions, and then extend into the mask) and concatenate them into a single NetCDF file. A separate Matlab script will make Matlab interpolants that Ua can read.
 def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
 
-    missing_val = -9999
-    num_iters = 100
     num_months = num_years*12
 
     # Get paths to all the MITgcm files
@@ -158,18 +156,14 @@ def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
         print 'Processing ' + in_file
         # Read the data, convert to m/y, and swap the sign
         ismr = -1*convert_ismr(read_netcdf(in_file, 'SHIfwFlx'))
-        # Throw away everything except FRIS
-        ismr = mask_except_fris(ismr, grid, time_dependent=True)
-        # Fill the mask with missing value
-        mask = ismr.mask
-        ismr = ismr.data
-        ismr[mask] = missing_val
         # Loop over timesteps
         num_time = ismr.shape[0]
         for tt in range(num_time):
             print '...timestep ' + str(tt+1) + ' of ' + str(num_time)
-            # Extend into mask a bunch of times
-            ismr_concat[t,:] = extend_into_mask(ismr[tt,:], missing_val=missing_val, num_iters=num_iters)
+            # Throw away non-FRIS regions and then extend into the whole domain
+            discard = np.invert(grid.fris_mask)
+            fill = np.ones([grid.ny, grid.nx]).astype(bool)  # array of all True
+            ismr_concat[t,:] = discard_and_fill(ismr[tt,:], discard, fill, use_3d=False, log=False)
             t += 1
 
     # Now save to file
