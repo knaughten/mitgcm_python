@@ -165,7 +165,7 @@ def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
         ismr = ismr.data
         ismr[mask] = missing_val
         # Loop over timesteps
-        num_time = ismr_tmp.shape[0]
+        num_time = ismr.shape[0]
         for tt in range(num_time):
             print '...timestep ' + str(tt+1) + ' of ' + str(num_time)
             # Extend into mask a bunch of times
