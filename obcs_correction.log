@@ -9,10 +9,16 @@ balance_obcs(option='correct', d_eta=-1.5, d_t=20)
 
 WSFRIS_999:
 balance_obcs(option='balance') for all years
-For piControl, abrupt-4xCO2, and 1pctCO2:
+For piControl:
 balance_obcs(option='correct', d_eta=-15, d_t=16)
+balance_obcs(option='correct', d_eta=10, d_t=25)
 For abrupt-4xCO2:
+balance_obcs(option='correct', d_eta=-15, d_t=16)
 balance_obcs(option='correct', d_eta=40, d_t=30)
+balance_obcs(option='correct', d_eta=10, d_t=6)
+For 1pctCO2:
+balance_obcs(option='correct', d_eta=-15, d_t=16)
+balance_obcs(option='correct', d_eta=12, d_t=15)
 
 WSK:
 balance_obcs(option='balance')
