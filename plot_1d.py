@@ -67,10 +67,11 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 # datas: list of 1D arrays of timeseries
 # labels: list of legend labels (strings) to use for each timeseries
 # colours: list of colours (strings or RGB tuples) to use for each timeseries
+# dates: indicates "time" is not an array of Dates, but just the values for years
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False):
+def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -88,7 +89,10 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
             time = times[i]
         else:
             time = times
-        ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+        if dates:
+            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+        else:
+            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
 
     ax.grid(True)
     if crosses_zero:
