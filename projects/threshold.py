@@ -388,6 +388,7 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
         thin.append(np.amin(ddraft))
         thick.append(np.amax(ddraft))
         old_grid = new_grid
+    time = np.array(time)
     ground = np.array(ground)
     unground = np.array(unground)
     thin = -1*np.array(thin)
