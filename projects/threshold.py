@@ -9,7 +9,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
-from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary, read_netcdf_list
+from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary, read_netcdf_list, netcdf_time
 from ..interpolation import interp_reg_xy, smooth_xy, interp_grid
 from ..utils import fix_lon_range, split_longitude, real_dir, dist_btw_points, mask_land_ice, polar_stereo, wrap_periodic
 from ..plot_utils.windows import finished_plot, set_panels
@@ -17,6 +17,8 @@ from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
 from ..plot_latlon import latlon_plot
 from ..constants import temp_C2K, rho_fw, deg2rad
+from ..postprocess import segment_file_paths
+from ..plot_1d import timeseries_multi_plot
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -352,10 +354,45 @@ def plot_continent_wind (era5_file, ukesm_file, fig_name=None):
     # Get stereographic coordinates
     x, y = polar_stereo(era5_lon, era5_lat)
 
-    
-
-    
     # Plot outline of Antarctica? How? Need mask file from ERA5?
     # Vector plots - how many points? Every second point?
     # Also vector anomaly.
     # Streamplots - every fifth point?
+
+
+# Plot a timeseries of the number of cells grounded and ungrounded, and the maximum thinning and thickening, in a coupled run.
+def plot_geometry_timeseries (output_dir, fig_name_1=None, fig_name_2=None):
+
+    file_paths = segment_file_paths(output_dir)
+
+    # Get the grid from the first one
+    old_grid = Grid(file_paths[0])
+
+    # Set up timeseries arrays
+    time = []
+    ground = []
+    unground = []
+    thin = []
+    thick = []
+
+    # Loop over the rest of the timeseries
+    for file_path in file_paths[1:]:
+        # Save time index from the beginning of the run
+        time.append(netcdf_time(file_path)[0])
+        # Calculate geometry changes
+        new_grid = Grid(file_path)
+        ground.append(np.count_nonzero((old_grid.bathy!=0)*(new_grid.bathy==0)))
+        unground.append(np.count_nonzero((old_grid.bathy==0)*(new_grid.bathy!=0)))
+        ddraft = np.ma.masked_where(old_grid.draft==0, np.ma.masked_where(new_grid.draft==0, new_grid.draft-old_grid.draft))
+        thin.append(np.amin(ddraft))
+        thick.append(np.amax(ddraft))
+        old_grid = new_grid
+    ground = np.array(ground)
+    unground = np.array(unground)
+    thin = -1*np.array(thin)
+    thick = np.array(thick)
+
+    # Plot
+    timeseries_multi_plot(time, [ground, unground], ['# Grounded', '# Ungrounded'], ['blue', 'red'], title='Changes in ocean cells', fig_name=fig_name_1)
+    timeseries_multi_plot(time, [thin, thick], ['Maximum thinning', 'Maximum thickening'], ['red', 'blue'], title='Changes in ice shelf draft', fig_name=fig_name_2)
+        
