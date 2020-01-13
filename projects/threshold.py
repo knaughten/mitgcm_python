@@ -361,7 +361,7 @@ def plot_continent_wind (era5_file, ukesm_file, fig_name=None):
 
 
 # Plot a timeseries of the number of cells grounded and ungrounded, and the maximum thinning and thickening, in a coupled run.
-def plot_geometry_timeseries (output_dir, fig_name_1=None, fig_name_2=None):
+def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None):
 
     file_paths = segment_file_paths(output_dir)
 
