@@ -377,6 +377,7 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
 
     # Loop over the rest of the timeseries
     for file_path in file_paths[1:]:
+        print 'Processing ' + file_path
         # Save time index from the beginning of the run
         time.append(netcdf_time(file_path)[0])
         # Calculate geometry changes
