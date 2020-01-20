@@ -669,7 +669,7 @@ def plot_topo (var, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax
         data = abs(mask_except_ice(grid.draft, grid))
         title = 'Ice shelf draft (m)'
     elif var == 'wct':
-        data = abs(mask_land(grid.wct, grid))
+        data = abs(mask_land(grid.draft-grid.bathy, grid))
         title = 'Water column thickness (m)'
 
     latlon_plot(data, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title, fig_name=fig_name, figsize=figsize)
