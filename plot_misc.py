@@ -310,7 +310,7 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
                     print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
                     sys.exit()
             data_3d = mask_outside_box(data_3d, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
-            data_tmp = area_average(data_3d, grid, gtype=gtype, time_dependent=True)
+            data_tmp = area_average(data_3d, grid, gtype=gtype, time_dependent=True)            
         elif option == 'point':
             if x0 is None or y0 is None:
                 print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"

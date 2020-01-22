@@ -367,6 +367,54 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
         plot_aice_minmax(file_path, year, grid=grid, fig_name=fig_dir+'aice_minmax_'+str(year)+'.png')
 
 
+# Helper functions for precompute_timeseries and precompute_hovmoller:
+
+# Check if the precomputed file already exists, and either open it or create it.
+def set_update_file (precomputed_file, grid, dimensions):
+    if os.path.isfile(precomputed_file):
+        # Open it
+        return nc.Dataset(precomputed_file, 'a')
+    else:
+        # Create it
+        return NCfile(precomputed_file, grid, dimensions)
+
+# Define or update the time axis.
+def set_update_time (id, mit_file):
+    # Read the time array from the MITgcm file, and its units
+    time, time_units = netcdf_time(mit_file, return_units=True)
+    if isinstance(id, nc.Dataset):
+        # File is being updated
+        # Update the units to match the old time array
+        time_units = id.variables['time'].units
+        # Also figure out how many time indices are in the file so far
+        num_time = id.variables['time'].size
+        # Convert to numeric values
+        time = nc.date2num(time, time_units)
+        # Append to file
+        id.variables['time'][num_time:] = time
+    elif isinstance(id, NCfile):
+        # File is new
+        # Add the time variable to the file
+        id.add_time(time, units=time_units)
+    else:
+        print 'Error (set_update_time): unknown id type'
+        sys.exit()
+
+# Define or update non-time variables.
+def set_update_var (id, data, var_name, title, units):
+    if isinstance(id, nc.Dataset):
+        # File is being updated
+        # Append to file
+        id.variables[var_name][num_time:] = data
+    elif isinstance(id, NCfile):
+        # File is new
+        # Add the variable to the file
+        id.add_variable(var_name, data, 't', long_name=title, units=units)
+    else:
+        print 'Error (set_update_var): unknown id type'
+        sys.exit()        
+
+
 # Pre-compute timeseries and save them in a NetCDF file which concatenates after each simulation segment.
 
 # Arguments:
@@ -389,39 +437,9 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
     # Build the grid
     grid = Grid(mit_file)
 
-    # Check if the timeseries file already exists
-    file_exists = os.path.isfile(timeseries_file)
-    if file_exists:
-        # Open it
-        id = nc.Dataset(timeseries_file, 'a')
-    else:
-        # Create it
-        ncfile = NCfile(timeseries_file, grid, 't')
-
-    # Define/update time
-    # Read the time array from the MITgcm file, and its units
-    time, time_units = netcdf_time(mit_file, return_units=True)
-    if file_exists:
-        # Update the units to match the old time array
-        time_units = id.variables['time'].units
-        # Also figure out how many time indices are in the file so far
-        num_time = id.variables['time'].size
-        # Convert to numeric values
-        time = nc.date2num(time, time_units)
-        # Append to file
-        id.variables['time'][num_time:] = time
-    else:
-        # Add the time variable to the file
-        ncfile.add_time(time, units=time_units)
-
-    # Inner function to define/update non-time variables
-    def write_var (data, var_name, title, units):
-        if file_exists:
-            # Append to file
-            id.variables[var_name][num_time:] = data
-        else:
-            # Add the variable to the file
-            ncfile.add_variable(var_name, data, 't', long_name=title, units=units)
+    # Set up or update the file and time axis
+    id = set_update_file(timeseries_file, grid, 't')
+    set_update_time(id, mit_file)
 
     # Now process all the timeseries
     for ts_name in timeseries_types:
@@ -434,17 +452,17 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             title_melt = 'Total melting beneath FRIS'
             title_freeze = 'Total refreezing beneath FRIS'
             # Update two variables
-            write_var(melt, 'fris_total_melt', title_melt, units)
-            write_var(freeze, 'fris_total_freeze', title_freeze, units)
+            set_update_var(id, melt, 'fris_total_melt', title_melt, units)
+            set_update_var(id, freeze, 'fris_total_freeze', title_freeze, units)
         else:
             data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
-            write_var(data, ts_name, title, units)
+            set_update_var(id, data, ts_name, title, units)
 
     # Finished
-    if file_exists:
+    if isinstance(id, nc.Dataset):
         id.close()
-    else:
-        ncfile.close()
+    elif isinstance(id, NCfile):
+        id.close()
 
 
 # Precompute ocean timeseries from a coupled UaMITgcm simulation.
@@ -946,6 +964,11 @@ def calc_ice_prod (file_path, out_file, monthly=True):
     ncfile.add_time(time)
     ncfile.add_variable('ice_prod', ice_prod, 'xyt', long_name='Net sea ice production', units='m/s')
     ncfile.close()
+
+
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
+
+    
 
     
 
