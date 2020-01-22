@@ -248,7 +248,19 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
         finished_plot(fig, fig_name=fig_name, dpi=dpi)
 
 
-#
+# Read a series of NetCDF files and create a Hovmoller plot of the given variable in the given region.
+
+# Arguments:
+# var: 'temp', 'salt', 'u', or 'v'
+# file_paths: a list of paths to NetCDF output files, or a string with just one file
+
+# Optional keyword arguments:
+# option: 'box' (average over a region between lat-lon coordinates; default) or 'point' (interpolate to given lat-lon point)
+# box: if option='box', can set to 'PIB' or 'Dot' to average over the predefined regions in Pine Island Bay or in front of Dotson
+# xmin, xmax, ymin, ymax: if option='box' and box=None, manual bounds on longitude and latitude of box. If any of them aren't set, they will default to the edges of the domain.
+# x0, y0: if option='point', lon and lat coordinates to interpolate to
+# grid: Grid object, if it already exists (otherwise it will be calculated from the NetCDF files)
+# zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
 def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xmax=None, ymin=None, ymax=None, x0=None, y0=None, grid=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
     
     if isinstance(file_paths, str):
@@ -281,7 +293,7 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
 
     data = None
     time = None
-    # Read and process data for each file. Loop over timesteps to save memory.
+    # Read and process data for each file.
     for file_path in file_paths:
         print 'Reading ' + file_path
         time_tmp = netcdf_time(file_path, monthly=monthly)
@@ -298,12 +310,12 @@ def read_plot_hovmoller (var, file_paths, option='box', box=None, xmin=None, xma
                     print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
                     sys.exit()
             data_3d = mask_outside_box(data_3d, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
-            data_tmp[t,:] = area_average(data_3d, grid, gtype=gtype, time_dependent=True)
+            data_tmp = area_average(data_3d, grid, gtype=gtype, time_dependent=True)
         elif option == 'point':
             if x0 is None or y0 is None:
                 print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"
                 sys.exit()
-            data_tmp[t,:] = interp_bilinear(data_3d, x0, y0, grid, gtype=gtype)
+            data_tmp = interp_bilinear(data_3d, x0, y0, grid, gtype=gtype)
         else:
             print 'Error (read_plot_hovmoller): invalid option ' + option
             sys.exit()
