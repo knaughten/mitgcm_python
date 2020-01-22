@@ -405,6 +405,7 @@ def set_update_var (id, data, var_name, title, units):
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Append to file
+        num_time = id.variables['time'].size
         id.variables[var_name][num_time:] = data
     elif isinstance(id, NCfile):
         # File is new
