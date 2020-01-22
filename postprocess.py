@@ -966,7 +966,7 @@ def calc_ice_prod (file_path, out_file, monthly=True):
     ncfile.close()
 
 
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
+#def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
 
     
 
