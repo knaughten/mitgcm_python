@@ -392,20 +392,21 @@ def set_update_time (id, mit_file):
         time = nc.date2num(time, time_units)
         # Append to file
         id.variables['time'][num_time:] = time
+        return num_time
     elif isinstance(id, NCfile):
         # File is new
         # Add the time variable to the file
         id.add_time(time, units=time_units)
+        return 0
     else:
         print 'Error (set_update_time): unknown id type'
         sys.exit()
 
 # Define or update non-time variables.
-def set_update_var (id, data, var_name, title, units):
+def set_update_var (id, num_time, data, var_name, title, units):
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Append to file
-        num_time = id.variables['time'].size
         id.variables[var_name][num_time:] = data
     elif isinstance(id, NCfile):
         # File is new
@@ -440,7 +441,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Set up or update the file and time axis
     id = set_update_file(timeseries_file, grid, 't')
-    set_update_time(id, mit_file)
+    num_time = set_update_time(id, mit_file)
 
     # Now process all the timeseries
     for ts_name in timeseries_types:
@@ -453,11 +454,11 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             title_melt = 'Total melting beneath FRIS'
             title_freeze = 'Total refreezing beneath FRIS'
             # Update two variables
-            set_update_var(id, melt, 'fris_total_melt', title_melt, units)
-            set_update_var(id, freeze, 'fris_total_freeze', title_freeze, units)
+            set_update_var(id, num_time, melt, 'fris_total_melt', title_melt, units)
+            set_update_var(id, num_time, freeze, 'fris_total_freeze', title_freeze, units)
         else:
             data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
-            set_update_var(id, data, ts_name, title, units)
+            set_update_var(id, num_time, data, ts_name, title, units)
 
     # Finished
     if isinstance(id, nc.Dataset):
@@ -967,7 +968,14 @@ def calc_ice_prod (file_path, out_file, monthly=True):
     ncfile.close()
 
 
-#def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
+
+    # Build the grid
+    grid = Grid(mit_file)
+
+    # Set up or update the file and time axis
+    id = set_update_file(hovmoller_file, grid, 'zt')
+    set_update_time(id, mit_file)
 
     
 
