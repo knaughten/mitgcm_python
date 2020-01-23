@@ -173,7 +173,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
+def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -211,9 +211,9 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
     existing_ax = ax is not None
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
-        
+
     # Plot the data
-    img = ax.pcolormesh(time_edges, grid.z_edges, data, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(time_edges, grid.z_edges, np.transpose(data), cmap=cmap, vmin=vmin, vmax=vmax)
     if contours is not None:
         # Overlay contours
         # Need time at the centres of each index
@@ -223,15 +223,18 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
             dt = (time_edges[t+1]-time_edges[t])/2
             time_centres.append(time_edges[t]+dt)
         plt.contour(time_centres, grid.z, data, levels=contours, colors='black', linestyles='solid')
-    
+
     # Set depth limits
     if zmin is None:
-        zmin = grid.z_edges[-1]
+        # Index of last masked cell
+        k_bottom = np.argwhere(np.invert(data[0,:].mask))[-1][0]
+        zmin = grid.z_edges[k_bottom+1]
     if zmax is None:
-        zmax = grid.z_edges[0]
+        # Index of first unmasked cell
+        k_top = np.argwhere(np.invert(data[0,:].mask))[0][0]
+        zmax = grid.z_edges[k_top]    
     ax.set_ylim([zmin, zmax])
     # Make nice axes labels
-    yearly_ticks(ax)    
     depth_axis(ax)
     if make_cbar:
         # Add a colourbar
@@ -267,7 +270,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
     grid = choose_grid(grid, None)
 
     # Make the plot
-    hovmoller_plot(data, time, grid, ctype=ctype, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
+    hovmoller_plot(data, time, grid, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
         
         
     
