@@ -259,39 +259,8 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 # zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
 def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
 
-    if precomputed:
-        if isinstance(file_paths, list):
-            print 'Error (read_plot_hovmoller): Please just give one file when precomputed=True.'
-            sys.exit()
-        
-    
-    if isinstance(file_paths, str):
-        # Just one file path
-        file_paths = [file_paths]
-
-    # Build the grid if needed
-    grid = choose_grid(grid, file_paths[0])
-
-    # Set parameters for this variable
-    gtype = 't'
-    ctype = 'basic'
-    if var == 'temp':
-        var_name = 'THETA'
-        title = 'Temperature ' + deg_string
-    elif var == 'salt':
-        var_name = 'SALT'
-        title = 'Salinity (psu)'
-    elif var == 'u':
-        var_name = 'UVEL'
-        title = 'Zonal velocity (m/s)'
-        gtype = 'u'
-    elif var == 'v':
-        var_name = 'VVEL'
-        title = 'Meridional velocity (m/s)'
-        gtype = 'v'
-    # Update the colourmap if needed
-    if var in ['u', 'v']:
-        ctype = 'plusminus'
+    data = read_netcdf(hovmoller_file, var_name)
+    time = netcdf_time(hovmoller_file)
 
     data = None
     time = None

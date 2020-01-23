@@ -404,7 +404,7 @@ def set_update_time (id, mit_file):
         sys.exit()
 
 # Define or update non-time variables.
-def set_update_var (id, num_time, data, var_name, title, units):
+def set_update_var (id, num_time, data, dimensions, var_name, title, units):
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Append to file
@@ -412,7 +412,7 @@ def set_update_var (id, num_time, data, var_name, title, units):
     elif isinstance(id, NCfile):
         # File is new
         # Add the variable to the file
-        id.add_variable(var_name, data, 't', long_name=title, units=units)
+        id.add_variable(var_name, data, dimensions, long_name=title, units=units)
     else:
         print 'Error (set_update_var): unknown id type'
         sys.exit()        
@@ -455,11 +455,11 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             title_melt = 'Total melting beneath FRIS'
             title_freeze = 'Total refreezing beneath FRIS'
             # Update two variables
-            set_update_var(id, num_time, melt, 'fris_total_melt', title_melt, units)
-            set_update_var(id, num_time, freeze, 'fris_total_freeze', title_freeze, units)
+            set_update_var(id, num_time, melt, 't', 'fris_total_melt', title_melt, units)
+            set_update_var(id, num_time, freeze, 't', 'fris_total_freeze', title_freeze, units)
         else:
             data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
-            set_update_var(id, num_time, data, ts_name, title, units)
+            set_update_var(id, num_time, data, 't', ts_name, title, units)
 
     # Finished
     if isinstance(id, nc.Dataset):
@@ -1002,7 +1002,7 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
             # Average over the correct region
             data = mask_outside_box(data_full, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
             data = area_average(data, grid, time_dependent=True)
-            set_update_var(id, num_time, data, l+'_'+v, loc_name+' '+title, units)
+            set_update_var(id, num_time, data, 'zt', l+'_'+v, loc_name+' '+title, units)
 
     # Finished
     if isinstance(id, nc.Dataset):
