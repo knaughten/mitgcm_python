@@ -15,7 +15,7 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from plot_misc import read_plot_hovmoller
+from plot_misc import read_plot_hovmoller_ts
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
@@ -126,9 +126,8 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
 
     # Hovmoller plots
     if key == 'PAS':
-        var_names = ['PIB_temp', 'PIB_salt', 'Dot_temp', 'Dot_salt']
-        for var in var_names:
-            read_plot_hovmoller(var, hovmoller_file, grid, fig_name=fig_dir+'hovmoller_'+var+'.png', monthly=monthly)
+        for loc in ['PIB', 'Dot']:
+            read_plot_hovmoller_ts(hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'vel', 'velice']
