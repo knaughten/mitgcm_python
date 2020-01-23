@@ -12,7 +12,7 @@ import datetime
 from grid import choose_grid
 from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
 from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label
-from plot_utils.windows import finished_plot
+from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
@@ -299,7 +299,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
 
 
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
-def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, figsize=(12,9), dpi=None):
+def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,9), dpi=None):
 
     temp = read_netcdf(hovmoller_file, loc+'_temp')
     salt = read_netcdf(hovmoller_file, loc+'_salt')
