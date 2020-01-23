@@ -15,11 +15,12 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom
+from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
 from plot_utils.windows import set_panels
-from constants import deg_string
+from constants import deg_string, bounds_PIB, bounds_Dot
+from calculus import area_average
 
 
 # Helper function to build lists of output files in a directory.
@@ -968,6 +969,7 @@ def calc_ice_prod (file_path, out_file, monthly=True):
     ncfile.close()
 
 
+# Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
 def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
 
     # Build the grid
@@ -975,12 +977,38 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
 
     # Set up or update the file and time axis
     id = set_update_file(hovmoller_file, grid, 'zt')
-    set_update_time(id, mit_file)
+    num_time = set_update_time(id, mit_file)
 
-    
+    for l in loc:
+        for v in var:
+            print 'Processing ' + l + ' ' + v
+            if v == 'temp':
+                var_name = 'THETA'
+                title = 'Temperature'
+                units = 'degC'
+            elif v == 'salt':
+                var_name = 'SALT'
+                title = 'Salinity'
+                units = 'psu'
+            if l == 'PIB':
+                loc_name = 'Pine Island Bay'
+                [xmin, xmax, ymin, ymax] = bounds_PIB
+            elif l == 'Dot':
+                loc_name = 'Dotson front'
+                [xmin, xmax, ymin, ymax] = bounds_Dot
+            # Read data and average over the correct region
+            data_3d = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
+            data_3d = mask_outside_box(data_3d, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
+            data = area_average(data_3d, grid, time_dependent=True)
+            set_update_var(id, num_time, data, l+'_'+v, loc_name+' '+title, units)
 
-    
-
+    # Finished
+    if isinstance(id, nc.Dataset):
+        id.close()
+    elif isinstance(id, NCfile):
+        id.close()
+            
+            
     
 
     
