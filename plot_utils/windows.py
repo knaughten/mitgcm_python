@@ -52,6 +52,8 @@ def set_panels (key, figsize=None):
             figsize = (12, 7)
         elif key == 'smallC1':
             figsize = (8, 6)
+        elif key == '2x1C2':
+            figsize = (12, 9)
 
     fig = plt.figure(figsize=figsize)
     
@@ -66,6 +68,12 @@ def set_panels (key, figsize=None):
         gs.update(left=0.07, right=0.97, bottom=0.15, top=0.85, wspace=0.05)
         cax1 = fig.add_axes([0.12, 0.05, 0.325, 0.04])
         cax2 = fig.add_axes([0.595, 0.05, 0.325, 0.04])
+    elif key == '2x1C2':
+        # Two plots, above and below, with colourbars to the side
+        gs = plt.GridSpec(2,1)
+        gs.update(left=0.05, right=0.9, bottom=0.05, top=0.9, hspace=0.1)
+        cax1 = fig.add_axes([0.92, 0.6, 0.03, 0.25])
+        cax2 = fig.add_axes([0.92, 0.1, 0.03, 0.25])
     elif key == '2x2C1':
         # Four plots arranged into two rows and two columns, with one colourbar below
         gs = plt.GridSpec(2,2)

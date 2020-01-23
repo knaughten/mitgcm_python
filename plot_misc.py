@@ -251,6 +251,31 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
         finished_plot(fig, fig_name=fig_name, dpi=dpi)
 
 
+# Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
+def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, loc_string='', fig_name=None, figsize=(12,9), dpi=None):
+
+    # Set panels
+    fig, gs, cax_t, cax_s = set_panels('2x1C2')
+    # Wrap things up in lists for easier iteration
+    data = [temp, salt]
+    vmin = [tmin, smin]
+    vmax = [tmax, smax]
+    contours = [t_contours, s_contours]
+    title = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
+    cax = [cax_t, cax_s]
+    for i in range(2):
+        ax = plt.subplot(gs[i,0])
+        # Make the plot
+        img = hovmoller_plot(data[i], time, grid, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], title=title[i])
+        # Add a colourbar
+        plt.colorbar(img, cax=cax[i])
+        if i == 0:
+            # Remove x-tick labels from top plot
+            ax.set_xticklabels([])            
+    plt.suptitle(loc_string, fontsize=20)
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)
+    
+
 # Read a precomputed Hovmoller file (from precompute_hovmoller in postprocess.py) and make the plot.
 
 # Arguments:
@@ -271,6 +296,19 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
 
     # Make the plot
     hovmoller_plot(data, time, grid, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
+
+
+# Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
+def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, figsize=(12,9), dpi=None):
+
+    temp = read_netcdf(hovmoller_file, loc+'_temp')
+    salt = read_netcdf(hovmoller_file, loc+'_salt')
+    time = netcdf_time(hovmoller_file, monthly=False)
+    if loc == 'PIB':
+        loc_string = 'Pine Island Bay '
+    elif loc == 'Dot':
+        loc_string = 'Dotson front '
+    hovmoller_ts_plot(temp, salt, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
         
         
     
