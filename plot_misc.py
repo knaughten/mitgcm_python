@@ -268,11 +268,12 @@ def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, 
         # Make the plot
         img = hovmoller_plot(data[i], time, grid, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], title=title[i])
         # Add a colourbar
-        plt.colorbar(img, cax=cax[i])
+        extend = get_extend(vmin=vmin[i], vmax=vmax[i])
+        plt.colorbar(img, cax=cax[i], extend=extend)
         if i == 0:
             # Remove x-tick labels from top plot
             ax.set_xticklabels([])            
-    plt.suptitle(loc_string, fontsize=20)
+    plt.suptitle(loc_string, fontsize=22)
     finished_plot(fig, fig_name=fig_name, dpi=dpi)
     
 
