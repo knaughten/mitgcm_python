@@ -301,6 +301,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
 def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
 
+    grid = choose_grid(grid, None)
     temp = read_netcdf(hovmoller_file, loc+'_temp')
     salt = read_netcdf(hovmoller_file, loc+'_salt')
     time = netcdf_time(hovmoller_file, monthly=False)
