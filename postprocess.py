@@ -130,7 +130,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             read_plot_hovmoller_ts(hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
 
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'vel', 'velice']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'eta', 'vel', 'velice']
     if key in ['WSS', 'WSK', 'FRIS', 'WSFRIS']:
         var_names += ['hsnow', 'mld', 'saltflx', 'psi', 'iceprod']
         if key in ['WSS', 'WSK']:
