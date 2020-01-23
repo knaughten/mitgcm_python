@@ -127,7 +127,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     # Hovmoller plots
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
-            read_plot_hovmoller_ts(hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
+            read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'eta', 'vel', 'velice']
@@ -140,15 +140,18 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         vmin = None
         vmax = None
         zoom_fris = False
+        ymax = None
         chunk = None
         fig_name = fig_dir + var + '.png'
+        if key == 'PAS' and var in ['bwsalt', 'bwtemp', 'hice', 'ismr', 'vel', 'velice']:
+            ymax = -70
         if var == 'bwtemp':
             if key == 'WSS':
                 vmin = -2.5
                 vmax = -1.5
             elif key in ['WSK', 'WSFRIS']:
                 vmax = 1
-        if var == 'bwsalt':
+        if var == 'bwsalt' and key in ['WSS', 'WSK', 'FRIS', 'WSFRIS']:
             vmin = 34.3
         if var == 'bwage':
             vmin = 0
@@ -157,7 +160,10 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         if var == 'eta':
             vmin = -2.5
         if var == 'hice':
-            vmax = 4
+            if key == 'PAS':
+                vmax = 2
+            else:
+                vmax = 4
         if var == 'saltflx':
             vmin = -0.001
             vmax = 0.001
@@ -176,7 +182,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         else:
             figsize = (8,6)
         # Plot
-        read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_name, date_string=date_string, figsize=figsize, chunk=chunk)
+        read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, ymax=ymax, fig_name=fig_name, date_string=date_string, figsize=figsize, chunk=chunk)
         # Make additional plots if needed
         if key in ['WSK', 'WSFRIS'] and var in ['ismr', 'vel', 'bwtemp', 'bwsalt', 'psi', 'bwage']:
             # Make another plot zoomed into FRIS
