@@ -15,6 +15,7 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
+from plot_misc import read_plot_hovmoller
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
@@ -83,7 +84,7 @@ def segment_file_paths (output_dir, segment_dir=None, file_name='output.nc'):
 # monthly: as in function netcdf_time
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
-def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=True, unravelled=False, key='WSFRIS'):
+def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=True, unravelled=False, key='WSFRIS', hovmoller_file='hovmoller.nc'):
 
     if time_average:
         time_index = None
@@ -118,13 +119,23 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+    elif key == 'PAS':
+        var_names = ['all_massloss', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
+    # Hovmoller plots
+    if key == 'PAS':
+        var_names = ['PIB_temp', 'PIB_salt', 'Dot_temp', 'Dot_salt']
+        for var in var_names:
+            read_plot_hovmoller(var, hovmoller_file, grid, fig_name=fig_dir+'hovmoller_'+var+'.png', monthly=monthly)
+
     # Lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'saltflx', 'vel', 'velice', 'psi', 'iceprod']
-    if key in ['WSK', 'WSS']:
-        var_names += 'bwage'
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'mld', 'eta', 'vel', 'velice']
+    if key in ['WSS', 'WSK', 'FRIS', 'WSFRIS']:
+        var_names += ['hsnow', 'mld', 'saltflx', 'psi', 'iceprod']
+        if key in ['WSS', 'WSK']:
+            var_names += 'bwage'
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
@@ -161,6 +172,8 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             chunk = 6
         if not zoom_fris and key in ['WSK', 'WSFRIS']:
             figsize = (10,6)
+        elif key == 'PAS':
+            figsize = (12,6)
         else:
             figsize = (8,6)
         # Plot
@@ -188,8 +201,9 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
     # Slice plots
-    read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
-    read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
+    if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
+        read_plot_ts_slice(file_path, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_filchner.png', date_string=date_string)
+        read_plot_ts_slice(file_path, grid=grid, lon0=-55, hmax=-72, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_ronne.png', date_string=date_string)
     if key in ['WSK', 'WSFRIS']:
         read_plot_ts_slice(file_path, grid=grid, lon0=0, time_index=time_index, time_average=time_average, fig_name=fig_dir+'ts_slice_eweddell.png', date_string=date_string)
 
@@ -286,6 +300,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+    elif key == 'PAS':
+        var_names = ['all_massloss', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
@@ -304,10 +320,14 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod']
-    if key in ['WSK', 'WSS']:
-        var_names += 'bwage'
+    if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
+        var_names += 'iceprod'
+        if key in ['WSK', 'WSS']:
+            var_names += 'bwage'
     if key in ['WSK', 'WSFRIS']:
         figsize = (10,6)
+    elif key == 'PAS':
+        figsize = (12,6)
     else:
         figsize = (8,6)
     for var in var_names:
@@ -333,8 +353,9 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
                 read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, vel_option=vel_option, date_string=date_string, fig_name=fig_dir+var+'_'+vel_option+'_diff.png')
 
     # Slice plots
-    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_filchner_diff.png')
-    read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-55, hmax=-72, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_ronne_diff.png')
+    if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
+        read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-40, hmax=-75, zmin=-1450, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_filchner_diff.png')
+        read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=-55, hmax=-72, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_ronne_diff.png')
     if key in ['WSK', 'WSFRIS']:
         read_plot_ts_slice_diff(file_path_1, file_path_2, grid=grid, lon0=0, zmin=-2000, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+'ts_slice_eweddell_diff.png')    
     
@@ -428,7 +449,7 @@ def set_update_var (id, num_time, data, dimensions, var_name, title, units):
 # timeseries_types: list of timeseries types to compute (subset of the options from set_parameters). If None, a default set will be used.
 # lon0, lat0: if timeseries_types includes 'temp_polynya' and/or 'salt_polynya', use these points as the centre.
 
-def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='WSS'):
+def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS'):
 
     # Timeseries to compute
     if timeseries_types is None:
@@ -436,6 +457,8 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             timeseries_types = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
         elif key == 'WSK':
             timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
+        elif key == 'PAS':
+            timeseries_types = ['all_massloss', 'eta_avg', 'seaice_area']
 
     # Build the grid
     grid = Grid(mit_file)
