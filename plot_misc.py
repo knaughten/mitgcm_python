@@ -222,7 +222,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
         for t in range(time_edges.size-1):
             dt = (time_edges[t+1]-time_edges[t])/2
             time_centres.append(time_edges[t]+dt)
-        plt.contour(time_centres, grid.z, data, levels=contours, colors='black', linestyles='solid')
+        plt.contour(time_centres, grid.z, np.transpose(data), levels=contours, colors='black', linestyles='solid')
 
     # Set depth limits
     if zmin is None:
@@ -260,7 +260,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 
 # Optional keyword arguments:
 # zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
-def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
+def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
 
     data = read_netcdf(hovmoller_file, var_name)
     # Set monthly=False so we don't back up an extra month (because precomputed)
