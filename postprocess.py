@@ -380,9 +380,9 @@ def set_update_file (precomputed_file, grid, dimensions):
         return NCfile(precomputed_file, grid, dimensions)
 
 # Define or update the time axis.
-def set_update_time (id, mit_file):
+def set_update_time (id, mit_file, monthly=True):
     # Read the time array from the MITgcm file, and its units
-    time, time_units = netcdf_time(mit_file, return_units=True)
+    time, time_units = netcdf_time(mit_file, return_units=True, monthly=monthly)
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Update the units to match the old time array
@@ -442,7 +442,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Set up or update the file and time axis
     id = set_update_file(timeseries_file, grid, 't')
-    num_time = set_update_time(id, mit_file)
+    num_time = set_update_time(id, mit_file, monthly=monthly)
 
     # Now process all the timeseries
     for ts_name in timeseries_types:
@@ -970,14 +970,14 @@ def calc_ice_prod (file_path, out_file, monthly=True):
 
 
 # Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt']):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt'], monthly=True):
 
     # Build the grid
     grid = Grid(mit_file)
 
     # Set up or update the file and time axis
     id = set_update_file(hovmoller_file, grid, 'zt')
-    num_time = set_update_time(id, mit_file)
+    num_time = set_update_time(id, mit_file, monthly=monthly)
 
     for v in var:
         print 'Processing ' + v
@@ -992,7 +992,7 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
         # Read data and mask land/ice shelves
         data_full = mask_3d(read_netcdf(mit_file, var_name), grid, time_dependent=True)
         for l in loc:
-            print 'Processing ' + l            
+            print '...at ' + l            
             if l == 'PIB':
                 loc_name = 'Pine Island Bay'
                 [xmin, xmax, ymin, ymax] = bounds_PIB

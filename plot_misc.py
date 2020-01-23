@@ -10,7 +10,7 @@ import numpy as np
 import datetime
 
 from grid import choose_grid
-from file_io import check_single_time, find_variable, read_netcdf, netcdf_time
+from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
 from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label
 from plot_utils.windows import finished_plot
 from plot_utils.colours import get_extend, set_colours
@@ -259,83 +259,12 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 # zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
 def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(8,6)):
 
-    if precomputed:
-        if isinstance(file_paths, list):
-            print 'Error (read_plot_hovmoller): Please just give one file when precomputed=True.'
-            sys.exit()
-        
-    
-    if isinstance(file_paths, str):
-        # Just one file path
-        file_paths = [file_paths]
+    data = read_netcdf(hovmoller_file, var_name)
+    # Set monthly=False so we don't back up an extra month (because precomputed)
+    time = netcdf_time(hovmoller_file, monthly=False)
+    title, units = read_title_units(hovmoller_file, var_name)
 
-    # Build the grid if needed
-    grid = choose_grid(grid, file_paths[0])
-
-    # Set parameters for this variable
-    gtype = 't'
-    ctype = 'basic'
-    if var == 'temp':
-        var_name = 'THETA'
-        title = 'Temperature ' + deg_string
-    elif var == 'salt':
-        var_name = 'SALT'
-        title = 'Salinity (psu)'
-    elif var == 'u':
-        var_name = 'UVEL'
-        title = 'Zonal velocity (m/s)'
-        gtype = 'u'
-    elif var == 'v':
-        var_name = 'VVEL'
-        title = 'Meridional velocity (m/s)'
-        gtype = 'v'
-    # Update the colourmap if needed
-    if var in ['u', 'v']:
-        ctype = 'plusminus'
-
-    data = None
-    time = None
-    # Read and process data for each file.
-    for file_path in file_paths:
-        print 'Reading ' + file_path
-        time_tmp = netcdf_time(file_path, monthly=monthly)
-        data_3d = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
-        if option == 'box':
-            print 'Averaging over box'
-            if box is not None:
-                # Preset box
-                if box == 'PIB':
-                    [xmin, xmax, ymin, ymax] = bounds_PIB
-                elif box == 'Dot':
-                    [xmin, xmax, ymin, ymax] = bounds_Dot
-                else:
-                    print 'Error (read_plot_hovmoller): invalid preset box ' + box + '. Valid options are PIB or Dot.'
-                    sys.exit()
-            data_3d = mask_outside_box(data_3d, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
-            data_tmp = area_average(data_3d, grid, gtype=gtype, time_dependent=True)            
-        elif option == 'point':
-            if x0 is None or y0 is None:
-                print "Error (read_plot_hovmoller): must set x0 and y0 for option='point'"
-                sys.exit()
-            data_tmp = interp_bilinear(data_3d, x0, y0, grid, gtype=gtype)
-        else:
-            print 'Error (read_plot_hovmoller): invalid option ' + option
-            sys.exit()
-        if data is None:
-            data = data_tmp
-            time = time_tmp
-        else:
-            data = np.concatenate((data, data_tmp))
-            time = np.concatenate((time, time_tmp))  
-
-    # Update the title
-    if option == 'box':
-        if box == 'PIB':
-            title += ', Pine Island Bay'
-        elif box == 'Dot':
-            title += ', Dotson'
-    else:
-        title += ' at ' + lon_label(x0) + ', ' + lat_label(y0)
+    grid = choose_grid(grid, None)
 
     # Make the plot
     hovmoller_plot(data, time, grid, ctype=ctype, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)

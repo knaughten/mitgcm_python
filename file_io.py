@@ -555,6 +555,13 @@ def read_netcdf_list (file_path, var_list, time_index=None, t_start=None, t_end=
     for var in var_list:
         data.append(read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
     return data
+
+
+# Read the long name and units of the given variable in the NetCDF file.
+def read_title_units (file_path, var_name):
+
+    id = nc.Dataset(file_path)
+    return id.variables[var_name].long_name, id.variables[var_name].units
     
 
     
