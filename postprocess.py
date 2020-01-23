@@ -979,27 +979,29 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
     id = set_update_file(hovmoller_file, grid, 'zt')
     num_time = set_update_time(id, mit_file)
 
-    for l in loc:
-        for v in var:
-            print 'Processing ' + l + ' ' + v
-            if v == 'temp':
-                var_name = 'THETA'
-                title = 'Temperature'
-                units = 'degC'
-            elif v == 'salt':
-                var_name = 'SALT'
-                title = 'Salinity'
-                units = 'psu'
+    for v in var:
+        print 'Processing ' + v
+        if v == 'temp':
+            var_name = 'THETA'
+            title = 'Temperature'
+            units = 'degC'
+        elif v == 'salt':
+            var_name = 'SALT'
+            title = 'Salinity'
+            units = 'psu'
+        # Read data and mask land/ice shelves
+        data_full = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
+        for l in loc:
+            print 'Processing ' + l            
             if l == 'PIB':
                 loc_name = 'Pine Island Bay'
                 [xmin, xmax, ymin, ymax] = bounds_PIB
             elif l == 'Dot':
                 loc_name = 'Dotson front'
                 [xmin, xmax, ymin, ymax] = bounds_Dot
-            # Read data and average over the correct region
-            data_3d = mask_3d(read_netcdf(file_path, var_name), grid, time_dependent=True)
-            data_3d = mask_outside_box(data_3d, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
-            data = area_average(data_3d, grid, time_dependent=True)
+            # Average over the correct region
+            data = mask_outside_box(data_full, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
+            data = area_average(data, grid, time_dependent=True)
             set_update_var(id, num_time, data, l+'_'+v, loc_name+' '+title, units)
 
     # Finished
