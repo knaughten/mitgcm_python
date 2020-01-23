@@ -252,7 +252,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, loc_string='', fig_name=None, figsize=(12,9), dpi=None):
+def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, loc_string='', fig_name=None, figsize=(12,7), dpi=None):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2')
@@ -299,7 +299,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
 
 
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
-def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,9), dpi=None):
+def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
 
     temp = read_netcdf(hovmoller_file, loc+'_temp')
     salt = read_netcdf(hovmoller_file, loc+'_salt')
