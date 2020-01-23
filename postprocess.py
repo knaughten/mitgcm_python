@@ -127,7 +127,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     # Hovmoller plots
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
-            read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
+            read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'eta', 'vel', 'velice']
@@ -151,8 +151,11 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
                 vmax = -1.5
             elif key in ['WSK', 'WSFRIS']:
                 vmax = 1
-        if var == 'bwsalt' and key in ['WSS', 'WSK', 'FRIS', 'WSFRIS']:
-            vmin = 34.3
+        if var == 'bwsalt':
+            if key == 'PAS':
+                vmin = 34.1
+            else:
+                vmin = 34.3
         if var == 'bwage':
             vmin = 0
             if key == 'WSS':
@@ -178,7 +181,10 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
         if not zoom_fris and key in ['WSK', 'WSFRIS']:
             figsize = (10,6)
         elif key == 'PAS':
-            figsize = (12,6)
+            if ymax == -70:
+                figsize = (14,5)
+            else:
+                figsize = (12,6)
         else:
             figsize = (8,6)
         # Plot
@@ -200,10 +206,10 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
             if key in ['WSK', 'WSFRIS']:
                 figsize = (10,6)
             for vel_option in ['sfc', 'bottom']:
-                read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize, chunk=chunk)
+                read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, vel_option=vel_option, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, ymax=ymax, fig_name=fig_dir+var+'_'+vel_option+'.png', date_string=date_string, figsize=figsize, chunk=chunk)
         if var in ['eta', 'hice']:
             # Make another plot with unbounded colour bar
-            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, zoom_fris=zoom_fris, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
+            read_plot_latlon(var, file_path, grid=grid, time_index=time_index, time_average=time_average, zoom_fris=zoom_fris, ymax=ymax, fig_name=fig_dir + var + '_unbound.png', date_string=date_string, figsize=figsize)
 
     # Slice plots
     if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
