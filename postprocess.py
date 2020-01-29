@@ -330,11 +330,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     grid = Grid(grid_path)
 
     # Now make lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
     if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
-        var_names += 'iceprod'
+        var_names += ['iceprod']
         if key in ['WSK', 'WSS']:
-            var_names += 'bwage'
+            var_names += ['bwage']
     if key in ['WSK', 'WSFRIS']:
         figsize = (10,6)
     elif key == 'PAS':
