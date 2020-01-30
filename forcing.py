@@ -6,9 +6,9 @@ import numpy as np
 import sys
 import os
 
-from grid import Grid, SOSEGrid, grid_check_split, choose_grid
+from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
-from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points
+from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
 from calculus import area_integral
@@ -557,7 +557,37 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, mit_end_year=None, model_
             # Update time range for next time
             t_start = t_end
             t_end = t_start + days_per_year
+
+
+# Convert a series of 6-hourly ERA5 forcing files (1 file per year) to monthly files. This will convert one variable, based on file_head_in (followed by _yyyy in each filename).
+def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
+
+    grid = ERA5Grid()
+    per_day = 24/6
+
+    for year in range(start_year, end_year+1):
+        print 'Processing year ' + str(year)
+        data = read_binary(file_head_in+'_'+str(year), [grid.nx, grid.ny], 'xyt')
+        data_monthly = np.empty([12, grid.ny, grid.nx])
+        t = 0
+        for month in range(12):
+            nt = days_per_month(month+1, year)*per_day
+            print 'Indices ' + str(t) + ' to ' + str(t+nt-1)
+            data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
+            t += nt
+        write_binary(data_monthly, file_head_out+'_'+str(year))
+                       
             
+        
+
+    
+
+    
+
+    
+
+    
+
                 
         
 
