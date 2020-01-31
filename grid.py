@@ -915,13 +915,13 @@ class PACEGrid:
 
     def __init__ (self):
 
-        lon0 = something
-        lon_inc = something
-        lat0 = something
-        lat_inc = something
-        nlon = something
-        nlat = something
-        self.max_lon = something
+        lon0 = 0.
+        lon_inc = 1.25
+        lat0 = -90.
+        nlon = 288
+        nlat = 192
+        lat_inc = 180./(nlat-1)
+        self.max_lon = 360
         self.lon, self.lat, self.dA = build_forcing_grid(lon0, lon_inc, lat0, lat_inc, nlon, nlat)
         self.nx = nlon
         self.ny = nlat

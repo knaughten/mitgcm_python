@@ -586,6 +586,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
     end_year = 2013
     days_per_year = 365
     months_per_year = 12
+    ens_str = str(ens).zfill(2)
 
     if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
         print 'Error (pace_atm_forcing): Invalid variable ' + var
@@ -619,7 +620,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
             file_mid = '.cam.h0.'
         else:
             file_mid = '.cam.h1.'
-        file_path = path + file_head + str(ens).zfill(2) + file_mid + var + file_tail
+        file_path = path + file_head + ens_str + file_mid + var + file_tail
         # Choose time indicies
         if monthly:
             per_year = months_per_year
@@ -641,7 +642,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
             # Convert from mixing ratio to specific humidity
             data = data/(1.0 + data)
         # Write data
-        out_file = real_dir(out_dir) + 'PACE_ens' + str(ens).zfill(2) + '_' + var + '_' + str(year)
+        out_file = real_dir(out_dir) + 'PACE_ens' + ens_str + '_' + var + '_' + str(year)
         write_binary(data, out_file)    
 
 
