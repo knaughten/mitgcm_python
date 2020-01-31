@@ -602,13 +602,24 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
 
     for year in range(start_year, end_year+1):
         print 'Processing ' + str(year)
-        # After 2006, use RCP 8.5
+        # Construct the file based on the year (after 2006 use RCP 8.5) and whether it's monthly or daily
         if year < 2006:
-            file_path = path + 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.19200101-20051231.nc'
+            file_head = 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'
+            if monthly:
+                file_tail = '.192001-200512.nc'
+            else:
+                file_tail = '.19200101-20051231.nc'
         else:
-            file_path = path + 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.20060101-20131231.nc'
+            file_head = 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'
+            if monthly:
+                file_tail = '.200601-201312.nc'
+            else:
+                file_tail = '.20060101-20131231.nc'
         if monthly:
-            file_path = file_path.replace('h1', 'h0')
+            file_mid = '.cam.h0.'
+        else:
+            file_mid = '.cam.h1.'
+        file_path = path + file_head + str(ens).zfill(2) + file_mid + var + file_tail
         # Choose time indicies
         if monthly:
             per_year = months_per_year

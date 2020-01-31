@@ -909,6 +909,23 @@ class UKESMGrid:
             print 'Error (get_lon_lat): invalid dim ' + str(dim)
             sys.exit()
 
+
+# Similarly for PACE but more lightweight
+class PACEGrid:
+
+    def __init__ (self):
+
+        lon0 = something
+        lon_inc = something
+        lat0 = something
+        lat_inc = something
+        nlon = something
+        nlat = something
+        self.max_lon = something
+        self.lon, self.lat, self.dA = build_forcing_grid(lon0, lon_inc, lat0, lat_inc, nlon, nlat)
+        self.nx = nlon
+        self.ny = nlat
+
         
         
 
