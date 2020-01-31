@@ -473,7 +473,7 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     write_binary(scale_extend, output_file, prec=prec)
 
 
-# Process one year of daily CMIP6 atmospheric data (in practice, from UKESM1-0-LL) and convert to MITgcm EXF format for forcing simulations.
+# Process daily CMIP6 atmospheric data (in practice, from UKESM1-0-LL) and convert to MITgcm EXF format for forcing simulations.
 # Assumes there are 30-day months - true for the DECK experiments in UKESM at least.
 
 # Arguments:
@@ -576,7 +576,73 @@ def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
             data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
             t += nt
         write_binary(data_monthly, file_head_out+'_'+str(year))
-                       
+
+
+# Process atmospheric forcing from PACE for a single variable and single ensemble member.
+def pace_atm_forcing (var, ens, in_dir, out_dir):
+
+    import netCDF4 as nc
+    start_year = 1920
+    end_year = 2013
+    days_per_year = 365
+    months_per_year = 12
+
+    if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
+        print 'Error (pace_atm_forcing): Invalid variable ' + var
+        sys.exit()
+
+    path = real_dir(in_dir) + var + '/'
+    # Decide if monthly or daily data
+    monthly = var in ['FLDS', 'FSDS']
+    if monthly:        
+        path += 'monthly/'
+    else:
+        path += 'daily/'
+
+    for year in range(start_year, end_year+1):
+        print 'Processing ' + str(year)
+        # After 2006, use RCP 8.5
+        if year < 2006:
+            file_path = path + 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.19200101-20051231.nc'
+        else:
+            file_path = path + 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.20060101-20131231.nc'
+        # Choose time indicies
+        if monthly:
+            per_year = months_per_year
+        else:
+            per_year = days_per_year
+        t_start = (year-start_year)*per_year
+        t_end = t_start + per_year
+        print 'Reading indices ' + str(t_start) + '-' + str(t_end-1)
+        # Read data
+        data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+        # Unit conversions
+        if var in ['FLDS', 'FSDS']:
+            # Swap sign
+            data *= -1
+        elif var == 'TREFHT':
+            # Convert from K to C
+            data -= temp_C2K
+        elif var == 'QBOT':
+            # Convert from mixing ratio to specific humidity
+            data = data/(1.0 + data)
+        # Write data
+        out_file = real_dir(out_dir) + 'PACE_ens' + str(ens).zfill(2) + '_' + var + '_' + str(year)
+        write_binary(data, out_file)    
+
+
+# Call pace_atm_forcing for all variables and ensemble members.
+def pace_all (in_dir, out_dir):
+
+    var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
+
+    for ens in range(1,20+1):
+        if ens == 13:
+            continue
+        print 'Processing ensemble member ' + str(ens)
+        for var in var_names:
+            print 'Processing ' + var
+            pace_atm_forcing(var, ens, in_dir, out_dir)
             
         
 
