@@ -607,6 +607,8 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
             file_path = path + 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.19200101-20051231.nc'
         else:
             file_path = path + 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'+str(ens).zfill(2)+'.cam.h1.'+var+'.20060101-20131231.nc'
+        if monthly:
+            file_path = file_path.replace('h1', 'h0')
         # Choose time indicies
         if monthly:
             per_year = months_per_year
