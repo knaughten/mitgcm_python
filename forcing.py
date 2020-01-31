@@ -591,13 +591,14 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
         print 'Error (pace_atm_forcing): Invalid variable ' + var
         sys.exit()
 
-    path = real_dir(in_dir) + var + '/'
+    path = real_dir(in_dir)
     # Decide if monthly or daily data
     monthly = var in ['FLDS', 'FSDS']
     if monthly:        
         path += 'monthly/'
     else:
         path += 'daily/'
+    path += var + '/'
 
     for year in range(start_year, end_year+1):
         print 'Processing ' + str(year)
