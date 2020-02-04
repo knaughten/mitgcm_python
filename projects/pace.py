@@ -2,6 +2,8 @@
 # Weddell Sea threshold paper
 ##################################################################
 
+import numpy as np
+
 from ..grid import ERA5Grid, PACEGrid
 from ..file_io import read_binary, write_binary
 from ..utils import real_dir
@@ -35,10 +37,10 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     pace_lon_bins = right_edges(pace_lon)
     pace_lat_bins = right_edges(pace_lat)
     # Figure out i and j indices for ERA5 to PACE binning
-    i_bins = np.digitize(era_grid.lon, pace_lon_bins)
+    i_bins = np.digitize(era5_grid.lon, pace_lon_bins)
     # Wrap the periodic boundary
     i_bins[i_bins==pace_grid.nx] = 0
-    j_bins = np.digitize(era_grid.lat, pace_lat_bins)
+    j_bins = np.digitize(era5_grid.lat, pace_lat_bins)
 
     # Loop over variables
     era5_clim = np.empty([num_vars, days_per_year, era5_grid.ny, era5_grid.nx])
@@ -51,9 +53,11 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         for year in range(start_year, end_year+1):
             file_path = real_dir(era5_dir) + file_head_era5 + var_era5[n] + '_' + str(year)
             data = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
+            # Average over each day
+            data = np.mean(np.reshape(data, (4, data.shape[0]/4, era5_grid.ny, era5_grid.nx)), axis=0)
             if data.shape[0] == days_per_year+1:
                 # Remove leap day
-                data = np.concatenate((data[:leap_day-1,:], data[leap_day+1:,:]), axis=0)
+                data = np.concatenate((data[:leap_day,:], data[leap_day+1:,:]), axis=0)
             data_accum += data
         # Convert from integral to average
         data_clim = data_accum/num_years
@@ -65,11 +69,8 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     for j in range(pace_grid.ny):
         for i in range(pace_grid.nx):
             if np.any(i_bins==i) and np.any(j_bins==j):
-                # Get an array which is 1 within this bin, 0 elsewhere
-                flag = np.nonzero((i_bins==i)*(j_bins==j)).astype(float)
-                # Tile it to be 4D
-                flag = np.tile(np.tile(flag, (days_per_year, 1, 1)), (num_vars, 1, 1, 1))
-                era5_clim_regrid[:,:,j,i] = np.mean(era5_clim*flag, axis=(2,3))
+                index = (i_bins==i)*(j_bins==j)
+                era5_clim_regrid[:,:,j,i] = np.mean(era5_clim[:,:,index], axis=-1)
     # Write each variable to binary
     for n in range(num_vars):   
         file_path = real_dir(out_dir) + 'ERA5_' + var_pace[n] + '_clim'
