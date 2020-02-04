@@ -26,11 +26,26 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     era5_grid = ERA5Grid()
     pace_grid = PACEGrid()
 
+    # Get right edges of PACE grid (for binning)
+    pace_lon, pace_lat = pace_grid.get_lon_lat(dim=1)
+    def right_edges (A):
+        edges_mid = 0.5*(A[:-1] + A[1:])
+        edges_end = 2*edges_mid[-1] - edges_mid[-2]
+        return np.concatenate((edges_mid, [edges_end]), axis=0)
+    pace_lon_bins = right_edges(pace_lon)
+    pace_lat_bins = right_edges(pace_lat)
+    # Figure out i and j indices for ERA5 to PACE binning
+    i_bins = np.digitize(era_grid.lon, pace_lon_bins)
+    # Wrap the periodic boundary
+    i_bins[i_bins==pace_grid.nx] = 0
+    j_bins = np.digitize(era_grid.lat, pace_lat_bins)
+
     # Loop over variables
+    era5_clim = np.empty([num_vars, days_per_year, era5_grid.ny, era5_grid.nx])
+    print 'Processing ERA5'
     for n in range(num_vars):
         print 'Processing ' + var_pace[n]
-
-        print 'Processing ERA5'
+        
         # Accumulate data over each year
         data_accum = np.zeros([days_per_year, era5_grid.ny, era5_grid.nx])
         for year in range(start_year, end_year+1):
@@ -42,11 +57,27 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
             data_accum += data
         # Convert from integral to average
         data_clim = data_accum/num_years
-        # TODO: Bin to PACE grid
-        # Write to binary
-        file_path = real_dir(out_dir) + 'ERA5_' + var_pace[n] + '_clim'
-        write_binary(data_clim, file_path)
+        era5_clim[n,:] = data_clim
 
+    # Now do all the binning at once to save memory
+    era5_clim_regrid = np.zeros([num_vars, days_per_year, pace_grid.ny, pace_grid.nx])
+    print 'Regridding from ERA5 to PACE grid'
+    for j in range(pace_grid.ny):
+        for i in range(pace_grid.nx):
+            if np.any(i_bins==i) and np.any(j_bins==j):
+                # Get an array which is 1 within this bin, 0 elsewhere
+                flag = np.nonzero((i_bins==i)*(j_bins==j)).astype(float)
+                # Tile it to be 4D
+                flag = np.tile(np.tile(flag, (days_per_year, 1, 1)), (num_vars, 1, 1, 1))
+                era5_clim_regrid[:,:,j,i] = np.mean(era5_clim*flag, axis=(2,3))
+    # Write each variable to binary
+    for n in range(num_vars):   
+        file_path = real_dir(out_dir) + 'ERA5_' + var_pace[n] + '_clim'
+        write_binary(era5_clim_regrid[n,:], file_path)
+
+    print 'Processing PACE'
+    for n in range(num_vars):
+        print 'Processing ' + var_pace[n]
         for ens in range(1, num_ens+1):
             if ens == 13:
                 continue
@@ -60,6 +91,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
                 data_accum += data
             data_clim = data_accum/num_years
             file_path = real_dir(out_dir) + 'PACE_ens' + ens_str + '_' + var_pace[n] + '_clim'
+            write_binary(data_clim, file_path)
 
 
         
