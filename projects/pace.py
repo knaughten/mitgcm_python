@@ -213,11 +213,14 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     ax.legend()
     finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
 
-    print 'Annual bias: ' + str(round(bias, 3))
-    bias_t_monthly = daily_to_monthly(bias_t)
+    print 'Annual bias: ' + str(bias)
+    if monthly:
+        bias_t_monthly = bias_t
+    else:
+        bias_t_monthly = daily_to_monthly(bias_t)
     print 'Monthly biases: '
     for month in range(months_per_year):
-        print str(round(bias_t_monthly[month], 3))
+        print str(bias_t_monthly[month])
         
 
 # Call plot_biases for all variables.
