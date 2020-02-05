@@ -7,12 +7,12 @@ from itertools import compress
 
 from ..grid import ERA5Grid, PACEGrid
 from ..file_io import read_binary, write_binary
-from ..utils import real_dir
+from ..utils import real_dir, days_per_month
 
 def calc_climatologies (era5_dir, pace_dir, out_dir):
 
     var_era5 = ['atemp', 'aqh', 'apressure', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
-    var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
+    var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FSDS', 'FLDS']
     file_head_era5 = 'ERA5_'
     file_head_pace = 'PACE_ens'
     days_per_year = 365
@@ -65,19 +65,21 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         for year in range(start_year, end_year+1):
             file_path = real_dir(era5_dir) + file_head_era5 + var_name_era5 + '_' + str(year)
             data = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
-            # Average over each day
-            data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx)), axis=0)
             if monthly:
                 # Monthly averages
                 data_monthly = np.empty(data_accum.shape)
+                t=0
                 for month in range(months_per_year):
                     nt = days_per_month(month+1, year)*per_day
                     data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
                     t += nt
                 data = data_monthly
-            elif data.shape[0] == days_per_year+1:
-                # Remove leap day
-                data = np.concatenate((data[:leap_day,:], data[leap_day+1:,:]), axis=0)
+            else:
+                # Average over each day
+                data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx)), axis=0)
+                if data.shape[0] == days_per_year+1:
+                    # Remove leap day
+                    data = np.concatenate((data[:leap_day,:], data[leap_day+1:,:]), axis=0)
             data_accum += data
         # Convert from integral to average
         return data_accum/num_years
@@ -86,10 +88,10 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     print 'Processing ERA5'
     era5_clim_daily = np.empty([num_vars_daily, days_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_daily):
-        era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
+        era5_clim_daily[n,:] = era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
     era5_clim_monthly = np.empty([num_vars_monthly, months_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_monthly):
-        era5_process_var(var_pace_monthly[n], var_era5_monthly[n], True)
+        era5_clim_monthly[n,:] = era5_process_var(var_pace_monthly[n], var_era5_monthly[n], True)
 
     # Now do all the binning at once to save memory
     era5_clim_regrid_daily = np.zeros([num_vars_daily, days_per_year, pace_grid.ny, pace_grid.nx])
