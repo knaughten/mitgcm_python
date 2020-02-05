@@ -160,7 +160,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     grid = PACEGrid()
     data = np.empty([num_ens-1, per_year, grid.ny, grid.nx])
     # Read data
-    for ens in range(1, num_ens-1):
+    for ens in range(1, num_ens+1):
         if ens == 13:
             continue
         ens_str = str(ens).zfill(2)
