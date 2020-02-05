@@ -12,6 +12,7 @@ from ..grid import ERA5Grid, PACEGrid
 from ..file_io import read_binary, write_binary
 from ..utils import real_dir, days_per_month
 from ..plot_utils.colours import set_colours
+from ..plot_utils.windows import finished_plot
 
 
 # Global variables
@@ -85,7 +86,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
                 data = data_monthly
             else:
                 # Average over each day
-                data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx)), axis=0)
+                data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx), order='F'), axis=0)
                 if data.shape[0] == days_per_year+1:
                     # Remove leap day
                     data = np.concatenate((data[:leap_day,:], data[leap_day+1:,:]), axis=0)
@@ -159,7 +160,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
         per_year = days_per_year
         time_label = 'day of year'
     # 19 visually distinct colours (from http://phrogz.net/css/distinct-colors.html)
-    ens_colours = [(57,230,149), (121,137,242), (115,29,98), (255,68,0), (255,238,0), (70,140,117), (170,163,217), (242,61,133), (140,37,0), (119,128,0), (0,255,238), (89,70,140), (77,57,65), (242,153,121), (153,204,51), (105,138,140), (97,0,242), (255,0,68), (51,20,0)]
+    ens_colours = [(0.224,0.902,0.584), (0.475,0.537,0.949), (0.451,0.114,0.384), (1.0,0.267,0.0), (1.0,0.933,0.0), (0.275,0.549,0.459), (0.667,0.639,0.851), (0.949,0.239,0.522), (0.549,0.145,0.0), (0.467,0.502,0.0), (0.0,1.0,0.933), (0.349,0.275,0.549), (0.302,0.224,0.255), (0.949,0.6,0.475), (0.6,0.8,0.2), (0.412,0.541,0.549), (0.38,0.0,0.949), (1.0,0.0,0.267), (0.2,0.078,0.0)]
 
     grid = PACEGrid()
     data = np.empty([num_ens-1, per_year, grid.ny, grid.nx])
@@ -181,9 +182,11 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     # Plot spatial map
     # Ensemble-mean and time-mean bias
     bias_xy = np.mean(data, axis=(0,1)) - np.mean(data_era5, axis=0)
+    # Mask out everything north of 30S so it doesn't get counted in min/max
+    bias_xy[grid.lat > ylim_era5[-1]] = 0
     fig, ax = plt.subplots(figsize=(10,6))
     cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
-    img = ax.contourf(grid.lon, grid.lat, bias_xy, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.contourf(grid.lon, grid.lat, bias_xy, 30, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_ylim(ylim_era5)
     plt.colorbar(img)
     plt.title(var_name, fontsize=18)
@@ -193,13 +196,13 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     # Area-mean bias over Amundsen region, for each ensemble
     index = (grid.lon >= xmin)*(grid.lon <= xmax)*(grid.lat >= ymin)*(grid.lat <=ymax)
     data_et = np.mean(data[:,:,index], axis=-1)
-    data_era5_t = np.mean(data_era5[:,index], axis=-1), (num_ens-1, 1, 1)
+    data_era5_t = np.mean(data_era5[:,index], axis=-1)
     # Get mean bias over ensemble members
     bias_t = np.mean(data_et, axis=0) - data_era5_t
     # And mean bias over time
     bias = np.mean(bias_t)
     fig, ax = plt.subplots(figsize=(8,6))
-    time = np.range(per_year)+1
+    time = np.arange(per_year)+1
     # One line for each ensemble member
     for i in range(num_ens-1):
         ax.plot(time, data_et[i,:], '-', color=ens_colours[i])
@@ -213,8 +216,8 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     plt.title(var_name+': mean bias '+str(bias), fontsize=18)
     plt.ylabel(time_label, fontsize=16)
     ax.legend()
-    finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
-    
+    finished_plot(fig) #, fig_name=real_dir(fig_dir)+var_name+'_et.png')
+
 
         
     
