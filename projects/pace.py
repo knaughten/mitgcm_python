@@ -209,7 +209,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     ax.axhline(color='black')
     ax.plot(time, bias_t, '--', color='red', label='Mean bias')
     ax.grid(True)
-    ax.set_xlim([0, days_per_year])
+    ax.set_xlim([1, per_year+1])
     plt.title(var_name+': mean bias '+str(bias), fontsize=18)
     plt.xlabel(time_label, fontsize=16)
     ax.legend()
