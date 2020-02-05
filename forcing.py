@@ -582,7 +582,7 @@ def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
 def pace_atm_forcing (var, ens, in_dir, out_dir):
 
     import netCDF4 as nc
-    start_year = 1920
+    start_year = 2006 #1920
     end_year = 2013
     days_per_year = 365
     months_per_year = 12
