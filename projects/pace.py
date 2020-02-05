@@ -225,4 +225,4 @@ def plot_all_biases (clim_dir, fig_dir='./'):
 
     for var in var_pace:
         monthly = var in ['FSDS', 'FLDS']
-        plot_biases(var_pace[n], clim_dir, monthly=monthly, fig_dir=fig_dir)
+        plot_biases(var, clim_dir, monthly=monthly, fig_dir=fig_dir)
