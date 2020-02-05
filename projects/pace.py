@@ -23,13 +23,13 @@ days_per_year = 365
 months_per_year = 12
 per_day = 4  # ERA5 records per day
 num_ens = 20 # Number of PACE ensemble members
-    
+var_era5 = ['atemp', 'aqh', 'apressure', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
+var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FSDS', 'FLDS']
+
 
 # Calculate the climatologies (daily or monthly) of each forcing variable in ERA5 (interpolated to the PACE grid) and in each PACE ensemble member.
 def calc_climatologies (era5_dir, pace_dir, out_dir):
 
-    var_era5 = ['atemp', 'aqh', 'apressure', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
-    var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FSDS', 'FLDS']
     # Day of the year that's 29 Feb (0-indexed)
     leap_day = 31+28
     # Climatology over the years that both products have data (not counting the RCP8.5 extension)
@@ -37,15 +37,15 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     end_year = 2005
     num_years = end_year-start_year+1
 
-    monthly = [var in ['FLDS', 'FSDS'] for var in var_pace]
+    monthly = [var in ['FSDS', 'FLDS'] for var in var_pace]
     var_era5_monthly = list(compress(var_era5, monthly))
     var_era5_daily = list(compress(var_era5, np.invert(monthly)))
     var_pace_monthly = list(compress(var_pace, monthly))
     var_pace_daily = list(compress(var_pace, np.invert(monthly)))
     num_vars = len(var_era5)
     num_vars_monthly = len(var_era5_monthly)
-    num_vars_daily = len(var_era5_daily)    
-
+    num_vars_daily = len(var_era5_daily)  
+    
     era5_grid = ERA5Grid()
     pace_grid = PACEGrid()
 
@@ -219,6 +219,9 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     finished_plot(fig) #, fig_name=real_dir(fig_dir)+var_name+'_et.png')
 
 
-        
-    
-    
+# Call plot_biases for all variables.
+def plot_all_biases (clim_dir, fig_dir='./'):
+
+    for var in var_pace:
+        monthly = var in ['FSDS', 'FLDS']
+        plot_biases(var_pace[n], clim_dir, monthly=monthly, fig_dir=fig_dir)
