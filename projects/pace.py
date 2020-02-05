@@ -201,10 +201,10 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     # One line for each ensemble member
     for i in range(num_ens-1):
         ax.plot(time, data_et[i,:], '-', color=ens_colours[i], alpha=0.25)
-    # Black line for ensemble mean on top
-    ax.plot(time, np.mean(data_et,axis=0), '-', color='black', label='Mean')
     # Blue line for ERA5 on top
     ax.plot(time, data_era5_t, '-', color='blue', label='ERA5')
+    # Black line for ensemble mean on top
+    ax.plot(time, np.mean(data_et,axis=0), '-', color='black', label='PACE mean')    
     # Dashed red line for ensemble-mean bias (over line at 0)
     ax.axhline(color='black')
     ax.plot(time, bias_t, '--', color='red', label='Mean bias')
