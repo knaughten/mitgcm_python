@@ -3,29 +3,37 @@
 ##################################################################
 
 import numpy as np
-from itertools import compress
+from itertools import compress, cycle
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from ..grid import ERA5Grid, PACEGrid
 from ..file_io import read_binary, write_binary
 from ..utils import real_dir, days_per_month
+from ..plot_utils.colours import set_colours
+
+
+# Global variables
+file_head_era5 = 'ERA5_'
+file_head_pace = 'PACE_ens'
+file_tail = '_clim'
+days_per_year = 365
+months_per_year = 12
+per_day = 4  # ERA5 records per day
+num_ens = 20 # Number of PACE ensemble members
+    
 
 def calc_climatologies (era5_dir, pace_dir, out_dir):
 
     var_era5 = ['atemp', 'aqh', 'apressure', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
     var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FSDS', 'FLDS']
-    file_head_era5 = 'ERA5_'
-    file_head_pace = 'PACE_ens'
-    days_per_year = 365
-    months_per_year = 12
-    per_day = 4  # ERA5 records per day
     # Day of the year that's 29 Feb (0-indexed)
     leap_day = 31+28
     # Climatology over the years that both products have data (not counting the RCP8.5 extension)
     start_year = 1979
     end_year = 2005
     num_years = end_year-start_year+1
-    # Number of PACE ensemble members
-    num_ens = 20
 
     monthly = [var in ['FLDS', 'FSDS'] for var in var_pace]
     var_era5_monthly = list(compress(var_era5, monthly))
@@ -105,10 +113,10 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
                 era5_clim_regrid_monthly[:,:,j,i] = np.mean(era5_clim_monthly[:,:,index], axis=-1)
     # Write each variable to binary
     for n in range(num_vars_daily):   
-        file_path = real_dir(out_dir) + 'ERA5_' + var_pace_daily[n] + '_clim'
+        file_path = real_dir(out_dir) + file_head_era5 + var_pace_daily[n] + file_tail
         write_binary(era5_clim_regrid_daily[n,:], file_path)
     for n in range(num_vars_monthly):   
-        file_path = real_dir(out_dir) + 'ERA5_' + var_pace_monthly[n] + '_clim'
+        file_path = real_dir(out_dir) + file_head_era5 + var_pace_monthly[n] + file_tail
         write_binary(era5_clim_regrid_monthly[n,:], file_path)
 
     print 'Processing PACE'
@@ -130,9 +138,79 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
                 data = read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
                 data_accum += data
             data_clim = data_accum/num_years
-            file_path = real_dir(out_dir) + 'PACE_ens' + ens_str + '_' + var_pace[n] + '_clim'
+            file_path = real_dir(out_dir) + file_head_pace + ens_str + '_' + var_pace[n] + file_tail
             write_binary(data_clim, file_path)
 
+
+
+def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
+
+    # Northern bound on ERA5 data
+    ymax_era5 = -30
+    # Bounds on box to average over for seasonal climatology
+    [xmin, xmax, ymin, ymax] = [240, 260, -75, -72]
+    if monthly:
+        per_year = months_per_year
+        time_label = 'month of year'
+    else:
+        per_year = days_per_year
+        time_label = 'day of year'
+    # 19 visually distinct colours (from http://phrogz.net/css/distinct-colors.html)
+    ens_colours = [(57,230,149), (121,137,242), (115,29,98), (255,68,0), (255,238,0), (70,140,117), (170,163,217), (242,61,133), (140,37,0), (119,128,0), (0,255,238), (89,70,140), (77,57,65), (242,153,121), (153,204,51), (105,138,140), (97,0,242), (255,0,68), (51,20,0)]
+
+    grid = PACEGrid()
+    data = np.empty([num_ens-1, per_year, grid.ny, grid.nx])
+    # Read data
+    for ens in range(1, num_ens-1):
+        if ens == 13:
+            continue
+        ens_str = str(ens).zfill(2)
+        if ens < 13:
+            ens_index = ens-1
+        else:
+            ens_index = ens-2
+        file_path = real_dir(clim_dir) + file_head_pace + ens_str + '_' + var_name + file_tail
+        data[ens_index,:] = read_binary(file_path, [grid.nx, grid.ny], 'xyt')
+    # Also need ERA5 data
+    file_path = real_dir(clim_dir) + file_head_era5 + var_name + file_tail
+    data_era5 = read_binary(file_path, [grid.nx, grid.ny], 'xyt')
+
+    # Plot spatial map
+    # Ensemble-mean and time-mean bias
+    bias_xy = np.mean(data, axis=(0,1)) - np.mean(data_era5, axis=0)
+    fig, ax = plt.subplots(figsize=(10,6))
+    cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
+    img = ax.contourf(grid.lon, grid.lat, bias_xy, cmap=cmap, vmin=vmin, vmax=vmax)
+    plt.colorbar(img)
+    plt.title(var_name, fontsize=18)
+    finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_xy.png')
+
+    # Plot seasonal climatology
+    # Area-mean bias over Amundsen region, for each ensemble
+    index = (grid.lon >= xmin)*(grid.lon <= xmax)*(grid.lat >= ymin)*(grid.lat <=ymax)
+    data_et = np.mean(data[:,:,index], axis=-1)
+    data_era5_t = np.mean(data_era5[:,index], axis=-1), (num_ens-1, 1, 1)
+    # Get mean bias over ensemble members
+    bias_t = np.mean(data_et, axis=0) - data_era5_t
+    # And mean bias over time
+    bias = np.mean(bias_t)
+    fig, ax = plt.subplots(figsize=(8,6))
+    time = np.range(per_year)+1
+    # One line for each ensemble member
+    for i in range(num_ens-1):
+        ax.plot(time, data_et[i,:], '-', color=ens_colours[i])
+    # Thicker black line for ensemble mean on top
+    ax.plot(time, np.mean(data_et,axis=0), '-', color='black', linewidth=2, label='Mean')
+    # Thicker red line for ERA5 on top
+    ax.plot(time, data_era5_t, '-', color='red', linewidth=2, label='ERA5')
+    # Dashed blue line for ensemble-mean bias
+    ax.plot(time, bias_t, '--', color='blue', label='Mean bias')
+    ax.grid(True)
+    plt.title(var_name, fontsize=18)
+    plt.ylabel(time_label, fontsize=16)
+    ax.legend()
+    finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
+    
 
         
     
