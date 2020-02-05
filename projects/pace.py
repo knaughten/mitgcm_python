@@ -24,6 +24,7 @@ per_day = 4  # ERA5 records per day
 num_ens = 20 # Number of PACE ensemble members
     
 
+# Calculate the climatologies (daily or monthly) of each forcing variable in ERA5 (interpolated to the PACE grid) and in each PACE ensemble member.
 def calc_climatologies (era5_dir, pace_dir, out_dir):
 
     var_era5 = ['atemp', 'aqh', 'apressure', 'uwind', 'vwind', 'precip', 'swdown', 'lwdown']
@@ -142,11 +143,13 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
             write_binary(data_clim, file_path)
 
 
-
+# For the given variable, make two plots of the PACE bias with respect to ERA5:
+# 1. A time-averaged, ensemble-averaged lat-lon bias plot
+# 2. An area-averaged (over the Amundsen Sea region) timeseries of each ensemble member, the ensemble mean, ERA5, and the ensemble-mean bias
 def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
 
-    # Northern bound on ERA5 data
-    ymax_era5 = -30
+    # Latitude bounds on ERA5 data
+    ylim_era5 = [-90, -30]
     # Bounds on box to average over for seasonal climatology
     [xmin, xmax, ymin, ymax] = [240, 260, -75, -72]
     if monthly:
@@ -181,6 +184,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     fig, ax = plt.subplots(figsize=(10,6))
     cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
     img = ax.contourf(grid.lon, grid.lat, bias_xy, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.set_ylim(ylim_era5)
     plt.colorbar(img)
     plt.title(var_name, fontsize=18)
     finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_xy.png')
@@ -206,7 +210,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     # Dashed blue line for ensemble-mean bias
     ax.plot(time, bias_t, '--', color='blue', label='Mean bias')
     ax.grid(True)
-    plt.title(var_name, fontsize=18)
+    plt.title(var_name+': mean bias '+str(bias), fontsize=18)
     plt.ylabel(time_label, fontsize=16)
     ax.legend()
     finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
