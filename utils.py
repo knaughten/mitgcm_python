@@ -639,6 +639,31 @@ def wrap_periodic (data, is_lon=False):
     return data_wrap
 
 
+# Given an array of one year of data where the first dimension is time, convert from daily averages to monthly averages.
+# If you want to consider leap years, pass the year argument. The default is a year with no leap (1979).
+# If there is more than one record per day, set the per_day argument.
+def daily_to_monthly (data, year=1979, per_day=1):
+
+    if data.shape[0]/per_day not in [365, 366]:
+        print 'Error (daily_to_monthly): The first dimension is not time, or else this is not one year of data.'
+        sys.exit()
+    new_shape = [12] + list(data.shape[1:])
+    if isinstance(data, np.ma.MaskedArray):
+        data_monthly = np.ma.empty(new_shape)
+    else:
+        data_monthly = np.empty(new_shape)
+    t = 0
+    for month in range(12):
+        nt = days_per_month(month+1, year)*Per_day
+        data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
+        t += nt
+    return data_monthly
+    
+    
+
+    
+
+
 
 
     

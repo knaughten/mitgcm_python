@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from ..grid import ERA5Grid, PACEGrid
 from ..file_io import read_binary, write_binary
-from ..utils import real_dir, days_per_month
+from ..utils import real_dir, daily_to_monthly
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot
 
@@ -77,13 +77,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
             data = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
             if monthly:
                 # Monthly averages
-                data_monthly = np.empty(data_accum.shape)
-                t=0
-                for month in range(months_per_year):
-                    nt = days_per_month(month+1, year)*per_day
-                    data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
-                    t += nt
-                data = data_monthly
+                data = daily_to_monthly(data, year=year, per_day=per_day)
             else:
                 # Average over each day
                 data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx), order='F'), axis=0)
@@ -147,6 +141,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
 # For the given variable, make two plots of the PACE bias with respect to ERA5:
 # 1. A time-averaged, ensemble-averaged lat-lon bias plot
 # 2. An area-averaged (over the Amundsen Sea region) timeseries of each ensemble member, the ensemble mean, ERA5, and the ensemble-mean bias
+# Also print out the annual and monthly values of the bias in #2.
 def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
 
     # Latitude bounds on ERA5 data
@@ -214,10 +209,16 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     ax.plot(time, bias_t, '--', color='blue', label='Mean bias')
     ax.grid(True)
     plt.title(var_name+': mean bias '+str(bias), fontsize=18)
-    plt.ylabel(time_label, fontsize=16)
+    plt.xlabel(time_label, fontsize=16)
     ax.legend()
-    finished_plot(fig) #, fig_name=real_dir(fig_dir)+var_name+'_et.png')
+    finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
 
+    print 'Annual bias: ' + str(round(bias, 3))
+    bias_t_monthly = daily_to_monthly(bias_t)
+    print 'Monthly biases: '
+    for month in range(months_per_year):
+        print str(round(bias_t_monthly[month], 3))
+        
 
 # Call plot_biases for all variables.
 def plot_all_biases (clim_dir, fig_dir='./'):
