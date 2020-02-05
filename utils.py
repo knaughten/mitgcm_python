@@ -655,7 +655,7 @@ def daily_to_monthly (data, year=1979, per_day=1):
     t = 0
     for month in range(12):
         nt = days_per_month(month+1, year)*per_day
-        data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
+        data_monthly[month,...] = np.mean(data[t:t+nt,...], axis=0)
         t += nt
     return data_monthly
     
