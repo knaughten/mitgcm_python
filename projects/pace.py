@@ -200,7 +200,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
     time = np.arange(per_year)+1
     # One line for each ensemble member
     for i in range(num_ens-1):
-        ax.plot(time, data_et[i,:], '-', color=ens_colours[i], alpha=0.5)
+        ax.plot(time, data_et[i,:], '-', color=ens_colours[i], alpha=0.25)
     # Black line for ensemble mean on top
     ax.plot(time, np.mean(data_et,axis=0), '-', color='black', label='Mean')
     # Blue line for ERA5 on top
