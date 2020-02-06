@@ -353,7 +353,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         if key in ['WSK', 'WSFRIS']:
             figsize = (10, 6)
         elif key == 'PAS':
-            if ymax = -70:
+            if ymax == -70:
                 figsize = (14, 5)
             else:
                 figsize = (12, 6)
