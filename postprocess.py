@@ -302,6 +302,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
         output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
+    # Build the grid
+    if grid_path is None:
+        grid_path = file_path_1
+    grid = Grid(grid_path)
+
     # Timeseries through the entire simulation
     if key == 'WSS':
         var_names = ['fris_mass_balance', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt', 'fris_age']
@@ -328,11 +333,6 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
     elif option == 'last_month':
         date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
-
-    # Build the grid
-    if grid_path is None:
-        grid_path = file_path_1
-    grid = Grid(grid_path)
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
