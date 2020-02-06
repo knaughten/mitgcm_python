@@ -19,6 +19,7 @@ from diagnostics import tfreeze
 from constants import deg_string, bounds_PIB, bounds_Dot
 from interpolation import interp_bilinear
 from calculus import area_average
+from timeseries import trim_and_diff
 
 
 # Create a temperature vs salinity distribution plot. Temperature and salinity are split into NxN bins (default N=1000) and the colour of each bin shows the log of the volume of water masses in that bin.
@@ -252,7 +253,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, loc_string='', fig_name=None, figsize=(12,7), dpi=None):
+def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2')
@@ -266,7 +267,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, 
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], title=title[i])
+        img = hovmoller_plot(data[i], time, grid, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=title[i])
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         plt.colorbar(img, cax=cax[i], extend=extend)
@@ -311,6 +312,39 @@ def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmi
     elif loc == 'Dot':
         loc_string = 'Dotson front '
     hovmoller_ts_plot(temp, salt, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
+
+
+# Helper function for difference plots
+# Returns time and difference in given variable over the same time indices
+def read_and_trim_diff (file_1, file_2, var_name):
+
+    time_1 = netcdf_time(file_1, monthly=False)
+    time_2 = netcdf_time(file_2, monthly=False)
+    data_1 = read_netcdf(file_1, var_name)
+    data_2 = read_netcdf(file_2, var_name)
+    time, data_diff = trim_and_diff(time_1, time_2, data_1, data_2)
+    return time, data_diff
+
+
+# Difference plots (2 minus 1)
+def read_plot_hovmoller_diff (var_name, hovmoller_file_1, hovmoller_file_2, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
+
+    time, data_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, var_name)
+    title, units = read_title_units(hovmoller_file_1, var_name)
+    grid = choose_grid(grid, None)
+    hovmoller_plot(data_diff, time, grid, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, ctype='plusminus', title='Change in '+title, fig_name=fig_name, figsize=figsize)
+
+
+def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
+
+    time, temp_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_temp')
+    salt_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_salt')[1]
+    grid = choose_grid(grid, None)
+    if loc == 'PIB':
+        loc_string = 'Pine Island Bay '
+    elif loc == 'Dot':
+        loc_string = 'Dotson front '
+    hovmoller_ts_plot(temp_diff, salt_diff, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, ctype='plusminus', loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
         
         
     

@@ -15,7 +15,7 @@ from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from plot_misc import read_plot_hovmoller_ts
+from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
@@ -134,7 +134,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     if key in ['WSS', 'WSK', 'FRIS', 'WSFRIS']:
         var_names += ['hsnow', 'mld', 'saltflx', 'psi', 'iceprod']
         if key in ['WSS', 'WSK']:
-            var_names += 'bwage'
+            var_names += ['bwage']
     for var in var_names:
         # Customise bounds and zooming
         vmin = None
@@ -277,7 +277,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS', hovmoller_file='hovmoller.nc'):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -315,6 +315,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         var_names = ['all_massloss', 'eta_avg', 'seaice_area']
     for var in var_names:
         read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
+
+    # Hovmoller plots
+    if key == 'PAS':
+        for loc in ['PIB', 'Dot']:
+            read_plot_hovmoller_ts_diff(output_dir+1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)

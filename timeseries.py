@@ -424,16 +424,16 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
 
 # Arguments:
 # time_1, time_2: 1D arrays containing time values for the two simulations (assumed to start at the same time, but might not be the same length)
-# data_1, data_2: 1D arrays containing timeseries for the two simulations
+# data_1, data_2: Arrays containing timeseries for the two simulations. Can be any dimension as long as time is the first one.
 
 # Output:
 # time: 1D array containing time values for the overlapping period of simulation
-# data_diff: 1D array containing differences (data_2 - data_1) at these times
+# data_diff: Array containing differences (data_2 - data_1) at these times
 def trim_and_diff (time_1, time_2, data_1, data_2):
 
     num_time = min(time_1.size, time_2.size)
     time = time_1[:num_time]
-    data_diff = data_2[:num_time] - data_1[:num_time]
+    data_diff = data_2[:num_time,...] - data_1[:num_time,...]
     return time, data_diff
 
 
