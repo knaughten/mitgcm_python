@@ -340,20 +340,26 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         var_names += ['iceprod']
         if key in ['WSK', 'WSS']:
             var_names += ['bwage']
-    if key in ['WSK', 'WSFRIS']:
-        figsize = (10,6)
-    elif key == 'PAS':
-        figsize = (12,6)
-    else:
-        figsize = (8,6)
-    for var in var_names:
+    for var in var_names:        
         if var == 'iceprod':
             vmin = -2
             vmax = 2            
         else:
             vmin = None
             vmax = None
-        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
+        ymax = None
+        if key == 'PAS' and var in ['bwsalt', 'bwtemp', 'hice', 'ismr', 'vel', 'velice']:
+            ymax = -70
+        if key in ['WSK', 'WSFRIS']:
+            figsize = (10, 6)
+        elif key == 'PAS':
+            if ymax = -70:
+                figsize = (14, 5)
+            else:
+                figsize = (12, 6)
+        else:
+            figsize = (8, 6)
+        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, ymax=ymax, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
         # Zoom into some variables
         if key in['WSK', 'WSFRIS'] and var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
             if var == 'bwage':
