@@ -302,6 +302,14 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
         output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
+    # Now figure out which time indices to use for plots with no time dependence
+    file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)
+    # Set date string
+    if option == 'last_year':
+        date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
+    elif option == 'last_month':
+        date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
+
     # Build the grid
     if grid_path is None:
         grid_path = file_path_1
@@ -325,14 +333,6 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
             read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
-
-    # Now figure out which time indices to use for plots with no time dependence
-    file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)
-    # Set date string
-    if option == 'last_year':
-        date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
-    elif option == 'last_month':
-        date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
