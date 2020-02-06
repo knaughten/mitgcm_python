@@ -335,9 +335,9 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
             read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
 
     # Now make lat-lon plots
-    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice']
+    var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'eta', 'vel', 'velice']
     if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
-        var_names += ['iceprod']
+        var_names += ['iceprod', 'mld']
         if key in ['WSK', 'WSS']:
             var_names += ['bwage']
     for var in var_names:        
