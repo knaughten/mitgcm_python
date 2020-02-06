@@ -214,7 +214,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
     xtick_years = np.sort(list(set([t.year for t in time_edges])))
     xtick_loc = [(cftime.real_datetime(year,1,1)-time_edges[0]).total_seconds() for year in xtick_years]
     xtick_labels = [str(year) for year in xtick_years]
-    time_edges = time_flt
+    time_edges = np.array(time_flt)
 
     # Make the figure and axes, if needed
     existing_ax = ax is not None
