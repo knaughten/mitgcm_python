@@ -319,7 +319,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Hovmoller plots
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
-            read_plot_hovmoller_ts_diff(output_dir+1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
+            read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
 
     # Now figure out which time indices to use for plots with no time dependence
     file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)
