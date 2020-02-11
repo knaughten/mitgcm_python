@@ -16,9 +16,10 @@ from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, overlay_vectors
 from ..plot_utils.labels import latlon_axes
 from ..plot_latlon import latlon_plot
+from ..plot_1d import timeseries_multi_plot
 from ..constants import temp_C2K, rho_fw, deg2rad
 from ..postprocess import segment_file_paths
-from ..plot_1d import timeseries_multi_plot
+from ..timeseries import set_parameters
 
 # Functions to build a katabatic wind correction file between UKESM and ERA5, following the method of Mathiot et al 2010.
 
@@ -397,4 +398,39 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
     # Plot
     timeseries_multi_plot(time, [ground, unground], ['# Grounded', '# Ungrounded'], ['blue', 'red'], title='Changes in ocean cells', fig_name=fig_name_1)
     timeseries_multi_plot(time, [thin, thick], ['Maximum thinning', 'Maximum thickening'], ['red', 'blue'], title='Changes in ice shelf draft', fig_name=fig_name_2)
-        
+
+
+# Make timeseries plots of the 3 simulations (piControl, abrupt-4xCO2, 1pctCO2) for FRIS mass loss, temperature, and salinity.
+def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='timeseries.nc', fig_dir='./'):
+
+    var_names = ['fris_massloss', 'fris_temp', 'fris_salt']
+    labels = ['piControl', 'abrupt-4xCO2', '1pctCO2']
+    colours = ['black', 'blue', 'green']
+    file_paths = [real_dir(dir_path)+timeseries_file for dir_path in [ctrl_dir, abrupt_dir, onepct_dir]]
+    num_sim = len(file_paths)
+    
+    # Read time axes
+    times = [netcdf_time(file_path, monthly=False) for file_path in file_paths]
+    # Need to shift the years in piControl so they match the other simulations
+    ctrl_year0 = times[0][0].year
+    year0 = times[1][0].year
+    dyear = ctrl_year0 - year0
+    for t in range(times[0].size):
+        times[0][t].year -= dyear
+
+    for var in var_names:
+        print 'Processing ' + var
+        datas = []
+        for n in range(num_sim):
+            if var == 'fris_massloss':
+                datas.append(read_netcdf(file_paths[n], 'fris_total_melt')+read_netcdf(file_paths[n], 'fris_total_freeze'))
+            else:
+                datas.append(read_netcdf(file_paths[n], var))
+        if var == 'fris_massloss':
+            title = 'FRIS net basal mass loss'
+            units = 'Gt/y'
+        else:
+            title, units = set_parameters(var)[2:4]
+        timeseries_multi_plot(times, datas, labels, colours, title=title, units=units, fig_name=real_dir(fig_dir)+'timeseries_'+fig_name+'_compare.png')
+    
+            
