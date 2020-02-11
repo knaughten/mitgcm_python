@@ -427,7 +427,7 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
             else:
                 data = read_netcdf(file_paths[n], var)
             # Annual average (blocks of 12)
-            data = np.mean(np.reshape(data, (12, data.shape/12)), axis=0)
+            data = np.mean(np.reshape(data, (12, data.size/12)), axis=0)
             datas.append(data)
         if var == 'fris_massloss':
             title = 'FRIS net basal mass loss'
