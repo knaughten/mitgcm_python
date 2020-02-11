@@ -7,7 +7,6 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
-import datetime
 
 from ..grid import Grid, UKESMGrid, ERA5Grid
 from ..file_io import read_binary, find_cmip6_files, NCfile, NCfile_basiclatlon, read_netcdf, write_binary, read_netcdf_list, netcdf_time
@@ -417,7 +416,7 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
     times = []
     time0 = start_year + dt/2
     for n in range(num_sim):
-        times.append(time0, time0+dt*nt[n], dt)
+        times.append(np.arange(time0, time0+dt*nt[n], dt))
 
     for var in var_names:
         print 'Processing ' + var
