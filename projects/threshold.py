@@ -432,6 +432,6 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
             units = 'Gt/y'
         else:
             title, units = set_parameters(var)[2:4]
-        timeseries_multi_plot(times, datas, labels, colours, title=title, units=units, fig_name=real_dir(fig_dir)+'timeseries_'+fig_name+'_compare.png')
+        timeseries_multi_plot(times, datas, labels, colours, title=title, units=units, fig_name=real_dir(fig_dir)+'timeseries_'+var+'_compare.png')
     
             
