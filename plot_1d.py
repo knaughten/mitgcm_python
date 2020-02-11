@@ -84,6 +84,15 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
         if np.amax(data) > 0:
             positive = True
     crosses_zero = negative and positive
+    if not dates:
+        if multi_time:
+            start_time = times[0][0]
+            end_time = start_time
+            for time in times:
+                end_time = max(end_time, time[-1])
+        else:
+            start_time = times[0]
+            end_time = times[-1]                
 
     if legend_in_centre:
         figsize=(8,6)
@@ -100,6 +109,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
             ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
         else:
             ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+            ax.set_xlim(start_time, end_time)
 
     ax.grid(True)
     if crosses_zero:

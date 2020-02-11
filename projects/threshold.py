@@ -423,9 +423,12 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
         datas = []
         for n in range(num_sim):
             if var == 'fris_massloss':
-                datas.append(read_netcdf(file_paths[n], 'fris_total_melt')+read_netcdf(file_paths[n], 'fris_total_freeze'))
+                data = read_netcdf(file_paths[n], 'fris_total_melt')+read_netcdf(file_paths[n], 'fris_total_freeze')
             else:
-                datas.append(read_netcdf(file_paths[n], var))
+                data = read_netcdf(file_paths[n], var)
+            # Annual average (blocks of 12)
+            data = np.mean(np.reshape(data, (12, data.shape/12)), axis=0)
+            datas.append(data)
         if var == 'fris_massloss':
             title = 'FRIS net basal mass loss'
             units = 'Gt/y'
