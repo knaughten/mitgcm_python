@@ -544,7 +544,7 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
 
 # Make animations of lat-lon variables throughout a coupled UaMITgcm simulation, and also images of the first and last frames.
 # Currently supported: ismr, bwtemp, bwsalt, draft, aice, hice, mld, eta, psi.
-def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6)):
+def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6), zoom_fris=False):
 
     import matplotlib.animation as animation
 
@@ -654,7 +654,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
     tsteps = [0, -1]
     fig_names = [fig_name_beg, fig_name_end]
     for t in range(2):
-        latlon_plot(all_data[tsteps[t]], all_grids[tsteps[t]], gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title, date_string=all_dates[tsteps[t]], figsize=figsize, fig_name=fig_names[t])
+        latlon_plot(all_data[tsteps[t]], all_grids[tsteps[t]], gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title, date_string=all_dates[tsteps[t]], figsize=figsize, fig_name=fig_names[t], zoom_fris=zoom_fris)
 
     # Now make the animation
 
@@ -662,7 +662,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
 
     # Inner function to plot a frame
     def plot_one_frame (t):
-        img = latlon_plot(all_data[t], all_grids[t], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+'\n'+all_dates[t], make_cbar=False)
+        img = latlon_plot(all_data[t], all_grids[t], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+'\n'+all_dates[t], make_cbar=False, zoom_fris=zoom_fris)
         if t==0:
             return img
 
