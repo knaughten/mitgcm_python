@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 import datetime
-import cftime
 
 from grid import choose_grid
 from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
@@ -176,6 +175,8 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # contours: list of values to contour in black over top
 
 def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
+
+    import cftime
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
