@@ -181,10 +181,17 @@ def parse_date (date=None, file_path=None, time_index=None, monthly=True):
         date = netcdf_time(file_path, monthly=monthly)[time_index]
     if monthly:
         # Return month and year
-        return date.strftime('%b %Y')
+        if date.year < 1900:
+            # strftime bug
+            return str(date.month)+'-'+str(date.year)
+        else:
+            return date.strftime('%b %Y')
     else:
         # Just go with the day that's in the timestamp, even though it's not representative of the averaging period
-        return date.strftime('%d %b %Y')
+        if date.year < 1900:
+            return str(date.day)+'-'+str(date.month)+'-'+str(date.year)
+        else:
+            return date.strftime('%d %b %Y')
 
 
 # Determine if we need to create a date string, and do so if needed.

@@ -16,7 +16,7 @@ from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
-from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box
+from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
 from plot_utils.windows import set_panels
@@ -639,14 +639,16 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
                 all_dates.append(parse_date(file_path=file_path, time_index=t))
 
     extend = get_extend(vmin=vmin, vmax=vmax)
+    vmin_tmp = np.amax(data)
+    vmax_tmp = np.amin(data)
+    for elm in all_data:
+        vmin_2, vmax_2 = var_min_max(elm, grid, zoom_fris=zoom_fris)
+        vmin_tmp = min(vmin_tmp, vmin_2)
+        vmax_tmp = max(vmax_tmp, vmax_2)
     if vmin is None:
-        vmin = np.amax(data)
-        for elm in all_data:
-            vmin = min(vmin, np.amin(elm))
+        vmin = vmin_tmp
     if vmax is None:
-        vmax = np.amin(data)
-        for elm in all_data:
-            vmax = max(vmax, np.amax(elm))
+        vmax = vmax_tmp
 
     num_frames = len(all_data)
 
