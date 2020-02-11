@@ -409,14 +409,12 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
     file_paths = [real_dir(dir_path)+timeseries_file for dir_path in [ctrl_dir, abrupt_dir, onepct_dir]]
     num_sim = len(file_paths)
     start_year = 1850
-    dt = 1/12.
 
-    # Simple time axes
-    nt = [netcdf_time(file_path).size for file_path in file_paths]    
+    # Simple time axes - annually averaged
+    nt = [netcdf_time(file_path).size/12 for file_path in file_paths]    
     times = []
-    time0 = start_year + dt/2
     for n in range(num_sim):
-        times.append(np.arange(time0, time0+dt*nt[n], dt))
+        times.append(np.arange(start_year, start_year+nt[n]))
 
     for var in var_names:
         print 'Processing ' + var
