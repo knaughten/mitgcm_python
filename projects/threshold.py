@@ -409,15 +409,15 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
     colours = ['black', 'blue', 'green']
     file_paths = [real_dir(dir_path)+timeseries_file for dir_path in [ctrl_dir, abrupt_dir, onepct_dir]]
     num_sim = len(file_paths)
-    
-    # Read time axes
-    times = [netcdf_time(file_path, monthly=False) for file_path in file_paths]
-    # Need to shift the years in piControl so they match the other simulations
-    ctrl_year0 = times[0][0].year
-    year0 = times[1][0].year
-    dyear = ctrl_year0 - year0
-    ctrl_time = [datetime.date(t.year-dyear, t.month, t.day) for t in times[0]]
-    times[0] = ctrl_time
+    start_year = 1850
+    dt = 1/12.
+
+    # Simple time axes
+    nt = [netcdf_time(file_path).size for file_path in file_paths]    
+    times = []
+    time0 = start_year + dt/2
+    for n in range(num_sim):
+        times.append(time0, time0+dt*nt[n], dt)
 
     for var in var_names:
         print 'Processing ' + var
@@ -432,6 +432,6 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
             units = 'Gt/y'
         else:
             title, units = set_parameters(var)[2:4]
-        timeseries_multi_plot(times, datas, labels, colours, title=title, units=units, fig_name=real_dir(fig_dir)+'timeseries_'+var+'_compare.png')
+        timeseries_multi_plot(times, datas, labels, colours, title=title, units=units, dates=False, fig_name=real_dir(fig_dir)+'timeseries_'+var+'_compare.png')
     
             
