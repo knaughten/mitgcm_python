@@ -76,7 +76,14 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
     # Boolean which will tell us whether we need a line at 0
-    crosses_zero = np.amin(datas)<0 and np.amax(datas)>0
+    negative = False
+    positive = False
+    for data in datas:
+        if np.amin(data) < 0:
+            negative = True
+        if np.amax(data) > 0:
+            positive = True
+    crosses_zero = negative and positive
 
     if legend_in_centre:
         figsize=(8,6)
