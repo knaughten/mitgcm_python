@@ -7,7 +7,7 @@ from scipy.io import loadmat
 import sys
 import shutil
 
-from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds
+from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds, fris_bounds
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
 from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
@@ -380,7 +380,7 @@ def update_nc_grid (nc_file, bathy, draft, omask, imask):
     id.variables['draft'][:] = draft
     id.variables['omask'][:] = omask
     id.variables['imask'][:] = imask
-    id.close()    
+    id.close()
 
 
 # Edit the land mask as desired, to block out sections of a domain. For example, Weddell Sea domains might like to make everything west of the peninsula into land.
@@ -770,6 +770,61 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., co
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
     print "The updated grid has been written into " + nc_out + ". Take a look and make sure everything looks okay. If you're happy, run write_topo_files to generate the binary files for MITgcm input."
+
+
+# Given a precomputed grid (from interp_bedmap2 + edit_mask + remove_grid_problems), swap in topography from an Ua simulation - just like in the UaMITgcm coupler. First remove FRIS from the existing domain so the ice front is identical.
+def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20.):
+
+    # Read the input grid
+    lon, lat, bathy_old, draft_old, omask_old, imask_old = read_nc_grid(nc_file)
+    dz, z_edges = vertical_layers(dz_file)
+
+    # Remove FRIS
+    # Make mask as in Grid
+    fris_mask = np.zeros(imask.shape, dtype='bool')
+    regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
+    for bounds in regions:
+        # Select the ice shelf points within these bounds
+        index = (imask==1)*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
+        fris_mask[index] = True
+    draft_old[fris_mask] = 0
+    imask[fris_mask] = 0
+
+    # Read Ua topography
+    f = loadmat(ua_file)
+    bathy = np.transpose(f['B_forMITgcm'])
+    draft = np.transpose(f['b_forMITgcm'])
+    mask = np.transpose(f['mask_forMITgcm'])        
+    # Mask grounded ice out of both fields
+    bathy[mask==0] = 0
+    draft[mask==0] = 0
+    # Mask out regions with bathymetry greater than zero
+    index = bathy > 0
+    bathy[index] = 0
+    draft[index] = 0
+
+    # Preserve ocean mask
+    index = (mask==2)*(bathy_old==0)
+    bathy[index] = 0
+
+    # Preserve static ice
+    index = (mask==2)*(draft_old<0)
+    draft[index] = draft_old[index]
+
+    # Recompute ocean masks
+    omask = mask!=0
+    imask = mask==1
+
+    # Fix grid problems
+    bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    draft = do_zapping(draft, draft!=0, dz, z_edges, hFacMinDr=hFacMinDr, only_grow=True)[0]
+
+    # Write results
+    shutil.copyfile(nc_file, out_file)
+    update_nc_grid(out_file, bathy, draft, omask, imask)
+
+    print 'Finished swapping out Ua geometry. Take a look and then call write_topo_files.'
 
     
 # Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
