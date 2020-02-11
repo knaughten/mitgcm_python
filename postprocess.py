@@ -674,12 +674,13 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
 
     # Function to update figure with the given frame
     def animate(t):
+        print 'Frame ' + str(t) + ' of ' + str(num_frames)
         ax.cla()
         plot_one_frame(t)
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
-    writer = animation.FFMpegWriter(bitrate=500, fps=10)
+    writer = animation.FFMpegWriter(bitrate=500, fps=12)
     anim.save(mov_name, writer=writer)
     if mov_name is not None:
         print 'Saving ' + mov_name
