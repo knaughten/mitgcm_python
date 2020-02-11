@@ -409,24 +409,23 @@ def threshold_timeseries (ctrl_dir, abrupt_dir, onepct_dir, timeseries_file='tim
     file_paths = [real_dir(dir_path)+timeseries_file for dir_path in [ctrl_dir, abrupt_dir, onepct_dir]]
     num_sim = len(file_paths)
     start_year = 1850
+    dt = 1/12.
 
-    # Simple time axes - annually averaged
-    nt = [netcdf_time(file_path).size/12 for file_path in file_paths]    
+    # Simple time axes
+    nt = [netcdf_time(file_path).size for file_path in file_paths]    
     times = []
+    time0 = start_year + dt/2
     for n in range(num_sim):
-        times.append(np.arange(start_year, start_year+nt[n]))
+        times.append(np.arange(time0, time0+dt*nt[n], dt))
 
     for var in var_names:
         print 'Processing ' + var
         datas = []
         for n in range(num_sim):
             if var == 'fris_massloss':
-                data = read_netcdf(file_paths[n], 'fris_total_melt')+read_netcdf(file_paths[n], 'fris_total_freeze')
+                datas.append(read_netcdf(file_paths[n], 'fris_total_melt')+read_netcdf(file_paths[n], 'fris_total_freeze'))
             else:
-                data = read_netcdf(file_paths[n], var)
-            # Annual average (blocks of 12)
-            data = np.mean(np.reshape(data, (12, data.size/12)), axis=0)
-            datas.append(data)
+                datas.append(read_netcdf(file_paths[n], var))
         if var == 'fris_massloss':
             title = 'FRIS net basal mass loss'
             units = 'Gt/y'
