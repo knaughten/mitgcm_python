@@ -363,7 +363,7 @@ def mask_below_line (data, lon, lat, p_start, p_end, mask_val=0):
 
 
 # Like mask_box, but only mask out ice shelf points within the given box.
-def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0):
+def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, ymax=None, mask_val=0, option='land'):
 
     # Set any bounds which aren't already set
     if xmin is None:
@@ -375,8 +375,17 @@ def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, 
     if ymax is None:
         ymax = np.amax(lat)
     index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(imask == 1)
-    omask[index] = mask_val
-    return omask
+    if option == 'land':
+        # Turn ice shelf points into land
+        mask = omask
+    elif option == 'ocean':
+        # Turn ice shelf points into open ocean
+        mask = imask
+    else:
+        print 'Error (mask_iceshelf_box): Invalid option ' + option
+        sys.exit()
+    mask[index] = mask_val
+    return mask
 
 
 # Split and rearrange the given array along the given index in the longitude axis (last axis). This is useful when converting from longitude ranges (0, 360) to (-180, 180) if the longitude array needs to be strictly increasing for later interpolation.

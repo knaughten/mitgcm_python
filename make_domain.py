@@ -780,15 +780,11 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     dz, z_edges = vertical_layers(dz_file)
 
     # Remove FRIS
-    # Make mask as in Grid
-    fris_mask = np.zeros(imask.shape, dtype='bool')
     regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
     for bounds in regions:
-        # Select the ice shelf points within these bounds
-        index = (imask==1)*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
-        fris_mask[index] = True
-    draft_old[fris_mask] = 0
-    imask[fris_mask] = 0
+        imask_old = mask_iceshelf_box(omask_old, imask_old, xmin=bounds[0], xmax=bounds[1], ymin=bounds[2], ymax=bounds[3], option='ocean')
+    index = imask == 0
+    draft_old[index] = 0
 
     # Read Ua topography
     f = loadmat(ua_file)
