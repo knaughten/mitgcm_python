@@ -782,8 +782,8 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     # Remove FRIS
     regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
     for bounds in regions:
-        imask_old = mask_iceshelf_box(omask_old, imask_old, xmin=bounds[0], xmax=bounds[1], ymin=bounds[2], ymax=bounds[3], option='ocean')
-    index = imask == 0
+        imask_old = mask_iceshelf_box(omask_old, imask_old, lon, lat, xmin=bounds[0], xmax=bounds[1], ymin=bounds[2], ymax=bounds[3], option='ocean')
+    index = imask_old == 0
     draft_old[index] = 0
 
     # Read Ua topography
@@ -808,8 +808,8 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     draft[index] = draft_old[index]
 
     # Recompute ocean masks
-    omask = mask!=0
-    imask = mask==1
+    omask = bathy!=0
+    imask = draft!=0
 
     # Fix grid problems
     bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
