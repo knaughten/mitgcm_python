@@ -593,7 +593,7 @@ class SOSEGrid(Grid):
             # Depth: can extend on both sides (depth 0 at top and extrapolated at bottom to clear the deepest model depth), trim on deep side
             z_above = 0*np.ones([self.k0_after])  # Will either be [0] or empty
             z_middle = self.z[self.k0_before:self.k1_before]
-            z_edges_middle = self.z_edges[self.k0_before:self.k1_before]
+            z_edges_middle = self.z_edges[self.k0_before:self.k1_before+1]
             z_below = (2*model_grid.z[-1] - model_grid.z[-2])*np.ones([self.nz-self.k1_after])   # Will either be [something deeper than z_deep] or empty
             self.z = np.concatenate((z_above, z_middle, z_below))
             self.z_edges = np.concatenate((z_above, z_edges_middle, z_below))
@@ -636,7 +636,7 @@ class SOSEGrid(Grid):
             self.hfac = self.read_field(path+'hFacC', 'xyz', fill_value=0)
             self.hfac_w = self.read_field(path+'hFacW', 'xyz', fill_value=0)
             self.hfac_s = self.read_field(path+'hFacS', 'xyz', fill_value=0)
-            self.dA = self.read_field(path+'RAC', 'xyz', fill_value=0)
+            self.dA = self.read_field(path+'RAC', 'xy', fill_value=0)
             self.dz = self.read_field(path+'DRF', 'z', fill_value=0)
         # Calculate volume
         self.dV = xy_to_xyz(self.dA, [self.nx, self.ny, self.nz])*z_to_xyz(self.dz, [self.nx, self.ny, self.nz])*self.hfac
