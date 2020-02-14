@@ -69,6 +69,8 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
     ax.triplot(x_ua, y_ua, connectivity, color='red', alpha=0.5)
     # Set axes limits
     latlon_axes(ax, x_ua, y_ua, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
+    if grid_nc is not None:
+        ax.axis('equal')
     # Turn off box
     ax.axis('off')
     # Title
