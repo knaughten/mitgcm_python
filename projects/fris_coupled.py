@@ -10,6 +10,7 @@ import netCDF4 as nc
 import numpy as np
 import sys
 import os
+from MITgcmutils import rdmds
 
 from ..plot_ua import read_ua_mesh
 from ..postprocess import get_segment_dir
@@ -26,31 +27,42 @@ from ..constants import deg_string
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
-def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, output_dir='output/', fig_name=None, figsize=(10,6)):
+def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/197901/MITgcm/output.nc', grid_nc=None, grid_dir=None, circumpolar=False, fig_name=None, figsize=(10,6)):
 
     output_dir = real_dir(output_dir)
+    if grid_dir is not None:
+        grid_dir = real_dir(grid_dir)
 
     # Read Ua mesh
     x_ua, y_ua, connectivity = read_ua_mesh(ua_mesh_file)
 
     # Read MIT grid
     if grid_nc is not None:
-        # Paul's grid.glob.nc file; slightly different conventions
-        lon = wrap_periodic(read_netcdf(grid_nc, 'X'), is_lon=True)[1:]
+        # grid.glob.nc file; slightly different conventions
+        lon = read_netcdf(grid_nc, 'X')
         lat = read_netcdf(grid_nc, 'Y')
-        j_max = np.where(lat>-60)[0][0]
-        lat = lat[:j_max]
+        if circumpolar:
+            lon = wrap_periodic(lon, is_lon=True)[1:]
+            j_max = np.where(lat>-60)[0][0]
+            lat = lat[:j_max]
         lon_2d, lat_2d = np.meshgrid(lon, lat)
-        hfac = wrap_periodic(read_netcdf(grid_nc, 'HFacC'))[:,:j_max,1:]
-        land_mask = np.sum(hfac, axis=0)==0
+        hfac = read_netcdf(grid_nc, 'HFacC')
+        if circumpolar:
+            hfac = wrap_periodic(hfac)[:,:j_max,1:]
+    elif grid_dir is not None:
+        # Files from Jan
+        lon_2d = rdmds(grid_dir+'XC')
+        lat_2d = rdmds(grid_dir+'YC')
+        hfac = rdmds('hFacC')
     else:
         segment_dir = get_segment_dir(output_dir)
         mit_file = output_dir+segment_dir[0]+'/MITgcm/output.nc'
         grid = Grid(mit_file)
         lon_2d, lat_2d = grid.get_lon_lat()
-        land_mask = grid.get_land_mask()
+        hfac = grid.get_hfac()
     x_mit, y_mit = polar_stereo(lon_2d, lat_2d)
     # Get ocean mask to plot
+    land_mask = np.sum(hfac, axis=0)==0
     ocean_mask = np.ma.masked_where(land_mask, np.invert(land_mask))
 
     # Find bounds
@@ -60,7 +72,8 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
     fig, ax = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor('white')
     # Plot ocean cell boundaries
-    if grid_nc is not None:
+    if grid_nc is not None or grid_dir is not None:
+        # Don't worry about the slight offset, it doesn't matter enough
         [x_plot, y_plot, mask_plot] = [x_mit, y_mit, ocean_mask]
     else:
         x_plot, y_plot, mask_plot = cell_boundaries(ocean_mask, grid, pster=True)
@@ -69,13 +82,10 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
     ax.triplot(x_ua, y_ua, connectivity, color='red', alpha=0.5)
     # Set axes limits
     latlon_axes(ax, x_ua, y_ua, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
-    if grid_nc is not None:
+    if circumpolar:
         ax.axis('equal')
     # Turn off box
     ax.axis('off')
-    # Title
-    if grid_nc is None:
-        plt.title(u'Initial MITgcm grid (blue) and Úa mesh (red)', fontsize=18, y=-0.05, va='top')
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
