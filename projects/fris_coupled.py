@@ -38,6 +38,7 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
         # Paul's grid.glob.nc file; slightly different conventions
         lon = read_netcdf(grid_nc, 'X')
         lat = read_netcdf(grid_nc, 'Y')
+        lon_2d, lat_2d = meshgrid(lon, lat)
         hfac = read_netcdf(grid_nc, 'HFacC')
         land_mask = np.sum(hfac, axis=0)==0
     else:
