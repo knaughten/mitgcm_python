@@ -13,7 +13,7 @@ import os
 
 from ..plot_ua import read_ua_mesh
 from ..postprocess import get_segment_dir
-from ..utils import real_dir, polar_stereo, choose_range
+from ..utils import real_dir, polar_stereo, choose_range, wrap_periodic
 from ..grid import Grid
 from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.labels import latlon_axes
@@ -26,7 +26,7 @@ from ..constants import deg_string
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
-def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, output_dir='output/', fig_name=None):
+def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, output_dir='output/', fig_name=None, figsize=(10,6)):
 
     output_dir = real_dir(output_dir)
 
@@ -36,10 +36,12 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
     # Read MIT grid
     if grid_nc is not None:
         # Paul's grid.glob.nc file; slightly different conventions
-        lon = read_netcdf(grid_nc, 'X')
+        lon = wrap_periodic(read_netcdf(grid_nc, 'X'), is_lon=True)[1:]
         lat = read_netcdf(grid_nc, 'Y')
-        lon_2d, lat_2d = meshgrid(lon, lat)
-        hfac = read_netcdf(grid_nc, 'HFacC')
+        j_max = np.where(lat>-60)[0][0]
+        lat = lat[:j_max]
+        lon_2d, lat_2d = np.meshgrid(lon, lat)
+        hfac = wrap_periodic(read_netcdf(grid_nc, 'HFacC'))[:,:j_max,1:]
         land_mask = np.sum(hfac, axis=0)==0
     else:
         segment_dir = get_segment_dir(output_dir)
@@ -49,16 +51,19 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
         land_mask = grid.get_land_mask()
     x_mit, y_mit = polar_stereo(lon_2d, lat_2d)
     # Get ocean mask to plot
-    ocean_mask = np.ma.masked_where(grid.land_mask, np.invert(grid.land_mask))
+    ocean_mask = np.ma.masked_where(land_mask, np.invert(land_mask))
 
     # Find bounds
     xmin, xmax = choose_range(x_ua, x2=x_mit, pad=0)
     ymin, ymax = choose_range(y_ua, x2=y_mit, pad=0)
 
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=figsize)
     fig.patch.set_facecolor('white')
     # Plot ocean cell boundaries
-    x_plot, y_plot, mask_plot = cell_boundaries(ocean_mask, grid, pster=True)
+    if grid_nc is not None:
+        [x_plot, y_plot, mask_plot] = [x_mit, y_mit, ocean_mask]
+    else:
+        x_plot, y_plot, mask_plot = cell_boundaries(ocean_mask, grid, pster=True)
     ax.pcolor(x_plot, y_plot, mask_plot, facecolor='none', edgecolor='blue', alpha=0.5)
     # Shade the ice sheet in red
     ax.triplot(x_ua, y_ua, connectivity, color='red', alpha=0.5)
@@ -67,7 +72,8 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
     # Turn off box
     ax.axis('off')
     # Title
-    plt.title(u'Initial MITgcm grid (blue) and Úa mesh (red)', fontsize=18, y=-0.05, va='top')
+    if grid_nc is None:
+        plt.title(u'Initial MITgcm grid (blue) and Úa mesh (red)', fontsize=18, y=-0.05, va='top')
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
