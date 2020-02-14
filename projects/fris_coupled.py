@@ -35,12 +35,18 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, outpu
 
     # Read MIT grid
     if grid_nc is not None:
-        mit_file = grid_nc
+        # Paul's grid.glob.nc file; slightly different conventions
+        lon = read_netcdf(grid_nc, 'X')
+        lat = read_netcdf(grid_nc, 'Y')
+        hfac = read_netcdf(grid_nc, 'HFacC')
+        land_mask = np.sum(hfac, axis=0)==0
     else:
         segment_dir = get_segment_dir(output_dir)
         mit_file = output_dir+segment_dir[0]+'/MITgcm/output.nc'
-    grid = Grid(mit_file)
-    x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
+        grid = Grid(mit_file)
+        lon_2d, lat_2d = grid.get_lon_lat()
+        land_mask = grid.get_land_mask()
+    x_mit, y_mit = polar_stereo(lon_2d, lat_2d)
     # Get ocean mask to plot
     ocean_mask = np.ma.masked_where(grid.land_mask, np.invert(grid.land_mask))
 
