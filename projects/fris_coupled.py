@@ -27,7 +27,7 @@ from ..constants import deg_string
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
-def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/197901/MITgcm/output.nc', grid_nc=None, grid_dir=None, circumpolar=False, fig_name=None, figsize=(10,6)):
+def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/197901/MITgcm/output.nc', grid_nc=None, grid_dir=None, circumpolar=False, pster=False, fig_name=None, figsize=(10,6)):
 
     if grid_dir is not None:
         grid_dir = real_dir(grid_dir)
@@ -59,7 +59,10 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/19
         grid = Grid(mit_file)
         lon_2d, lat_2d = grid.get_lon_lat()
         hfac = grid.get_hfac()
-    x_mit, y_mit = polar_stereo(lon_2d, lat_2d)
+    if pster:
+        [x_mit, y_mit] = [lon_2d, lat_2d]
+    else:
+        x_mit, y_mit = polar_stereo(lon_2d, lat_2d)
     # Get ocean mask to plot
     land_mask = np.sum(hfac, axis=0)==0
     ocean_mask = np.ma.masked_where(land_mask, np.invert(land_mask))
