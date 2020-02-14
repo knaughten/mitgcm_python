@@ -26,7 +26,7 @@ from ..constants import deg_string
 
 
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
-def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', output_dir='output/', fig_name=None):
+def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', grid_nc=None, output_dir='output/', fig_name=None):
 
     output_dir = real_dir(output_dir)
 
@@ -34,8 +34,11 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', output_dir='output/
     x_ua, y_ua, connectivity = read_ua_mesh(ua_mesh_file)
 
     # Read MIT grid
-    segment_dir = get_segment_dir(output_dir)
-    mit_file = output_dir+segment_dir[0]+'/MITgcm/output.nc'
+    if grid_nc is not None:
+        mit_file = grid_nc
+    else:
+        segment_dir = get_segment_dir(output_dir)
+        mit_file = output_dir+segment_dir[0]+'/MITgcm/output.nc'
     grid = Grid(mit_file)
     x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
     # Get ocean mask to plot
