@@ -84,8 +84,7 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/19
     ax.triplot(x_ua, y_ua, connectivity, color='red', alpha=0.5)
     # Set axes limits
     latlon_axes(ax, x_ua, y_ua, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
-    if circumpolar:
-        ax.axis('equal')
+    ax.axis('equal')
     # Turn off box
     ax.axis('off')
     finished_plot(fig, fig_name=fig_name, dpi=300)
