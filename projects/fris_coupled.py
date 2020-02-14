@@ -29,7 +29,6 @@ from ..constants import deg_string
 # Make a plot of the overlapping MITgcm grid and Ua mesh, at the beginning of the simulation.
 def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/197901/MITgcm/output.nc', grid_nc=None, grid_dir=None, circumpolar=False, fig_name=None, figsize=(10,6)):
 
-    output_dir = real_dir(output_dir)
     if grid_dir is not None:
         grid_dir = real_dir(grid_dir)
 
