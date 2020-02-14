@@ -54,8 +54,6 @@ def plot_domain_mesh (ua_mesh_file='ua_run/NewMeshFile.mat', mit_file='output/19
         lat_2d = rdmds(grid_dir+'YC')
         hfac = rdmds('hFacC')
     else:
-        segment_dir = get_segment_dir(output_dir)
-        mit_file = output_dir+segment_dir[0]+'/MITgcm/output.nc'
         grid = Grid(mit_file)
         lon_2d, lat_2d = grid.get_lon_lat()
         hfac = grid.get_hfac()
