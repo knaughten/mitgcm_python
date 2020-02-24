@@ -352,6 +352,10 @@ class Grid:
             [xmin, xmax, ymin, ymax] = a23a_bounds
             index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
             coast_mask[index] = False
+            # Similarly for little island in PAS grid
+            [xmin, xmax, ymin, ymax] = [-95, -85, -70, -68]
+            index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+            coast_mask[index] = False
         return coast_mask
 
 
