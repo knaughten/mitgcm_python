@@ -888,6 +888,10 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
             return mask_land_ice(read_netcdf(file_path, 'EXFpreci', time_index=time_index, time_average=time_average), grid), 'Precipitation (m/s)'
         elif var == 'aqh':
             return mask_land_ice(read_netcdf(file_path, 'EXFaqh', time_index=time_index, time_average=time_average), grid), 'Specific humidity (fraction)'
+        elif var == 'swdown':
+            return mask_land_ice(read_netcdf(file_path, 'EXFswdn', time_index=time_index, time_average=time_average), grid), r'Downwelling shortwave radiation (W/m$2$)')
+        elif var == 'lwdown':
+            return mask_land_ice(read_netcdf(file_path, 'EXFlwdn', time_index=time_index, time_average=time_average), grid), r'Downwelling longwave radiation (W/m$2$)')
         elif var in ['wind', 'uwind', 'vwind', 'windangle']:
             uwind = read_netcdf(file_path, 'EXFuwind', time_index=time_index, time_average=time_average)
             vwind = read_netcdf(file_path, 'EXFvwind', time_index=time_index, time_average=time_average)
