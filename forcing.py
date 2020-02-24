@@ -913,6 +913,18 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
         data[mask] = 0
         write_binary(data, out_files[n], prec=prec)
 
+
+# Build a correction file for a thermodynamic variable, which will add a spatially-varying offset to UKESM/PACE data so that it matches ERA5 data in the time-mean.
+def thermo_correction (grid_dir, var_name, cmip_file, era5_file, out_file, prec=64):
+
+    grid = Grid(grid_dir)
+    data = []
+    for fname in [cmip_file, era5_file]:
+        data.append(read_netcdf(fname, var_name))
+    data_diff = data[1] - data[0]
+    latlon_plot(data_diff, grid, ctype='plusminus', figsize=(10,6))
+    write_binary(data_diff, out_file, prec=prec)
+
             
     
 
