@@ -834,8 +834,8 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
     ncfile.close()
 
 
-# Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments file1 and file2 are the outputs of process_forcing_for_correction, for ERA5 and UKESM/PACE respectively. 
-def katabatic_correction (grid_dir, file1, file2, out_file_scale, out_file_rotate, scale_cap=3, prec=64):
+# Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments cmip_file and era5_file are the outputs of process_forcing_for_correction, for UKESM/PACE and ERA5 respectively. 
+def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_file_rotate, scale_cap=3, prec=64):
 
     var_names = ['uwind', 'vwind']
     scale_dist = 150.
@@ -852,7 +852,7 @@ def katabatic_correction (grid_dir, file1, file2, out_file_scale, out_file_rotat
     print 'Calculating winds in polar coordinates'
     magnitudes = []
     angles = []
-    for fname in [file1, file2]:
+    for fname in [cmip_file, era5_file]:
         u = read_netcdf(fname, var_names[0])
         v = read_netcdf(fname, var_names[1])
         magnitudes.append(np.sqrt(u**2 + v**2))
@@ -860,7 +860,7 @@ def katabatic_correction (grid_dir, file1, file2, out_file_scale, out_file_rotat
         angles.append(angle)
 
     print 'Calculating corrections'
-    # Take minimum of the ratio of file1 to file2 wind magnitude, and the scale cap
+    # Take minimum of the ratio of ERA5 to CMIP wind magnitude, and the scale cap
     scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
     # Smooth and mask the land and ice shelf
     scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
