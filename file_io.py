@@ -148,20 +148,15 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
         time = time_id[t_start:t_end]
     id.close()
 
-    if return_date:
-        # Want to convert to a datetime object
-        if monthly:
-            # Back up to previous month
-            for t in range(time.size):
-                month = time[t].month-1
-                year = time[t].year
-                if month < 1:
-                    month += 12
-                    year -= 1
-                time[t] = datetime.datetime(year, month, 1)
-        else:
-            for t in range(time.size):
-                time[t] = datetime.datetime(time[t].year, time[t].month, time[t].day)             
+    if return_date and monthly:
+        # Back up to previous month
+        for t in range(time.size):
+            month = time[t].month-1
+            year = time[t].year
+            if month < 1:
+                month += 12
+                year -= 1
+            time[t] = nc.netcdftime._datetime.datetime(year, month, 1)       
 
     if return_units:
         return time, units, calendar
