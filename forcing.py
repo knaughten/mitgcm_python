@@ -786,7 +786,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
             for year in range(start_year, end_year+1):
                 # Loop over ensemble members
                 data_tmp = None
-                num_ens = 0
+                num_ens_tmp = 0
                 for ens in range(1, num_ens+1):
                     if ens == missing_ens:
                         continue
@@ -796,9 +796,9 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                         data_tmp = data_tmp_ens
                     else:
                         data_tmp += data_tmp_ens
-                    num_ens += 1
+                    num_ens_tmp += 1
                 # Ensemble mean for this year
-                data_tmp /= num_ens
+                data_tmp /= num_ens_tmp
                 # Now accumulate time integral
                 if monthly[n]:
                     # Weighting for different number of days per month
