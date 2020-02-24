@@ -736,7 +736,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         data = None
         num_time = 0
 
-        if option == 'ERA5':
+        if source == 'ERA5':
             # Loop over years
             for year in range(start_year, end_year+1):
                 file_path = in_dir + file_head + var_names[n] + '_' + str(year)
@@ -747,7 +747,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                     data += np.sum(data_tmp, axis=0)
                 num_time += data_tmp.shape[0]
 
-        elif option ==' UKESM':
+        elif source ==' UKESM':
             in_files, start_years, end_years = find_cmip6_files(in_dir, expt, ensemble_member, var_names_in[n], 'day')
             # Loop over each file
             for t in range(len(in_files)):
@@ -781,7 +781,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                 # Swap sign on radiation fluxes
                 data *= -1
 
-        elif option == 'PACE':
+        elif source == 'PACE':
             # Loop over years
             for year in range(start_year, end_year+1):
                 # Loop over ensemble members
