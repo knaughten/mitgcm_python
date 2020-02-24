@@ -927,8 +927,11 @@ class PACEGrid:
         self.ny = nlat
 
         
-    def get_lon_lat (self, dim=2):
-        
+    def get_lon_lat (self, dim=2, gtype='t'):
+
+        if gtype != 't':
+            print 'Error (get_lon_lat): invalid gtype ' + gtype
+            sys.exit()        
         if dim == 1:
             return self.lon[0,:], self.lat[:,0]
         elif dim == 2:

@@ -6,10 +6,10 @@ import numpy as np
 import sys
 import os
 
-from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid
+from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
 from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month
-from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper
+from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
 from calculus import area_integral
 
@@ -658,6 +658,185 @@ def pace_all (in_dir, out_dir):
         for var in var_names:
             print 'Processing ' + var
             pace_atm_forcing(var, ens, in_dir, out_dir)
+
+
+# Read forcing (var='wind' or 'thermo') from a given atmospheric dataset (source='ERA5', 'UKESM', or 'PACE'). Time-average, ensemble-average (if PACE) and interpolate to the MITgcm grid. Save the otuput to a NetCDF file. This will be used to create spatially-varying, time-constant bias correction files in the functions katabatic_correction and thermo_correction.
+def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=None, start_year=1979, end_year=None):
+
+    # Set parameters based on source dataset
+    if source == 'ERA5':
+        if in_dir is None:
+            # Path on BAS servers
+            in_dir = '/data/oceans_input/processed_input_data/ERA5/'
+        file_head = 'ERA5_'
+        gtype = ['t', 't', 't', 't', 't']
+    elif source == 'UKESM':
+        if in_dir is None:
+            # Path on JASMIN
+            in_dir = '/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/'
+        expt = 'historical'
+        ensemble_member = 'r1i1p1f2'
+        if var == 'wind':
+            var_names_in = ['uas', 'vas']
+            gtype = ['u', 'v']
+        elif var == 'thermo':
+            var_names_in = ['tas', 'huss', 'pr', 'ssrd', 'strd']
+            gtype = ['t', 't', 't', 't', 't']
+        days_per_year = 12*30
+    elif source == 'PACE':
+        if in_dir is None:
+            # Path on BAS servers
+            in_dir = '/data/oceans_input/processed_input_data/CESM/PACE_new/'
+        file_head = 'PACE_ens'
+        num_ens = 20
+        missing_ens = 13
+        if var == 'wind':
+            var_names_in = ['UBOT', 'VBOT']
+            monthly = [False, False]
+        elif var == 'thermo':
+            var_names_in = ['TREFHT', 'QBOT', 'PRECT', 'FSDS', 'FLDS']
+            monthly = [False, False, False, True, True]
+        gtype = ['t', 't', 't', 't', 't']
+    else:
+        print 'Error (process_forcing_for_correction): invalid source ' + source
+        sys.exit()
+    # Set parameters based on variable type
+    if var == 'wind':
+        var_names = ['uwind', 'vwind']
+        units = ['m/s', 'm/s']
+    elif var == 'thermo':
+        var_names = ['atemp', 'aqh', 'precip', 'swdown', 'lwdown']
+        units = ['degC', '1', 'm/s', 'W/m^2', 'W/m^2']
+    else:
+        print 'Error (process_forcing_for_correction): invalid var ' + var
+        sys.exit()
+    # Check end_year is defined
+    if end_year is None:
+        print 'Error (process_forcing_for_correction): must set end_year. Typically use 2014 for WSFRIS and 2013 for PACE.'
+        sys.exit()
+
+    mit_grid_dir = real_dir(mit_grid_dir)
+    in_dir = real_dir(in_dir)
+
+    print 'Building grids'
+    if source == 'ERA5':
+        forcing_grid = ERA5Grid()
+    elif source == 'UKESM':
+        forcing_grid = UKESMGrid()
+    elif source == 'PACE':
+        forcing_grid = PACEGrid()
+    mit_grid = Grid(mit_grid_dir)
+
+    ncfile = NCfile(out_file, mit_grid, 'xy')
+
+    # Loop over variables
+    for n in range(len(var_names)):
+        print 'Processing variable ' + var_names[n]
+        # Read the data, time-integrating as we go
+        data = None
+        num_time = 0
+
+        if option == 'ERA5':
+            # Loop over years
+            for year in range(start_year, end_year+1):
+                file_path = in_dir + file_head + var_names[n] + '_' + str(year)
+                data_tmp = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
+                if data is None:
+                    data = np.sum(data_tmp, axis=0)
+                else:
+                    data += np.sum(data_tmp, axis=0)
+                num_time += data_tmp.shape[0]
+
+        elif option ==' UKESM':
+            in_files, start_years, end_years = find_cmip6_files(in_dir, expt, ensemble_member, var_names_in[n], 'day')
+            # Loop over each file
+            for t in range(len(in_files)):
+                file_path = in_files[t]
+                print 'Processing ' + file_path
+                print 'Covers years ' + str(start_years[t]) + ' to ' + str(end_years[t])
+                # Loop over years
+                t_start = 0  # Time index in file
+                t_end = t_start+days_per_year
+                for year in range(start_years[t], end_years[t]+1):
+                    if year >= start_year and year <= end_year:
+                        print 'Processing ' + str(year)
+                        # Read data
+                        print 'Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)
+                        data_tmp = read_netcdf(file_path, var_names_in[n], t_start=t_start, t_end=t_end)
+                        if data is None:
+                            data = np.sum(data_tmp, axis=0)
+                        else:
+                            data += np.sum(data_tmp, axis=0)
+                        num_time += days_per_year
+                    # Update time range for next time
+                    t_start = t_end
+                    t_end = t_start + days_per_year
+            if var_names[n] == 'atemp':
+                # Convert from K to C
+                data -= temp_C2K
+            elif var_names[n] == 'precip':
+                # Convert from kg/m^2/s to m/s
+                data /= rho_fw
+            elif var_names[n] in ['swdown', 'lwdown']:
+                # Swap sign on radiation fluxes
+                data *= -1
+
+        elif option == 'PACE':
+            # Loop over years
+            for year in range(start_year, end_year+1):
+                # Loop over ensemble members
+                data_tmp = None
+                num_ens = 0
+                for ens in range(1, num_ens+1):
+                    if ens == missing_ens:
+                        continue
+                    file_path = in_dir + file_head + str(ens).zfill(2) + '_' + var_names_in[n] + '_' + str(year)
+                    data_tmp_ens = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
+                    if data_tmp is None:
+                        data_tmp = data_tmp_ens
+                    else:
+                        data_tmp += data_tmp_ens
+                    num_ens += 1
+                # Ensemble mean for this year
+                data_tmp /= num_ens
+                # Now accumulate time integral
+                if monthly[n]:
+                    # Weighting for different number of days per month
+                    for month in range(data_tmp.shape[0]):
+                        # Get number of days per month with no leap years
+                        ndays = days_per_month(month+1, 1979)
+                        data_tmp[month,:] *= ndays
+                        num_time += ndays
+                else:
+                    num_time += data_tmp.shape[0]
+                if data is None:
+                    data = np.sum(data_tmp, axis=0)
+                else:
+                    data += np.sum(data_tmp, axis=0)
+
+        # Now convert from time-integral to time-average
+        data /= num_time
+
+        forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
+        # Get longitude in the range -180 to 180, then split and rearrange so it's monotonically increasing        
+        forcing_lon = fix_lon_range(forcing_lon)
+        i_split = np.nonzero(forcing_lon < 0)[0][0]
+        forcing_lon = split_longitude(forcing_lon, i_split)
+        data = split_longitude(data, i_split)
+        # Now interpolate to MITgcm tracer grid        
+        mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
+        print 'Interpolating'
+        data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
+        print 'Saving to ' + out_file
+        ncfile.add_variable(var_names[n], data_interp, 'xy', units=units[n])
+
+    ncfile.close()
+                    
+
+            
+    
+
+    
             
         
 
