@@ -433,7 +433,7 @@ def set_update_time (id, mit_file, monthly=True):
         # Also figure out how many time indices are in the file so far
         num_time = id.variables['time'].size
         # Convert to numeric values
-        time = nc.date2num(time, time_units)
+        time = nc.date2num(time, time_units, calendar=calendar)
         # Append to file
         id.variables['time'][num_time:] = time
         return num_time
