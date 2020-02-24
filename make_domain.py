@@ -452,7 +452,7 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         num_valid_neighbours = neighbours(oomask, missing_val=0)[-1]
         index = (oomask==1)*(num_valid_neighbours==0)
         omask[index] = 0
-        bathy[index] = 0        
+        bathy[index] = 0
     elif key == 'WSS_old_smaller':
         # Small Weddell Sea domain - temporary before coupling      
         # Block out everything west of the peninsula
