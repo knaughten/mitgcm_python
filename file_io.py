@@ -159,7 +159,7 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
             time[t] = datetime.datetime(year, month, 1)
 
     if return_units:
-        return time, units
+        return time, units, calendar
     else:
         return time
 
@@ -351,7 +351,7 @@ class NCfile:
     # units: units for this variable
     # dtype: data type of variable (default 'f8' which is float)
 
-    def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, dtype='f8'):
+    def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, calendar=None, dtype='f8'):
 
         # Sort out dimensions
         shape = []
@@ -380,6 +380,8 @@ class NCfile:
             self.id.variables[var_name].long_name = long_name
         if units is not None:
             self.id.variables[var_name].units = units
+        if calendar is not None:
+            self.id.variables[var_name].calendar = calendar
 
         # Fill data
         self.id.variables[var_name][:] = data
@@ -392,7 +394,7 @@ class NCfile:
 
     # Optional keyword argument:
     # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
-    def add_time (self, time, units=None):
+    def add_time (self, time, units=None, calendar=None):
 
         import netCDF4 as nc
 
@@ -402,9 +404,9 @@ class NCfile:
                 # Set some default units
                 units = 'seconds since 1979-01-01 00:00:00'
             # Convert to numeric values
-            time = nc.date2num(time, units)            
+            time = nc.date2num(time, units, calendar=calendar)            
 
-        self.add_variable('time', time, 't', units=units)
+        self.add_variable('time', time, 't', units=units, calendar=calendar)
 
 
     # Call this function when you're ready to close the file.

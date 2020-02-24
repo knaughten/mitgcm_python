@@ -425,7 +425,7 @@ def set_update_file (precomputed_file, grid, dimensions):
 # Define or update the time axis.
 def set_update_time (id, mit_file, monthly=True):
     # Read the time array from the MITgcm file, and its units
-    time, time_units = netcdf_time(mit_file, return_units=True, monthly=monthly)
+    time, time_units, calendar = netcdf_time(mit_file, return_units=True, monthly=monthly)
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Update the units to match the old time array
@@ -440,7 +440,7 @@ def set_update_time (id, mit_file, monthly=True):
     elif isinstance(id, NCfile):
         # File is new
         # Add the time variable to the file
-        id.add_time(time, units=time_units)
+        id.add_time(time, units=time_units, calendar=calendar)
         return 0
     else:
         print 'Error (set_update_time): unknown id type'
