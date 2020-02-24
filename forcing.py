@@ -8,7 +8,7 @@ import os
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
-from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month
+from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw
 from calculus import area_integral
@@ -831,7 +831,86 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         ncfile.add_variable(var_names[n], data_interp, 'xy', units=units[n])
 
     ncfile.close()
-                    
+
+
+# Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments file1 and file2 are the outputs of process_forcing_for_correction, for ERA5 and UKESM/PACE respectively. 
+def katabatic_correction (grid_dir, file1, file2, out_file_scale, out_file_rotate, scale_cap=3, prec=64):
+
+    var_names = ['uwind', 'vwind']
+    scale_dist = 150.
+    # Radius for smoothing
+    sigma = 2
+
+    print 'Building grid'
+    grid = Grid(grid_dir)
+    print 'Selecting coastal points'
+    coast_mask = grid.get_coast_mask(ignore_iceberg=True)
+    lon_coast = grid.lon_2d[coast_mask].ravel()
+    lat_coast = grid.lat_2d[coast_mask].ravel()
+
+    print 'Calculating winds in polar coordinates'
+    magnitudes = []
+    angles = []
+    for fname in [file1, file2]:
+        u = read_netcdf(fname, var_names[0])
+        v = read_netcdf(fname, var_names[1])
+        magnitudes.append(np.sqrt(u**2 + v**2))
+        angle = np.arctan2(v,u)
+        angles.append(angle)
+
+    print 'Calculating corrections'
+    # Take minimum of the ratio of file1 to file2 wind magnitude, and the scale cap
+    scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
+    # Smooth and mask the land and ice shelf
+    scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
+    # Take difference in angles
+    rotate = angles[1] - angles[0]
+    # Take mod 2pi when necessary
+    index = rotate < -np.pi
+    rotate[index] += 2*np.pi
+    index = rotate > np.pi
+    rotate[index] -= 2*np.pi
+    # Smoothing would be weird with the periodic angle, so just mask
+    rotate = mask_land_ice(rotate, grid)
+
+    print 'Calculating distance from the coast'
+    min_dist = None
+    # Loop over all the coastal points
+    for i in range(lon_coast.size):
+        # Calculate distance of every point in the model grid to this specific coastal point, in km
+        dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])*1e-3
+        if min_dist is None:
+            # Initialise the array
+            min_dist = dist_to_pt
+        else:
+            # Figure out which cells have this coastal point as the closest one yet, and update the array
+            index = dist_to_pt < min_dist
+            min_dist[index] = dist_to_pt[index]
+
+    print 'Tapering function offshore'
+    # Cosine function moving from scaling factor to 1 over distance of scale_dist km offshore
+    scale_tapered = (min_dist < scale_dist)*(scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
+    # For the rotation, move from scaling factor to 0
+    rotate_tapered = (min_dist < scale_dist)*rotate*np.cos(np.pi/2*min_dist/scale_dist)    
+
+    print 'Plotting'
+    data_to_plot = [min_dist, scale_tapered, rotate_tapered]
+    titles = ['Distance to coast (km)', 'Scaling factor', 'Rotation factor']
+    ctype = ['basic', 'ratio', 'plusminus']
+    fig_names = ['min_dist.png', 'scale.png', 'rotate.png']
+    for i in range(len(data_to_plot)):
+        for fig_name in [None, fig_names[i]]:
+            latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6), fig_name=fig_name)
+
+    print 'Writing to file'
+    fields = [scale_tapered, rotate_tapered]
+    out_files = [out_file_scale, out_file_rotate]
+    for n in range(len(fields)):
+        # Replace mask with zeros
+        mask = fields[n].mask
+        data = fields[n].data
+        data[mask] = 0
+        write_binary(data, out_files[n], prec=prec)
 
             
     
