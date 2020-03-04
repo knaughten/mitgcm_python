@@ -128,7 +128,10 @@ def netcdf_time (file_path, var_name='time', t_start=None, t_end=None, return_da
     id = nc.Dataset(file_path, 'r')
     time_id = id.variables[var_name]
     units = time_id.units
-    calendar = time_id.calendar
+    try:
+        calendar = time_id.calendar
+    except(AttributeError):
+        calendar = 'standard'
     num_time = time_id.size
 
     # Choose range of time values to consider
