@@ -834,8 +834,9 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
     ncfile.close()
 
 
-# Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments cmip_file and era5_file are the outputs of process_forcing_for_correction, for UKESM/PACE and ERA5 respectively. 
-def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_file_rotate, scale_cap=3, prec=64):
+# Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments cmip_file and era5_file are the outputs of process_forcing_for_correction, for UKESM/PACE and ERA5 respectively.
+# Update 13 March 2020: Can set bounds on region in domain to apply this correction to. For example, in PAS can set xmin=-90 to only correct in the eastern part of the domain. 
+def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_file_rotate, scale_cap=3, xmin=None, xmax=None, ymin=None, ymax=None, prec=64):
 
     var_names = ['uwind', 'vwind']
     scale_dist = 150.
@@ -848,6 +849,15 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
+    if xmin is None:
+        xmin = np.amin(grid.lon_2d)
+    if xmax is None:
+        xmax = np.amax(grid.lon_2d)
+    if ymin is None:
+        ymin = np.amin(grid.lat_2d)
+    if ymax is None:
+        ymax = np.amax(grid.lat_2d)
+    out_of_bounds = np.invert((grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax))
 
     print 'Calculating winds in polar coordinates'
     magnitudes = []
@@ -862,6 +872,8 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     print 'Calculating corrections'
     # Take minimum of the ratio of ERA5 to CMIP wind magnitude, and the scale cap
     scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
+    # Outside the bounds, set to 1 so nothing happens
+    scale[out_of_bounds] = 1
     # Smooth and mask the land and ice shelf
     scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
     # Take difference in angles
@@ -871,6 +883,8 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     rotate[index] += 2*np.pi
     index = rotate > np.pi
     rotate[index] -= 2*np.pi
+    # Outside the bounds, set to 0
+    rotate[out_of_bounds] = 0
     # Smoothing would be weird with the periodic angle, so just mask
     rotate = mask_land_ice(rotate, grid)
 
