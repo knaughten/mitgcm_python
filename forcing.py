@@ -857,7 +857,6 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
         ymin = np.amin(grid.lat_2d)
     if ymax is None:
         ymax = np.amax(grid.lat_2d)
-    out_of_bounds = np.invert((grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax))
 
     print 'Calculating winds in polar coordinates'
     magnitudes = []
@@ -872,8 +871,6 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     print 'Calculating corrections'
     # Take minimum of the ratio of ERA5 to CMIP wind magnitude, and the scale cap
     scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
-    # Outside the bounds, set to 1 so nothing happens
-    scale[out_of_bounds] = 1
     # Smooth and mask the land and ice shelf
     scale = mask_land_ice(smooth_xy(scale, sigma=sigma), grid)
     # Take difference in angles
@@ -883,8 +880,6 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     rotate[index] += 2*np.pi
     index = rotate > np.pi
     rotate[index] -= 2*np.pi
-    # Outside the bounds, set to 0
-    rotate[out_of_bounds] = 0
     # Smoothing would be weird with the periodic angle, so just mask
     rotate = mask_land_ice(rotate, grid)
 
@@ -892,6 +887,9 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     min_dist = None
     # Loop over all the coastal points
     for i in range(lon_coast.size):
+        # Skip over any points that are out of bounds
+        if lon_coast[i] < xmin or lon_coast[i] > xmax or lat_coast[i] < ymin or lat_coast[i] > ymax:
+            continue
         # Calculate distance of every point in the model grid to this specific coastal point, in km
         dist_to_pt = dist_btw_points([lon_coast[i], lat_coast[i]], [grid.lon_2d, grid.lat_2d])*1e-3
         if min_dist is None:
