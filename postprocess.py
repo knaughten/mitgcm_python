@@ -13,7 +13,7 @@ from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
 from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from plot_1d import read_plot_timeseries, read_plot_timeseries_diff
-from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot
+from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot, read_plot_latlon_comparison
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim
@@ -1061,6 +1061,64 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
         id.close()
     elif isinstance(id, NCfile):
         id.close()
+
+
+# Make figures to compare two simulations (generally 3-panel figures with 1, 2, and 2-1).
+# Input arguments:
+# name_1, name_2: simulation names to add to plot titles. No spaces allowed so they can be used in file names.
+# dir_1, dir_2: paths to directories containing fname
+# fname: name of NetCDF output file (assumes one time index, previously time-averaged with nco)
+# fig_dir: directory to save figures in
+# Optional keyword arguments:
+# hovmoller_file, timeseries_file: 
+# key: simulation type key which will set variable types and other settings
+def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmoller_file='hovmoller.nc', timeseries_file='timeseries.nc', key='PAS'):
+
+    if key == 'PAS':
+        latlon_names_forcing = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'windangle', 'precip', 'swdown', 'lwdown']
+        latlon_names = ['bwsalt', 'bwtemp', 'ismr', 'aice', 'hice']
+        vmin = [34, None, None, None, None]
+        vmax = [None, 1.5, None, None, 4]
+        vmin_diff = [-0.3, None, -10, None, None]
+        vmax_diff = [0.3, None, None, None, 4]
+        change_points = [None, None, [5,10,30], None, None]
+        ymax = -70
+        timeseries_types = ['all_massloss']
+        hovmoller_loc = ['PIB', 'Dot']
+        hovmoller_bounds = [-1.5, 1.5, 34, 34.725]
+        hovmoller_t_contours = [0, 1]
+        hovmoller_s_contours = [34.5, 34.7]
+    else:
+        print 'Error (plot_everything_compare): need to write the code for simulation key ' + key
+        sys.exit()
+
+    dir_1 = real_dir(dir_1)
+    dir_2 = real_dir(dir_2)
+    fig_dir = real_dir(fig_dir)
+    if ' ' in name_1 or ' ' in name_2:
+        print 'Error (plot_everything_compare): no spaces allowed in simulation names'
+        sys.exit()
+    dirs = [dir_1, dir_2]
+    names = [name_1, name_2]
+
+    grid = Grid(dir_1+fname)
+    # Plot lat-lon forcing variables
+    for var_name in latlon_names_forcing:
+        read_plot_latlon_comparison(var_name, name_1, name_2, dir_1, dir_2, fname, grid=grid, time_index=0, fig_name=fig_dir+var_name+'.png')
+    # Plot lat-lon diagnostic variables
+    for n in range(len(latlon_names)):
+        read_plot_latlon_comparison(latlon_names[n], name_1, name_2, dir_1, dir_2, fname, grid=grid, time_index=0, fig_name=fig_dir+latlon_names[n]+'.png', vmin=vmin[n], vmax=vmax[n], vmin_diff=vmin_diff[n], vmax_diff=vmax_diff[n], change_points=change_points[n], ymax=ymax)
+    # Plot timeseries: 1, 2, and difference
+    for var_name in timeseries_types:
+        for n in range(2):
+            read_plot_timeseries(var_name, dirs[n]+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var_name+'_'+names[n]+'.png')
+        read_plot_timeseries_diff(var_name, dir_1+timeseries_file, dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var_name+'_diff.png')
+    for loc in hovmoller_loc:
+        for n in range(2):
+            read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png')
+        read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png')
+
+    
             
             
     
