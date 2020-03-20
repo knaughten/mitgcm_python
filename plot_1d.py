@@ -12,6 +12,7 @@ from timeseries import calc_special_timeseries, calc_special_timeseries_diff, se
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
+from utils import trim_titles
 
 
 # Helper function to plot timeseries.
@@ -155,11 +156,12 @@ def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=Non
         # Read the time array; don't need to back up one month
         time = netcdf_time(file_path, monthly=False)
 
-    if var == 'fris_mass_balance':
+    if var.endswith('mass_balance'):
         if precomputed:
             # Read the fields from the timeseries file
-            melt = read_netcdf(file_path, 'fris_total_melt')
-            freeze = read_netcdf(file_path, 'fris_total_freeze')
+            shelf = var[:var.index('_mass_balance')]
+            melt = read_netcdf(file_path, shelf+'_total_melt')
+            freeze = read_netcdf(file_path, shelf+'_total_freeze')
         else:
             # Calculate the timeseries from the MITgcm file(s)
             time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
@@ -194,10 +196,11 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
         time, data_diff = trim_and_diff(time_1, time_2, data_1, data_2)
         return time, data_diff
 
-    if var == 'fris_mass_balance':
+    if var.endswith('mass_balance'):
         if precomputed:
-            time, melt_diff = read_and_trim('fris_total_melt')
-            freeze_diff = read_and_trim('fris_total_freeze')[1]
+            shelf = var[:var.index('_mass_balance')]
+            time, melt_diff = read_and_trim(shelf+'_total_melt')
+            freeze_diff = read_and_trim(shelf+'_total_freeze')[1]
         else:
             # Calculate the difference timeseries
             time, melt_diff, freeze_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
@@ -208,3 +211,56 @@ def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False,
         else:
             time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         make_timeseries_plot(time, data_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
+
+
+# NetCDF interface to timeseries_multi_plot. Can set diff=True and file_path as a list of two file paths if you want a difference plot.
+def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+
+    if diff:
+        if not isinstance(file_path, list) or len(file_path) != 2:
+            print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
+            sys.exit()
+        file_path_1 = file_path[0]
+        file_path_2 = file_path[1]
+        time_1 = netcdf_time(file_path_1, monthly=(monthly and not precomputed))
+        time_2 = netcdf_time(file_path_2, monthly=(monthly and not precomputed))
+        time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
+    else:
+        time = netcdf_time(file_path, monthly=(monthly and not precomputed))
+    
+    data = []
+    labels = []
+    units = None
+    if colours is None:
+        colours = ['blue', 'red', 'black', 'green', 'cyan', 'magenta', 'yellow']
+        if len(var_names) > len(colours):
+            print 'Error (read_plot_timeseries_multi): need to specify colours if there are more than 7 variables.'
+            sys.exit()
+        colours = colours[:len(var_names)]
+    for var in var_names:
+        if var.endswith('mass_balance'):
+            print 'Error (read_plot_timeseries_multi): ' + var + ' is already a multi-plot by itself.'
+            sys.exit()
+        title, units_tmp = set_parameters(var)[2:4]
+        labels.append(title)
+        if units is None:
+            units = units_tmp
+        elif units != units_tmp:
+            print 'Error (read_plot_timeseries_multi): units do not match for all timeseries variables'
+            sys.exit()
+        if precomputed:
+            if diff:
+                data_1 = read_netcdf(file_path_1, var)
+                data_2 = read_netcdf(file_path_2, var)
+                data.append(trim_and_diff(time_1, time_2, data_1, data_2)[1])
+            else:
+                data.append(read_netcdf(file_path, var))
+        else:
+            if diff:
+                data.append(calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1])
+            else:
+                data.append(calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1])
+    title, labels = trim_titles(labels)
+    if diff:
+        title = 'Change in ' + title
+    timeseries_multi_plot(time, data, labels, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)

@@ -667,6 +667,40 @@ def daily_to_monthly (data, year=1979, per_day=1):
         data_monthly[month,...] = np.mean(data[t:t+nt,...], axis=0)
         t += nt
     return data_monthly
+
+
+# Given a set of titles, find the common parts from the beginning and the end of each title. Trim them and return the master beginning title (trimmed of unnecessary prepositions) as well as the trimmed individual titles.
+# For example, the list
+# ['Basal mass balance of Pine Island Glacier Ice Shelf',
+#  'Basal mass balance of Dotson and Crosson Ice Shelves',
+#  'Basal mass balance of Thwaites Ice Shelf']
+# would return the master title 'Basal mass balance' and the trimmed titles
+# ['Pine Island Glacier', 'Dotson and Crosson', 'Thwaites']
+def trim_titles (titles):
+
+    # First replace "shelves" with "shelf" (ignore s so not case sensitive)
+    for n in range(len(titles)):
+        titles[n] = titles[n].replace('helves', 'helf')
+    # Trim the common starts and ends, saving the starts
+    title_start = ''
+    found = True
+    while found:
+        found = False
+        if all([s[0]==titles[0][0] for s in titles]):
+            found = True
+            title_start += titles[0][0]
+            titles = [s[1:] for s in titles]
+        if all([s[-1]==titles[0][-1] for s in titles]):
+            found = True
+            titles = [s[:-1] for s in titles]
+    # Trim any white space
+    title_start = title_start.strip()
+    # Remove prepositions
+    for s in [' of', ' in', ' from']:
+        if title_start.endswith(s):
+            title_start = title_start[:title_start.index(s)]
+    return title_start, titles
+        
     
     
 

@@ -12,7 +12,7 @@ from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, appl
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
-from constants import deg_string
+from constants import deg_string, region_names
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (current options are 'fris', 'ewed', and 'all'). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -22,7 +22,7 @@ from constants import deg_string
 # grid = Grid object
 
 # Optional keyword arguments:
-# shelves: 'fris' (default) restricts the calculation to FRIS. 'ewed' restricts the calculation to ice shelves between the Eastern Weddell bounds given in constants.py. 'all' considers all ice shelves.
+# shelf: 'fris' (default) restricts the calculation to FRIS. 'ewed' restricts the calculation to ice shelves between the Eastern Weddell bounds given in constants.py. 'all' considers all ice shelves.
 # result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
 # time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
@@ -32,18 +32,10 @@ from constants import deg_string
 # Otherwise: 1D array containing timeseries of mass loss or average melt rate
 # If mass_balance=True: two values/arrays will be returned, with the positive and negative components.
 
-def timeseries_ismr (file_path, grid, shelves='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
+def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
 
     # Choose the appropriate mask
-    if shelves == 'fris':
-        mask = grid.get_ice_mask(shelf='fris')
-    elif shelves == 'ewed':
-        mask = grid.get_ice_mask(shelf='ewed')
-    elif shelves == 'all':
-        mask = grid.get_ice_mask()
-    else:
-        print 'Error (timeseries_ismr): invalid shelves=' + shelves
-        sys.exit()
+    mask = grid.get_ice_mask(shelf=shelf)
 
     # Read ice shelf melt rate and convert to m/y
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
@@ -262,7 +254,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 # file_path: either a single filename or a list of filenames
 
 # Optional keyword arguments:
-# option: 'ismr': calculates net melting OR total melting and freezing beneath given ice shelves; must specify shelves and mass_balance
+# option: 'ismr': calculates net melting OR total melting and freezing beneath given ice shelf; must specify shelf and mass_balance
 #          'max': calculates maximum value of variable in region; must specify var_name and possibly xmin etc.
 #          'avg_sfc': calculates area-averaged value over the sea surface, i.e. not counting cavities
 #          'int_sfc': calculates area-integrated value over the sea surface
@@ -277,7 +269,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
-# shelves, mass_balance, result: as in function timeseries_ismr. Only matters for 'ismr'.
+# shelf, mass_balance, result: as in function timeseries_ismr. Only matters for 'ismr'.
 # var_name: variable name to process. Doesn't matter for 'ismr' or 'wed_gyre_trans'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
 # threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
@@ -293,7 +285,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelves='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, shelf='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True):
 
     if isinstance(file_path, str):
         # Just one file
@@ -325,9 +317,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     # Calculate timeseries on the first file
     if option == 'ismr':
         if mass_balance:
-            melt, freeze = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
+            melt, freeze = timeseries_ismr(first_file, grid, shelf=shelf, mass_balance=mass_balance, result=result)
         else:
-            values = timeseries_ismr(first_file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
+            values = timeseries_ismr(first_file, grid, shelf=shelf, mass_balance=mass_balance, result=result)
     elif option == 'max':
         values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     elif option == 'avg_sfc':
@@ -362,9 +354,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         for file in file_path[1:]:
             if option == 'ismr':
                 if mass_balance:
-                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
+                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelf=shelf, mass_balance=mass_balance, result=result)
                 else:
-                    values_tmp = timeseries_ismr(file, grid, shelves=shelves, mass_balance=mass_balance, result=result)
+                    values_tmp = timeseries_ismr(file, grid, shelf=shelf, mass_balance=mass_balance, result=result)
             elif option == 'max':
                 values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             elif option == 'avg_sfc':
@@ -424,26 +416,24 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelves='fris', mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, shelf='fris', mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelves=shelves, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, shelf=shelf, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, shelf=shelf, mass_balance=mass_balance, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
 
 
 # Set a bunch of parameters corresponding to a given timeseries variable:
-#      'fris_mass_balance': melting, freezing, and net melting beneath FRIS
-#      'fris_massloss': net melting beneath FRIS
-#      'ewed_massloss': net melting beneath Eastern Weddell ice shelves
-#      'all_massloss': net melting beneath all ice shelves in the domain
-#      'avg_melt': average melt rate beneath all ice shelves in the domain 
+#      '*_mass_balance': melting, freezing, and net melting beneath the given ice shelf (including 'all')
+#      '*_massloss': net mass loss beneath the given ice shelf
+#      '*_melting': average melt rate beneath the given ice shelf
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
@@ -474,7 +464,7 @@ def set_parameters (var):
     xmax = None
     ymin = None
     ymax = None
-    shelves = None
+    shelf = None
     mass_balance = None
     result = None
     threshold = None
@@ -486,29 +476,27 @@ def set_parameters (var):
     point1 = None
     direction = None
 
-    if var in ['fris_mass_balance', 'fris_massloss', 'ewed_massloss', 'all_massloss']:
+    if var.endswith('mass_balance') or var.endswith('massloss') or var.endswith('melting'):
         option = 'ismr'
         var_name = 'SHIfwFlx'
-        units = 'Gt/y'
-        mass_balance = var=='fris_mass_balance'
-        result = 'massloss'
-        if var in ['fris_mass_balance', 'fris_massloss']:
-            shelves = 'fris'
-            title = 'Basal mass balance of FRIS'            
-        elif var == 'ewed_massloss':
-            shelves = 'ewed'
-            title = 'Basal mass balance of Eastern Weddell ice shelves'
-        elif var == 'all_massloss':
-            shelves = 'all'
-            title = 'Basal mass balance of ice shelves'
-    elif var == 'avg_melt':
-        option = 'ismr'
-        var_name = 'SHIfwFlx'
-        units = 'm/y'
-        mass_balance = False
-        result = 'meltrate'
-        shelves = 'all'
-        title = 'Mean ice shelf melt rate'
+        mass_balance = var.endswith('mass_balance')
+        if var.endswith('melting'):
+            result = 'meltrate'
+            units = 'm/y'
+        else:
+            result = 'massloss'
+            units = 'Gt/y'
+        # Extract name of ice shelf
+        if var.endswith('mass_balance'):
+            shelf = var[:var.index('_mass_balance')]
+            title = 'Basal mass balance of '
+        elif var.endswith('massloss'):
+            shelf = var[:var.index('_massloss')]
+            title = 'Basal mass loss from '
+        elif var.endswith('melting'):
+            shelf = var[:var.index('_melting')]
+            title = 'Mean melt rate of '
+        title += region_names[shelf]
     elif var in ['hice_corner', 'mld_ewed']:
         # Maximum between spatial bounds
         option = 'max'
@@ -632,22 +620,22 @@ def set_parameters (var):
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, shelf, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelf, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
         # Special case for calc_timeseries, with extra output argument
-        time, melt, freeze = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
+        time, melt, freeze = calc_timeseries(file_path, option=option, shelf=shelf, mass_balance=mass_balance, grid=grid, monthly=monthly)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, shelves=shelves, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
+        time, data = calc_timeseries(file_path, option=option, shelf=shelf, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -658,18 +646,18 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, shelves, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, shelf, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:
         # Special case; calculate each timeseries separately because there are extra output arguments
-        time_1, melt_1, freeze_1 = calc_timeseries(file_path_1, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
-        time_2, melt_2, freeze_2 = calc_timeseries(file_path_2, option=option, shelves=shelves, mass_balance=mass_balance, grid=grid, monthly=monthly)
+        time_1, melt_1, freeze_1 = calc_timeseries(file_path_1, option=option, shelf=shelf, mass_balance=mass_balance, grid=grid, monthly=monthly)
+        time_2, melt_2, freeze_2 = calc_timeseries(file_path_2, option=option, shelf=shelf, mass_balance=mass_balance, grid=grid, monthly=monthly)
         time, melt_diff = trim_and_diff(time_1, time_2, melt_1, melt_2)
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelves=shelves, mass_balance=mass_balance, result=result, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, shelf=shelf, mass_balance=mass_balance, result=result, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data_diff *= 1e-12

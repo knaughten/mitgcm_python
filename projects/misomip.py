@@ -144,7 +144,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
 # Precompute timeseries for the given experiment.
 def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', timeseries_file='timeseries.nc', segment_dir=None, discard_spinup=True, num_spinup_dir=1):
 
-    timeseries_types = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    timeseries_types = ['all_melting', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
 
     output_dir = real_dir(output_dir)
     if segment_dir is not None:
@@ -171,7 +171,7 @@ def compare_timeseries_jan (timeseries_file='timeseries.nc', jan_file='/work/n02
     fig_dir = real_dir(fig_dir)
 
     # Variable names in our files and in Jan's old file, plus titles, units, and conversion factors to apply to Jan's file to get the units we want
-    var_names = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    var_names = ['all_melting', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
     jan_names = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
     titles = ['Mean ice shelf melt rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
     units = ['m/y', 'Gt/y', r'm$^3$', deg_string+'C', 'psu']
@@ -193,7 +193,7 @@ def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    var_names = ['avg_melt', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
+    var_names = ['all_melting', 'all_massloss', 'ocean_vol', 'avg_temp', 'avg_salt']
     titles = ['Mean ice shelf melt rate', 'Basal mass loss from all ice shelves', 'Volume of ocean in domain', 'Volume-averaged temperature', 'Volume-averaged salinity']
     units = ['m/y', 'Gt/y', r'm$^3$', deg_string+'C', 'psu']
 
