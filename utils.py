@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year, fris_bounds, fris_bounds_pster, deg2rad, rEarth
+from constants import rho_fw, sec_per_year, region_bounds, deg2rad, rEarth
 
 
 # Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180). If max_lon is None, nothing will be done to the array.
@@ -166,7 +166,7 @@ def mask_except_ice (data, grid, gtype='t', time_dependent=False, depth_dependen
 # Mask everything except FRIS out of an array.
 def mask_except_fris (data, grid, gtype='t', time_dependent=False, depth_dependent=False):
 
-    return apply_mask(data, np.invert(grid.get_fris_mask(gtype=gtype)), time_dependent=time_dependent, depth_dependent=depth_dependent)
+    return apply_mask(data, np.invert(grid.get_ice_mask(shelf='fris', gtype=gtype)), time_dependent=time_dependent, depth_dependent=depth_dependent)
 
 
 # Apply the 3D hfac mask. Dry cells are masked out; partial cells are untouched.
@@ -266,9 +266,9 @@ def var_min_max (data, grid, pster=False, zoom_fris=False, xmin=None, xmax=None,
     # Set limits on axes
     if zoom_fris:
         if pster:
-            [xmin, xmax, ymin, ymax] = fris_bounds_pster
+            [xmin, xmax, ymin, ymax] = region_bounds['fris_pster_plot']
         else:
-            [xmin, xmax, ymin, ymax] = fris_bounds
+            [xmin, xmax, ymin, ymax] = region_bounds['fris_plot']
     if xmin is None:
         xmin = np.amin(x)
     if xmax is None:
@@ -546,7 +546,7 @@ def dist_btw_points (point0, point1):
 
 
 # Find all ice shelf front points and return them as a list.
-# For a specific ice shelf, pass a special ice_mask (such as grid.fris_mask)
+# For a specific ice shelf, pass a special ice_mask 
 def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
 
     from interpolation import neighbours

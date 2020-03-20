@@ -14,7 +14,7 @@ from ..utils import real_dir, mask_land_ice, var_min_max, mask_3d, select_bottom
 from ..grid import Grid
 from ..plot_1d import timeseries_multi_plot, make_timeseries_plot
 from ..file_io import netcdf_time, read_netcdf, read_binary
-from ..constants import deg_string, sec_per_year, deg2rad, a23a_bounds, rho_fw
+from ..constants import deg_string, sec_per_year, deg2rad, region_bounds, rho_fw
 from ..timeseries import trim_and_diff, monthly_to_annual
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.labels import round_to_decimals, reduce_cbar_labels, lon_label, slice_axes, lon_label, lat_label, latlon_axes
@@ -1051,8 +1051,9 @@ def domain_map (base_dir='./', fig_dir='./'):
     plt.text(.75, .03, 'Bathymetry (km)', fontsize=14, ha='left', va='bottom', transform=fig.transFigure)
     # Trace outline of sws_shelf_mask
     # First add the grounded iceberg to the mask so it doesn't get outlined
-    mask = grid.sws_shelf_mask.astype(float)
-    index = (grid.lon_2d >= a23a_bounds[0])*(grid.lon_2d <= a23a_bounds[1])*(grid.lat_2d >= a23a_bounds[2])*(grid.lat_2d <= a23a_bounds[3])*(grid.land_mask)
+    mask = grid.get_shelf_mask(region='sws_shelf').astype(float)
+    [xmin, xmax, ymin, ymax] = region_bounds['a23a']
+    index = (grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax)*(grid.land_mask)
     mask[index] = 1
     ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('magenta'), linestyles='dashed', linewidth=1.5)
     # Overlay transect shown in mwdw_slices
@@ -1388,7 +1389,7 @@ def calc_salt_fluxes (base_dir='./'):
         seaice_flux = (read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0))*rho_fw
         # Mask (FRIS and continental shelf respectively)
         shelf_flux = mask_except_ice(shelf_flux, grid)
-        seaice_flux = np.ma.masked_where(np.invert(grid.sws_shelf_mask), seaice_flux)
+        seaice_flux = np.ma.masked_where(np.invert(grid.get_shelf_mask(region='sws_shelf')), seaice_flux)
         # Select only positive values
         shelf_flux = np.maximum(shelf_flux, 0)
         seaice_flux = np.maximum(seaice_flux, 0)

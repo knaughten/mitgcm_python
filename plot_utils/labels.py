@@ -10,7 +10,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..file_io import netcdf_time
-from ..constants import fris_bounds, fris_bounds_pster, deg_string
+from ..constants import region_bounds, deg_string
 from ..utils import polar_stereo
 
 
@@ -71,9 +71,9 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
     # Set limits on axes
     if zoom_fris:
         if pster:
-            [xmin, xmax, ymin, ymax] = fris_bounds_pster
+            [xmin, xmax, ymin, ymax] = region_bounds['fris_pster_plot']
         else:
-            [xmin, xmax, ymin, ymax] = fris_bounds
+            [xmin, xmax, ymin, ymax] = region_bounds['fris_plot']
     if xmin is None:
         xmin = np.amin(x)
     if xmax is None:

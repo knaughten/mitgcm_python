@@ -16,7 +16,7 @@ from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
-from constants import deg_string, bounds_PIB, bounds_Dot
+from constants import deg_string
 from interpolation import interp_bilinear
 from calculus import area_average
 from timeseries import trim_and_diff
@@ -68,7 +68,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
     # Select the points we care about
     if option == 'fris':
         # Select all points in the FRIS cavity
-        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.fris_mask, grid)
+        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_ice_mask(shelf='fris'), grid)
     elif option == 'cavities':
         # Select all points in ice shelf cavities
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.ice_mask, grid)
@@ -100,9 +100,10 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 
     # Loop over all cells to increment volume
     # This can't really be vectorised unfortunately
+    fris_mask = grid.get_ice_mask(shelf='fris')
     for i in range(grid.nx):
         for j in range(grid.ny):
-            if option=='fris' and not grid.fris_mask[j,i]:
+            if option=='fris' and not fris_mask[j,i]:
                 # Disregard all points not in FRIS cavity
                 continue
             if option=='cavities' and not grid.ice_mask[j,i]:

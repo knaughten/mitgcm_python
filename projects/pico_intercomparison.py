@@ -80,7 +80,7 @@ def woa18_pico_input (woa_dir, out_file):
             # Select the bottom layer
             data = select_bottom(data)
             # Mask out everything except the SWS continental shelf
-            data = apply_mask(data, np.invert(grid.sws_shelf_mask))
+            data = apply_mask(data, np.invert(grid.get_shelf_mask(region='sws_shelf')))
             # Area-average and save
             data = area_average(data, grid)
             # Save monthly data
@@ -130,7 +130,7 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
             for t in range(num_time):
                 data = mask_3d(data_full[t,:], grid)
                 data = select_bottom(data)
-                data = apply_mask(data, np.invert(grid.sws_shelf_mask))
+                data = apply_mask(data, np.invert(grid.get_shelf_mask(region='sws_shelf')))
                 data = area_average(data, grid)
                 data_print = str(round_to_decimals(data, 2))
                 print data_print
@@ -161,7 +161,7 @@ def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
         for tt in range(num_time):
             print '...timestep ' + str(tt+1) + ' of ' + str(num_time)
             # Throw away non-FRIS regions and then extend into the whole domain
-            discard = np.invert(grid.fris_mask)
+            discard = np.invert(grid.get_ice_mask(shelf='fris'))
             fill = np.ones([grid.ny, grid.nx]).astype(bool)  # array of all True
             ismr_concat[t,:] = discard_and_fill(ismr[tt,:], discard, fill, use_3d=False, log=False)
             t += 1

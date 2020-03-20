@@ -7,7 +7,7 @@ from scipy.io import loadmat
 import sys
 import shutil
 
-from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, a23a_bounds, fris_bounds
+from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, region_bounds
 from file_io import write_binary, NCfile_basiclatlon, read_netcdf
 from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
 from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
@@ -91,11 +91,12 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
     id = nc.Dataset(rtopo_file, 'r')
     lon_rtopo = id.variables['lon'][:]
     lat_rtopo = id.variables['lat'][:]
+    [xmin, xmax, ymin, ymax] = region_bounds['a23a']
     # Select the region we care about
-    i_start = np.nonzero(lon_rtopo >= a23a_bounds[0])[0][0] - 1
-    i_end = np.nonzero(lon_rtopo >= a23a_bounds[1])[0][0]
-    j_start = np.nonzero(lat_rtopo >= a23a_bounds[2])[0][0] - 1
-    j_end = np.nonzero(lat_rtopo >= a23a_bounds[3])[0][0]
+    i_start = np.nonzero(lon_rtopo >= xmin)[0][0] - 1
+    i_end = np.nonzero(lon_rtopo >= xmax)[0][0]
+    j_start = np.nonzero(lat_rtopo >= ymin)[0][0] - 1
+    j_end = np.nonzero(lat_rtopo >= ymax)[0][0]
     # Read mask just from this section
     mask_rtopo = id.variables['amask'][j_start:j_end, i_start:i_end]
     id.close()
@@ -780,7 +781,7 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     dz, z_edges = vertical_layers(dz_file)
 
     # Remove FRIS
-    regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
+    regions = [region_bounds['fris1'], region_bounds['fris2']]
     for bounds in regions:
         imask_old = mask_iceshelf_box(omask_old, imask_old, lon, lat, xmin=bounds[0], xmax=bounds[1], ymin=bounds[2], ymax=bounds[3], option='ocean')
     index = imask_old == 0

@@ -10,7 +10,6 @@ from matplotlib.collections import PatchCollection
 import sys
 
 from ..utils import dist_btw_points, ice_shelf_front_points
-from ..constants import fris_bounds
 
 
 # Create the rectangular Polygon patches for plotting a slice (necessary to properly represent partial cells) and the corresponding data values. This is done with 4 helper functions:
@@ -484,10 +483,11 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
     lon, lat = grid.get_lon_lat(gtype=gtype)
     i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
     land_mask = grid.get_land_mask(gtype=gtype)
+    fris_mask = grid.get_ice_mask(shelf='fris', gtype=gtype)
     if shelf == 'ronne':
-        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon < -46)
+        ice_mask = fris_mask*(lon < -46)
     elif shelf == 'filchner':
-        ice_mask = grid.get_fris_mask(gtype=gtype)*(lon > -46)
+        ice_mask = fris_mask*(lon > -46)
     else:
         ice_mask = grid.get_ice_mask(gtype=gtype)
     hfac = grid.get_hfac(gtype=gtype)

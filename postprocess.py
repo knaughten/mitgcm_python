@@ -20,7 +20,7 @@ from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
 from plot_utils.windows import set_panels
-from constants import deg_string, bounds_PIB, bounds_Dot
+from constants import deg_string, region_bounds
 from calculus import area_average
 
 
@@ -1047,10 +1047,10 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
             print '...at ' + l            
             if l == 'PIB':
                 loc_name = 'Pine Island Bay'
-                [xmin, xmax, ymin, ymax] = bounds_PIB
+                [xmin, xmax, ymin, ymax] = region_bounds['pine_island_bay']
             elif l == 'Dot':
                 loc_name = 'Dotson front'
-                [xmin, xmax, ymin, ymax] = bounds_Dot
+                [xmin, xmax, ymin, ymax] = region_bounds['dotson_front']
             # Average over the correct region
             data = mask_outside_box(data_full, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
             data = area_average(data, grid, time_dependent=True)

@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_ice, wed_gyre_bounds, Cp_sw
+from constants import rho_ice, region_bounds, Cp_sw
 from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
 from calculus import area_integral, vertical_integral, indefinite_ns_integral
 from plot_utils.slices import get_transect
@@ -125,7 +125,7 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
 
 # Arguments:
 # ismr: 2D (lat x lon) array of ice shelf melt rate in m/y
-# mask: boolean array which is True in the points to be included in the calculation (such as grid.fris_mask or grid.ice_mask)
+# mask: boolean array which is True in the points to be included in the calculation (such as grid.ice_mask)
 # grid: Grid object
 
 # Optional keyword argument:
@@ -174,7 +174,8 @@ def barotropic_streamfunction (u, grid):
 def wed_gyre_trans (u, grid):
 
     strf = barotropic_streamfunction(u, grid)
-    vmin, vmax = var_min_max(strf, grid, xmin=wed_gyre_bounds[0], xmax=wed_gyre_bounds[1], ymin=wed_gyre_bounds[2], ymax=wed_gyre_bounds[3], gtype='u')
+    [xmin, xmax, ymin, ymax] = region_bounds['wed_gyre']
+    vmin, vmax = var_min_max(strf, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype='u')
     return -1*vmin
 
 

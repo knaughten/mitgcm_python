@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom
-from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_shelf_h0, sws_shelf_line, berkner_island_bounds, rEarth, deg2rad, a23a_bounds
+from constants import region_bounds, region_split, sose_res, shelf_h0, rEarth, deg2rad
 
 
 # Grid object containing lots of grid variables:
@@ -38,10 +38,6 @@ from constants import fris_bounds, ewed_bounds, sose_res, sws_shelf_bounds, sws_
 # draft: ice shelf draft (negative, m, XY)
 # land_mask, land_mask_u, land_mask_v: boolean land masks on the tracer, u, and v grids (XY). True means it is masked.
 # ice_mask, ice_mask_u, ice_mask_v: boolean ice shelf masks on the tracer, u, and v grids (XY)
-# fris_mask, fris_mask_u, fris_mask_v: boolean FRIS masks on the tracer, u, and v grids (XY)
-# ewed_mask: boolean Eastern Weddell ice shelf mask on the tracer grid (XY)
-# sws_shelf_mask: boolean Southern Weddell Sea continental shelf mask on the tracer grid (XY)
-# sws_shelf_mask_inner, sws_shelf_mask_outer: boolean inner and outer Southern Weddell Sea continental shelf masks on the tracer grid (XY)
 class Grid:
 
     # Initialisation arguments:
@@ -155,16 +151,6 @@ class Grid:
         self.ice_mask = self.build_ice_mask(self.hfac)
         self.ice_mask_u = self.build_ice_mask(self.hfac_w)
         self.ice_mask_v = self.build_ice_mask(self.hfac_s)
-        # FRIS masks
-        self.fris_mask = self.build_fris_mask(self.ice_mask, self.lon_2d, self.lat_2d)
-        self.fris_mask_u = self.build_fris_mask(self.ice_mask_u, self.lon_corners_2d, self.lat_2d)
-        self.fris_mask_v = self.build_fris_mask(self.ice_mask_v, self.lon_2d, self.lat_corners_2d)
-        # Eastern Weddell ice shelf mask
-        self.ewed_mask = self.build_ewed_mask(self.ice_mask, self.lon_2d, self.lat_2d)
-        # Southern Weddell Sea continental shelf mask
-        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, self.ice_mask, self.lon_2d, self.lat_2d, self.bathy)
-        # Inner and outer sections
-        self.sws_shelf_mask_inner, self.sws_shelf_mask_outer = self.build_sws_shelf_mask_inner_outer(self.sws_shelf_mask, self.lon_2d, self.lat_2d)
 
         
     # Given a 3D hfac array on any grid, create the land mask.
@@ -177,58 +163,7 @@ class Grid:
     def build_ice_mask (self, hfac):
 
         return (np.sum(hfac, axis=0)!=0)*(hfac[0,:]<1)
-
-
-    # Create a mask just containing FRIS ice shelf points.
-    # Arguments:
-    # ice_mask, lon, lat: 2D arrays of the ice shelf mask, longitude, and latitude on any grid
-    def build_fris_mask (self, ice_mask, lon, lat):
-
-        fris_mask = np.zeros(ice_mask.shape, dtype='bool')
-        # Identify FRIS in two parts, split along the line 45W
-        # Each set of 4 bounds is in form [lon_min, lon_max, lat_min, lat_max]
-        regions = [[fris_bounds[0], -45, fris_bounds[2], -74.4], [-45, fris_bounds[1], fris_bounds[2], -77.85]]
-        for bounds in regions:
-            # Select the ice shelf points within these bounds
-            index = ice_mask*(lon >= bounds[0])*(lon <= bounds[1])*(lat >= bounds[2])*(lat <= bounds[3])
-            fris_mask[index] = True
-        return fris_mask
-
     
-    # Like build_fris_mask, but for Eastern Weddell ice shelves. A fair bit simpler.
-    def build_ewed_mask (self, ice_mask, lon, lat):
-
-        return ice_mask*(lon >= ewed_bounds[0])*(lon <= ewed_bounds[1])*(lat >= ewed_bounds[2])*(lat <= ewed_bounds[3])
-
-
-    # Create a mask just containing continental shelf points in front of FRIS.
-    # These points must be:
-    # 1. within the rectangle given by sws_shelf_bounds,
-    # 2. bathymetry shallower than 1250 m,
-    # 3. not ice shelf or land points.
-    def build_sws_shelf_mask(self, land_mask, ice_mask, lon, lat, bathy):
-
-        [xmin, xmax, ymin, ymax] = sws_shelf_bounds
-
-        if self.split == 0:
-            # Need to adjust the longitude bounds so in range 0-360
-            if xmin < 0:
-                xmin += 360
-            if xmax < 0:
-                xmax += 360
-
-        return np.invert(land_mask)*np.invert(ice_mask)*(bathy >= sws_shelf_h0)*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-
-
-    # Split this mask into inner and outer sections, based on a straight line cutting across the shelf.
-    def build_sws_shelf_mask_inner_outer(self, sws_shelf_mask, lon, lat):
-        
-        [lon0, lon1, lat0, lat1] = sws_shelf_line
-        bdry = (lat1-lat0)/float(lon1-lon0)*(lon-lon0) + lat0
-        inner = sws_shelf_mask*(lat < bdry)
-        outer = sws_shelf_mask*(lat >= bdry)
-        return inner, outer
-
         
     # Return the longitude and latitude arrays for the given grid type.
     # 't' (default), 'u', 'v', 'psi', and 'w' are all supported.
@@ -290,33 +225,50 @@ class Grid:
             print 'Error (get_land_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
 
-            
-    # Return the ice shelf mask for the given grid type.
-    def get_ice_mask (self, gtype='t'):
 
+    # Restrict a mask to a given region.
+    def restrict_mask (self, mask, region_name, gtype='t'):
+
+        lon, lat = self.get_lon_lat(gtype=gtype)
+        mask_new = np.zeros(mask.shape, dtype='bool')
+        # Find the bounds on the region (possibly split into 2).
+        if region_name in region_split:
+            names = [region_name+'1', region_name+'2']
+        else:
+            names = [region_name]
+        for name in names:
+            [xmin, xmax, ymin, ymax] = region_bounds[name]
+            if self.split == 0:
+                # Need to adjust the longitude bounds so in range 0-360
+                if xmin < 0:
+                    xmin += 360
+                if xmax < 0:
+                    xmax += 360
+            # Select the mask points within these bounds
+            index = mask*(lon >= xmin)*(lon <= xmax)*(lat <= ymin)*(lat >= ymax)
+            mask_new[index] = True
+        return mask_new
+
+            
+    # Return the ice shelf mask for the given ice shelf and grid type.
+    def get_ice_mask (self, shelf='all', gtype='t'):
+
+        # Select grid type
         if gtype == 't':
-            return self.ice_mask
+            ice_mask_all = self.ice_mask
         elif gtype == 'u':
-            return self.ice_mask_u
+            ice_mask_all = self.ice_mask_u
         elif gtype == 'v':
-            return self.ice_mask_v
+            ice_mask_all = self.ice_mask_v
         else:
             print 'Error (get_ice_mask): no mask exists for the ' + gtype + ' grid'
             sys.exit()
-
-
-    # Return the FRIS mask for the given grid type.
-    def get_fris_mask (self, gtype='t'):
-
-        if gtype == 't':
-            return self.fris_mask
-        elif gtype == 'u':
-            return self.fris_mask_u
-        elif gtype == 'v':
-            return self.fris_mask_v
+        
+        # Select ice shelf
+        if shelf == 'all':
+            return ice_mask_all
         else:
-            print 'Error (get_fris_mask): no mask exists for the ' + gtype + ' grid'
-            sys.exit()
+            return self.restrict_mask(ice_mask_all, shelf, gtype=gtype)
 
 
     # Build and return an open ocean mask for the given grid type.
@@ -331,13 +283,23 @@ class Grid:
         return open_ocean
 
     
-    # Build and return a Berkner Island mask for the given grid type.
-    def get_bi_mask (self, gtype='t'):
+    # Build and return a continental shelf mask for the given grid type and region. These points must be:
+    # 1. within the bounds of the given region,
+    # 2. bathymetry shallower than 1250 m,
+    # 3. not ice shelf or land points.
+    def get_shelf_mask(self, region='all', gtype='t'):
 
+        land_mask = self.get_land_mask(gtype=gtype)
+        ice_mask = self.get_ice_mask(gtype=gtype)
         lon, lat = self.get_lon_lat(gtype=gtype)
-        [lon0, lon1, lat0, lat1] = berkner_island_bounds
-        return (lon>=lon0)*(lon<=lon1)*(lat>=lat0)*(lat<=lat1)*self.get_land_mask(gtype=gtype)
+        # Assume bathymetry on the tracer grid.
 
+        shelf_mask_all = np.invert(land_mask)*np.invert(ice_mask)*(bathy >= shelf_h0)
+        if region == 'all':
+            return shelf_mask_all
+        else:
+            return self.restrict_mask(shelf_mask_all, region, gtype=gtype)
+        
 
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
     def get_coast_mask (self, gtype='t', ignore_iceberg=True):
@@ -656,9 +618,8 @@ class SOSEGrid(Grid):
         self.land_mask = self.build_land_mask(self.hfac)
         self.land_mask_u = self.build_land_mask(self.hfac_w)
         self.land_mask_v = self.build_land_mask(self.hfac_s)
-        # Southern Weddell Sea continental shelf land mask
-        # Pass dummy ice mask with all False
-        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape).astype(bool), self.lon_2d, self.lat_2d, self.bathy)
+        # Dummy ice mask with all False
+        self.ice_mask = np.zeros(self.land_mask.shape).astype(bool)
     
 
 
@@ -708,23 +669,8 @@ class SOSEGrid(Grid):
         return data
 
 
-    # Dummy definitions for functions we don't want, which would otherwise be inhertied from Grid
-    def build_ice_mask (self, hfac):
-        print 'Error (SOSEGrid): no ice shelves to mask'
-        sys.exit()
-    def build_fris_mask (self, hfac):
-        print 'Error (SOSEGrid): no ice shelves to mask'
-        sys.exit()
-    def get_ice_mask (self, gtype='t'):
-        print 'Error (SOSEGrid): no ice shelves to mask'
-        sys.exit()
-    def get_fris_mask (self, gtype='t'):
-        print 'Error (SOSEGrid): no ice shelves to mask'
-        sys.exit()
-
 
 # WOAGrid object containing basic grid variables
-# Only inherits Grid for the build_sws_shelf_mask function - this is probably sloppy
 class WOAGrid(Grid):
 
     def __init__ (self, file_path, split=180):
@@ -762,8 +708,7 @@ class WOAGrid(Grid):
         self.bathy = select_bottom(depth_masked, return_masked=False)
         # Build land mask
         self.land_mask = np.amin(mask, axis=0)
-        # Now build sws_shelf_mask
-        self.sws_shelf_mask = self.build_sws_shelf_mask(self.land_mask, np.zeros(self.land_mask.shape).astype(bool), self.lon_2d, self.lat_2d, self.bathy)        
+        self.ice_mask = np.zeros(self.land_mask.shape).astype(bool)
     
 
 # CMIPGrid object containing basic grid variables for a CMIP6 ocean grid.
