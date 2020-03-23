@@ -86,4 +86,17 @@ bedmap_bdry = 3333000    # Polar stereographic coordinate (m) on boundary
 bedmap_res = 1000    # Resolution (m)
 bedmap_missing_val = -9999    # Missing value for bathymetry north of 60S
 
+# Rignot 2013 estimates of ice shelf melting
+# [mass loss in Gt/y, standard deviation in mass loss, average melt rate in m/y, standard deviation in melt rate]
+# Dotson and Crosson are combined.
+rignot_melt = {
+    'getz': [144.9, 14, 4.3, 0.4],
+    'dotson_crosson': [83.7, 8, 9.3, 0.74],
+    'thwaites': [97.5, 7, 17.7, 1],
+    'pig': [101.2, 8, 16.2, 1],
+    'cosgrove': [8.5, 2, 2.8, 0.7],
+    'abbot': [51.8, 19, 1.7, 0.6],
+    'venable': [19.4, 2, 6.1, 0.7]
+}
+
 

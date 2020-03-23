@@ -23,7 +23,7 @@ from constants import deg_string, region_names
 
 # Optional keyword arguments:
 # shelf: 'fris' (default) restricts the calculation to FRIS. 'ewed' restricts the calculation to ice shelves between the Eastern Weddell bounds given in constants.py. 'all' considers all ice shelves.
-# result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
+# result: 'massloss' (default) calculates the total mass loss in Gt/y. 'melting' calculates the area-averaged melt rate in m/y.
 # time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
 
@@ -481,7 +481,7 @@ def set_parameters (var):
         var_name = 'SHIfwFlx'
         mass_balance = var.endswith('mass_balance')
         if var.endswith('melting'):
-            result = 'meltrate'
+            result = 'melting'
             units = 'm/y'
         else:
             result = 'massloss'

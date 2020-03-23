@@ -9,17 +9,17 @@ import sys
 import numpy as np
 import datetime
 
-from grid import choose_grid
+from grid import choose_grid, Grid
 from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
 from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label
 from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
-from constants import deg_string
+from constants import deg_string, rignot_melt
 from interpolation import interp_bilinear
 from calculus import area_average
-from timeseries import trim_and_diff
+from timeseries import trim_and_diff, timeseries_ismr
 
 
 # Create a temperature vs salinity distribution plot. Temperature and salinity are split into NxN bins (default N=1000) and the colour of each bin shows the log of the volume of water masses in that bin.
@@ -357,7 +357,57 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
     elif loc == 'Dot':
         loc_string = 'Dotson front '
     hovmoller_ts_plot(temp_diff, salt_diff, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, ctype='plusminus', loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
-        
+
+
+# Compare simulated mean melt rates for each Amundsen Sea ice shelf with the range given by Rignot 2013. The blue dots are the model output and the black error ranges are from Rignot.
+# Input arguments:
+# file_path: path to precomputed timeseries file (set precomputed=True) or a NetCDF model output file, containing SHIfwFlx data for the whole simulation (or a time-average - it will be averaged if it's not already).
+# Optional keyword arguments:
+# precomputed: set to True if file_path is a precomputed timeseries file with the melt rates for each ice shelf already there
+# option: 'melting' (plot melt rates in m/y) or 'massloss' (plot basal mass loss)
+# fig_name: as in function finished_plot
+def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', fig_name=None):
+
+    shelf_names = ['getz', 'dotson_crosson', 'thwaites', 'pig', 'cosgrove', 'abbot', 'venable']
+    shelf_titles = ['Getz', 'Dotson & Crosson', 'Thwaites', 'Pine Island', 'Cosgrove', 'Abbot', 'Venable']
+    num_shelves = len(shelf_names)
+
+    if not precomputed:
+        grid = Grid(file_path)
+
+    model_melt = []
+    obs_melt = []
+    obs_std = []
+    for shelf in shelf_names:
+        var_name = shelf+'_'+option
+        if precomputed:
+            model_melt.append(read_netcdf(file_path, var_name, time_average=True))
+        else:
+            model_melt.append(timeseries_ismr(file_path, grid, shelf=shelf, result=option, time_average=True))
+        obs = rignot_melt[shelf]
+        if option == 'massloss':
+            obs_melt.append(obs[0])
+            obs_std.append(obs[1])
+        elif option == 'melting':
+            obs_melt.append(obs[2])
+            obs_std.append(obs[3])
+        else:
+            print 'Error (amundsen_rignot_comparison): invalid option ' + option
+            sys.exit()
+
+    fig, ax = plt.subplots()
+    ax.plot(range(num_shelves), model_melt, 'o', color='blue')
+    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none')
+    plt.xticks(range(num_shelves), shelf_title, rotation='vertical')
+    if option == 'massloss':
+        plt.title('Basal mass loss')
+        plt.ylabel('Gt/y')
+    elif option == 'melting':
+        plt.title('Average melt rate')
+        plt.ylabel('m/y')
+    finished_plot(fig, fig_name=fig_name)
+            
+    
         
     
 

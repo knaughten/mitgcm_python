@@ -129,13 +129,13 @@ def t_minus_tf (temp, salt, grid, time_dependent=False):
 # grid: Grid object
 
 # Optional keyword argument:
-# result: 'massloss' (default) calculates the total mass loss in Gt/y. 'meltrate' calculates the area-averaged melt rate in m/y.
+# result: 'massloss' (default) calculates the total mass loss in Gt/y. 'melting' calculates the area-averaged melt rate in m/y.
 
 # Output: float containing mass loss or average melt rate
 
 def total_melt (ismr, mask, grid, result='massloss'):
 
-    if result == 'meltrate':
+    if result == 'melting':
         # Area-averaged melt rate
         return np.sum(ismr*grid.dA*mask)/np.sum(grid.dA*mask)
     elif result == 'massloss':
