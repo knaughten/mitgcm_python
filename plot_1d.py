@@ -151,7 +151,7 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
 def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
-        print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
+        print 'Error (read_plot_timeseries): must pass a list of 2 file paths when diff=True.'
         sys.exit()
 
     if precomputed:
@@ -209,27 +209,31 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
 # NetCDF interface to timeseries_multi_plot. Can set diff=True and file_path as a list of two file paths if you want a difference plot.
 def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
 
-    if diff:
-        if not isinstance(file_path, list) or len(file_path) != 2:
-            print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
-            sys.exit()
-        file_path_1 = file_path[0]
-        file_path_2 = file_path[1]
-        time_1 = netcdf_time(file_path_1, monthly=(monthly and not precomputed))
-        time_2 = netcdf_time(file_path_2, monthly=(monthly and not precomputed))
-        time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
-    else:
-        time = netcdf_time(file_path, monthly=(monthly and not precomputed))
-    
-    data = []
-    labels = []
-    units = None
+    if diff and (not isinstance(file_path, list) or len(file_path) != 2):
+        print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
+        sys.exit()
+
+    if precomputed:
+        # Read time arrays
+        if diff:
+            time_1 = netcdf_time(file_path[0], monthly=False)
+            time_2 = netcdf_time(file_path[1], monthly=False)
+            time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
+        else:
+            time = netcdf_time(file_path, monthly=False)
+
+    # Set up the colours
     if colours is None:
         colours = ['blue', 'red', 'black', 'green', 'cyan', 'magenta', 'yellow']
         if len(var_names) > len(colours):
             print 'Error (read_plot_timeseries_multi): need to specify colours if there are more than 7 variables.'
             sys.exit()
         colours = colours[:len(var_names)]
+    
+    data = []
+    labels = []
+    units = None        
+    # Loop over variables
     for var in var_names:
         if var.endswith('mass_balance'):
             print 'Error (read_plot_timeseries_multi): ' + var + ' is already a multi-plot by itself.'
@@ -250,9 +254,10 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
                 data.append(read_netcdf(file_path, var))
         else:
             if diff:
-                data.append(calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1])
+                time, data_tmp = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
             else:
-                data.append(calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1])
+                time, data_tmp = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+            data.append(data_tmp)
     title, labels = trim_titles(labels)
     if diff:
         title = 'Change in ' + title[0].lower() + title[1:]
