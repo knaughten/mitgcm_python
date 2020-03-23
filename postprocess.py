@@ -120,7 +120,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'PAS':
-        melt_names = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
+        melt_names = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
         read_plot_timeseries_multi(melt_names, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_multi_melt.png', monthly=monthly)
         var_names = ['eta_avg', 'seaice_area']
     for var in var_names:
@@ -327,11 +327,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'PAS':
-        melt_names = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
+        melt_names = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
         read_plot_timeseries_multi(melt_names, [output_dir_1+timeseries_file, output_dir_2+timeseries_file], diff=True, precomputed=True, fig_name=fig_dir+'timeseries_multi_melt_diff.png', monthly=monthly)
         var_names = ['eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries_diff(var, output_dir_1+timeseries_file, output_dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
+        read_plot_timeseries_diff(var, [output_dir_1+timeseries_file, output_dir_2+timeseries_file], precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
     # Hovmoller plots
     if key == 'PAS':
@@ -484,7 +484,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
         elif key == 'WSK':
             timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
         elif key == 'PAS':
-            timeseries_types = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'seaice_area']
+            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'eta_avg', 'seaice_area']
 
     # Build the grid
     grid = Grid(mit_file)
@@ -1087,7 +1087,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         vmax_diff = [0.3, None, None, None, 4]
         change_points = [None, None, [5,10,30], None, None]
         ymax = -70
-        timeseries_types = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
+        melt_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
         hovmoller_loc = ['PIB', 'Dot']
         hovmoller_bounds = [-1.5, 1.5, 34, 34.725]
         hovmoller_t_contours = [0, 1]
@@ -1112,11 +1112,11 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
     # Plot lat-lon diagnostic variables
     for n in range(len(latlon_names)):
         read_plot_latlon_comparison(latlon_names[n], name_1, name_2, dir_1, dir_2, fname, grid=grid, time_index=0, fig_name=fig_dir+latlon_names[n]+'.png', vmin=vmin[n], vmax=vmax[n], vmin_diff=vmin_diff[n], vmax_diff=vmax_diff[n], change_points=change_points[n], ymax=ymax)
-    # Plot timeseries: 1, 2, and difference
-    for var_name in timeseries_types:
-        for n in range(2):
-            read_plot_timeseries(var_name, dirs[n]+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var_name+'_'+names[n]+'.png')
-        read_plot_timeseries_diff(var_name, dir_1+timeseries_file, dir_2+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var_name+'_diff.png')
+    # Plot multi timeseries: 1, 2, and difference
+    for n in range(2):
+        read_plot_timeseries_multi(melt_types, dirs[n]+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_melt_multi_'+names[n]+'.png')
+    read_plot_timeseries_multi(melt_types, [dir_1+timeseries_file, dir_2+timeseries_file], diff=True, precomputed=True, fig_name=fig_dir+'timeseries_melt_multi_diff.png')
+    # Plot Hovmoller plots: 1, 2, and difference
     for loc in hovmoller_loc:
         for n in range(2):
             read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png')
