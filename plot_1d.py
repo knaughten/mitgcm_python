@@ -130,16 +130,17 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
         # Make legend
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     
-    finished_plot(fig, fig_name=fig_name, dpi=dpi)    
+    finished_plot(fig, fig_name=fig_name, dpi=dpi)
     
 
-# User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot.
+# User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot. Can also do difference plots (2 minus 1).
 
 # Arguments:
 # var: keyword indicating which timeseries to plot. The options are defined in function set_parameters.
-# file_path: if precomputed=False, either a single filename or a list of filenames, to NetCDF files containing the necessary var_name as defined in set_parameters. If precomputed=True, path to the timeseries file created by function precompute_timeseries.
+# file_path: if precomputed=False, either a single filename or a list of filenames, to NetCDF files containing the necessary var_name as defined in set_parameters. If precomputed=True, path to the timeseries file created by function precompute_timeseries. If diff=True, this must be a list of length 2 (containing either 2 lists or 2 filenames), corresponding to simulations 1 and 2.
 
 # Optional keyword arguments:
+# diff: indicates this is a difference plot between two simulations.
 # precomputed: indicates that the timeseries have been precomputed (by function precompute_timeseries in postprocess.py) and saved in file_path
 # grid: as in function read_plot_latlon
 # lon0, lat0: point to interpolate to for var='temp_polynya' or 'salt_polynya'
@@ -147,70 +148,63 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
+def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
 
-    # Set parameters (only care about title and units)
-    title, units = set_parameters(var)[2:4]
-
-    if precomputed:
-        # Read the time array; don't need to back up one month
-        time = netcdf_time(file_path, monthly=False)
-
-    if var.endswith('mass_balance'):
-        if precomputed:
-            # Read the fields from the timeseries file
-            shelf = var[:var.index('_mass_balance')]
-            melt = read_netcdf(file_path, shelf+'_total_melt')
-            freeze = read_netcdf(file_path, shelf+'_total_freeze')
-        else:
-            # Calculate the timeseries from the MITgcm file(s)
-            time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
-        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
+    if diff:
+        # Extract 2 file paths
+        if not isinstance(file_path, list) or len(file_path) != 2:
+            print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
+            sys.exit()
+        file_path_1 = file_path[0]
+        file_path_2 = file_path[1]
+        # Read time arrays
+        time_1 = netcdf_time(file_path_1, monthly=(monthly and not precomputed))
+        time_2 = netcdf_time(file_path_2, monthly=(monthly and not precomputed))
+        time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
     else:
-        if precomputed:
-            data = read_netcdf(file_path, var)
-        else:
-            time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
-
-
-
-# User interface for difference timeseries. Given simulations 1 and 2, plot the difference (2 minus 1) for the given variable.
-# Arguments are the same as in read_plot_timeseries, but two file paths/lists are supplied. It is assumed the two simulations start at the same time, but it's okay if one is longer than the other.
-def read_plot_timeseries_diff (var, file_path_1, file_path_2, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True):
+        time = netcdf_time(file_path, monthly=(monthly and not precomputed))
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
-    # Edit the title to show it's a difference plot
-    title = 'Change in ' + title[0].lower() + title[1:]
-
-    if precomputed:
-        # Read the time arrays
-        time_1 = netcdf_time(file_path_1, monthly=False)
-        time_2 = netcdf_time(file_path_2, monthly=False)
+    if diff:
+        title = 'Change in ' + title[0].lower() + title[1:]
 
     # Inner function to read a timeseries from both files and calculate the differences, trimming if needed. Only useful if precomputed=True.
     def read_and_trim (var_name):
         data_1 = read_netcdf(file_path_1, var_name)
         data_2 = read_netcdf(file_path_2, var_name)
-        time, data_diff = trim_and_diff(time_1, time_2, data_1, data_2)
-        return time, data_diff
+        data_diff = trim_and_diff(time_1, time_2, data_1, data_2)[1:]
+        return data_diff
 
     if var.endswith('mass_balance'):
         if precomputed:
+            # Read the fields from the timeseries file
             shelf = var[:var.index('_mass_balance')]
-            time, melt_diff = read_and_trim(shelf+'_total_melt')
-            freeze_diff = read_and_trim(shelf+'_total_freeze')[1]
+            if diff:
+                melt = read_and_trim(shelf+'_total_melt')
+                freeze = read_and_trim(shelf+'_total_freeze')
+            else:
+                melt = read_netcdf(file_path, shelf+'_total_melt')
+                freeze = read_netcdf(file_path, shelf+'_total_freeze')
         else:
-            # Calculate the difference timeseries
-            time, melt_diff, freeze_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
-        timeseries_multi_plot(time, [melt_diff, freeze_diff, melt_diff+freeze_diff], ['Change in melting\n(>0)', 'Change in freezing\n(<0)', 'Change in net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name)
+            # Calculate the timeseries from the MITgcm file(s)
+            if diff:
+                melt, freeze = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)[1:]
+            else:
+                melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)[1:]
+        timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
     else:
         if precomputed:
-            time, data_diff = read_and_trim(var)
+            if diff:
+                data = read_and_trim(var)
+            else:
+                data = read_netcdf(file_path, var)
         else:
-            time, data_diff = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        make_timeseries_plot(time, data_diff, title=title, units=units, monthly=monthly, fig_name=fig_name)
+            if diff:
+                data = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)[1:]
+            else:
+                data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1:]
+        make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
 # NetCDF interface to timeseries_multi_plot. Can set diff=True and file_path as a list of two file paths if you want a difference plot.
@@ -262,5 +256,5 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
                 data.append(calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1])
     title, labels = trim_titles(labels)
     if diff:
-        title = 'Change in ' + title
+        title = 'Change in ' + title[0].lower() + title[1:]
     timeseries_multi_plot(time, data, labels, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)

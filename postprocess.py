@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
 from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
-from plot_1d import read_plot_timeseries, read_plot_timeseries_diff, read_plot_timeseries_multi
+from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot, read_plot_latlon_comparison
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
@@ -120,7 +120,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'PAS':
-        melt_names = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
+        melt_names = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
         read_plot_timeseries_multi(melt_names, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_multi_melt.png', monthly=monthly)
         var_names = ['eta_avg', 'seaice_area']
     for var in var_names:
@@ -327,11 +327,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'PAS':
-        melt_names = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
+        melt_names = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
         read_plot_timeseries_multi(melt_names, [output_dir_1+timeseries_file, output_dir_2+timeseries_file], diff=True, precomputed=True, fig_name=fig_dir+'timeseries_multi_melt_diff.png', monthly=monthly)
         var_names = ['eta_avg', 'seaice_area']
     for var in var_names:
-        read_plot_timeseries_diff(var, [output_dir_1+timeseries_file, output_dir_2+timeseries_file], precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
+        read_plot_timeseries(var, [output_dir_1+timeseries_file, output_dir_2+timeseries_file], diff=True, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'_diff.png', monthly=monthly)
 
     # Hovmoller plots
     if key == 'PAS':
@@ -484,7 +484,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
         elif key == 'WSK':
             timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
         elif key == 'PAS':
-            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'eta_avg', 'seaice_area']
+            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'seaice_area']
 
     # Build the grid
     grid = Grid(mit_file)
