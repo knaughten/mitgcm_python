@@ -369,7 +369,7 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
 def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', fig_name=None):
 
     shelf_names = ['getz', 'dotson_crosson', 'thwaites', 'pig', 'cosgrove', 'abbot', 'venable']
-    shelf_titles = ['Getz', 'Dotson & Crosson', 'Thwaites', 'Pine Island', 'Cosgrove', 'Abbot', 'Venable']
+    shelf_titles = ['Getz', 'Dotson &\nCrosson', 'Thwaites', 'Pine Island', 'Cosgrove', 'Abbot', 'Venable']
     num_shelves = len(shelf_names)
 
     if not precomputed:
@@ -397,14 +397,18 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 
     fig, ax = plt.subplots()
     ax.plot(range(num_shelves), model_melt, 'o', color='blue')
-    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none')
-    plt.xticks(range(num_shelves), shelf_title, rotation='vertical')
+    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4)
+    ax.grid(True)
+    plt.xticks(range(num_shelves), shelf_titles, rotation='vertical')
+    plt.subplots_adjust(bottom=0.2)
     if option == 'massloss':
-        plt.title('Basal mass loss')
-        plt.ylabel('Gt/y')
+        title = 'Basal mass loss'
+        units = 'Gt/y'
     elif option == 'melting':
-        plt.title('Average melt rate')
-        plt.ylabel('m/y')
+        title = 'Average melt rate'
+        units = 'm/y'
+    plt.title(title, fontsize=16)
+    plt.ylabel(units, fontsize=12)
     finished_plot(fig, fig_name=fig_name)
             
     
