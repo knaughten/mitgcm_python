@@ -157,12 +157,15 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
             sys.exit()
         file_path_1 = file_path[0]
         file_path_2 = file_path[1]
+
+    if precomputed:
         # Read time arrays
-        time_1 = netcdf_time(file_path_1, monthly=(monthly and not precomputed))
-        time_2 = netcdf_time(file_path_2, monthly=(monthly and not precomputed))
-        time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
-    else:
-        time = netcdf_time(file_path, monthly=(monthly and not precomputed))
+        if diff:
+            time_1 = netcdf_time(file_path_1, monthly=(monthly and not precomputed))
+            time_2 = netcdf_time(file_path_2, monthly=(monthly and not precomputed))
+            time = trim_and_diff(time_1, time_2, time_1, time_2)[0]
+        else:
+            time = netcdf_time(file_path, monthly=(monthly and not precomputed))
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
@@ -189,9 +192,9 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
         else:
             # Calculate the timeseries from the MITgcm file(s)
             if diff:
-                melt, freeze = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)[1:]
+                time, melt, freeze = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
             else:
-                melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)[1:]
+                time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
         timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
     else:
         if precomputed:
@@ -201,9 +204,9 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 data = read_netcdf(file_path, var)
         else:
             if diff:
-                data = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)[1:]
+                time, data = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, monthly=monthly)
             else:
-                data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1:]
+                time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
