@@ -245,7 +245,7 @@ class Grid:
                 if xmax < 0:
                     xmax += 360
             # Select the mask points within these bounds
-            index = mask*(lon >= xmin)*(lon <= xmax)*(lat <= ymin)*(lat >= ymax)
+            index = mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
             mask_new[index] = True
         return mask_new
 
