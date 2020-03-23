@@ -247,14 +247,14 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
             sys.exit()
         if precomputed:
             if diff:
-                data_1 = read_netcdf(file_path_1, var)
-                data_2 = read_netcdf(file_path_2, var)
+                data_1 = read_netcdf(file_path[0], var)
+                data_2 = read_netcdf(file_path[1], var)
                 data.append(trim_and_diff(time_1, time_2, data_1, data_2)[1])
             else:
                 data.append(read_netcdf(file_path, var))
         else:
             if diff:
-                time, data_tmp = calc_special_timeseries_diff(var, file_path_1, file_path_2, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+                time, data_tmp = calc_special_timeseries_diff(var, file_path[0], file_path[1], grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
             else:
                 time, data_tmp = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
             data.append(data_tmp)
