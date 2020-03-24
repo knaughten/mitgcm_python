@@ -129,7 +129,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     # Hovmoller plots
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
-            read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly)
+            read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly, smooth=6)
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'eta', 'vel', 'velice']
@@ -336,7 +336,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Hovmoller plots
     if key == 'PAS':
         for loc in ['PIB', 'Dot']:
-            read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly)
+            read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly, smooth=6)
 
     # Now make lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'eta', 'vel', 'velice']
@@ -1119,8 +1119,8 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
     # Plot Hovmoller plots: 1, 2, and difference
     for loc in hovmoller_loc:
         for n in range(2):
-            read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png')
-        read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png')
+            read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png', smooth=6)
+        read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
 
     
             
