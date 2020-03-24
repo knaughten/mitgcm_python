@@ -1089,9 +1089,9 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         ymax = -70
         melt_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
         hovmoller_loc = ['PIB', 'Dot']
-        hovmoller_bounds = [-1.5, 1.5, 34, 34.725]
+        hovmoller_bounds = [-1.8, 1.2, 34, 34.725]
         hovmoller_t_contours = [0, 1]
-        hovmoller_s_contours = [34.5, 34.7]
+        hovmoller_s_contours = [34.5, 34.6, 34.7]
     else:
         print 'Error (plot_everything_compare): need to write the code for simulation key ' + key
         sys.exit()

@@ -366,8 +366,10 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
 # Optional keyword arguments:
 # precomputed: set to True if file_path is a precomputed timeseries file with the melt rates for each ice shelf already there
 # option: 'melting' (plot melt rates in m/y) or 'massloss' (plot basal mass loss)
+# file_path_2: file_path for a second simulation, to plot on same axes.
+# sim_names: list of length 2 containing simulation names for file_path and file_path_2.
 # fig_name: as in function finished_plot
-def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', fig_name=None):
+def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', file_path_2=None, sim_names=None, fig_name=None):
 
     shelf_names = ['getz', 'dotson_crosson', 'thwaites', 'pig', 'cosgrove', 'abbot', 'venable']
     shelf_titles = ['Getz', 'Dotson &\nCrosson', 'Thwaites', 'Pine Island', 'Cosgrove', 'Abbot', 'Venable']
@@ -375,16 +377,27 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 
     if not precomputed:
         grid = Grid(file_path)
+        
+    second = file_path_2 is not None
+    if second and (sim_names is None or not isinstance(sim_names, list) or len(sim_names) != 2):
+        print 'Error (amundsen_rignot_comparison): must set sim_names as list of 2 simulation names if file_path_2 is set.'
+        sys.exit()
 
     model_melt = []
+    if second:
+        model2_melt = []
     obs_melt = []
     obs_std = []
     for shelf in shelf_names:
         var_name = shelf+'_'+option
         if precomputed:
             model_melt.append(read_netcdf(file_path, var_name, time_average=True))
+            if second:
+                model2_melt.append(read_netcdf(file_path_2, var_name, time_average=True))
         else:
             model_melt.append(timeseries_ismr(file_path, grid, shelf=shelf, result=option, time_average=True))
+            if second:
+                model2_melt.append(timeseries_ismr(file_path_2, grid, shelf=shelf, result=option, time_average=True))
         obs = rignot_melt[shelf]
         if option == 'massloss':
             obs_melt.append(obs[0])
@@ -397,7 +410,12 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
             sys.exit()
 
     fig, ax = plt.subplots()
-    ax.plot(range(num_shelves), model_melt, 'o', color='blue')
+    if second:
+        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=sim_names[0])
+        ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
+        ax.legend()
+    else:
+        ax.plot(range(num_shelves), model_melt, 'o', color='blue')
     ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4)
     ax.grid(True)
     plt.xticks(range(num_shelves), shelf_titles, rotation='vertical')
