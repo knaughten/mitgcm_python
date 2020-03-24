@@ -211,13 +211,6 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         dt = time[1]-time[0]
         start_time = time[0] - dt
         time_edges = np.concatenate(([start_time], time))
-    # Update for versions of pcolormesh that don't support date axis:
-    #time_flt = [(t-time_edges[0]).total_seconds() for t in time_edges]
-    # Ticks at each year
-    #xtick_years = np.sort(list(set([t.year for t in time_edges])))
-    #xtick_loc = [(cftime.real_datetime(year,1,1)-time_edges[0]).total_seconds() for year in xtick_years]
-    #xtick_labels = [str(year) for year in xtick_years]
-    #time_edges = np.array(time_flt)
 
     # Smooth with a moving average
     # Will have to trim each end by one radius
@@ -235,8 +228,6 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
     # Plot the data
     img = ax.pcolormesh(time_edges, grid.z_edges, np.transpose(data), cmap=cmap, vmin=vmin, vmax=vmax)
-    #ax.set_xticks(xtick_loc)
-    #ax.set_xticklabels(xtick_labels)
     if contours is not None:
         # Overlay contours
         # Need time at the centres of each index
