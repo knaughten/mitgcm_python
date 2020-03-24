@@ -170,12 +170,13 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # grid: Grid object.
 
 # Optional keyword arguments:
+# smooth: radius for moving average (0 means no smoothing)
 # ax, make_cbar, ctype, vmin, vmax, title, titlesize, return_fig, fig_name, extend, fig_size, dpi: as in latlon_plot
 # zmin, zmax: bounds on depth axis to plot (negative, in metres, zmin is the deep bound).
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
+def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
 
     import cftime
 
@@ -217,6 +218,15 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
     xtick_loc = [(cftime.real_datetime(year,1,1)-time_edges[0]).total_seconds() for year in xtick_years]
     xtick_labels = [str(year) for year in xtick_years]
     time_edges = np.array(time_flt)
+
+    # Smooth with a moving average
+    # Will have to trim each end by one radius
+    t_first = smooth
+    t_last = data.shape[0]-smooth  # First one not selected as per python convection
+    data_cumsum = np.concatenate((np.zeros((1,data.shape[1])), np.ma.cumsum(data, axis=0)), axis=0)
+    data = (data_cumsum[t_first+smooth+1:t_last+smooth+1,:] - data_cumsum[t_first-smooth:t_last-smooth,:])/(2*smooth+1)
+    # Now trim the time axis too
+    time_edges = time_edges[smooth:-smooth]            
 
     # Make the figure and axes, if needed
     existing_ax = ax is not None
@@ -265,7 +275,7 @@ def hovmoller_plot (data, time, grid, ax=None, make_cbar=True, ctype='basic', vm
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2')
@@ -279,7 +289,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, 
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=title[i])
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=title[i])
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         plt.colorbar(img, cax=cax[i], extend=extend)
@@ -298,8 +308,8 @@ def hovmoller_ts_plot (temp, salt, time, grid, tmin=None, tmax=None, smin=None, 
 # grid: Grid object or path to grid file/directory
 
 # Optional keyword arguments:
-# zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
-def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
+# smooth, zmin, zmax, vmin, vmax, contours, monthly, fig_name, figsize: as in hovmoller_plot
+def read_plot_hovmoller (var_name, hovmoller_file, grid, smooth=0, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
 
     data = read_netcdf(hovmoller_file, var_name)
     # Set monthly=False so we don't back up an extra month (because precomputed)
@@ -309,7 +319,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, zmin=None, zmax=None, v
     grid = choose_grid(grid, None)
 
     # Make the plot
-    hovmoller_plot(data, time, grid, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
+    hovmoller_plot(data, time, grid, smooth=smooth, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, title=title, fig_name=fig_name, figsize=figsize)
 
 
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
@@ -339,15 +349,15 @@ def read_and_trim_diff (file_1, file_2, var_name):
 
 
 # Difference plots (2 minus 1)
-def read_plot_hovmoller_diff (var_name, hovmoller_file_1, hovmoller_file_2, grid, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
+def read_plot_hovmoller_diff (var_name, hovmoller_file_1, hovmoller_file_2, grid, smooth=0, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, monthly=True, fig_name=None, figsize=(14,5)):
 
     time, data_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, var_name)
     title, units = read_title_units(hovmoller_file_1, var_name)
     grid = choose_grid(grid, None)
-    hovmoller_plot(data_diff, time, grid, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, ctype='plusminus', title='Change in '+title, fig_name=fig_name, figsize=figsize)
+    hovmoller_plot(data_diff, time, grid, smooth=smooth, vmin=vmin, vmax=vmax, zmin=zmin, zmax=zmax, monthly=monthly, contours=contours, ctype='plusminus', title='Change in '+title, fig_name=fig_name, figsize=figsize)
 
 
-def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
+def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, smooth=0, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
 
     time, temp_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_temp')
     salt_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_salt')[1]
@@ -356,7 +366,7 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
         loc_string = 'Pine Island Bay '
     elif loc == 'Dot':
         loc_string = 'Dotson front '
-    hovmoller_ts_plot(temp_diff, salt_diff, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, ctype='plusminus', loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    hovmoller_ts_plot(temp_diff, salt_diff, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, ctype='plusminus', loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Compare simulated mean melt rates for each Amundsen Sea ice shelf with the range given by Rignot 2013. The blue dots are the model output and the black error ranges are from Rignot.
