@@ -223,7 +223,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     # Will have to trim each end by one radius
     t_first = smooth
     t_last = data.shape[0]-smooth  # First one not selected as per python convection
-    data_cumsum = np.concatenate((np.zeros((1,data.shape[1])), np.ma.cumsum(data, axis=0)), axis=0)
+    data_cumsum = np.ma.concatenate((np.zeros((1,data.shape[1])), np.ma.cumsum(data, axis=0)), axis=0)
     data = (data_cumsum[t_first+smooth+1:t_last+smooth+1,:] - data_cumsum[t_first-smooth:t_last-smooth,:])/(2*smooth+1)
     # Now trim the time axis too
     time_edges = time_edges[smooth:time_edges.size-smooth]            
