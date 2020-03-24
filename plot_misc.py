@@ -413,10 +413,10 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
     if second:
         ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=sim_names[0])
         ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
-        ax.legend()
     else:
-        ax.plot(range(num_shelves), model_melt, 'o', color='blue')
-    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4)
+        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label='MITgcm')
+    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4, label='Observations')
+    ax.legend()
     ax.grid(True)
     plt.xticks(range(num_shelves), shelf_titles, rotation='vertical')
     plt.subplots_adjust(bottom=0.2)
