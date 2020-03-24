@@ -235,8 +235,8 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
     # Plot the data
     img = ax.pcolormesh(time_edges, grid.z_edges, np.transpose(data), cmap=cmap, vmin=vmin, vmax=vmax)
-    ax.set_xticks(xtick_loc)
-    ax.set_xticklabels(xtick_labels)
+    #ax.set_xticks(xtick_loc)
+    #ax.set_xticklabels(xtick_labels)
     if contours is not None:
         # Overlay contours
         # Need time at the centres of each index
