@@ -323,7 +323,7 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, smooth=0, zmin=None, zm
 
 
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
-def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
+def read_plot_hovmoller_ts (hovmoller_file, loc, grid, smooth=0, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
 
     grid = choose_grid(grid, None)
     temp = read_netcdf(hovmoller_file, loc+'_temp')
@@ -333,7 +333,7 @@ def read_plot_hovmoller_ts (hovmoller_file, loc, grid, zmin=None, zmax=None, tmi
         loc_string = 'Pine Island Bay '
     elif loc == 'Dot':
         loc_string = 'Dotson front '
-    hovmoller_ts_plot(temp, salt, time, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Helper function for difference plots
