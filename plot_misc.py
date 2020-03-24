@@ -414,7 +414,13 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
         ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=sim_names[0])
         ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
     else:
-        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label='MITgcm')
+        if isinstance(sim_names, list):
+            label = sim_names[0]
+        elif isinstance(sim_names, str):
+            label = sim_names
+        else:
+            label = 'MITgcm'
+        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=label)
     ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4, label='Observations')
     ax.legend()
     ax.grid(True)
