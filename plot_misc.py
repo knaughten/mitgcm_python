@@ -497,29 +497,29 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=1, fig_name=Non
     model_data = [model_temp, model_salt]
     titles = ['Temperature', 'Salinity']
     units = [deg_string+'C', 'psu']
-    vmin = [-2, 33]
-    vmax = [2, 35]
+    vmin = [-2, 33.5]
+    vmax = [2, 34.75]
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         # Plot obs, all in grey
         for n in range(num_obs):
             ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6), linewidth=1)
         # Plot obs mean in thicker dashedblack
-        ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=3, linestyle='dashed')
+        ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2, linestyle='dashed')
         # Plot model years, in different colours
         for n in range(num_model):
             ax.plot(model_data[i][n,:], grid.z, linewidth=1)
         # Plot model mean in thicker black
-        ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=3)
+        ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
         ax.set_xlim([vmin[i], vmax[i]])
         ax.grid(True)
         plt.title(titles[i], fontsize=16)
-        plt.xlabel(units[i], fontsize=12)
+        plt.xlabel(units[i], fontsize=14)
         if i==0:
-            plt.ylabel('Depth (m)', fontsize=12)
+            plt.ylabel('Depth (m)', fontsize=14)
         else:
             ax.set_yticklabels([])
-    plt.suptitle(region + ': model (colours) vs obs (grey)', fontsize=18)
+    plt.suptitle(region + ': model (colours) vs CTDs (grey)', fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
     
