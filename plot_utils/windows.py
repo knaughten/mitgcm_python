@@ -71,7 +71,7 @@ def set_panels (key, figsize=None):
     elif key == '1x2C0':
         # Two side-by-side plots with no colourbars
         gs = plt.GridSpec(1,2)
-        gs.update(left=0.07, right=0.97, bottom=0.05, top=0.85, wspace=0.05)
+        gs.update(left=0.07, right=0.97, bottom=0.1, top=0.85, wspace=0.05)
     elif key == '2x1C2':
         # Two plots, above and below, with colourbars to the side
         gs = plt.GridSpec(2,1)
