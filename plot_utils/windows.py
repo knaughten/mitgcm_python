@@ -22,7 +22,7 @@ def set_panels (key, figsize=None):
 
     # Choose figure size
     if figsize is None:
-        if key in ['1x2C1', '1x2C2']:
+        if key in ['1x2C1', '1x2C2', '1x2C0']:
             figsize = (12, 6)
         elif key == '2x2C1':
             figsize = (10, 7.5)
@@ -68,6 +68,10 @@ def set_panels (key, figsize=None):
         gs.update(left=0.07, right=0.97, bottom=0.15, top=0.85, wspace=0.05)
         cax1 = fig.add_axes([0.12, 0.05, 0.325, 0.04])
         cax2 = fig.add_axes([0.595, 0.05, 0.325, 0.04])
+    elif key == '1x2C0':
+        # Two side-by-side plots with no colourbars
+        gs = plt.GridSpec(1,2)
+        gs.update(left=0.07, right=0.97, bottom=0.05, top=0.85, wspace=0.05)
     elif key == '2x1C2':
         # Two plots, above and below, with colourbars to the side
         gs = plt.GridSpec(2,1)

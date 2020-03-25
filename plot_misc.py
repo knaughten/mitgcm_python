@@ -16,7 +16,7 @@ from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
-from constants import deg_string, rignot_melt
+from constants import deg_string, rignot_melt, region_bounds
 from interpolation import interp_bilinear
 from calculus import area_average
 from timeseries import trim_and_diff, timeseries_ismr
@@ -436,9 +436,85 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
     plt.ylabel(units, fontsize=12)
     finished_plot(fig, fig_name=fig_name)
             
-    
-        
-    
+
+# Plot temperature and salinity casts from the given region against each year of the model output averaged over the same region. Also plot the mean CTD cast and the mean model cast.
+
+# Arguments:
+# loc: region name ('PIB', 'Dot', or anything in the "region_bounds" dictionary in constants.py)
+# hovmoller_file: path to precomputed Hovmoller file for this region (from precompute_hovmoller in postprocess.py)
+# obs_file: path to Matlab file with the CTD database
+# grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables
+
+# Optional keyword arguments:
+# month: month of model output to plot (1-12). Default is to plot each modelled January. To plot all months, set month=None.
+# fig_name: as in finished_plot.
+
+def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=1, fig_name=None):
+
+    from scipy.io import loadmat
+
+    grid = choose_grid(grid, None)
+
+    # Get bounds on region
+    if loc == 'PIB':
+        region = 'pine_island_bay'
+    elif loc == 'Dot':
+        region = 'dotson_front'
+    else:
+        region = loc
+    [xmin, xmax, ymin, ymax] = region_bounds[region]
+    # Read obs
+    f = loadmat(obs_file)
+    obs_lat = np.squeeze(f['Lat'])
+    obs_lon = np.squeeze(f['Lon'])
+    obs_depth = -1*np.squeeze(f['P'])
+    obs_temp = np.transpose(f['PT'])
+    obs_salt = np.transpose(f['S'])
+    # Convert NaNs into mask
+    obs_temp = np.ma.masked_where(np.isnan(obs_temp), obs_temp)
+    obs_salt = np.ma.masked_where(np.isnan(obs_salt), obs_salt)
+    # Find casts within given region
+    index = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)
+    obs_temp = obs_temp[index,:]
+    obs_salt = obs_salt[index,:]
+    num_obs = obs_temp.shape[0]
+
+    # Read model output
+    model_temp = read_netcdf(hovmoller_file, loc+'_temp')
+    model_salt = read_netcdf(hovmoller_file, loc+'_salt')
+    if month != 0:
+        # Select the month we want
+        time = netcdf_time(hovmoller_file, monthly=False)
+        index = [t.month==month for t in time]
+        model_temp = model_temp[index,:]
+        model_salt = model_salt[index,:]
+    num_model = model_temp.shape[0]
+
+    # Set panels
+    fig, gs = set_panels('1x2C0')
+    # Wrap things up in lists for easier iteration
+    obs_data = [obs_temp, obs_salt]
+    model_data = [model_temp, model_salt]
+    titles = ['Temperature', 'Salinity']
+    units = [deg_string+'C', 'psu']
+    for i in range(2):
+        ax = plt.subplot(gs[0,i])
+        # Plot obs, all in grey
+        for n in range(num_obs):
+            ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6))
+        # Plot obs mean in thicker black
+        ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2)
+        # Plot model years, in different colours
+        for n in range(num_model):
+            ax.plot(model_data[i][n,:], grid.z)
+        # Plot model mean in thicker black
+        ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
+        plt.title(titles[i], fontsize=16)
+        plt.xlabel(units[i], fontsize=12)
+        if i==0:
+            plt.ylabel('Depth (m)', fontsize=12)
+    plt.suptitle(region, fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
 
     
     
