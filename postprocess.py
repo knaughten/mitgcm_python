@@ -1122,18 +1122,18 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
 
 
-# Calculate potential density from temperature and salinity, and add it to the given model output file.
-def add_density (file_path, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+# Calculate potential density from temperature and salinity in the given NetCDF file, and write it to another file.
+def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    grid = Grid(in_file)
 
     temp = read_netcdf(file_path, 'THETA')
     salt = read_netcdf(file_path, 'SALT')
     rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
-    id = nc.Dataset(file_path, 'a')
-    id.createVariable('RHO', 'f8', ('time', 'Z', 'YC', 'XC'))
-    id.variables['RHO'].long_name = 'potential density (offline)'
-    id.variables['RHO'].units = 'kg/m^3'
-    id.variables['RHO'][:] = rho
-    id.close()
+
+    ncfile = NCfile(out_file, grid, 'xyzt')
+    ncfile.add_variable('RHO', density, 'xyzt', units='kg/m^3')
+    ncfile.close()
 
 
 # Call add_density for all files.
@@ -1146,7 +1146,8 @@ def add_density_to_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None
 
     for fname in file_paths:
         print 'Processing ' + fname
-        add_density(fname, eosType=eosType, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+        out_name = fname[:fname.index('.nc')]+'_density.nc'
+        add_density(fname, out_name, eosType=eosType, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
     
     
 
