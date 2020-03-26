@@ -473,8 +473,9 @@ def set_update_var (id, num_time, data, dimensions, var_name, title, units):
 # Optional keyword arguments:
 # timeseries_types: list of timeseries types to compute (subset of the options from set_parameters). If None, a default set will be used.
 # lon0, lat0: if timeseries_types includes 'temp_polynya' and/or 'salt_polynya', use these points as the centre.
+# offline_density: if there are *_density timeseries and density is calculated offline using add_density, set to True. Assumes the density filename is the same as mit_file but with the suffix '_density.nc' instead of '.nc'.
 
-def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS'):
+def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS', offline_density=True):
 
     # Timeseries to compute
     if timeseries_types is None:
@@ -495,10 +496,14 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
     # Now process all the timeseries
     for ts_name in timeseries_types:
         print 'Processing ' + ts_name
+        if offline_density and ts_name.endswith('_density'):
+            fname = mit_file[:mit_file.index('.nc')]+'_density.nc'
+        else:
+            fname = mit_file
         # Get information about the variable; only care about title and units
         title, units = set_parameters(ts_name)[2:4]
         if ts_name == 'fris_mass_balance':
-            melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1:]
+            melt, freeze = calc_special_timeseries(ts_name, fname, grid=grid, monthly=monthly)[1:]
             # We need two titles now
             title_melt = 'Total melting beneath FRIS'
             title_freeze = 'Total refreezing beneath FRIS'
@@ -506,7 +511,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             set_update_var(id, num_time, melt, 't', 'fris_total_melt', title_melt, units)
             set_update_var(id, num_time, freeze, 't', 'fris_total_freeze', title_freeze, units)
         else:
-            data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
+            data = calc_special_timeseries(ts_name, fname, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)[1]
             set_update_var(id, num_time, data, 't', ts_name, title, units)
 
     # Finished
@@ -1131,7 +1136,10 @@ def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, S
     salt = read_netcdf(in_file, 'SALT')
     rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
 
+    time, units, calendar = netcdf_time(in_file, return_date=False, return_units=True)
+
     ncfile = NCfile(out_file, grid, 'xyzt')
+    ncfile.add_time(time, units=units, calendar=calendar)
     ncfile.add_variable('RHO', density, 'xyzt', units='kg/m^3')
     ncfile.close()
 
