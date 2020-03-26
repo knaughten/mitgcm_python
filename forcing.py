@@ -836,10 +836,9 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
 
 # Build katabatic correction files which scale and rotate the winds in a band around the coast. The arguments cmip_file and era5_file are the outputs of process_forcing_for_correction, for UKESM/PACE and ERA5 respectively.
 # Update 13 March 2020: Can set bounds on region in domain to apply this correction to. For example, in PAS can set xmin=-100 to only correct in the eastern part of the domain. 
-def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_file_rotate, scale_cap=3, xmin=None, xmax=None, ymin=None, ymax=None, prec=64):
+def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_file_rotate, scale_dist=150., scale_cap=3, xmin=None, xmax=None, ymin=None, ymax=None, prec=64):
 
     var_names = ['uwind', 'vwind']
-    scale_dist = 150.
     # Radius for smoothing
     sigma = 2
 
