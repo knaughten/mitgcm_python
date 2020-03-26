@@ -319,7 +319,7 @@ class Grid:
             if zmax is None:
                 zmax = self.z[0]
             mask = xy_to_xyz(mask, self)
-            z_3d = z_to_xyz(grid.z, self)
+            z_3d = z_to_xyz(self.z, self)
             mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
 
         return mask
