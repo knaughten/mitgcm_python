@@ -1132,7 +1132,7 @@ def add_density (file_path, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None
     salt = read_netcdf(file_path, 'SALT')
     rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
     id = nc.Dataset(file_path, 'a')
-    id.create_variable('RHO', 'f8', ('time', 'Z', 'Y', 'X'))
+    id.createVariable('RHO', 'f8', ('time', 'Z', 'Y', 'X'))
     id.variables['RHO'].long_name = 'potential density (offline)'
     id.variables['RHO'].units = 'kg/m^3'
     id.variables['RHO'][:] = rho
