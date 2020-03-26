@@ -39,10 +39,10 @@ deg_string = r'$^{\circ}$'
 # Dictionary of bounds on different regions - some in 2 parts
 # lon_min, lon_max, lat_min, lat_max
 region_bounds = {
-    'fris_plot': [-85., -29., -84., -74.],
+    'fris_plot': [-85., -24., -84., -74.],
     'fris_pster_plot': [-1.6e6, -5e5, 1.2e5, 1.365e6],
     'fris1': [-85., -45., -84., -74.4],
-    'fris2': [-45., -29., -84., -77.85],
+    'fris2': [-45., -24., -84., -77.85],
     'ewed': [-30., 40., -77., -65.],
     'wed_gyre': [-60., 30., -90., -50.],
     'sws_shelf': [-70., -30., -79., -72.],
@@ -74,8 +74,11 @@ region_names = {
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
-# Threshold bathymetry delineating shelf
-shelf_h0 = -1250
+# Bathymetry bounds for some regions
+region_bathy_bounds = {
+    'sws_shelf': [-1250, None],
+    'filchner_trough': [-1250, -650]
+}
 
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.

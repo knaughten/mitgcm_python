@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom
-from constants import region_bounds, region_split, sose_res, shelf_h0, rEarth, deg2rad
+from constants import region_bounds, region_split, region_bathy_bounds, sose_res, rEarth, deg2rad
 
 
 # Grid object containing lots of grid variables:
@@ -284,21 +284,27 @@ class Grid:
 
     
     # Build and return a continental shelf mask for the given grid type and region. These points must be:
-    # 1. within the bounds of the given region,
-    # 2. bathymetry shallower than 1250 m,
+    # 1. within the lat/lon bounds of the given region,
+    # 2. within the bathymetry bounds of the given region,
     # 3. not ice shelf or land points.
-    def get_shelf_mask(self, region='all', gtype='t'):
+    def get_shelf_mask(self, region, gtype='t'):
 
         land_mask = self.get_land_mask(gtype=gtype)
         ice_mask = self.get_ice_mask(gtype=gtype)
         lon, lat = self.get_lon_lat(gtype=gtype)
         # Assume bathymetry on the tracer grid.
 
-        shelf_mask_all = np.invert(land_mask)*np.invert(ice_mask)*(bathy >= shelf_h0)
-        if region == 'all':
-            return shelf_mask_all
-        else:
-            return self.restrict_mask(shelf_mask_all, region, gtype=gtype)
+        # Get bathymetry bounds
+        [deep_bound, shallow_bound] = region_bathy_bounds[region]
+        if deep_bound is None:
+            deep_bound = np.amin(self.bathy)
+        if shallow_bound is None:
+            shallow_bound = np.amax(self.bathy)
+
+        # Restrict the bathymetry bounds
+        shelf_mask_all = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
+        # Now restrict the lat-lon bounds
+        return self.restrict_mask(shelf_mask_all, region, gtype=gtype)
         
 
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
