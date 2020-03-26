@@ -80,10 +80,21 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
 
 
 # Helper function for timeseries_avg_sfc and timeseries_int_sfc.
-def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
     
     # Read the data
-    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if isinstance(var_name, str):
+        # Just one variable
+        # Make it a list
+        var_name = [var_name]
+    # Now we have multiple variables to add together.
+    data = None
+    for var in var_name:
+        data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if data is None:
+            data = data_tmp
+        else:
+            data += data_tmp
     if len(data.shape)==2:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
@@ -92,20 +103,23 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
     timeseries = []
     for t in range(data.shape[0]):
         # Mask
-        data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
+        if mask is None:
+            data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
+        else:
+            data_tmp = apply_mask(data[t,:], np.invert(mask))
         # Area-average or integrate
         timeseries.append(over_area(option, data_tmp, grid, gtype=gtype))
     return np.array(timeseries)
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
-def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-    return timeseries_area_sfc('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+    return timeseries_area_sfc('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask)
 
 
 # Like timeseries_avg_sfc, but for area-integrals over the sea surface.
-def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-    return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+    return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask)
 
 
 # Integrate the area of the sea surface where the given variable exceeds the given threshold.
@@ -264,6 +278,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 #          'wed_gyre_trans': calculates Weddell Gyre transport.
 #          'watermass': calculates percentage volume of the water mass defined by any of tmin, tmax, smin, smax.
 #          'transport_transect': calculates net transport across a given transect
+#          'iceprod': calculates total sea ice production over the given region
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -296,7 +311,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): file_path must be a string or a list'
         sys.exit()
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -314,7 +329,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, first_file)
 
     # Set region mask, if needed
-    if option == 'avg_3d':
+    if option in ['avg_3d', 'iceprod']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough']:
@@ -324,66 +339,51 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif region == 'all':
             mask = None
 
-    # Calculate timeseries on the first file
-    if option == 'ismr':
-        if mass_balance:
-            melt, freeze = timeseries_ismr(first_file, grid, shelf=region, mass_balance=mass_balance, result=result)
+    if isinstance(file_path, str):
+        # Just one file - make it a list of length 1
+        file_path = [file_path]
+    melt = None
+    freeze = None
+    values = None
+    time = None
+    for fname in file_path:
+        if option == 'ismr':
+            if mass_balance:
+                melt_tmp, freeze_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result)
+            else:
+                values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result)
+        elif option == 'max':
+            values_tmp = timeseries_max(fname, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        elif option == 'avg_sfc':
+            values_tmp = timeseries_avg_sfc(fname, var_name, grid, gtype=gtype)
+        elif option == 'int_sfc':
+            values_tmp = timeseries_int_sfc(fname, var_name, grid, gtype=gtype)
+        elif option == 'area_threshold':
+            values_tmp = timeseries_area_threshold(fname, var_name, threshold, grid, gtype=gtype)
+        elif option == 'avg_3d':
+            values_tmp = timeseries_avg_3d(fname, var_name, grid, gtype=gtype, mask=mask)
+        elif option == 'point_vavg':
+            values_tmp = timeseries_point_vavg(fname, var_name, lon0, lat0, grid, gtype=gtype)
+        elif option == 'wed_gyre_trans':
+            values_tmp = timeseries_wed_gyre(fname, grid)
+        elif option == 'watermass':
+            values_tmp = timeseries_watermass_volume(fname, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+        elif option == 'volume':
+            values_tmp = timeseries_domain_volume(fname, grid)
+        elif option == 'transport_transect':
+            values_tmp = timeseries_transport_transect(fname, grid, point0, point1, direction=direction)
+        elif option == 'iceprod':
+            values = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask)
+        time_tmp = netcdf_time(fname, monthly=monthly)
+        if time is None:
+            # Initialise the arrays
+            if option == 'ismr' and mass_balance:
+                melt = melt_tmp
+                freeze = freeze_tmp
+            elif option != 'time':
+                values = values_tmp
+            time = time_tmp
         else:
-            values = timeseries_ismr(first_file, grid, shelf=region, mass_balance=mass_balance, result=result)
-    elif option == 'max':
-        values = timeseries_max(first_file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    elif option == 'avg_sfc':
-        values = timeseries_avg_sfc(first_file, var_name, grid, gtype=gtype)
-    elif option == 'int_sfc':
-        values = timeseries_int_sfc(first_file, var_name, grid, gtype=gtype)
-    elif option == 'area_threshold':
-        values = timeseries_area_threshold(first_file, var_name, threshold, grid, gtype=gtype)
-    elif option == 'avg_3d':
-        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=mask)
-    elif option == 'point_vavg':
-        values = timeseries_point_vavg(first_file, var_name, lon0, lat0, grid, gtype=gtype)
-    elif option == 'wed_gyre_trans':
-        values = timeseries_wed_gyre(first_file, grid)
-    elif option == 'watermass':
-        values = timeseries_watermass_volume(first_file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
-    elif option == 'volume':
-        values = timeseries_domain_volume(first_file, grid)
-    elif option == 'transport_transect':
-        values = timeseries_transport_transect(first_file, grid, point0, point1, direction=direction)
-    elif option != 'time':
-        print 'Error (calc_timeseries): invalid option ' + option
-        sys.exit()
-    # Read time axis
-    time = netcdf_time(first_file, monthly=monthly)
-    if isinstance(file_path, list):
-        # More files to read
-        for file in file_path[1:]:
-            if option == 'ismr':
-                if mass_balance:
-                    melt_tmp, freeze_tmp = timeseries_ismr(file, grid, shelf=region, mass_balance=mass_balance, result=result)
-                else:
-                    values_tmp = timeseries_ismr(file, grid, shelf=region, mass_balance=mass_balance, result=result)
-            elif option == 'max':
-                values_tmp = timeseries_max(file, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-            elif option == 'avg_sfc':
-                values_tmp = timeseries_avg_sfc(file, var_name, grid, gtype=gtype)
-            elif option == 'int_sfc':
-                values_tmp = timeseries_int_sfc(file, var_name, grid, gtype=gtype)
-            elif option == 'area_threshold':
-                values_tmp = timeseries_area_threshold(file, var_name, threshold, grid, gtype=gtype)
-            elif option == 'avg_3d':
-                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=mask)
-            elif option == 'point_vavg':
-                values_tmp = timeseries_point_vavg(file, var_name, lon0, lat0, grid, gtype=gtype)
-            elif option == 'wed_gyre_trans':
-                values_tmp = timeseries_wed_gyre(file, grid)
-            elif option == 'watermass':
-                values_tmp = timeseries_watermass_volume(file, grid, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
-            elif option == 'volume':
-                values_tmp = timeseries_domain_volume(file, grid)
-            elif option == 'transport_transect':
-                values_tmp = timeseries_transport_transect(file, grid, point0, point1, direction=direction)
-            time_tmp = netcdf_time(file, monthly=monthly)
             # Concatenate the arrays
             if option == 'ismr' and mass_balance:
                 melt = np.concatenate((melt, melt_tmp))
@@ -458,6 +458,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      'ocean_vol': volume of entire ocean domain (m^3)
 #      'filchner_trans': transport across the Filchner Ice Shelf front into the cavity (Sv)
 #      'atemp_avg': area-averaged surface air temperature (C)
+#      '*_iceprod': total sea ice production over the given region (m^3/y) - works for sws_shelf so far
 def set_parameters (var):
 
     var_name = None
@@ -611,6 +612,11 @@ def set_parameters (var):
         var_name = 'EXFatemp'
         title = 'Area-averaged surface air temperature'
         units = deg_string+'C'
+    elif var.endswith('_iceprod'):
+        option = 'iceprod'
+        region = var[:var.index('_iceprod')
+        title = 'Total sea ice production over Southern Weddell Sea continental shelf'
+        units = r'm$^3$/y'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

@@ -306,7 +306,7 @@ class Grid:
         if shallow_bound is None:
             shallow_bound = np.amax(self.bathy)
 
-        # Restrict based on isobaths
+        # Restrict based on isobaths, land, and ice shelves
         mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
         # Now restrict based on lat-lon bounds
         mask =  self.restrict_mask(mask, region, gtype=gtype)

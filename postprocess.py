@@ -97,8 +97,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     # Build the list of output files in this directory (use them all for timeseries)
     if key in ['WSFRIS', 'FRIS']:
         # Coupled
-        segment_dir = get_segment_dir(output_dir)
-        output_files = segment_file_paths(output_dir, segment_dir, 'output.nc')
+        output_files = segment_file_paths(output_dir)
     else:
         # Uncoupled
         output_files = build_file_list(output_dir, unravelled=unravelled)
@@ -297,10 +296,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     # Build lists of output files in each directory
     if key in ['WSFRIS', 'FRIS']:
         # Coupled
-        segment_dir_1 = get_segment_dir(output_dir_1)
-        output_files_1 = segment_file_paths(output_dir_1, segment_dir_1, 'output.nc')
-        segment_dir_2 = get_segment_dir(output_dir_2)
-        output_files_2 = segment_file_paths(output_dir_2, segment_dir_2, 'output.nc')
+        output_files_1 = segment_file_paths(output_dir_1)
+        output_files_2 = segment_file_paths(output_dir_2)
     else:
         # Uncoupled
         output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
@@ -1137,6 +1134,20 @@ def add_density (file_path, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None
     id.variables['RHO'].units = 'kg/m^3'
     id.variables['RHO'][:] = rho
     id.close()
+
+
+# Call add_density for all files.
+def add_density_to_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    if coupled:
+        file_paths = segment_file_paths(output_dir)
+    else:
+        file_paths = build_file_list(output_dir)
+
+    for fname in file_paths:
+        print 'Processing ' + fname
+        add_density(fname, eosType=eosType, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+    
     
 
     
