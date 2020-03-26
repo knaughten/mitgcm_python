@@ -616,7 +616,7 @@ def set_parameters (var):
         option = 'iceprod'
         region = var[:var.index('_iceprod')]
         title = 'Total sea ice production over Southern Weddell Sea continental shelf'
-        units = r'10$^3 m$^3$/y'
+        units = r'10$^3$ m$^3$/y'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
