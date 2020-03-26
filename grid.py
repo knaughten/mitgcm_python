@@ -311,7 +311,7 @@ class Grid:
         if ignore_iceberg:
             # Grounded iceberg A23A should not be considered the coast
             lon, lat = self.get_lon_lat(gtype=gtype)
-            [xmin, xmax, ymin, ymax] = a23a_bounds
+            [xmin, xmax, ymin, ymax] = region_bounds['a23a']
             index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
             coast_mask[index] = False
             # Similarly for little island in PAS grid
