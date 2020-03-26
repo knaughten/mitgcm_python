@@ -1127,8 +1127,8 @@ def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, S
 
     grid = Grid(in_file)
 
-    temp = read_netcdf(file_path, 'THETA')
-    salt = read_netcdf(file_path, 'SALT')
+    temp = read_netcdf(in_file, 'THETA')
+    salt = read_netcdf(in_file, 'SALT')
     rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
 
     ncfile = NCfile(out_file, grid, 'xyzt')
