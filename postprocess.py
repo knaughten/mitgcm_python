@@ -1126,7 +1126,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
 
 # Calculate potential density from temperature and salinity, and add it to the given model output file.
-def add_density (file_path, eosType, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def add_density (file_path, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     temp = read_netcdf(file_path, 'THETA')
     salt = read_netcdf(file_path, 'SALT')
