@@ -373,7 +373,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'transport_transect':
             values_tmp = timeseries_transport_transect(fname, grid, point0, point1, direction=direction)
         elif option == 'iceprod':
-            values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask)
+            values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask)*1e-3
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time is None:
             # Initialise the arrays
@@ -458,7 +458,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      'ocean_vol': volume of entire ocean domain (m^3)
 #      'filchner_trans': transport across the Filchner Ice Shelf front into the cavity (Sv)
 #      'atemp_avg': area-averaged surface air temperature (C)
-#      '*_iceprod': total sea ice production over the given region (m^3/y) - works for sws_shelf so far
+#      '*_iceprod': total sea ice production over the given region (10^3 m^3/y) - works for sws_shelf so far
 def set_parameters (var):
 
     var_name = None
@@ -616,7 +616,7 @@ def set_parameters (var):
         option = 'iceprod'
         region = var[:var.index('_iceprod')]
         title = 'Total sea ice production over Southern Weddell Sea continental shelf'
-        units = r'm$^3$/y'
+        units = r'10$^3 m$^3$/y'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
