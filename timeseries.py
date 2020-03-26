@@ -614,7 +614,7 @@ def set_parameters (var):
         units = deg_string+'C'
     elif var.endswith('_iceprod'):
         option = 'iceprod'
-        region = var[:var.index('_iceprod')
+        region = var[:var.index('_iceprod')]
         title = 'Total sea ice production over Southern Weddell Sea continental shelf'
         units = r'm$^3$/y'
     else:
