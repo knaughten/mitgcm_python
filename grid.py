@@ -13,7 +13,7 @@ import os
 
 from file_io import read_netcdf, find_cmip6_files
 from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom
-from constants import region_bounds, region_split, region_bathy_bounds, sose_res, rEarth, deg2rad
+from constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
 # Grid object containing lots of grid variables:
@@ -283,11 +283,12 @@ class Grid:
         return open_ocean
 
     
-    # Build and return a continental shelf mask for the given grid type and region. These points must be:
+    # Build and return a mask for a given region of the ocean. These points must be:
     # 1. within the lat/lon bounds of the given region,
-    # 2. within the bathymetry bounds of the given region,
+    # 2. within the isobaths defining the region (optional),
     # 3. not ice shelf or land points.
-    def get_shelf_mask(self, region, gtype='t'):
+    # If is_3d=True, will return a 3D mask within the depth bounds of the given region.
+    def get_ocean_region_mask(self, region, gtype='t', is_3d=False):
 
         land_mask = self.get_land_mask(gtype=gtype)
         ice_mask = self.get_ice_mask(gtype=gtype)
@@ -295,16 +296,33 @@ class Grid:
         # Assume bathymetry on the tracer grid.
 
         # Get bathymetry bounds
-        [deep_bound, shallow_bound] = region_bathy_bounds[region]
+        try:
+            [deep_bound, shallow_bound] = region_bathy_bounds[region]
+        except(KeyError):
+            deep_bound = None
+            shallow_bound = None
         if deep_bound is None:
             deep_bound = np.amin(self.bathy)
         if shallow_bound is None:
             shallow_bound = np.amax(self.bathy)
 
-        # Restrict the bathymetry bounds
-        shelf_mask_all = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
-        # Now restrict the lat-lon bounds
-        return self.restrict_mask(shelf_mask_all, region, gtype=gtype)
+        # Restrict based on isobaths
+        mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
+        # Now restrict based on lat-lon bounds
+        mask =  self.restrict_mask(mask, region, gtype=gtype)
+
+        if is_3d:
+            # Add a depth dimension and restrict to depth bounds
+            [zmin, zmax] = region_depth_bounds[region]
+            if zmin is None:
+                zmin = grid.z[-1]
+            if zmax is None:
+                zmax = grid.z[0]
+            mask = xy_to_xyz(mask, grid)
+            z_3d = z_to_xyz(grid.z, grid)
+            mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
+
+        return mask
         
 
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.

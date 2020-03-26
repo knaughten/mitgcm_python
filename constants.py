@@ -58,9 +58,22 @@ region_bounds = {
     'abbot1': [-104., -99., -73.2, -71.5],
     'abbot2': [-99., -88.9, -73.4, -71.5],
     'venable': [-88.9, -85.6, -73.4, -72.7],
-    'filchner_trough': [-45, -30, -79, -75]
+    'filchner_trough': [-45, -30, -79, -75],
+    'offshore_wed': [-60, -20, -75, -65]
 }
-# Names corresponding to some keys
+# Regions that are in two parts
+region_split = ['fris', 'abbot']
+# Isobaths restricting some regions
+region_bathy_bounds = {
+    'sws_shelf': [-1250, None],
+    'filchner_trough': [-1250, -650],
+    'offshore_wed': [None, -2000]
+}
+# Depth bounds for 3D regions
+region_depth_bounds = {
+    'offshore_wed': [-1500, -500]
+}
+# Names corresponding to some keys (used for plotting)
 region_names = {
     'fris': 'Filchner-Ronne Ice Shelf',
     'ewed': 'Eastern Wedddell ice shelves',
@@ -72,13 +85,6 @@ region_names = {
     'abbot': 'Abbot Ice Shelf',
     'venable': 'Venable Ice Shelf',
     'all': 'all ice shelves'
-}
-# Regions that are in two parts
-region_split = ['fris', 'abbot']
-# Bathymetry bounds for some regions
-region_bathy_bounds = {
-    'sws_shelf': [-1250, None],
-    'filchner_trough': [-1250, -650]
 }
 
 # Resolution of SOSE grid in degrees
