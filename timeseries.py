@@ -9,7 +9,7 @@ import datetime
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
-from diagnostics import total_melt, wed_gyre_trans, transport_transect, density
+from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
 from constants import deg_string, region_names
@@ -128,13 +128,7 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. Restrict it to the given mask (default just mask out the land).
 def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, eosType='MDJWF'):
 
-    if var_name == 'RHO':
-        # Need to calculate density from temperature and salinity.
-        temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        data = density(eosType, salt, temp, 0)
-    else:
-        data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
@@ -519,7 +513,7 @@ def set_parameters (var):
             units = 'psu'
         elif var.endswith('_density'):
             region = var[:var.index('_density')]
-            var_name = 'RHO'   # This is just a flag: density will be calculated from THETA and SALT.
+            var_name = 'RHO'
             title += 'potential density '
             units = r'kg/m$^3$'
         elif var.endswith('_age'):

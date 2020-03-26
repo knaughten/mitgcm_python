@@ -22,6 +22,7 @@ from plot_utils.colours import get_extend
 from plot_utils.windows import set_panels
 from constants import deg_string, region_bounds
 from calculus import area_average
+from diagnostics import density
 
 
 # Helper function to build lists of output files in a directory.
@@ -1122,6 +1123,21 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         for n in range(2):
             read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png', smooth=6)
         read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
+
+
+# Calculate potential density from temperature and salinity, and add it to the given model output file.
+def add_density (file_path, eosType, rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+
+    temp = read_netcdf(file_path, 'THETA')
+    salt = read_netcdf(file_path, 'SALT')
+    rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+    id = nc.Dataset(file_path, 'a')
+    id.create_variable('RHO', 'f8', ('time', 'Z', 'Y', 'X'))
+    id.variables['RHO'].long_name = 'potential density (offline)'
+    id.variables['RHO'].units = 'kg/m^3'
+    id.variables['RHO'][:] = rho
+    id.close()
+    
 
     
             
