@@ -331,7 +331,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     elif option == 'avg_fris':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.get_ice_mask(shelf='fris'))
     elif option == 'avg_sws_shelf':
-        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.get_ocean_region_mask('sws_shelf'))
+        values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype, mask=grid.get_region_mask('sws_shelf'))
     elif option == 'avg_domain':
         values = timeseries_avg_3d(first_file, var_name, grid, gtype=gtype)
     elif option == 'point_vavg':
@@ -368,7 +368,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             elif option == 'avg_fris':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.get_ice_mask(shelf='fris'))
             elif option == 'avg_sws_shelf':
-                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.get_ocean_region_mask('sws_shelf'))
+                values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype, mask=grid.get_region_mask('sws_shelf'))
             elif option == 'avg_domain':
                 values_tmp = timeseries_avg_3d(file, var_name, grid, gtype=gtype)
             elif option == 'point_vavg':

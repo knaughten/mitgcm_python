@@ -80,7 +80,7 @@ def woa18_pico_input (woa_dir, out_file):
             # Select the bottom layer
             data = select_bottom(data)
             # Mask out everything except the SWS continental shelf
-            data = apply_mask(data, np.invert(grid.ocean_region_mask('sws_shelf')))
+            data = apply_mask(data, np.invert(grid.get_region_mask('sws_shelf')))
             # Area-average and save
             data = area_average(data, grid)
             # Save monthly data
@@ -130,7 +130,7 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
             for t in range(num_time):
                 data = mask_3d(data_full[t,:], grid)
                 data = select_bottom(data)
-                data = apply_mask(data, np.invert(grid.get_ocean_region_mask('sws_shelf')))
+                data = apply_mask(data, np.invert(grid.get_region_mask('sws_shelf')))
                 data = area_average(data, grid)
                 data_print = str(round_to_decimals(data, 2))
                 print data_print

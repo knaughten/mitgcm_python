@@ -288,7 +288,7 @@ class Grid:
     # 2. within the isobaths defining the region (optional),
     # 3. not ice shelf or land points.
     # If is_3d=True, will return a 3D mask within the depth bounds of the given region.
-    def get_ocean_region_mask(self, region, gtype='t', is_3d=False):
+    def get_region_mask(self, region, gtype='t', is_3d=False):
 
         land_mask = self.get_land_mask(gtype=gtype)
         ice_mask = self.get_ice_mask(gtype=gtype)
@@ -315,11 +315,11 @@ class Grid:
             # Add a depth dimension and restrict to depth bounds
             [zmin, zmax] = region_depth_bounds[region]
             if zmin is None:
-                zmin = grid.z[-1]
+                zmin = self.z[-1]
             if zmax is None:
-                zmax = grid.z[0]
-            mask = xy_to_xyz(mask, grid)
-            z_3d = z_to_xyz(grid.z, grid)
+                zmax = self.z[0]
+            mask = xy_to_xyz(mask, self)
+            z_3d = z_to_xyz(grid.z, self)
             mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
 
         return mask

@@ -1051,7 +1051,7 @@ def domain_map (base_dir='./', fig_dir='./'):
     plt.text(.75, .03, 'Bathymetry (km)', fontsize=14, ha='left', va='bottom', transform=fig.transFigure)
     # Trace outline of sws_shelf_mask
     # First add the grounded iceberg to the mask so it doesn't get outlined
-    mask = grid.get_ocean_region_mask('sws_shelf').astype(float)
+    mask = grid.get_region_mask('sws_shelf').astype(float)
     [xmin, xmax, ymin, ymax] = region_bounds['a23a']
     index = (grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax)*(grid.land_mask)
     mask[index] = 1
@@ -1389,7 +1389,7 @@ def calc_salt_fluxes (base_dir='./'):
         seaice_flux = (read_netcdf(file_path, 'SIdHbOCN', time_index=0) + read_netcdf(file_path, 'SIdHbATC', time_index=0) + read_netcdf(file_path, 'SIdHbATO', time_index=0) + read_netcdf(file_path, 'SIdHbFLO', time_index=0))*rho_fw
         # Mask (FRIS and continental shelf respectively)
         shelf_flux = mask_except_ice(shelf_flux, grid)
-        seaice_flux = np.ma.masked_where(np.invert(grid.get_ocean_region_mask('sws_shelf')), seaice_flux)
+        seaice_flux = np.ma.masked_where(np.invert(grid.get_region_mask('sws_shelf')), seaice_flux)
         # Select only positive values
         shelf_flux = np.maximum(shelf_flux, 0)
         seaice_flux = np.maximum(seaice_flux, 0)
