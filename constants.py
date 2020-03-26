@@ -57,7 +57,8 @@ region_bounds = {
     'cosgrove': [-102., -98.5, -73.8, -73.2],
     'abbot1': [-104., -99., -73.2, -71.5],
     'abbot2': [-99., -88.9, -73.4, -71.5],
-    'venable': [-88.9, -85.6, -73.4, -72.7]
+    'venable': [-88.9, -85.6, -73.4, -72.7],
+    'filchner_trough': [-45, -30, -79, -75]
 }
 # Names corresponding to some keys
 region_names = {
