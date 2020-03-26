@@ -373,7 +373,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'transport_transect':
             values_tmp = timeseries_transport_transect(fname, grid, point0, point1, direction=direction)
         elif option == 'iceprod':
-            values = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask)
+            values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask)
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time is None:
             # Initialise the arrays
