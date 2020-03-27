@@ -40,7 +40,7 @@ deg_string = r'$^{\circ}$'
 # lon_min, lon_max, lat_min, lat_max
 region_bounds = {
     'fris_plot': [-85., -24., -84., -74.],
-    'fris_pster_plot': [-1.6e6, -5e5, 1.2e5, 1.365e6],
+    'fris_pster_plot': [-1.6e6, -4.5e5, 1.2e5, 1.365e6],
     'fris1': [-85., -45., -84., -74.4],
     'fris2': [-45., -24., -84., -77.85],
     'ewed': [-30., 40., -77., -65.],

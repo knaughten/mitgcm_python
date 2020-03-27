@@ -16,6 +16,7 @@ from ..plot_utils.latlon import shade_land_ice, prepare_vel
 from ..plot_utils.labels import latlon_axes, parse_date
 from ..postprocess import segment_file_paths
 from ..constants import deg_string
+from ..plot_latlon import latlon_plot
 
 # Analyse the coastal winds in UKESM vs ERA5:
 #   1. Figure out what percentage of points have winds in the opposite directions
@@ -164,7 +165,7 @@ def animate_cavity (output_dir='./', mov_name=None):
         # Initialise to something crazy
         vmin_tmp = np.amax(all_data[n][0])
         vmax_tmp = np.amin(all_data[n][0])
-        for t in rante(num_time):
+        for t in range(num_time):
             vmin_2, vmax_2 = var_min_max(all_data[n][t], all_grids[t], zoom_fris=True, pster=True)
             vmin_tmp = min(vmin_tmp, vmin_2)
             vmax_tmp = max(vmax_tmp, vmax_2)
@@ -193,6 +194,7 @@ def animate_cavity (output_dir='./', mov_name=None):
     ax = []
     for n in range(num_vars):
         ax.append(plt.subplot(gs[n/2,n%2]))
+        ax[n].axis('equal')
 
     # Inner function to plot a frame
     def plot_one_frame (t):
