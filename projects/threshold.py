@@ -115,6 +115,15 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
     finished_plot(fig, fig_name=fig_name)
 
 
+# Calculate the fields used for animate_cavity and save to a NetCDF file.
+def precompute_animation_fields (output_dir='./', file_path='animation_fields.nc'):
+
+    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
+    num_vars = len(var_names)
+    
+    file_paths = segment_file_paths(real_dir(output_dir))
+
+
 # Make animations of bottom water temperature, bottom water salinity, ice shelf melt rate, and barotropic velocity in the FRIS cavity for the given simulation.
 # Run "load_animations" before calling this function.
 def animate_cavity (output_dir='./', mov_name=None):
@@ -200,8 +209,8 @@ def animate_cavity (output_dir='./', mov_name=None):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(all_data[n][t], all_grids[t], ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=14))
-        plt.suptitle(all_dates[n], fontsize=18)
+            img.append(latlon_plot(all_data[n][t], all_grids[t], ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=18))
+        plt.suptitle(all_dates[n], fontsize=24)
         if t == 0:
             return img
 

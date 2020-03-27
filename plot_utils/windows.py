@@ -29,7 +29,7 @@ def set_panels (key, figsize=None):
         elif key == '2x2C0':
             figsize = (10, 6.5)
         elif key == '2x2C4':
-            figsize = (12, 9) 
+            figsize = (12, 8) 
         elif key in ['1x3C1', '1x3C3', '1x3C0']:
             figsize = (16, 5)
         elif key == '1x3C2':
@@ -92,11 +92,11 @@ def set_panels (key, figsize=None):
     elif key == '2x2C4':
         # Like 2x2C1 but one colourbar for each plot
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.05, right=0.85, bottom=0.1, top=0.85, wspace=0.1, hspace=0.15)
-        cax1 = fig.add_axes([0.4, 0.6, 0.03, 0.3])
-        cax2 = fig.add_axes([0.9, 0.6, 0.03, 0.3])
-        cax3 = fig.add_axes([0.4, 0.1, 0.03, 0.3])
-        cax4 = fig.add_axes([0.9, 0.1, 0.03, 0.3])
+        gs.update(left=0.15, right=0.85, bottom=0.1, top=0.85, wspace=0.1, hspace=0.15)
+        cax1 = fig.add_axes([0.05, 0.55, 0.03, 0.3])
+        cax2 = fig.add_axes([0.9, 0.55, 0.03, 0.3])
+        cax3 = fig.add_axes([0.05, 0.15, 0.03, 0.3])
+        cax4 = fig.add_axes([0.9, 0.15, 0.03, 0.3])
     elif key == '1x3C1':
         # Three side-by-side plots with one colourbar below
         gs = plt.GridSpec(1,3)
