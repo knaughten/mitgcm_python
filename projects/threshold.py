@@ -9,7 +9,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid
-from ..file_io import read_netcdf
+from ..file_io import read_netcdf, NCfile
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel
@@ -122,6 +122,13 @@ def precompute_animation_fields (output_dir='./', file_path='animation_fields.nc
     num_vars = len(var_names)
     
     file_paths = segment_file_paths(real_dir(output_dir))
+    segment_length = netcdf_time(file_paths[0]).size  # Assume constant
+    num_time = len(file_paths)*segment_length
+
+    
+    
+
+    
 
 
 # Make animations of bottom water temperature, bottom water salinity, ice shelf melt rate, and barotropic velocity in the FRIS cavity for the given simulation.
