@@ -16,7 +16,7 @@ from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
 from diagnostics import tfreeze
-from constants import deg_string, rignot_melt, region_bounds
+from constants import deg_string, rignot_melt, region_bounds, region_names
 from interpolation import interp_bilinear
 from calculus import area_average
 from timeseries import trim_and_diff, timeseries_ismr
@@ -294,7 +294,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
 # Read a precomputed Hovmoller file (from precompute_hovmoller in postprocess.py) and make the plot.
 
 # Arguments:
-# var: variable name in precomputed file, in the form loc_var, such as 'PIB_temp'
+# var: variable name in precomputed file, in the form loc_var, such as 'pine_island_bay_temp'
 # hovmoller_file: path to precomputed Hovmoller file
 # grid: Grid object or path to grid file/directory
 
@@ -320,10 +320,7 @@ def read_plot_hovmoller_ts (hovmoller_file, loc, grid, smooth=0, zmin=None, zmax
     temp = read_netcdf(hovmoller_file, loc+'_temp')
     salt = read_netcdf(hovmoller_file, loc+'_salt')
     time = netcdf_time(hovmoller_file, monthly=False)
-    if loc == 'PIB':
-        loc_string = 'Pine Island Bay '
-    elif loc == 'Dot':
-        loc_string = 'Dotson front '
+    loc_string = region_names[loc]
     hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
@@ -353,10 +350,7 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
     time, temp_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_temp')
     salt_diff = read_and_trim_diff(hovmoller_file_1, hovmoller_file_2, loc+'_salt')[1]
     grid = choose_grid(grid, None)
-    if loc == 'PIB':
-        loc_string = 'Pine Island Bay '
-    elif loc == 'Dot':
-        loc_string = 'Dotson front '
+    loc_string = region_names[loc]
     hovmoller_ts_plot(temp_diff, salt_diff, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, ctype='plusminus', loc_string=loc_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
@@ -440,7 +434,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 # Plot temperature and salinity casts from the given region against each year of the model output averaged over the same region. Also plot the mean CTD cast and the mean model cast.
 
 # Arguments:
-# loc: region name ('PIB', 'Dot', or anything in the "region_bounds" dictionary in constants.py)
+# loc: region name (anything in the "region_bounds" dictionary in constants.py)
 # hovmoller_file: path to precomputed Hovmoller file for this region (from precompute_hovmoller in postprocess.py)
 # obs_file: path to Matlab file with the CTD database
 # grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables
@@ -456,13 +450,7 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=1, fig_name=Non
     grid = choose_grid(grid, None)
 
     # Get bounds on region
-    if loc == 'PIB':
-        region = 'pine_island_bay'
-    elif loc == 'Dot':
-        region = 'dotson_front'
-    else:
-        region = loc
-    [xmin, xmax, ymin, ymax] = region_bounds[region]
+    [xmin, xmax, ymin, ymax] = region_bounds[loc]
     # Read obs
     f = loadmat(obs_file)
     obs_lat = np.squeeze(f['Lat'])
@@ -519,7 +507,7 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=1, fig_name=Non
             plt.ylabel('Depth (m)', fontsize=14)
         else:
             ax.set_yticklabels([])
-    plt.suptitle(region + ': model (colours) vs CTDs (grey)', fontsize=20)
+    plt.suptitle(loc + ': model (colours) vs CTDs (grey)', fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
     

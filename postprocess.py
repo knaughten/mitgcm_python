@@ -16,11 +16,11 @@ from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
 from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot, read_plot_latlon_comparison
 from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
 from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, ctd_cast_compare
-from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim
+from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask
 from plot_utils.labels import parse_date
 from plot_utils.colours import get_extend
 from plot_utils.windows import set_panels
-from constants import deg_string, region_bounds
+from constants import deg_string, region_names
 from calculus import area_average
 from diagnostics import density
 
@@ -128,7 +128,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
 
     # Hovmoller plots and CTD casts
     if key == 'PAS':
-        for loc in ['PIB', 'Dot']:
+        for loc in ['pine_island_bay', 'dotson_front']:
             read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly, smooth=6)
             ctd_cast_compare(loc, hovmoller_file, ctd_file, grid, fig_name=fig_dir+'casts_'+loc+'.png')
 
@@ -334,7 +334,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 
     # Hovmoller plots
     if key == 'PAS':
-        for loc in ['PIB', 'Dot']:
+        for loc in ['pine_island_bay', 'dotson_front']:
             read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly, smooth=6)
 
     # Now make lat-lon plots
@@ -1026,7 +1026,11 @@ def calc_ice_prod (file_path, out_file, monthly=True):
 
 
 # Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['temp', 'salt'], monthly=True):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_front'], var=['temp', 'salt'], monthly=True):
+
+    if isinstance(loc, str):
+        # Make it a list
+        loc = [loc]
 
     # Build the grid
     grid = Grid(mit_file)
@@ -1048,19 +1052,13 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['PIB', 'Dot'], var=['te
         # Read data and mask land/ice shelves
         if netcdf_time(mit_file).size == 1:
             # Need a dummy time dimension
-            data_full = mask_3d(add_time_dim(read_netcdf(mit_file, var_name), 1), grid, time_dependent=True)
-        else:
-            data_full = mask_3d(read_netcdf(mit_file, var_name), grid, time_dependent=True)
+            data_full = add_time_dim(read_netcdf(mit_file, var_name), 1)
         for l in loc:
-            print '...at ' + l            
-            if l == 'PIB':
-                loc_name = 'Pine Island Bay'
-                [xmin, xmax, ymin, ymax] = region_bounds['pine_island_bay']
-            elif l == 'Dot':
-                loc_name = 'Dotson front'
-                [xmin, xmax, ymin, ymax] = region_bounds['dotson_front']
+            print '...at ' + l
+            loc_name = region_names[l]
             # Average over the correct region
-            data = mask_outside_box(data_full, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_dependent=True)
+            mask = grid.get_region_mask(l)
+            data = apply_mask(data_full, np.invert(mask), time_dependent=True, depth_dependent=True)
             data = area_average(data, grid, time_dependent=True)
             set_update_var(id, num_time, data, 'zt', l+'_'+v, loc_name+' '+title, units)
 
@@ -1092,7 +1090,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         change_points = [None, None, [5,10,30], None, None]
         ymax = -70
         melt_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
-        hovmoller_loc = ['PIB', 'Dot']
+        hovmoller_loc = ['pine_island_bay', 'dotson_front']
         hovmoller_bounds = [-1.8, 1.2, 34, 34.725]
         hovmoller_t_contours = [0, 1]
         hovmoller_s_contours = [34.5, 34.6, 34.7]

@@ -87,7 +87,9 @@ region_names = {
     'all': 'all ice shelves',
     'filchner_trough': 'Filchner Trough',
     'sws_shelf': 'Southern Weddell Sea shelf',
-    'wdw_core': 'Warm Deep Water core'
+    'wdw_core': 'Warm Deep Water core',
+    'pine_island_bay': 'Pine Island Bay',
+    'dotson_front': 'Dotson Front'
 }
 
 # Resolution of SOSE grid in degrees
