@@ -246,7 +246,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:])
+            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:]))
         plt.suptitle(dates[t], fontsize=20)
         if t == 0:
             return img
