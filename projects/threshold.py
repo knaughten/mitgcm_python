@@ -120,14 +120,12 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
 
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
     num_vars = len(var_names)
-    mask_names = ['land_mask', 'ice_mask']
-    num_masks = len(mask_names)
 
     # Get all the model output files
     file_paths = segment_file_paths(real_dir(output_dir))
 
     time = None
-    masks = [None for n in range(num_masks)]
+    land_mask = None
     data = [None for n in range(num_vars)]
     vmin = [None for n in range(num_vars)]
     vmax = [None for n in range(num_vars)]
@@ -140,17 +138,13 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
             time = time_tmp
         else:
             time = np.concatenate((time, time_tmp), axis=0)
-        # Get masks as time-dependent fields
+        # Get land mask as time-dependent field
         grid = Grid(file_path)
-        for n in range(num_masks):
-            if mask_names[n] == 'land_mask':
-                mask_tmp = add_time_dim(grid.land_mask, time_tmp.size)
-            elif mask_names[n] == 'ice_mask':
-                mask_tmp = add_time_dim(grid.ice_mask, time_tmp.size)
-            if masks[n] is None:
-                masks[n] = mask_tmp
-            else:
-                masks[n] = np.concatenate((masks[n], mask_tmp), axis=0)
+        mask_tmp = add_time_dim(grid.land_mask, time_tmp.size)
+        if land_mask is None:
+            land_mask = mask_tmp
+        else:
+            land_mask = np.concatenate((land_mask, mask_tmp), axis=0)
         # Loop over proper variables and process data
         for n in range(num_vars):
             print '...'+var_names[n]
@@ -182,8 +176,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
     # Write to NetCDF
     ncfile = NCfile(out_file, grid, 'xyt')
     ncfile.add_time(time, units=units, calendar=calendar)
-    for n in range(num_masks):
-        ncfile.add_variable(mask_names[n], masks[n], 'xyt')
+    ncfile.add_variable('land_mask', land_mask, 'xyt')
     for n in range(num_vars):
         ncfile.add_variable(var_names[n], data[n], 'xyt', vmin=vmin[n], vmax=vmax[n])
     ncfile.close()    
@@ -219,6 +212,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     extend = []    
     for n in range(num_vars):
         data_tmp, vmin_tmp, vmax_tmp = read_netcdf(animation_file, var_names[n], return_minmax=True)
+        data_tmp = np.ma.masked_where(land_mask, data_tmp)
         data.append(data_tmp)
         # Figure out what to do with bounds
         if vmin[n] is None or vmin[n] < vmin_tmp:
@@ -252,7 +246,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:], ice_mask=ice_mask[t,:]))
+            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:])
         plt.suptitle(dates[t], fontsize=20)
         if t == 0:
             return img
