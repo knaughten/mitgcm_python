@@ -192,7 +192,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
 # Make animations of bottom water temperature, bottom water salinity, ice shelf melt rate, and barotropic velocity in the FRIS cavity for the given simulation.
 # Type "load_animations" in the shell before calling this function.
 # The grid is just for grid sizes, so pass it any valid grid regardless of coupling status.
-def animate_cavity (animation_file, grid, mov_name=None):
+def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     import matplotlib.animation as animation
 
@@ -213,8 +213,8 @@ def animate_cavity (animation_file, grid, mov_name=None):
     dates = []
     for date in time:
         dates.append(parse_date(date=date))
-    land_mask = read_netcdf(animation_file, 'land_mask').astype(bool)
-    ice_mask = read_netcdf(animation_file, 'ice_mask').astype(bool)
+    land_mask = read_netcdf(animation_file, 'land_mask') == 1
+    ice_mask = read_netcdf(animation_file, 'ice_mask') == 1
     data = []
     extend = []    
     for n in range(num_vars):
