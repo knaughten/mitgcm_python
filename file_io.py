@@ -22,6 +22,7 @@ from utils import days_per_month, real_dir, is_depth_dependent
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
 # return_info: boolean indicating to return the 'description' and 'units' variables. Default False.
+# return_minmax: boolean indicating to return the 'vmin' and 'vmax' attributes. Default False.
 
 # Output: numpy array containing the variable
 
@@ -37,7 +38,7 @@ from utils import days_per_month, real_dir, is_depth_dependent
 # Read the last 12 time indices and time-average:
 # temp = read_netcdf('temp.nc', 'temp', t_start=-12, time_average=True)
 
-def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False, return_info=False):
+def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False, return_info=False, return_minmax=False):
 
     import netCDF4 as nc
 
@@ -99,10 +100,17 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     if return_info:
         description = id.variables[var_name].description
         units = id.variables[var_name].units
+    if return_minmax:
+        vmin = id.variables[var_name].vmin
+        vmax = id.variables[var_name].vmax
     id.close()
 
-    if return_info:
-        return data, description, units
+    if return_info and return_minmax:
+        return data, description, units, vmin, vmax
+    elif return_info:
+        return data, description
+    elif return_minmax:
+        return data, vmin, vmax
     else:
         return data
 
@@ -357,9 +365,10 @@ class NCfile:
     # gtype: as in function cell_boundaries (plus 'w' for w-grid)
     # long_name: descriptor for this variable
     # units: units for this variable
+    # vmin, vmax: optional attributes
     # dtype: data type of variable (default 'f8' which is float)
 
-    def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, calendar=None, dtype='f8'):
+    def add_variable (self, var_name, data, dimensions, gtype='t', long_name=None, units=None, calendar=None, vmin=None, vmax=None, dtype='f8'):
 
         # Sort out dimensions
         shape = []
@@ -390,6 +399,10 @@ class NCfile:
             self.id.variables[var_name].units = units
         if calendar is not None:
             self.id.variables[var_name].calendar = calendar
+        if vmin is not None:
+            self.id.variables[var_name].vmin = vmin
+        if vmax is not None:
+            self.id.variables[var_name].vmax = vmax
 
         # Fill data
         self.id.variables[var_name][:] = data

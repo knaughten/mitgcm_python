@@ -116,26 +116,87 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 
 
 # Calculate the fields used for animate_cavity and save to a NetCDF file.
-def precompute_animation_fields (output_dir='./', file_path='animation_fields.nc'):
+def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'):
 
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
     num_vars = len(var_names)
-    
+    mask_names = ['land_mask', 'ice_mask']
+    num_masks = len(mask_names)
+
+    # Get all the model output files
     file_paths = segment_file_paths(real_dir(output_dir))
-    segment_length = netcdf_time(file_paths[0]).size  # Assume constant
-    num_time = len(file_paths)*segment_length
 
-    
-    
+    time = None
+    masks = [None for n in range(num_masks)]
+    data = [None for n in range(num_vars)]
+    vmin = [None for n in range(num_vars)]
+    vmax = [None for n in range(num_vars)]
+    # Loop over files
+    for file_path in file_paths:
+        print 'Processing ' + file_path
+        time_tmp, units, calendar = netcdf_time(file_path, return_date=False, return_units=True)
+        if time is None:
+            # First file - initialise array
+            time = time_tmp
+        else:
+            time = np.concatenate((time, time_tmp), axis=0)
+        # Get masks as time-dependent fields
+        grid = Grid(file_path)
+        for n in range(num_masks):
+            if mask_names[n] == 'land_mask':
+                mask_tmp = add_time_dim(grid.land_mask, time_tmp.size)
+            elif mask_names[n] == 'ice_mask':
+                mask_tmp = add_time_dim(grid.ice_mask, time_tmp.size)
+            if masks[n] is None:
+                masks[n] = mask_tmp
+            else:
+                masks[n] = np.concatenate((masks[n], mask_tmp), axis=0)
+        # Loop over proper variables and process data
+        for n in range(num_vars):
+            print '...'+var_names[n]
+            if var_names[n] == 'bwtemp':
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'THETA'), grid, time_dependent=True))
+            elif var_names[n] == 'bwsalt':
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'SALT'), grid, time_dependent=True))
+            elif var_names[n] == 'ismr':
+                data_tmp = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx'), grid, time_dependent=True))
+            elif var_names[n] == 'vel':
+                u = mask_3d(read_netcdf(file_path, 'UVEL'), grid, gtype='u', time_dependent=True)
+                v = mask_3d(read_netcdf(file_path, 'VVEL'), grid, gtype='v', time_dependent=True)
+                data_tmp = prepare_vel(u, v, grid, vel_option='avg', time_dependent=True)[0]
+            if data[n] is None:
+                data[n] = data_tmp
+            else:
+                data[n] = np.concatenate((data[n], data_tmp), axis=0)
+            # Find the min and max over the region
+            for t in range(num_time):
+                vmin_tmp, vmax_tmp = var_min_max(data_tmp[t], grid, zoom_fris=True, pster=True)
+                if vmin[n] is None:
+                    # First timestep - initialise
+                    vmin[n] = vmin_tmp
+                    vmax[n] = vmax_tmp
+                else:
+                    vmin[n] = min(vmin[n], vmin_tmp)
+                    vmax[n] = max(vmax[n], vmax_tmp)
 
-    
+    # Write to NetCDF
+    ncfile = NCfile(output_file, grid, 'xyt')
+    ncfile.add_time(time, units=units, calendar=calendar)
+    for n in range(num_masks):
+        ncfile.add_variable(mask_names[n], masks[n], 'xyt')
+    for n in range(num_vars):
+        ncfile.add_variable(var_names[n], data[n], 'xyt', vmin=vmin[n], vmax=vmax[n])
+    ncfile.close()    
 
 
 # Make animations of bottom water temperature, bottom water salinity, ice shelf melt rate, and barotropic velocity in the FRIS cavity for the given simulation.
-# Run "load_animations" before calling this function.
-def animate_cavity (output_dir='./', mov_name=None):
+# Type "load_animations" in the shell before calling this function.
+# The grid is just for grid sizes, so pass it any valid grid regardless of coupling status.
+def animate_cavity (animation_file, grid, mov_name=None):
 
     import matplotlib.animation as animation
+
+    grid = choose_grid(grid, None)
 
     var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
     var_titles = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Ice shelf melt rate (m/y)', 'Barotropic velocity (m/s)']
@@ -144,47 +205,21 @@ def animate_cavity (output_dir='./', mov_name=None):
     vmin = [-2.5, 33.4, None, None]
     vmax = [2.5, 34.75, None, None]
     num_vars = len(var_names)
-    
-    file_paths = segment_file_paths(real_dir(output_dir))    
 
-    # Read and process all the data from each segment
-    all_grids = []
-    all_dates = []
-    all_data = [[] for n in range(num_vars)]
-    for file_path in file_paths:
-        print 'Processing ' + file_path
-        grid = Grid(file_path)
-        # Loop over variables
-        for n in range(num_vars):
-            print '...'+var_names[n]
-            if var_names[n] == 'bwtemp':
-                data = select_bottom(mask_3d(read_netcdf(file_path, 'THETA'), grid, time_dependent=True))
-            elif var_names[n] == 'bwsalt':
-                data = select_bottom(mask_3d(read_netcdf(file_path, 'SALT'), grid, time_dependent=True))
-            elif var_names[n] == 'ismr':
-                data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx'), grid, time_dependent=True))
-            elif var_names[n] == 'vel':
-                u = mask_3d(read_netcdf(file_path, 'UVEL'), grid, gtype='u', time_dependent=True)
-                v = mask_3d(read_netcdf(file_path, 'VVEL'), grid, gtype='v', time_dependent=True)
-                data = prepare_vel(u, v, grid, vel_option='avg', time_dependent=True)[0]
-            # Loop over timesteps and append to master lists
-            for t in range(data.shape[0]):
-                if n == 0:
-                    all_grids.append(grid)
-                    all_dates.append(parse_date(file_path=file_path, time_index=t))
-                all_data[n].append(data[t,:])
-    num_time = len(all_data[0])
-
-    # Now find true min and max values, and what the endpoints of each colourbar should do
+    # Read data from precomputed file
+    time = netcdf_time(animation_file)
+    # Parse dates
+    for date in time:
+        dates.append(parse_date(date=date))
+    land_mask = read_netcdf(animation_file, 'land_mask')
+    ice_mask = read_netcdf(animation_file, 'ice_mask')
+    data = []
     extend = []
+    dates = []
     for n in range(num_vars):
-        # Initialise to something crazy
-        vmin_tmp = np.amax(all_data[n][0])
-        vmax_tmp = np.amin(all_data[n][0])
-        for t in range(num_time):
-            vmin_2, vmax_2 = var_min_max(all_data[n][t], all_grids[t], zoom_fris=True, pster=True)
-            vmin_tmp = min(vmin_tmp, vmin_2)
-            vmax_tmp = max(vmax_tmp, vmax_2)
+        data_tmp, vmin_tmp, vmax_tmp = read_netcdf(animation_file, var_names[n], return_minmax=True)
+        data.append(data_tmp)
+        # Figure out what to do with bounds
         if vmin[n] is None or vmin[n] < vmin_tmp:
             extend_min = False
             vmin[n] = vmin_tmp
@@ -202,7 +237,7 @@ def animate_cavity (output_dir='./', mov_name=None):
         elif extend_max:
             extend.append('max')
         else:
-            extend.append('neither')
+            extend.append('neither')    
 
     # Initialise the plot
     fig, gs, cax1, cax2, cax3, cax4 = set_panels('2x2C4')
@@ -216,8 +251,8 @@ def animate_cavity (output_dir='./', mov_name=None):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(all_data[n][t], all_grids[t], ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=18))
-        plt.suptitle(all_dates[t], fontsize=24)
+            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:], ice_mask=ice_mask[t,:]))
+        plt.suptitle(dates[t], fontsize=20)
         if t == 0:
             return img
 

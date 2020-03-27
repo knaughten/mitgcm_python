@@ -118,30 +118,24 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
     ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]))
 
     
-def shade_land (ax, grid, gtype='t', pster=False, hfac=None):
-    if hfac is None:
-        # Get land mask from grid
-        mask = grid.get_land_mask(gtype=gtype)
-    else:
-        # Build land mask from hfac
-        mask = np.sum(hfac, axis=0)==0
-    shade_mask(ax, mask, grid, gtype=gtype, pster=pster)
+def shade_land (ax, grid, gtype='t', pster=False, land_mask=None):
+    if land_mask is None:
+        land_mask = grid.get_land_mask(gtype=gtype)
+    shade_mask(ax, land_mask, grid, gtype=gtype, pster=pster)
 
     
-def shade_land_ice (ax, grid, gtype='t', pster=False, hfac=None):
-    if hfac is None:
-        mask = grid.get_land_mask(gtype=gtype)+grid.get_ice_mask(gtype=gtype)
-    else:
-        mask = np.sum(hfac, axis=0)==0 + (np.sum(hfac, axis=0)!=0)*(hfac[0,:]<1)
-    shade_mask(ax, mask, grid, gtype=gtype, pster=pster)
+def shade_land_ice (ax, grid, gtype='t', pster=False, land_mask=None, ice_mask=None):
+    if land_mask is None:
+        land_mask = grid.get_land_mask(gtype=gtype)
+    if ice_mask is None:
+        ice_mask = grid.get_ice_mask(gtype=gtype)
+    shade_mask(ax, land_mask+ice_mask, grid, gtype=gtype, pster=pster)
 
 
-def clear_ocean (ax, grid, gtype='t', pster=False, hfac=None):
-    if hfac is None:
-        mask = grid.get_land_mask(gtype=gtype)
-    else:
-        mask = np.sum(hfac, axis=0)==0
-    shade_mask(ax, np.invert(mask), grid, gtype=gtype, pster=pster, colour='white')
+def clear_ocean (ax, grid, gtype='t', pster=False, land_mask=None):
+    if land_mask is None:
+        land_mask = grid.get_land_mask(gtype=gtype)
+    shade_mask(ax, np.invert(land_mask), grid, gtype=gtype, pster=pster, colour='white')
 
 
 # Fill the background of the plot with grey.
