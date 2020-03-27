@@ -178,12 +178,6 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 
 def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
 
-    try:
-        # Just for BAS servers
-        import cftime
-    except(ImportError):
-        pass
-
     # Choose what the endpoints of the colourbar should do
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)

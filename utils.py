@@ -293,7 +293,7 @@ def var_min_max_zt (data, grid, zmin=None, zmax=None):
     if zmax is None:
         zmax = grid.z[0]
     # Make z 2D
-    z = add_time_dim(grid.z, data.shape[0])
+    z = add_time_dim(np.copy(grid.z), data.shape[0])
     loc = (z >= zmin)*(z <= zmax)
     return np.amin(data[loc]), np.amax(data[loc])
 
