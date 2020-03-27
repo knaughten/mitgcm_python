@@ -210,7 +210,7 @@ def animate_cavity (output_dir='./', mov_name=None):
         img = []
         for n in range(num_vars):
             img.append(latlon_plot(all_data[n][t], all_grids[t], ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=18))
-        plt.suptitle(all_dates[n], fontsize=24)
+        plt.suptitle(all_dates[t], fontsize=24)
         if t == 0:
             return img
 

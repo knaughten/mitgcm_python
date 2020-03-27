@@ -47,9 +47,10 @@ from calculus import vertical_average
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 # extend: 'neither', 'min', 'max', 'both', or None (will be determined automatically based on vmin and vmax)
 # label_latlon: whether to label latitude and longitude axes
+# hfac: alternate hFac field to use for shading masks (useful for coupling)
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, figsize=(8,6), dpi=None):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, hfac=None, figsize=(8,6), dpi=None):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -78,14 +79,14 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         # Shade the background in grey
         shade_background(ax)
         # Clear the ocean back to white
-        clear_ocean(ax, grid, gtype=gtype, pster=pster)
+        clear_ocean(ax, grid, gtype=gtype, pster=pster, hfac=hfac)
     else:
         if include_shelf:
             # Shade land in grey
-            shade_land(ax, grid, gtype=gtype, pster=pster)
+            shade_land(ax, grid, gtype=gtype, pster=pster, hfac=hfac)
         else:
             # Shade land and ice shelves in grey
-            shade_land_ice(ax, grid, gtype=gtype, pster=pster)
+            shade_land_ice(ax, grid, gtype=gtype, pster=pster, hfac=hfac)
     # Plot the data    
     img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
     if include_shelf:
@@ -101,7 +102,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
     if title is not None:
         # Add a title
-        plt.title(title, fontsize=titlesize)
+        ax.set_title(title, fontsize=titlesize)
 
     if return_fig:
         return fig, ax
