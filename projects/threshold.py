@@ -204,7 +204,7 @@ def animate_cavity (animation_file, grid, mov_name=None):
     # These min and max values will be overrided if they're not restrictive enough
     vmin = [-2.5, 33.4, None, None]
     vmax = [2.5, 34.75, None, None]
-    num_vars = len(var_names)s
+    num_vars = len(var_names)
 
     # Read data from precomputed file
     time = netcdf_time(animation_file)
