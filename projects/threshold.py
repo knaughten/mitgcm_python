@@ -8,9 +8,9 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from ..grid import Grid
-from ..file_io import read_netcdf, NCfile
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr
+from ..grid import Grid, choose_grid
+from ..file_io import read_netcdf, NCfile, netcdf_time
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel
 from ..plot_utils.labels import latlon_axes, parse_date
@@ -169,7 +169,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
             else:
                 data[n] = np.concatenate((data[n], data_tmp), axis=0)
             # Find the min and max over the region
-            for t in range(num_time):
+            for t in range(time_tmp.size):
                 vmin_tmp, vmax_tmp = var_min_max(data_tmp[t], grid, zoom_fris=True, pster=True)
                 if vmin[n] is None:
                     # First timestep - initialise
@@ -180,7 +180,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
                     vmax[n] = max(vmax[n], vmax_tmp)
 
     # Write to NetCDF
-    ncfile = NCfile(output_file, grid, 'xyt')
+    ncfile = NCfile(out_file, grid, 'xyt')
     ncfile.add_time(time, units=units, calendar=calendar)
     for n in range(num_masks):
         ncfile.add_variable(mask_names[n], masks[n], 'xyt')
@@ -204,18 +204,19 @@ def animate_cavity (animation_file, grid, mov_name=None):
     # These min and max values will be overrided if they're not restrictive enough
     vmin = [-2.5, 33.4, None, None]
     vmax = [2.5, 34.75, None, None]
-    num_vars = len(var_names)
+    num_vars = len(var_names)s
 
     # Read data from precomputed file
     time = netcdf_time(animation_file)
+    num_time = time.size
     # Parse dates
+    dates = []
     for date in time:
         dates.append(parse_date(date=date))
-    land_mask = read_netcdf(animation_file, 'land_mask')
-    ice_mask = read_netcdf(animation_file, 'ice_mask')
+    land_mask = read_netcdf(animation_file, 'land_mask').astype(bool)
+    ice_mask = read_netcdf(animation_file, 'ice_mask').astype(bool)
     data = []
-    extend = []
-    dates = []
+    extend = []    
     for n in range(num_vars):
         data_tmp, vmin_tmp, vmax_tmp = read_netcdf(animation_file, var_names[n], return_minmax=True)
         data.append(data_tmp)
