@@ -301,16 +301,6 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True):
 
-    if isinstance(file_path, str):
-        # Just one file
-        first_file = file_path
-    elif isinstance(file_path, list):
-        # More than one
-        first_file = file_path[0]
-    else:
-        print 'Error (calc_timeseries): file_path must be a string or a list'
-        sys.exit()
-
     if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
@@ -324,9 +314,12 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         print 'Error (calc_timeseries): must specify point0 and point1'
         sys.exit()
 
+    if isinstance(file_path, str):
+        # Just one file - make it a list of length 1
+        file_path = [file_path]
     # Build the grid if needed
     if option != 'time':
-        grid = choose_grid(grid, first_file)
+        grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
     if option in ['avg_3d', 'iceprod']:
@@ -338,10 +331,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_region_mask(region, is_3d=True)
         elif region == 'all':
             mask = None
-
-    if isinstance(file_path, str):
-        # Just one file - make it a list of length 1
-        file_path = [file_path]
+    
     melt = None
     freeze = None
     values = None

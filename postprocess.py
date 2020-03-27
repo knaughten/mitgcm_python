@@ -1140,7 +1140,7 @@ def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, S
 
     ncfile = NCfile(out_file, grid, 'xyzt')
     ncfile.add_time(time, units=units, calendar=calendar)
-    ncfile.add_variable('RHO', density, 'xyzt', units='kg/m^3')
+    ncfile.add_variable('RHO', rho, 'xyzt', units='kg/m^3')
     ncfile.close()
 
 
