@@ -10,11 +10,12 @@ import matplotlib.pyplot as plt
 
 from ..grid import Grid
 from ..file_io import read_netcdf
-from ..utils import real_dir, var_min_max
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel
 from ..plot_utils.labels import latlon_axes, parse_date
 from ..postprocess import segment_file_paths
+from ..constants import deg_string
 
 # Analyse the coastal winds in UKESM vs ERA5:
 #   1. Figure out what percentage of points have winds in the opposite directions
@@ -146,15 +147,15 @@ def animate_cavity (output_dir='./', mov_name=None):
             elif var_names[n] == 'ismr':
                 data = convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx'), grid, time_dependent=True))
             elif var_names[n] == 'vel':
-                u = mask_3d(read_netcdf(file_path, 'UVEL'), gtype='u', time_dependent=True)
-                v = mask_3d(read_netcdf(file_path, 'VVEL'), gtype='v', time_dependent=True)
-                data = prepare_vel(u, v, grid, vel_option='avg')[0]
+                u = mask_3d(read_netcdf(file_path, 'UVEL'), grid, gtype='u', time_dependent=True)
+                v = mask_3d(read_netcdf(file_path, 'VVEL'), grid, gtype='v', time_dependent=True)
+                data = prepare_vel(u, v, grid, vel_option='avg', time_dependent=True)[0]
             # Loop over timesteps and append to master lists
             for t in range(data.shape[0]):
                 if n == 0:
                     all_grids.append(grid)
                     all_dates.append(parse_date(file_path=file_path, time_index=t))
-                all_data[n].append(data)
+                all_data[n].append(data[t,:])
     num_time = len(all_data[0])
 
     # Now find true min and max values, and what the endpoints of each colourbar should do

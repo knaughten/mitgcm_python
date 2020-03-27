@@ -155,18 +155,18 @@ def contour_iceshelf_front (ax, grid, pster=False):
 # 'interp': interpolate to depth z0 (positive, in metres)
 # 'ice': indicates u and v are already 2D (usually because they're sea ice velocity) so no vertical transformation is needed
 # Returns the speed as well as both vector components.
-def prepare_vel (u, v, grid, vel_option='avg', z0=None):
+def prepare_vel (u, v, grid, vel_option='avg', z0=None, time_dependent=False):
 
     # Get the correct 2D velocity field
     if vel_option == 'avg':
-        u_2d = vertical_average(u, grid, gtype='u')
-        v_2d = vertical_average(v, grid, gtype='v')
+        u_2d = vertical_average(u, grid, gtype='u', time_dependent=time_dependent)
+        v_2d = vertical_average(v, grid, gtype='v', time_dependent=time_dependent)
     elif vel_option == 'sfc':
-        u_2d = select_top(u)
-        v_2d = select_top(v)
+        u_2d = select_top(u, time_dependent=time_dependent)
+        v_2d = select_top(v, time_dependent=time_dependent)
     elif vel_option == 'bottom':
-        u_2d = select_bottom(u)
-        v_2d = select_top(v)
+        u_2d = select_bottom(u, time_dependent=time_dependent)
+        v_2d = select_bottom(v, time_dependent=time_dependent)
     elif vel_option == 'ice':
         u_2d = u
         v_2d = v
@@ -174,8 +174,8 @@ def prepare_vel (u, v, grid, vel_option='avg', z0=None):
         if z0 is None:
             print "Error (prepare_vel): Must set z0 if option='interp'."
             sys.exit()
-        u_2d = interp_to_depth(u, z0, grid, gtype='u')
-        v_2d = interp_to_depth(v, z0, grid, gtype='v')
+        u_2d = interp_to_depth(u, z0, grid, gtype='u', time_dependent=time_dependent)
+        v_2d = interp_to_depth(v, z0, grid, gtype='v', time_dependent=time_dependent)
 
     # Interpolate to the tracer grid
     if vel_option == 'ice':
@@ -183,8 +183,8 @@ def prepare_vel (u, v, grid, vel_option='avg', z0=None):
         mask_shelf = True
     else:
         mask_shelf = False
-    u_interp = interp_grid(u_2d, grid, 'u', 't', mask_shelf=mask_shelf)
-    v_interp = interp_grid(v_2d, grid, 'v', 't', mask_shelf=mask_shelf)
+    u_interp = interp_grid(u_2d, grid, 'u', 't', mask_shelf=mask_shelf, time_dependent=time_dependent)
+    v_interp = interp_grid(v_2d, grid, 'v', 't', mask_shelf=mask_shelf, time_dependent=time_dependent)
 
     # Calculate speed
     speed = np.sqrt(u_interp**2 + v_interp**2)
