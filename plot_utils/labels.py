@@ -3,6 +3,7 @@
 #######################################################
 
 import matplotlib.dates as dt
+import datetime
 import numpy as np
 import sys
 import matplotlib
@@ -183,7 +184,8 @@ def parse_date (date=None, file_path=None, time_index=None, monthly=True):
         # Return month and year
         if date.year < 1900:
             # strftime bug
-            return str(date.month)+'-'+str(date.year)
+            date2 = datetime.date(1900, date.month, date.day)
+            return date2.strftime('%b ')+str(date.year)
         else:
             return date.strftime('%b %Y')
     else:
