@@ -1128,7 +1128,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
 
 # Calculate potential density from temperature and salinity in the given NetCDF file, and write it to another file.
-def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def save_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     grid = Grid(in_file)
 
@@ -1144,8 +1144,8 @@ def add_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, S
     ncfile.close()
 
 
-# Call add_density for all files.
-def add_density_to_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+# Call save_density for all files.
+def save_density_for_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     if coupled:
         file_paths = segment_file_paths(output_dir)
@@ -1155,7 +1155,7 @@ def add_density_to_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None
     for fname in file_paths:
         print 'Processing ' + fname
         out_name = fname[:fname.index('.nc')]+'_density.nc'
-        add_density(fname, out_name, eosType=eosType, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
+        save_density(fname, out_name, eosType=eosType, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
     
     
 
