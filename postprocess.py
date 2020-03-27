@@ -1050,9 +1050,10 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
             title = 'Salinity'
             units = 'psu'
         # Read data and mask land/ice shelves
+        data_full = read_netcdf(mit_file, var_name)
         if netcdf_time(mit_file).size == 1:
             # Need a dummy time dimension
-            data_full = add_time_dim(read_netcdf(mit_file, var_name), 1)
+            data_full = add_time_dim(data_full, 1)
         for l in loc:
             print '...at ' + l
             loc_name = region_names[l]
