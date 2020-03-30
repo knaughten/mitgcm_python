@@ -279,7 +279,24 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 
 
 # NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, annual_average=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, linestyles=None):
+
+# Arguments:
+# var_name: name of timeseries variable to plot (anything from function set_parameters in timeseries.py)
+# file_paths: list of length N, of file paths to MITgcm output files or precomputed timeseries files from different simulations.
+# sim_names: list of length N, of names for each simulation to show on legend
+
+# Optional keyword arguments:
+# precomputed: indicates timeseries is precomputed (otherwise will calculate from model output file)
+# grid, lon0, lat0: as in calc_special_timeseries
+# plot_mean: boolean indicating to also plot the ensemble mean in thicker black
+# first_in_mean: boolean indicating to include the first simulation in the mean (default True; set to False if you want to exclude it, e.g. ERA5 compared to PACe ensemble mean)
+# annual_average: boolean indicating to annually average the data before plotting
+# time_use: index of simulation to use the time axis for all variables (<= N); set to None if you want the different simulations to have different time axes (eg if they're not the same length and you're not plotting the mean).
+# colours: list of length N of colours to use for plot - if not set, will choose colours automatically
+# linestyles: list of length N of linestyles to use for the plot (default solid for all)
+# fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
+
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
 
     if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
@@ -296,11 +313,14 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
             time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         all_times.append(time)
         all_datas.append(data)
-    # Make sure all simulations are the same length, and then choose one time axis to use
-    if any([t.size != all_times[0].size for t in all_times]):
-        print 'Error (read_plot_timeseries_ensemble): not all the simulations are the same length.'
-        sys.exit()
-    time = all_times[time_use]
+    if time_use is None:
+        time = all_times
+    else:
+        # Make sure all simulations are the same length, and then choose one time axis to use
+        if any([t.size != all_times[0].size for t in all_times]):
+            print 'Error (read_plot_timeseries_ensemble): not all the simulations are the same length.'
+            sys.exit()
+        time = all_times[time_use]
 
     if annual_average:
         # Make sure it's an integer number of 30-day months
@@ -309,7 +329,11 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
             print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
             sys.exit()
         # Get midpoint of each year
-        time = np.array([time[i] for i in range(6,time.size,12)])
+        if time_use is None:
+            for n in range(len(time)):
+                time[n] = np.array([time[n][i] for i in range(6, time.size, 12)])
+        else:
+            time = np.array([time[i] for i in range(6,time.size,12)])
         # Average in blocks of 12
         for n in range(len(all_datas)):
             all_datas[n] = np.mean(all_datas[n].reshape(all_datas[n].size/12, 12), axis=-1)
@@ -320,8 +344,15 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         colours = default_colours(len(file_paths))
 
     if plot_mean:
+        if first_in_mean:
+            n0 = 0
+        else:
+            n0 = 1
+        if time_use is None and any([t.size != all_times[n0].size for t in all_times[n0:]]):
+            print 'Error (read_plot_timeseries_ensemble): can only calculate mean if simulations are same length.'
+            sys.exit()            
         # Calculate the mean
-        all_datas.append(np.mean(all_datas, axis=0))
+        all_datas.append(np.mean(all_datas[n0:], axis=0))
         # Plot in thicker black
         # First replace any black in the colours array
         if 'black' in colours:

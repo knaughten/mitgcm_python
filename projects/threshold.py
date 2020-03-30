@@ -21,8 +21,9 @@ from ..plot_latlon import latlon_plot
 
 # Global variables
 sim_keys = ['ctO', 'ctIO', 'abO', 'abIO', '1pO', '1pIO']
-
-
+sim_dirs = ['WSFRIS_'+key+'/output/' for key in sim_keys]
+sim_names = ['piControl-O','piControl-IO','abrupt-4xCO2-O','abrupt-4xCO2-IO','1pctCO2-O','1pctCO2-IO']
+timeseries_file = 'timeseries.nc'
 
 
 # Analyse the coastal winds in UKESM vs ERA5:
@@ -280,5 +281,17 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 def plot_all_timeseries (base_dir='./', fig_dir='./'):
 
     timeseries_types = ['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
+    file_paths = [real_dir(base_dir) + d + timeseries_file for d in sim_dirs]
+    colours = ['blue', 'blue', 'green', 'green', 'red', 'red']
+    linestyles = ['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed']
+
+    for var in timeseries_types:
+        for annual_average in [False, True]:
+            fig_name = real_dir(fig_dir) + var_name
+            if annual_average:
+                fig_name += '_annual.png'
+            else:
+                fig_name += '.png'
+        read_plot_timeseries_ensemble(var, file_paths, sim_names, precomputed=True, colours=colours, linestyles=linestyles, annual_average=annual_average, time_use=2, fig_name=fig_name)
 
     
