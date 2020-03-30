@@ -311,5 +311,6 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         if 'black' in colours:
             colours[colours.index['black']] = (0.6, 0.6, 0.6)
         colours.append('black')
+        sim_names.append('Mean')
 
     timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean)
