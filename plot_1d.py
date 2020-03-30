@@ -288,9 +288,9 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # Arguments:
 # var_name: name of timeseries variable to plot (anything from function set_parameters in timeseries.py)
 # file_paths: list of length N, of file paths to MITgcm output files or precomputed timeseries files from different simulations.
-# sim_names: list of length N, of names for each simulation to show on legend
 
 # Optional keyword arguments:
+# sim_names: list of length N, of names for each simulation to show on legend. If not set, there will be no legend.
 # precomputed: indicates timeseries is precomputed (otherwise will calculate from model output file)
 # grid, lon0, lat0: as in calc_special_timeseries
 # plot_mean: boolean indicating to also plot the ensemble mean in thicker black
