@@ -18,6 +18,13 @@ from ..postprocess import segment_file_paths
 from ..constants import deg_string
 from ..plot_latlon import latlon_plot
 
+
+# Global variables
+sim_keys = ['ctO', 'ctIO', 'abO', 'abIO', '1pO', '1pIO']
+
+
+
+
 # Analyse the coastal winds in UKESM vs ERA5:
 #   1. Figure out what percentage of points have winds in the opposite directions
 #   2. Suggest possible caps on the ERA5/UKESM ratio
@@ -267,4 +274,11 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     anim = animation.FuncAnimation(fig, func=animate, frames=range(num_time))
     writer = animation.FFMpegWriter(bitrate=500, fps=12)
     anim.save(mov_name, writer=writer)
+    
+
+# Plot all the timeseries variables, showing all simulations on the same axes for each variable.
+def plot_all_timeseries (base_dir='./', fig_dir='./'):
+
+    timeseries_types = ['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
+
     

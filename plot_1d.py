@@ -73,7 +73,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True, thick_last=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True, thick_last=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -94,7 +94,10 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
                 end_time = max(end_time, time[-1])
         else:
             start_time = times[0]
-            end_time = times[-1]                
+            end_time = times[-1]
+
+    if linestyles is None:
+        linestyles = ['solid' for n in range(len(labels))]
 
     if legend_in_centre:
         figsize=(8,6)
@@ -112,9 +115,9 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
         else:
             linewidth=1.5
         if dates:
-            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth)
+            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i])
         else:
-            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth)
+            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i])
             ax.set_xlim(start_time, end_time)
 
     ax.grid(True)
