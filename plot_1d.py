@@ -282,7 +282,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
     all_datas = []
     for f in file_paths:
         if precomputed:
-            time = netcdf_time(f, monthly=False))
+            time = netcdf_time(f, monthly=False)
             data = read_netcdf(f, var_name))
         else:
             time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
