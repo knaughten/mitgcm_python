@@ -32,6 +32,8 @@ es0 = 611
 sh_coeff = 0.62197
 # Specific heat of seawater (J/K/kg)
 Cp_sw = 4180.
+# Conversion from ice VAF change to global mean sea level contribution (m^-2) following Goelzer 2020 
+vaf_to_gmslr = 910./1028./3.625e14
 
 # Degrees formatted nicely in a string
 deg_string = r'$^{\circ}$'

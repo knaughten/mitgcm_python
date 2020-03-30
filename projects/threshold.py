@@ -15,7 +15,7 @@ from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel
 from ..plot_utils.labels import latlon_axes, parse_date
 from ..postprocess import segment_file_paths
-from ..constants import deg_string
+from ..constants import deg_string, vaf_to_gmslr
 from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 
@@ -289,7 +289,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
 
     timeseries_types = ['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
     # Now the Ua timeseries for the coupled simulations
-    ua_timeseries = ['iceVAF', 'iceVolume', 'groundedArea']
+    ua_timeseries = ['iceVAF', 'iceVolume', 'groundedArea', 'slr_contribution']
     file_paths = [base_dir + d + timeseries_file for d in sim_dirs]
     colours = ['blue', 'blue', 'green', 'green', 'red', 'red']
     linestyles = ['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed']
@@ -312,6 +312,12 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
         datas = []
         for n in range(num_sims):
             if coupled(n):
+                if var == 'slr_contribution':
+                    # Calculate from iceVAF
+                    data_tmp = read_netcdf(ua_files[n], 'iceVAF')
+                    data_tmp = (data_tmp-data_tmp[0])*vaf_to_gmslr
+                    title = 'Global mean sea level rise contribution'
+                    units = 'm'
                 data_tmp, title, units = read_netcdf(ua_files[n], var, return_info=True)
                 datas.append(data_tmp)
         timeseries_multi_plot(time, datas, sim_names[coupled], colours[coupled], title=title, units=units, fig_name=fig_dir+var_name+'.png')
