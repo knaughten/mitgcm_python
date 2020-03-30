@@ -206,7 +206,17 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
-# NetCDF interface to timeseries_multi_plot. Can set diff=True and file_path as a list of two file paths if you want a difference plot.
+# Helper function to set up to 7 colours automatically.
+def default_colours (n):
+
+    colours = ['blue', 'red', 'black', 'green', 'cyan', 'magenta', 'yellow']
+    if n > len(colours):
+        print 'Error (default_colours): need to specify colours if you need more than ' + str(len(colours))
+        sys.exit()
+    return colours[:n]
+
+
+# NetCDF interface to timeseries_multi_plot, for multiple variables in the same simulation (that have the same units). Can set diff=True and file_path as a list of two file paths if you want a difference plot.
 def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
@@ -224,11 +234,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 
     # Set up the colours
     if colours is None:
-        colours = ['blue', 'red', 'black', 'green', 'cyan', 'magenta', 'yellow']
-        if len(var_names) > len(colours):
-            print 'Error (read_plot_timeseries_multi): need to specify colours if there are more than 7 variables.'
-            sys.exit()
-        colours = colours[:len(var_names)]
+        colours = default_colours(len(var_names))
     
     data = []
     labels = []
@@ -262,3 +268,30 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
     if diff:
         title = 'Change in ' + title[0].lower() + title[1:]
     timeseries_multi_plot(time, data, labels, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
+
+
+# NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+
+    if var.endswith('mass_balance'):
+        print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
+        sys.exit()
+
+    # Read data
+    all_times = []
+    all_datas = []
+    for f in file_paths:
+        if precomputed:
+            time = netcdf_time(f, monthly=False))
+            data = read_netcdf(f, var_name))
+        else:
+            time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+        all_times.append(time)
+        all_datas.append(data)
+
+    # Set other things for plot
+    title, units = set_parameters(var_name)[2:4]
+    if colours is None:
+        colours = default_colours(len(file_paths))
+
+    timeseries_multi_plot(all_times, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
