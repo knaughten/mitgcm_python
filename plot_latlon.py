@@ -497,20 +497,31 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
 # var: as in read_plot_latlon, but options restricted to: 'ismr', 'bwtemp', 'bwsalt', 'bwage', 'sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'vel', 'velice', 'iceprod'
 # file_path_1, file_path_2: paths to NetCDF files containing the necessary variables for simulations 1 and 2; you can use second_file_path_1 and second_file_path_2 keyword arguments if needed (should only be necessary for 'vel' and 'velice').
 # It is assumed they cover the same period of time. If they don't, you can set time_index_2, etc. for the corresponding timesteps in file_path_2 which match time_index, etc. for file_path_1.
+# coupled: If True, the two files might have different masks, so mask with the most restrictive one.
 
-def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', z0=None, figsize=(8,6)):
+def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, vel_option='avg', z0=None, figsize=(8,6), coupled=False):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
-    # Get set up, just like read_plot_latlon
-    grid = choose_grid(grid, file_path_1)
+    if coupled:
+        # Recompute the grids regardless of whether they exist already
+        grid_1 = Grid(file_path_1)
+        grid_2 = Grid(file_path_2)
+        # Combine masks to get most restrictive ones
+        land_mask = (grid_1.land_mask + grid_2.land_mask).astype(bool)
+        ice_mask = (grid_1.ice_mask + grid_2.ice_mask).astype(bool)
+    else:
+        grid_1 = choose_grid(grid, file_path_1)
+        grid_2 = grid_1
+        land_mask = None
+        ice_mask = None
     check_single_time(time_index, time_average)
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     # This is the same as in read_plot_latlon except it requires file path arguments
-    def read_and_mask (var_name, mask_option, file_path, second_file_path=None, check_second=False, check_diff_time=False):
+    def read_and_mask (var_name, mask_option, file_path, grid, second_file_path=None, check_second=False, check_diff_time=False):
         # Do we need to choose the right file?
         if check_second and second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, var_name)
@@ -536,8 +547,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
 
     # Interface to call read_and_mask for each variable
     def read_and_mask_both (var_name, mask_option, check_second=False):
-        data1 = read_and_mask(var_name, mask_option, file_path_1, second_file_path=second_file_path_1, check_second=check_second)
-        data2 = read_and_mask(var_name, mask_option, file_path_2, second_file_path=second_file_path_2, check_second=check_second, check_diff_time=True)
+        data1 = read_and_mask(var_name, mask_option, file_path_1, grid_1, second_file_path=second_file_path_1, check_second=check_second)
+        data2 = read_and_mask(var_name, mask_option, file_path_2, grid_2, second_file_path=second_file_path_2, check_second=check_second, check_diff_time=True)
         return data1, data2
         
     # Now read and mask the necessary variables
@@ -609,8 +620,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         data_diff = eta_2 - eta_1
         title = 'Change in free surface (m)'
     elif var == 'vel':
-        speed_1 = prepare_vel(u_1, v_1, grid, vel_option=vel_option, z0=z0)[0]
-        speed_2 = prepare_vel(u_2, v_2, grid, vel_option=vel_option, z0=z0)[0]
+        speed_1 = prepare_vel(u_1, v_1, grid_1, vel_option=vel_option, z0=z0)[0]
+        speed_2 = prepare_vel(u_2, v_2, grid_2, vel_option=vel_option, z0=z0)[0]
         data_diff = speed_2 - speed_1
         title = 'Change in '
         if vel_option == 'avg':
@@ -623,8 +634,8 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
             title += str(int(round(-z0))) + 'm'
         title += ' speed (m/s)'
     elif var == 'velice':
-        speed_1 = prepare_vel(uice_1, vice_1, grid, vel_option='ice')[0]
-        speed_2 = prepare_vel(uice_2, vice_2, grid, vel_option='ice')[0]
+        speed_1 = prepare_vel(uice_1, vice_1, grid_1, vel_option='ice')[0]
+        speed_2 = prepare_vel(uice_2, vice_2, grid_2, vel_option='ice')[0]
         data_diff = speed_2 - speed_1
         title = 'Change in sea ice speed (m/s)'
     elif var == 'iceprod':
@@ -641,7 +652,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         include_shelf = False
 
     # Plot
-    latlon_plot(data_diff, grid, include_shelf=include_shelf, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize)    
+    latlon_plot(data_diff, grid_1, include_shelf=include_shelf, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, land_mask=land_mask, ice_mask=ice_mask)    
 
 
 # Plot topographic variables: bathymetry, ice shelf draft, water column thickness.

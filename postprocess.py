@@ -294,12 +294,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     fig_dir = real_dir(fig_dir)
 
     # Build lists of output files in each directory
-    if key in ['WSFRIS', 'FRIS']:
-        # Coupled
+    coupled = key in ['WSFRIS', 'FRIS']
+    if coupled:
         output_files_1 = segment_file_paths(output_dir_1)
         output_files_2 = segment_file_paths(output_dir_2)
     else:
-        # Uncoupled
         output_files_1 = build_file_list(output_dir_1, unravelled=unravelled)
         output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
@@ -362,7 +361,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
                 figsize = (12, 6)
         else:
             figsize = (8, 6)
-        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, ymax=ymax, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax)
+        read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, date_string=date_string, ymax=ymax, fig_name=fig_dir+var+'_diff.png', figsize=figsize, vmin=vmin, vmax=vmax, coupled=coupled)
         # Zoom into some variables
         if key in['WSK', 'WSFRIS'] and var in ['ismr', 'bwtemp', 'bwsalt', 'vel', 'bwage']:
             if var == 'bwage':
@@ -371,11 +370,11 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
             else:
                 vmin = None
                 vmax = None
-            read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, zoom_fris=True, date_string=date_string, fig_name=fig_dir+var+'_zoom_diff.png', vmin=vmin, vmax=vmax)
+            read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, zoom_fris=True, date_string=date_string, fig_name=fig_dir+var+'_zoom_diff.png', vmin=vmin, vmax=vmax, coupled=coupled)
         if var == 'vel':
             # Call the other options for vertical transformations
             for vel_option in ['sfc', 'bottom']:
-                read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, vel_option=vel_option, date_string=date_string, fig_name=fig_dir+var+'_'+vel_option+'_diff.png')
+                read_plot_latlon_diff(var, file_path_1, file_path_2, grid=grid, time_index=time_index_1, t_start=t_start_1, t_end=t_end_1, time_average=time_average, time_index_2=time_index_2, t_start_2=t_start_2, t_end_2=t_end_2, vel_option=vel_option, date_string=date_string, fig_name=fig_dir+var+'_'+vel_option+'_diff.png', coupled=coupled)
 
     # Slice plots
     if key in ['WSK', 'WSS', 'WSFRIS', 'FRIS']:
