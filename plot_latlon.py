@@ -590,6 +590,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         data_diff = convert_ismr(shifwflx_2 - shifwflx_1)
         title = 'Change in ice shelf melt rate (m/y)'
     elif var == 'bwtemp':
+        # Have to select bottom individually in case the mask is different
         data_diff = select_bottom(temp_2) - select_bottom(temp_1)
         title = r'Change in bottom water temperature ('+deg_string+'C)'
     elif var == 'bwsalt':
@@ -650,12 +651,6 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         include_shelf = True
     elif var in ['sst', 'sss', 'aice', 'hice', 'hsnow', 'mld', 'eta', 'velice', 'iceprod']:
         include_shelf = False
-
-    if coupled:
-        # Apply more restrictive mask
-        data_diff = np.ma.masked_where(land_mask, data_diff)
-        if not include_shelf:
-            data_diff = np.ma.masked_where(ice_mask, data_diff)
 
     # Plot
     latlon_plot(data_diff, grid_1, include_shelf=include_shelf, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, land_mask=land_mask, ice_mask=ice_mask)    
