@@ -266,18 +266,22 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
 
 
 # Similar to read_plot_slice, but plots differences between two simulations (2 minus 1). If the two simulations cover different periods of time, set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=0):
+def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, date_string=None, fig_name=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, ref_depth=0, coupled=False):
 
     # Figure out if the two files use different time indices
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
-    # Get set up just like read_plot_slice
-    grid = choose_grid(grid, file_path_1)
+    if coupled:
+        grid_1 = Grid(file_path_1)
+        grid_2 = Grid(file_path_2)
+    else:
+        grid_1 = choose_grid(grid, file_path_1)
+        grid_2 = grid_1
     check_single_time(time_index, time_average)
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from a NetCDF file and mask appropriately
-    def read_and_mask (var_name, file_path, check_diff_time=False, gtype='t'):
+    def read_and_mask (var_name, file_path, grid, check_diff_time=False, gtype='t'):
         if var_name in ['tminustf', 'rho']:
             # Need to read 2 variables
             temp = read_and_mask('THETA', file_path, check_diff_time=check_diff_time)
@@ -309,8 +313,8 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
 
     # Interface to call read_and_mask for each variable
     def read_and_mask_both (var_name, gtype='t'):
-        data1 = read_and_mask(var_name, file_path_1, gtype=gtype)
-        data2 = read_and_mask(var_name, file_path_2, check_diff_time=True, gtype=gtype)
+        data1 = read_and_mask(var_name, file_path_1, grid_1, gtype=gtype)
+        data2 = read_and_mask(var_name, file_path_2, grid_2, check_diff_time=True, gtype=gtype)
         return data1, data2
 
     if var in ['vnorm', 'valong', 'tadv_along', 'tdif_along'] and None in [point0, point1]:
@@ -320,34 +324,34 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
     # Read variables and make plots
     if var == 'temp':
         temp_1, temp_2 = read_and_mask_both('THETA')
-        slice_plot_diff(temp_1, temp_2, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(temp_1, temp_2, grid_1, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in temperature ('+deg_string+'C)', date_string=date_string, fig_name=fig_name)
     elif var == 'salt':
         salt_1, salt_2 = read_and_mask_both('SALT')     
-        slice_plot_diff(salt_1, salt_2, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(salt_1, salt_2, grid_1, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in salinity (psu)', date_string=date_string, fig_name=fig_name)
     elif var == 'tminustf':
         tmtf_1, tmtf_2 = read_and_mask_both('tminustf')
-        slice_plot_diff(tmtf_1, tmtf_2, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in difference from in-situ freezing point ('+deg_string+')', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(tmtf_1, tmtf_2, grid_1, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in difference from in-situ freezing point ('+deg_string+')', date_string=date_string, fig_name=fig_name)
     elif var == 'rho':
         rho_1, rho_2 = read_and_mask_both('rho')
-        slice_plot_diff(rho_1, rho_2, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(rho_1, rho_2, grid_1, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in density (kg/m$^3$)', date_string=date_string, fig_name=fig_name)
     elif var == 'u':
         u_1, u_2 = read_and_mask_both('UVEL', gtype='u')
-        slice_plot_diff(u_1, u_2, grid, gtype='u', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(u_1, u_2, grid_1, gtype='u', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in zonal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'v':
         v_1, v_2 = read_and_mask_both('VVEL', gtype='v')
-        slice_plot_diff(v_1, v_2, grid, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(v_1, v_2, grid_1, gtype='v', lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in meridional velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'vnorm':
         vnorm_1, vnorm_2 = read_and_mask_both(var)
-        slice_plot_diff(vnorm_1, vnorm_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(vnorm_1, vnorm_2, grid_1, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in normal velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'valong':
         valong_1, valong_2 = read_and_mask_both(var)
-        slice_plot_diff(valong_1, valong_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(valong_1, valong_2, grid_1, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title='Change in along-transect velocity (m/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'tadv_along':
         tadv_along_1, tadv_along_2 = read_and_mask_both(var)
-        slice_plot_diff(tadv_along_1, tadv_along_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(tadv_along_1, tadv_along_2, grid_1, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect advective heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     elif var == 'tdif_along':
         tdif_along_1, tdif_along_2 = read_and_mask_both(var)
-        slice_plot_diff(tdif_along_1, tdif_along_2, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
+        slice_plot_diff(tdif_along_1, tdif_along_2, grid_1, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
         print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
         sys.exit()
@@ -538,16 +542,21 @@ def read_plot_ts_slice (file_path, grid=None, lon0=None, lat0=None, point0=None,
 
 
 # Similar to read_plot_ts_slice, but plots the differences between two simulations (2 minus 1). It is assumed that the two files cover the same time period. Otherwise you can set time_index_2 etc. as in function read_plot_latlon_diff.
-def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None):
+def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat0=None, point0=None, point1=None, time_index=None, t_start=None, t_end=None, time_average=False, time_index_2=None, t_start_2=None, t_end_2=None, hmin=None, hmax=None, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, tcontours=None, scontours=None, date_string=None, fig_name=None, second_file_path_1=None, second_file_path_2=None, coupled=False):
 
     diff_time = (time_index_2 is not None) or (time_average and (t_start_2 is not None or t_end_2 is not None))
 
-    grid = choose_grid(grid, file_path_1)
+    if coupled:
+        grid_1 = Grid(file_path_1)
+        grid_2 = Grid(file_path_2)
+    else:
+        grid_1 = choose_grid(grid, file_path_1)
+        grid_2 = grid_1
     check_single_time(time_index, time_average)
     date_string = check_date_string(date_string, file_path_1, time_index)
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
-    def read_and_mask (var_name, file_path, second_file_path=None, check_diff_time=False):
+    def read_and_mask (var_name, file_path, grid, second_file_path=None, check_diff_time=False):
         # Do we need to choose the right file?
         if second_file_path is not None:
             file_path_use = find_variable(file_path, second_file_path, var_name)
@@ -562,8 +571,8 @@ def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat
 
     # Interface to call read_and_mask for each variable
     def read_and_mask_both (var_name):
-        data1 = read_and_mask(var_name, file_path_1, second_file_path=second_file_path_1)
-        data2 = read_and_mask(var_name, file_path_2, second_file_path=second_file_path_2, check_diff_time=True)
+        data1 = read_and_mask(var_name, file_path_1, grid_1, second_file_path=second_file_path_1)
+        data2 = read_and_mask(var_name, file_path_2, grid_2, second_file_path=second_file_path_2, check_diff_time=True)
         return data1, data2
 
     # Read temperature and salinity for each simulation
@@ -571,7 +580,7 @@ def read_plot_ts_slice_diff (file_path_1, file_path_2, grid=None, lon0=None, lat
     salt_1, salt_2 = read_and_mask_both('SALT')
 
     # Plot
-    ts_slice_plot_diff(temp_1, temp_2, salt_1, salt_2, grid, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, tcontours=tcontours, scontours=scontours, date_string=date_string, fig_name=fig_name)    
+    ts_slice_plot_diff(temp_1, temp_2, salt_1, salt_2, grid_1, lon0=lon0, lat0=lat0, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, tmin=tmin, tmax=tmax, smin=smin, smax=smax, tcontours=tcontours, scontours=scontours, date_string=date_string, fig_name=fig_name)    
     
 
 # Plot a slice of vertical resolution (dz).
