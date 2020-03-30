@@ -279,7 +279,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 
 
 # NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, annual_average=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, annual_average=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, linestyles=None):
 
     if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
@@ -329,4 +329,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         colours.append('black')
         sim_names.append('Mean')
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles)
