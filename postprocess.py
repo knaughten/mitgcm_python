@@ -279,8 +279,9 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 # fig_dir: as in function plot_everything
 # option: either 'last_year' (averages over the last 12 months of the overlapping period of the simulations) or 'last_month' (just considers the last month of the overlapping period).
 # unravelled: as in function plot_everything
+# file_name: name of file containing 1 time index, which is present in both directories.
 
-def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS', hovmoller_file='hovmoller.nc'):
+def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS', hovmoller_file='hovmoller.nc', file_name=None):
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
@@ -303,12 +304,24 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
         output_files_2 = build_file_list(output_dir_2, unravelled=unravelled)
 
     # Now figure out which time indices to use for plots with no time dependence
-    file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)
-    # Set date string
-    if option == 'last_year':
-        date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
-    elif option == 'last_month':
-        date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
+    if file_name is None:
+        file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average = select_common_time(output_files_1, output_files_2, option=option, monthly=monthly, check_match=False)
+        # Set date string
+        if option == 'last_year':
+            date_string = 'year beginning ' + parse_date(file_path=file_path_1, time_index=t_start_1)
+        elif option == 'last_month':
+            date_string = parse_date(file_path=file_path_1, time_index=time_index_1)
+    else:
+        file_path_1 = output_dir_1 + file_name
+        file_path_2 = output_dir_2 + file_name
+        time_index_1 = 0
+        time_index_2 = 0
+        t_start_1 = None
+        t_start_2 = None
+        t_end_1 = None
+        t_end_2 = None
+        time_average = False
+        date_string = ''
 
     # Build the grid
     if grid_path is None:
