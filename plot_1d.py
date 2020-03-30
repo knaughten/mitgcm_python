@@ -96,6 +96,10 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
             start_time = times[0]
             end_time = times[-1]
 
+    plot_legend = labels is not None
+    if labels is None:
+        labels = [None for i in range(len(datas))]        
+            
     if linestyles is None:
         linestyles = ['solid' for n in range(len(labels))]
 
@@ -128,15 +132,16 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
         monthly_ticks(ax)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
-    if legend_in_centre:
-        # Make legend
-        ax.legend(loc='center')
-    else:
-        # Move plot over to make room for legend
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
-        # Make legend
-        ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    if plot_legend:
+        if legend_in_centre:
+            # Make legend
+            ax.legend(loc='center')
+        else:
+            # Move plot over to make room for legend
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+            # Make legend
+            ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     
     finished_plot(fig, fig_name=fig_name, dpi=dpi)
     
@@ -296,7 +301,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # linestyles: list of length N of linestyles to use for the plot (default solid for all)
 # fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
 
     if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'

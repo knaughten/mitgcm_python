@@ -17,13 +17,17 @@ from ..plot_utils.labels import latlon_axes, parse_date
 from ..postprocess import segment_file_paths
 from ..constants import deg_string
 from ..plot_latlon import latlon_plot
+from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 
 
 # Global variables
 sim_keys = ['ctO', 'ctIO', 'abO', 'abIO', '1pO', '1pIO']
 sim_dirs = ['WSFRIS_'+key+'/output/' for key in sim_keys]
 sim_names = ['piControl-O','piControl-IO','abrupt-4xCO2-O','abrupt-4xCO2-IO','1pctCO2-O','1pctCO2-IO']
+coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
+ua_post_file = 'ua_postprocessed.nc'
+num_sim = len(sim_keys)
 
 
 # Analyse the coastal winds in UKESM vs ERA5:
@@ -279,19 +283,64 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
 # Plot all the timeseries variables, showing all simulations on the same axes for each variable.
 def plot_all_timeseries (base_dir='./', fig_dir='./'):
+    
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     timeseries_types = ['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
-    file_paths = [real_dir(base_dir) + d + timeseries_file for d in sim_dirs]
+    # Now the Ua timeseries for the coupled simulations
+    ua_timeseries = ['iceVAF', 'iceVolume', 'groundedArea']
+    file_paths = [base_dir + d + timeseries_file for d in sim_dirs]
     colours = ['blue', 'blue', 'green', 'green', 'red', 'red']
     linestyles = ['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed']
+    ua_files = [base_dir + d + ua_post_file for d in sim_dirs]
 
     for var in timeseries_types:
         for annual_average in [False, True]:
-            fig_name = real_dir(fig_dir) + var_name
+            fig_name = fig_dir + var_name
             if annual_average:
                 fig_name += '_annual.png'
             else:
                 fig_name += '.png'
         read_plot_timeseries_ensemble(var, file_paths, sim_names, precomputed=True, colours=colours, linestyles=linestyles, annual_average=annual_average, time_use=2, fig_name=fig_name)
 
-    
+    # Now the Ua timeseries
+    # Read time from an ocean file
+    time = netcdf_time(file_paths[0], monthly=False)
+    # Read data from each simulation
+    for var in ua_timeseries:
+        datas = []
+        for n in range(num_sims):
+            if coupled(n):
+                data_tmp, title, units = read_netcdf(ua_files[n], var, return_info=True)
+                datas.append(data_tmp)
+        timeseries_multi_plot(time, datas, sim_names[coupled], colours[coupled], title=title, units=units, fig_name=fig_dir+var_name+'.png')
+
+
+# Plot grounding line at the beginning of the ctIO simulation, and the end of each coupled simulation.
+def gl_plot (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    colours = ['black', 'blue', 'green', 'red']
+    labels = ['Initial'] + sim_names[coupled]
+
+    xGL_all = []
+    yGL_all = []
+    for n in range(num_sims):
+        if coupled(n):
+            xGL = read_netcdf(file_path, 'xGL')
+            yGL = read_netcdf(file_path, 'yGL')
+            if len(xGL_all)==0:
+                # Initial grounding line for the first simulation
+                xGL_all.append(xGL[0,:])
+                yGL_all.append(yGL[0,:])
+            # Final grounding line for all simulations
+            xGL_all.append(xGL[-1,:])
+            yGL_all.append(yGL[-1,:])
+    fig, ax = plt.subplots(figsize=(7,6))
+    for n in range(len(xGL_all)):
+        ax.plot(xGL_all[n], yGL_all[n], '-', color=colours[n], label=labels[n])
+    ax.legend()
+    ax.set_title('Final grounding line position')
+    finished_plot(fig, fig_name=fig_dir+'gl_final.png')
