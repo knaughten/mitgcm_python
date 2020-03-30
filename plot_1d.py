@@ -276,7 +276,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 
 
 # NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, annual_average=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
 
     if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
@@ -299,6 +299,18 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         sys.exit()
     time = all_times[time_use]
 
+    if annual_average:
+        # Make sure it's an integer number of 30-day months
+        calendar = netcdf_time(file_paths[0], return_units=True)[2]
+        if calendar != '360_day' or not monthly or time.size%12 != 0:
+            print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
+            sys.exit()
+        # Get midpoint of each year
+        time = [time[i] for i in range(6,time.size,12)]
+        # Average in blocks of 12
+        for n in range(len(all_datas)):
+            all_datas[n] = np.mean(all_datas[n].reshape(all_datas[n].size/12, 12), axis=-1)
+
     # Set other things for plot
     title, units = set_parameters(var_name)[2:4]
     if colours is None:
@@ -314,7 +326,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         colours.append('black')
         sim_names.append('Mean')
 
-    print len(all_datas)
-    print len(sim_names)
-    print len(colours)
     timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean)
