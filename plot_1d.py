@@ -306,7 +306,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
             print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
             sys.exit()
         # Get midpoint of each year
-        time = [time[i] for i in range(6,time.size,12)]
+        time = np.array([time[i] for i in range(6,time.size,12)])
         # Average in blocks of 12
         for n in range(len(all_datas)):
             all_datas[n] = np.mean(all_datas[n].reshape(all_datas[n].size/12, 12), axis=-1)
