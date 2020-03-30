@@ -361,7 +361,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         # Plot in thicker black
         # First replace any black in the colours array
         if 'black' in colours:
-            colours[colours.index['black']] = (0.6, 0.6, 0.6)
+            colours[colours.index('black')] = (0.6, 0.6, 0.6)
         colours.append('black')
         if sim_names is None:
             sim_names = [None for n in range(len(all_datas))]
