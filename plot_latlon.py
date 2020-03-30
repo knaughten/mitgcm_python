@@ -590,13 +590,13 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         data_diff = convert_ismr(shifwflx_2 - shifwflx_1)
         title = 'Change in ice shelf melt rate (m/y)'
     elif var == 'bwtemp':
-        data_diff = select_bottom(temp_2 - temp_1)
+        data_diff = select_bottom(temp_2) - select_bottom(temp_1)
         title = r'Change in bottom water temperature ('+deg_string+'C)'
     elif var == 'bwsalt':
-        data_diff = select_bottom(salt_2 - salt_1)
+        data_diff = select_bottom(salt_2) - select_bottom(salt_1)
         title = 'Change in bottom water salinity (psu)'
     elif var == 'bwage':
-        data_diff = select_bottom(age_2 - age_1)
+        data_diff = select_bottom(age_2) - select_bottom(age_1)
         title = 'Change in bottom water age (years)'
     elif var == 'sst':
         data_diff = temp_2[0,:] - temp_1[0,:]
