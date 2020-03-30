@@ -293,6 +293,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
             time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         all_times.append(time)
         all_datas.append(data)
+    # Make sure all simulations are the same length, and then choose one time axis to use
     if any([t.size != all_times[0].size for t in all_times]):
         print 'Error (read_plot_timeseries_ensemble): not all the simulations are the same length.'
         sys.exit()
@@ -313,4 +314,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
         colours.append('black')
         sim_names.append('Mean')
 
+    print len(all_datas)
+    print len(sim_names)
+    print len(colours)
     timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean)
