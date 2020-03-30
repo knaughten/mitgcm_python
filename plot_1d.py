@@ -69,10 +69,11 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 # labels: list of legend labels (strings) to use for each timeseries
 # colours: list of colours (strings or RGB tuples) to use for each timeseries
 # dates: indicates "time" is not an array of Dates, but just the values for years
+# thick_last: indicates to plot the last line in a thicker weight
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True):
+def timeseries_multi_plot (times, datas, labels, colours, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True, thick_last=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -106,10 +107,14 @@ def timeseries_multi_plot (times, datas, labels, colours, title='', units='', mo
             time = times[i]
         else:
             time = times
-        if dates:
-            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+        if thicker_last and i==len(datas)-1:
+            linewidth=3
         else:
-            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=1.5)
+            linewidth=1.5
+        if dates:
+            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth)
+        else:
+            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth)
             ax.set_xlim(start_time, end_time)
 
     ax.grid(True)
@@ -271,9 +276,9 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 
 
 # NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, time_use=0, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
 
-    if var.endswith('mass_balance'):
+    if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
         sys.exit()
 
@@ -288,10 +293,23 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names, precomputed=
             time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         all_times.append(time)
         all_datas.append(data)
+    if any([t.size != all_times[0].size for t in all_times]):
+        print 'Error (read_plot_timeseries_ensemble): not all the simulations are the same length.'
+        sys.exit()
+    time = all_times[time_use]
 
     # Set other things for plot
     title, units = set_parameters(var_name)[2:4]
     if colours is None:
         colours = default_colours(len(file_paths))
 
-    timeseries_multi_plot(all_times, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
+    if plot_mean:
+        # Calculate the mean
+        all_datas.append(np.mean(all_datas, axis=0))
+        # Plot in thicker black
+        # First replace any black in the colours array
+        if 'black' in colours:
+            colours[colours.index['black']] = (0.6, 0.6, 0.6)
+        colours.append('black')
+
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean)
