@@ -1146,7 +1146,7 @@ def save_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, 
 
 
 # Call save_density for all files.
-def save_density_for_all (output_dir, coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def save_density_for_all (output_dir='./', coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     if coupled:
         file_paths = segment_file_paths(output_dir)
