@@ -318,8 +318,8 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     # Read time from an ocean file
     #time = netcdf_time(file_paths[0], monthly=False)
     # Read data from each simulation
-    for n in range(len(ua_timeseries)):
-        var = ua_timeseries[n]
+    for i in range(len(ua_timeseries)):
+        var = ua_timeseries[i]
         datas = []
         for n in range(num_sim):
             if coupled[n]:
@@ -331,7 +331,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
                     data_tmp = (data_tmp-data_tmp[0])*vaf_to_gmslr
                 data_tmp = read_netcdf(ua_files[n], var)
                 datas.append(data_tmp)
-        timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=ua_titles[n], units=ua_units[n], fig_name=fig_dir+var_name+'.png')
+        timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=ua_titles[i], units=ua_units[i], fig_name=fig_dir+var_name+'.png')
 
 
 # Plot grounding line at the beginning of the ctIO simulation, and the end of each coupled simulation.
