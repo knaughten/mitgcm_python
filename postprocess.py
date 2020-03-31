@@ -1159,10 +1159,13 @@ def save_density (in_file, out_file, eosType='MDJWF', rhoConst=None, Tref=None, 
 
 
 # Call save_density for all files.
-def save_density_for_all (output_dir='./', coupled=True, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def save_density_for_all (output_dir='./', coupled=True, start_year=None, eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
 
     if coupled:
         file_paths = segment_file_paths(output_dir)
+        if start_year is not None:
+            i_start = [file_paths.index(s) for s in file_paths if str(start_year) in s][0]
+            file_paths = file_paths[i_start:]
     else:
         file_paths = build_file_list(output_dir)
 
