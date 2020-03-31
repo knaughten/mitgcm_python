@@ -7,19 +7,11 @@ import sys
 import numpy as np
 import shutil
 import netCDF4 as nc
-import matplotlib.pyplot as plt
 
 from grid import Grid
 from file_io import NCfile, netcdf_time, find_time_index, read_netcdf
 from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
-from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
-from plot_latlon import read_plot_latlon, plot_aice_minmax, read_plot_latlon_diff, latlon_plot, read_plot_latlon_comparison
-from plot_slices import read_plot_ts_slice, read_plot_ts_slice_diff
-from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, ctd_cast_compare
 from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask
-from plot_utils.labels import parse_date
-from plot_utils.colours import get_extend
-from plot_utils.windows import set_panels
 from constants import deg_string, region_names
 from calculus import area_average
 from diagnostics import density
@@ -86,6 +78,12 @@ def segment_file_paths (output_dir, segment_dir=None, file_name='output.nc'):
 # unravelled: set to True if the simulation is done and you've run netcdf_finalise.sh, so the files are 1979.nc, 1980.nc, etc. instead of output_001.nc, output_002., etc.
 
 def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=True, unravelled=False, key='WSFRIS', hovmoller_file='hovmoller.nc', ctd_file='../../ctddatabase.mat'):
+
+    from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
+    from plot_latlon import read_plot_latlon
+    from plot_slices import read_plot_ts_slice
+    from plot_misc import read_plot_hovmoller_ts
+    from plot_misc import ctd_cast_compare
 
     if time_average:
         time_index = None
@@ -283,6 +281,12 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 
 def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS', hovmoller_file='hovmoller.nc', file_name=None):
 
+    from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
+    from plot_latlon import read_plot_latlon_diff
+    from plot_slices import read_plot_ts_slice_diff
+    from plot_misc import read_plot_hovmoller_ts_diff
+    from plot_utils.labels import parse_date
+
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
     if baseline_dir is None:
@@ -410,6 +414,8 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 # monthly: as in function netcdf_time
 
 def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=True):
+
+    from plot_latlon import plot_aice_minmax
 
     fig_dir = real_dir(fig_dir)
 
@@ -570,6 +576,10 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
 def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment_dir=None, vmin=None, vmax=None, change_points=None, mov_name=None, fig_name_beg=None, fig_name_end=None, figsize=(8,6), zoom_fris=False):
 
     import matplotlib.animation as animation
+    import matplotlib.pyplot as plt
+    from plot_latlon import latlon_plot
+    from plot_utils.labels import parse_date
+    from plot_utils.colours import get_extend
 
     output_dir = real_dir(output_dir)
     segment_dir = check_segment_dir(output_dir, segment_dir)
@@ -1097,6 +1107,10 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
 # hovmoller_file, timeseries_file: 
 # key: simulation type key which will set variable types and other settings
 def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmoller_file='hovmoller.nc', timeseries_file='timeseries.nc', key='PAS'):
+
+    from plot_1d import read_plot_timeseries_multi
+    from plot_latlon import read_plot_latlon_comparison
+    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
 
     if key == 'PAS':
         latlon_names_forcing = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'windangle', 'precip', 'swdown', 'lwdown']
