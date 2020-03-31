@@ -287,7 +287,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    timeseries_types = ['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
+    timeseries_types = [] #['fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']  # Everything except the mass balance (doesn't work as ensemble)
     # Now the Ua timeseries for the coupled simulations
     ua_timeseries = ['iceVAF', 'iceVolume', 'groundedArea', 'slr_contribution']
     file_paths = [base_dir + d + timeseries_file for d in sim_dirs]
@@ -307,8 +307,14 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     # Now the Ua timeseries
     sim_names_ua = []
     colours_ua = []
+    time = []
+    import datetime
+    for year in range(150):
+        for month in range(12):
+            time.append(datetime.date(1850+year,month+1,1))
+    time = np.array(time)
     # Read time from an ocean file
-    time = netcdf_time(file_paths[0], monthly=False)
+    #time = netcdf_time(file_paths[0], monthly=False)
     # Read data from each simulation
     for var in ua_timeseries:
         datas = []
