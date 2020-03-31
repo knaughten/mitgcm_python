@@ -305,6 +305,8 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
         read_plot_timeseries_ensemble(var, file_paths, sim_names, precomputed=True, colours=colours, linestyles=linestyles, annual_average=annual_average, time_use=2, fig_name=fig_name)
 
     # Now the Ua timeseries
+    sim_names_ua = []
+    colours_ua = []
     # Read time from an ocean file
     time = netcdf_time(file_paths[0], monthly=False)
     # Read data from each simulation
@@ -312,6 +314,8 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
         datas = []
         for n in range(num_sims):
             if coupled(n):
+                sim_names_ua.append(sim_names[n])
+                colours_ua.append(colours[n])
                 if var == 'slr_contribution':
                     # Calculate from iceVAF
                     data_tmp = read_netcdf(ua_files[n], 'iceVAF')
@@ -320,7 +324,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
                     units = 'm'
                 data_tmp, title, units = read_netcdf(ua_files[n], var, return_info=True)
                 datas.append(data_tmp)
-        timeseries_multi_plot(time, datas, sim_names[coupled], colours[coupled], title=title, units=units, fig_name=fig_dir+var_name+'.png')
+        timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=title, units=units, fig_name=fig_dir+var_name+'.png')
 
 
 # Plot grounding line at the beginning of the ctIO simulation, and the end of each coupled simulation.
@@ -329,7 +333,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     colours = ['black', 'blue', 'green', 'red']
-    labels = ['Initial'] + sim_names[coupled]
+    labels = ['Initial']
 
     xGL_all = []
     yGL_all = []
@@ -337,6 +341,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
         if coupled(n):
             xGL = read_netcdf(file_path, 'xGL')
             yGL = read_netcdf(file_path, 'yGL')
+            labels.append(sim_names[n])
             if len(xGL_all)==0:
                 # Initial grounding line for the first simulation
                 xGL_all.append(xGL[0,:])
