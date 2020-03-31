@@ -1097,6 +1097,22 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
         id.close()
 
 
+# Call precompute_hovmoller for every segment in a coupled simulation.
+def precompute_hovmoller_all_coupled (output_dir='./', hovmoller_file='hovmoller.nc', file_name='output.nc', segment_dir=None, loc=['filchner_trough'], var=['temp', 'salt'], monthly=True):
+
+    output_dir = real_dir(output_dir)
+    if segment_dir is None and os.path.isfile(hovmoller_file):
+        print 'Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'
+        sys.exit()
+    segment_dir = check_segment_dir(output_dir, segment_dir)
+    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
+
+    # Call precompute_hovmoller for each segment
+    for file_path in file_paths:
+        print 'Processing ' + file_path
+        precompute_hovmoller(file_path, hovmoller_file, loc=loc, var=var, monthly=monthly)
+        
+
 # Make figures to compare two simulations (generally 3-panel figures with 1, 2, and 2-1).
 # Input arguments:
 # name_1, name_2: simulation names to add to plot titles. No spaces allowed so they can be used in file names.
