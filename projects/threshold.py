@@ -353,7 +353,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
     fig, ax = plt.subplots(figsize=(7,6))
     for n in range(len(xGL_all)):
         ax.plot(xGL_all[n], yGL_all[n], '-', color=colours[n], label=labels[n])
-    ax.legend(loc='upper center')
+    ax.legend(loc='upper left')
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_title('Final grounding line position')
