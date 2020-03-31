@@ -313,7 +313,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     for var in ua_timeseries:
         datas = []
         for n in range(num_sim):
-            if coupled(n):
+            if coupled[n]:
                 sim_names_ua.append(sim_names[n])
                 colours_ua.append(colours[n])
                 if var == 'slr_contribution':
@@ -338,7 +338,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
     xGL_all = []
     yGL_all = []
     for n in range(num_sim):
-        if coupled(n):
+        if coupled[n]:
             xGL = read_netcdf(file_path, 'xGL')
             yGL = read_netcdf(file_path, 'yGL')
             labels.append(sim_names[n])
