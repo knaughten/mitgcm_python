@@ -130,7 +130,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 # Calculate the fields used for animate_cavity and save to a NetCDF file.
 def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'):
 
-    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
+    var_names = ['bwtemp', 'bwsalt'] #, 'ismr', 'vel']
     num_vars = len(var_names)
 
     # Get all the model output files
@@ -194,7 +194,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'
     ncfile.close()    
 
 
-# Make animations of bottom water temperature, bottom water salinity, ice shelf melt rate, and barotropic velocity in the FRIS cavity for the given simulation.
+# Make animations of bottom water temperature and salinity in the FRIS cavity for the given simulation.
 # Type "load_animations" in the shell before calling this function.
 # The grid is just for grid sizes, so pass it any valid grid regardless of coupling status.
 def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
@@ -203,12 +203,12 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     grid = choose_grid(grid, None)
 
-    var_names = ['bwtemp', 'bwsalt', 'ismr', 'vel']
-    var_titles = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Ice shelf melt rate (m/y)', 'Barotropic velocity (m/s)']
-    ctype = ['basic', 'basic', 'ismr', 'vel']
+    var_names = ['bwtemp', 'bwsalt'] #, 'ismr', 'vel']
+    var_titles = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)'] #, 'Ice shelf melt rate (m/y)', 'Barotropic velocity (m/s)']
+    ctype = ['basic', 'basic'] #, 'ismr', 'vel']
     # These min and max values will be overrided if they're not restrictive enough
-    vmin = [-2.5, 33.4, None, None]
-    vmax = [2.5, 34.75, None, None]
+    vmin = [-2.5, 33.4] #, None, None]
+    vmax = [2.5, 34.75] #, None, None]
     num_vars = len(var_names)
 
     # Read data from precomputed file
@@ -246,8 +246,8 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
             extend.append('neither')    
 
     # Initialise the plot
-    fig, gs, cax1, cax2, cax3, cax4 = set_panels('2x2C4')
-    cax = [cax1, cax2, cax3, cax4]
+    fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(24,12))
+    cax = [cax1, cax2]
     ax = []
     for n in range(num_vars):
         ax.append(plt.subplot(gs[n/2,n%2]))
@@ -257,15 +257,15 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=16, land_mask=land_mask[t,:]))
-        plt.suptitle(dates[t], fontsize=20)
+            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=32, land_mask=land_mask[t,:]))
+        plt.suptitle(dates[t], fontsize=40)
         if t == 0:
             return img
 
     # First frame
     img = plot_one_frame(0)
     for n in range(num_vars):
-        plt.colorbar(img[n], cax=cax[n], extend=extend[n])
+        plt.colorbar(img[n], cax=cax[n], extend=extend[n], orientation='horizontal')
 
     # Function to update figure with the given frame
     def animate(t):
@@ -276,7 +276,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(num_time))
-    writer = animation.FFMpegWriter(bitrate=500, fps=12)
+    writer = animation.FFMpegWriter(bitrate=2000, fps=12)
     anim.save(mov_name, writer=writer)
     
 
