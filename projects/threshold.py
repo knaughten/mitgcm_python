@@ -332,6 +332,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
+    ua_files = [base_dir + d + ua_post_file for d in sim_dirs]
     colours = ['black', 'blue', 'green', 'red']
     labels = ['Initial']
 
@@ -339,8 +340,8 @@ def gl_plot (base_dir='./', fig_dir='./'):
     yGL_all = []
     for n in range(num_sim):
         if coupled[n]:
-            xGL = read_netcdf(file_path, 'xGL')
-            yGL = read_netcdf(file_path, 'yGL')
+            xGL = read_netcdf(ua_files[n], 'xGL')
+            yGL = read_netcdf(ua_files[n], 'yGL')
             labels.append(sim_names[n])
             if len(xGL_all)==0:
                 # Initial grounding line for the first simulation
