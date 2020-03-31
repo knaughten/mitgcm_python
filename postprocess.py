@@ -334,7 +334,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
     elif key == 'WSK':
         var_names = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
     elif key == 'WSFRIS':
-        var_names = ['fris_mass_balance', 'fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod'] #['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        var_names = [] #['fris_mass_balance', 'fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod'] #['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'FRIS':
         var_names = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
     elif key == 'PAS':
