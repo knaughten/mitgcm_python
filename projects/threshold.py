@@ -219,7 +219,6 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     for date in time:
         dates.append(parse_date(date=date))
     land_mask = read_netcdf(animation_file, 'land_mask') == 1
-    ice_mask = read_netcdf(animation_file, 'ice_mask') == 1
     data = []
     extend = []    
     for n in range(num_vars):
