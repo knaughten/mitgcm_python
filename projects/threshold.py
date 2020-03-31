@@ -331,7 +331,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
                     data_tmp = (data_tmp-data_tmp[0])*vaf_to_gmslr
                 data_tmp = read_netcdf(ua_files[n], var)
                 datas.append(data_tmp)
-        timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=ua_titles[i], units=ua_units[i], fig_name=fig_dir+var_name+'.png')
+        timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=ua_titles[i], units=ua_units[i], fig_name=fig_dir+var+'.png')
 
 
 # Plot grounding line at the beginning of the ctIO simulation, and the end of each coupled simulation.
