@@ -257,7 +257,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     def plot_one_frame (t):
         img = []
         for n in range(num_vars):
-            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=32, land_mask=land_mask[t,:]))
+            img.append(latlon_plot(data[n][t,:], grid, ax=ax[n], make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=var_titles[n], titlesize=36, land_mask=land_mask[t,:]))
         plt.suptitle(dates[t], fontsize=40)
         if t == 0:
             return img
@@ -265,11 +265,12 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     # First frame
     img = plot_one_frame(0)
     for n in range(num_vars):
-        plt.colorbar(img[n], cax=cax[n], extend=extend[n], orientation='horizontal')
+        cbar = plt.colorbar(img[n], cax=cax[n], extend=extend[n], orientation='horizontal')
+        cbar.ax.tick_params(labelsize=18)
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t) + ' of ' + str(num_time)
+        print 'Frame ' + str(t+1) + ' of ' + str(num_time)
         for n in range(num_vars):
             ax[n].cla()
         plot_one_frame(t)
