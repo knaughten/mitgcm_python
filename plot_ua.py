@@ -63,7 +63,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     clip = option=='reg' and x_bdry is not None and y_bdry is not None
     if clip:
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
-        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
+        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='white', edgecolor='black')
     else:
         bdry = None
         
