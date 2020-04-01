@@ -68,7 +68,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         y_bdry[y<ymin] = ymin
         y_bdry[y>ymax] = ymax
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
-        bdry = matplotlib.patches.PathPatch(matplotlib.path.Path(xy_bdry), facecolor='none', edgecolor='black')
+        bdry = matplotlib.patches.PathPatch(matplotlib.path.Path(xy_bdry, closed=True), facecolor='none', edgecolor='black')
     else:
         bdry = None
         
