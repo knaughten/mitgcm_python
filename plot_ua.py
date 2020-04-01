@@ -117,7 +117,7 @@ def check_read_gl (gl_file, gl_time_index):
 
 
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
+def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -214,7 +214,7 @@ def gl_final (file_path, fig_name=None, dpi=None):
 
 
 # Plot the difference between two Ua output steps for the given variable. This involves interpolating to a common grid.
-def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
+def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None):
 
     import matplotlib
     matplotlib.use('TkAgg')
@@ -235,9 +235,14 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
             data = np.sqrt(f['ub'][:,0]**2 + f['vb'][:,0]**2)
         else:
             data = f[var][:,0]
-        return interp_nonreg_xy(x, y, data, x_reg, y_reg)
+        return x_reg, y_reg, interp_nonreg_xy(x, y, data, x_reg, y_reg)
 
-    data_diff = interp_nonreg_xy(file_path_2) - interp_nonreg_xy(file_path_1)
+    x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
+    x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
+    if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
+        print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
+        sys.exit()
+    data_diff = data_2 - data_1
     xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
     if title is None:
@@ -245,8 +250,9 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
             title = ua_titles[var]
         except(KeyError):
             title = var
+        title = 'Change in ' + title[0].lower() + title[1:]
 
-    ua_plot('reg', data_diff, x_reg, y_reg, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    ua_plot('reg', data_diff, x_reg_1, y_reg_1, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
     
         
         
