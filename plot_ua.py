@@ -63,7 +63,8 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     clip = option=='reg' and x_bdry is not None and y_bdry is not None
     if clip:
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
-        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
+        bdry = matplotlib.path.Path(xy_bdry)
+        #bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
     else:
         bdry = None
         
@@ -76,9 +77,8 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     if option == 'tri':
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     elif option == 'reg':
-        if clip:
-            fig.patch.set_facecolor('white')
-            ax.add_patch(bdry)
+        #if clip:
+            #ax.add_patch(bdry)
         img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=(bdry,ax.transAxes))
     if make_cbar:
         # Add a colourbar
