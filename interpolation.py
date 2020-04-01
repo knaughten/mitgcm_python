@@ -483,8 +483,8 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
         return c1*data[k1,:] + c2*data[k2,:]
 
 
-# Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).
-# The input lat and lon arrays should be 2D for the source grid, and either 1D (if regular) or 2D for the target grid.
+# Interpolate from a non-regular grid to a another grid (either regular or non-regular).
+# The input lat and lon arrays can be either 1D or 2D.
 # Fill anything outside the bounds of the source grid with fill_value. If there are any such missing values within the bounds of the source grid, fill them with the average of the legitimate points as to not mess up the interpolation.
 def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
 

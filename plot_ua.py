@@ -220,29 +220,21 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
     matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
 
-    # Finer grid to interpolate to
-    nx = 1000
-    ny = 1000
-
     # Read the data for each output step
     def read_data (file_path):
         f = loadmat(file_path)
         x, y, connectivity = read_ua_mesh(f)
-        # Set up regular grid. This will be the same for both steps because the boundary is fixed.
-        x_reg = np.linspace(np.amin(x), np.amax(x), num=nx)
-        y_reg = np.linspace(np.amin(y), np.amax(y), num=ny)            
         if var == 'velb':
             data = np.sqrt(f['ub'][:,0]**2 + f['vb'][:,0]**2)
         else:
             data = f[var][:,0]
-        return x_reg, y_reg, interp_nonreg_xy(x, y, data, x_reg, y_reg)
+        return x, y, connectivity, data
 
-    x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
-    x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
-    if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
-        print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
-        sys.exit()
-    data_diff = data_2 - data_1
+    x_1, y_1, connectivity_1, data_1 = read_data(file_path_1)
+    x, y, connectivity, data_2 = read_data(file_path_2)
+    # Interpolate the first grid to the second
+    data_1_interp = interp_nonreg_xy(x_1, y_1, data_1, x, y)
+    data_diff = data_2 - data_1_interp
     xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
     if title is None:
@@ -252,7 +244,7 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
             title = var
         title = 'Change in ' + title[0].lower() + title[1:]
 
-    ua_plot('reg', data_diff, x_reg_1, y_reg_1, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    ua_plot('tri', data_diff, x, y, connectivity=connectivity, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
     
         
         
