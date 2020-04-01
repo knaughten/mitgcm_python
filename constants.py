@@ -117,3 +117,18 @@ rignot_melt = {
 }
 
 
+# Titles for Ua variables
+ua_titles = {
+    'b': 'Ice base elevation (m)',
+    'ab': 'Basal mass balance (m/y)',
+    'B': 'Bedrock elevation (m)',
+    'dhdt': 'Ice thickness rate of change (m/y)',
+    'h': 'Ice thickness (m)',
+    'rho': r'Ice density (kg/m$^3$)',
+    's': 'Ice surface elevation (m)',
+    'ub': 'Basal x-velocity (m/y)',
+    'vb': 'Basal y-velocity (m/y)',
+    'velb': 'Basal velocity (m/y)'
+}
+
+

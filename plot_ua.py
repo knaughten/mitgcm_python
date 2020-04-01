@@ -15,18 +15,28 @@ from plot_utils.labels import latlon_axes
 from plot_utils.windows import finished_plot
 from file_io import read_netcdf
 from utils import var_min_max, choose_range
+from interp import interp_nonreg_xy
+from constants import ua_titles
 
-# Plot a 2D variable on the Ua triangular mesh.
+# Plot a 2D variable on either the Ua triangular mesh or interpolated to a regular grid.
 # Arguments:
+# option: 'tri' or 'reg'
 # data: Ua variable at each node
 # x, y: locations of each node (polar stereographic)
-# connectivity: from the MUA object
-# Optional keyword arguments: as in function latlon_plot
-def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
+
+# Optional keyword arguments: mostly as in function latlon_plot
+# connectivity: if option=tri', connectivity from the MUA object
+# xGL, yGL: grounding line coordinates to overlay
+
+def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
     
     import matplotlib
     matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
+
+    if option == 'tri' and connectivity is None:
+        print 'Error (ua_plot): Need to provide connectivity'
+        sys.exit()
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -47,10 +57,18 @@ def ua_tri_plot (data, x, y, connectivity, ax=None, make_cbar=True, ctype='basic
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
     # Plot the data
-    img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
+    if option == 'tri':
+        img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
+    elif option == 'reg':
+        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax)
     if make_cbar:
         # Add a colourbar
-        plt.colorbar(img)
+        if option == 'tri':
+            plt.colorbar(img)
+        elif option == 'reg':
+            plt.colorbar(img, extend=extend)
+    if xGL is not None and yGL is not None:
+        ax.plot(xGL, yGL, color='black', linewidth=2)
     # Set axes limits etc.
     latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
     if title is not None:
@@ -79,8 +97,20 @@ def read_ua_mesh (f):
     return x, y, connectivity
 
 
+# Helper function to check and read the grounding line data. It must be precomputed and saved in a NetCDF file.
+def check_read_gl (gl_file, gl_time_index):
+
+    if gl_file is not None:
+        xGL = read_netcdf(gl_file, 'xGL', time_index=gl_time_index)
+        yGL = read_netcdf(gl_file, 'yGL', time_index=gl_time_index)
+    else:
+        xGL = None
+        yGL = None
+    return xGL, yGL
+
+
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
+def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -93,40 +123,20 @@ def read_plot_ua_tri (var, file_path, title=None, vmin=None, vmax=None, xmin=Non
         data = np.sqrt(u**2 + v**2)
     else:
         data = read_data(var)
+    xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
     if title is None:
         # Choose title
-        if var == 'b':
-            title = 'Ice base elevation (m)'
-        elif var == 'ab':
-            title = 'Basal melt rate (m/y)'
-        elif var == 'B':
-            title = 'Bedrock elevation (m)'
-        elif var == 'dhdt':
-            title = 'Ice thickness rate of change (m/y)'
-        elif var == 'h':
-            title = 'Ice thickness (m)'
-        elif var == 'rho':
-            title = r'Ice density (kg/m$^3$)'
-        elif var == 's':
-            title = 'Ice surface elevation (m)'
-        elif var == 'ub':
-            title = 'Basal x-velocity (m/y)'
-        elif var == 'vb':
-            title = 'Basal y-velocity (m/y)'
-        elif var == 'velb':
-            title = 'Basal velocity (m/y)'
-        elif var in ['ab', 'AGlen', 'C']:
+        try:
+            title = ua_titles[var]
+        except(KeyError):
             title = var
-        else:
-            print 'Error (read_plot_ua_tri): variable ' + var + ' unknown'
-            sys.exit()
     # Choose colourmap
     ctype = 'basic'
     if var in ['dhdt', 'ub', 'vb']:
         ctype = 'plusminus'
     
-    ua_tri_plot(data, x, y, connectivity, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    ua_plot('tri', data, x, y, connectivity=connectivity, xGL=xGL, yGL=yGL, ctype=ctype, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Helper function to plot the grounding line at the beginning of the simulation, and at the current frame.
@@ -194,3 +204,42 @@ def gl_final (file_path, fig_name=None, dpi=None):
 
     fig, ax = gl_frame(xGL, yGL, -1, label='Final')
     finished_plot(fig, fig_name, dpi=dpi)
+
+
+# Plot the difference between two Ua output steps for the given variable. This involves interpolating to a common grid.
+def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=(8,6), dpi=None):
+
+    import matplotlib
+    matplotlib.use('TkAgg')
+    import matplotlib.pyplot as plt
+
+    # Finer grid to interpolate to
+    nx = 1000
+    ny = 1000
+
+    # Read the data for each output step
+    def read_data (file_path):
+        f = loadmat(file_path)
+        x, y, connectivity = read_ua_mesh(f)
+        # Set up regular grid. This will be the same for both steps because the boundary is fixed.
+        x_reg = np.linspace(np.amin(x), np.amax(x), num=nx)
+        y_reg = np.linspace(np.amin(y), np.amax(y), num=ny)            
+        if var == 'velb':
+            data = np.sqrt(f['ub'][:,0]**2 + f['vb'][:,0]**2)
+        else:
+            data = f[var][:,0]
+        return interp_nonreg_xy(x, y, data, x_reg, y_reg)
+
+    data_diff = interp_nonreg_xy(file_path_2) - interp_nonreg_xy(file_path_1)
+    xGL, yGL = check_read_gl(gl_file, gl_time_index)
+
+    if title is None:
+        try:
+            title = ua_titles[var]
+        except(KeyError):
+            title = var
+
+    ua_plot('reg', data_diff, x_reg, y_reg, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    
+        
+        
