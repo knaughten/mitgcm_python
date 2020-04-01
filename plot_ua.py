@@ -75,7 +75,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     if option == 'tri':
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     elif option == 'reg':
-        #if clip:
+        if clip:
             ax.add_patch(bdry)
         img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax) #, clip_path=bdry, clip_on=clip)
     if make_cbar:
