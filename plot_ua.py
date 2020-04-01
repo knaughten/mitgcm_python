@@ -68,7 +68,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
         elif option == 'reg':
             plt.colorbar(img, extend=extend)
     if xGL is not None and yGL is not None:
-        ax.plot(xGL, yGL, color='black', linewidth=2)
+        ax.plot(xGL, yGL, color='black')
     # Set axes limits etc.
     latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
     if title is not None:
