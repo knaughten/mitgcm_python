@@ -64,8 +64,8 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     if clip:
         # Trim to remove any boundary nodes outside the axes limits
         index = (x_bdry < xmin) + (x_bdry > xmax) + (y_bdry < ymin) + (y_bdry > ymax)
-        x_bdry[index] = xmax
-        y_bdry[index] = ymin
+        #x_bdry[index] = xmax
+        #y_bdry[index] = ymin
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
         bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
     else:
