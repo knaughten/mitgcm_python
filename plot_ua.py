@@ -62,13 +62,8 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     # Figure out if we need to mask outside the model bounds
     clip = option=='reg' and x_bdry is not None and y_bdry is not None
     if clip:
-        # Trim to bounds
-        x_bdry[x<xmin] = xmin
-        x_bdry[x>xmax] = xmax
-        y_bdry[y<ymin] = ymin
-        y_bdry[y>ymax] = ymax
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
-        bdry = matplotlib.patches.PathPatch(matplotlib.path.Path(xy_bdry, closed=True), facecolor='none', edgecolor='black')
+        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
     else:
         bdry = None
         

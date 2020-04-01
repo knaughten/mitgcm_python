@@ -700,35 +700,6 @@ def trim_titles (titles):
         if title_start.endswith(s):
             title_start = title_start[:title_start.index(s)]
     return title_start, titles
-
-
-'''def trim_path (x, y, xmin, xmax, ymin, ymax):
-
-    # Inner functions
-    # Find index of first valid point
-    def first_valid ():
-        index = np.where((x>=xmin)*(x<=xmax)*(y>=ymin)*(y<=ymax))
-        if len(index) == 0:
-            return None
-        else:
-            return index[0][0]
-    # Find index of first invalid point
-    def first_invalid ():
-        index = np.where(np.inverse(x>=xmin)*(x<=xmax)*(y>=ymin)*(y<=ymax))
-        if len(index) == 0:
-            return None
-        else:
-            i = index[0][0]
-            
-            
-    
-
-    new_x = np.array([])
-    new_y = np.array([])
-
-    
-    # Find first point within bounds
-    i0 = np.where((x>=xmin)*(x<=xmax)*(y>=ymin)*(y<=ymax))'''
     
 
     
