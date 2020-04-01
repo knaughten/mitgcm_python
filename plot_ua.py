@@ -77,14 +77,15 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     elif option == 'reg':
         if clip:
+            fig.patch.set_facecolor('white')
             ax.add_patch(bdry)
-        #img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry)
+        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry)
     if make_cbar:
         # Add a colourbar
         if option == 'tri':
             plt.colorbar(img)
-        #elif option == 'reg':
-            #plt.colorbar(img, extend=extend)
+        elif option == 'reg':
+            plt.colorbar(img, extend=extend)
     if xGL is not None and yGL is not None:
         ax.plot(xGL, yGL, color='black')        
     # Set axes limits etc.
