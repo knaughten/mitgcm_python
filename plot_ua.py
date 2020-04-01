@@ -78,13 +78,13 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     elif option == 'reg':
         if clip:
             ax.add_patch(bdry)
-        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry)
+        #img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry)
     if make_cbar:
         # Add a colourbar
         if option == 'tri':
             plt.colorbar(img)
-        elif option == 'reg':
-            plt.colorbar(img, extend=extend)
+        #elif option == 'reg':
+            #plt.colorbar(img, extend=extend)
     if xGL is not None and yGL is not None:
         ax.plot(xGL, yGL, color='black')        
     # Set axes limits etc.
