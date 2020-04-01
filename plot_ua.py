@@ -15,7 +15,7 @@ from plot_utils.labels import latlon_axes
 from plot_utils.windows import finished_plot
 from file_io import read_netcdf
 from utils import var_min_max, choose_range
-from interp import interp_nonreg_xy
+from interpolation import interp_nonreg_xy
 from constants import ua_titles
 
 # Plot a 2D variable on either the Ua triangular mesh or interpolated to a regular grid.
