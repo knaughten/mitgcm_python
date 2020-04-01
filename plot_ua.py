@@ -28,7 +28,7 @@ from constants import ua_titles
 # connectivity: if option=tri', connectivity from the MUA object
 # xGL, yGL: grounding line coordinates to overlay
 
-def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(8,6), dpi=None):
+def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None):
     
     import matplotlib
     matplotlib.use('TkAgg')
@@ -37,6 +37,12 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
     if option == 'tri' and connectivity is None:
         print 'Error (ua_plot): Need to provide connectivity'
         sys.exit()
+
+    if figsize is None:
+        if zoom_fris:
+            figsize = (8,6)
+        else:
+            figsize = (10,6)
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -56,6 +62,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
     existing_ax = ax is not None
     if not existing_ax:
         fig, ax = plt.subplots(figsize=figsize)
+        ax.axis('equal')
     # Plot the data
     if option == 'tri':
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
