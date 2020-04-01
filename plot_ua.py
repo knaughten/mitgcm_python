@@ -62,10 +62,6 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     # Figure out if we need to mask outside the model bounds
     clip = option=='reg' and x_bdry is not None and y_bdry is not None
     if clip:
-        # Trim to remove any boundary nodes outside the axes limits
-        index = (x_bdry < xmin) + (x_bdry > xmax) + (y_bdry < ymin) + (y_bdry > ymax)
-        #x_bdry[index] = xmax
-        #y_bdry[index] = ymin
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
         bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')
     else:
@@ -80,8 +76,6 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     if option == 'tri':
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     elif option == 'reg':
-        if clip:
-            ax.add_patch(bdry)
         img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry)
     if make_cbar:
         # Add a colourbar
