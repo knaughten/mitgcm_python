@@ -27,8 +27,9 @@ from constants import ua_titles
 # Optional keyword arguments: mostly as in function latlon_plot
 # connectivity: if option=tri', connectivity from the MUA object
 # xGL, yGL: grounding line coordinates to overlay
+# x_bdry, y_bdry: coordinates of boundary nodes, to clip the data interpolated onto a regular mesh
 
-def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None):
+def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=None, y_bdry=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None):
     
     import matplotlib
     matplotlib.use('TkAgg')
@@ -43,6 +44,13 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
             figsize = (8,6)
         else:
             figsize = (10,6)
+
+    clip = option=='reg' and x_bdry is not None and y_bdry is not None
+    if clip:
+        xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
+        bdry = patches.Polygon(xy_bdry)
+    else:
+        bdry = None
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -67,7 +75,9 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
     if option == 'tri':
         img = ax.tricontourf(x, y, connectivity, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     elif option == 'reg':
-        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax)
+        if clip:
+            ax.add_patch(bdry)
+        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, clip_path=bdry, clip_on=clip)
     if make_cbar:
         # Add a colourbar
         if option == 'tri':
@@ -75,7 +85,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, ax=None,
         elif option == 'reg':
             plt.colorbar(img, extend=extend)
     if xGL is not None and yGL is not None:
-        ax.plot(xGL, yGL, color='black')
+        ax.plot(xGL, yGL, color='black')        
     # Set axes limits etc.
     latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
     if title is not None:
@@ -102,6 +112,16 @@ def read_ua_mesh (f):
     y = f['MUA']['coordinates'][0][0][:,1]
     connectivity = f['MUA']['connectivity'][0][0]-1
     return x, y, connectivity
+
+
+# Read the coordinates of the boundary nodes from the Ua output file.
+def read_ua_bdry(f):
+
+    if isinstance(f, str):
+        f = loadmat(f)
+    x_bdry = f['MUA']['Boundary'][0,0]['x'][0][0][:,0]
+    y_bdry = f['MUA']['Boundary'][0,0]['y'][0][0][:,0]
+    return x_bdry, y_bdry    
 
 
 # Helper function to check and read the grounding line data. It must be precomputed and saved in a NetCDF file.
@@ -245,6 +265,9 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
     data_diff = data_2 - data_1
     xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
+    # Also read the boundary nodes - same for both files
+    x_bdry, y_bdry = read_ua_bdry(file_path_1)
+
     if title is None:
         try:
             title = ua_titles[var]
@@ -252,7 +275,7 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
             title = var
         title = 'Change in ' + title[0].lower() + title[1:]
 
-    ua_plot('reg', data_diff, x_reg_1, y_reg_1, xGL=xGL, yGL=yGL, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    ua_plot('reg', data_diff, x_reg_1, y_reg_1, xGL=xGL, yGL=yGL, x_bdry=x_bdry, y_bdry=y_bdry, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
     
         
         
