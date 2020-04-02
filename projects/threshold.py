@@ -18,6 +18,7 @@ from ..postprocess import segment_file_paths
 from ..constants import deg_string, vaf_to_gmslr
 from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
+fro m..plot_misc import read_plot_hovmoller_ts
 
 
 # Global variables
@@ -26,8 +27,10 @@ sim_dirs = ['WSFRIS_'+key+'/output/' for key in sim_keys]
 sim_names = ['piControl-O','piControl-IO','abrupt-4xCO2-O','abrupt-4xCO2-IO','1pctCO2-O','1pctCO2-IO']
 coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
+hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 num_sim = len(sim_keys)
+grid_path = 'WSFRIS_999/ini_grid/'  # Just for dimensions etc.
 
 
 # Analyse the coastal winds in UKESM vs ERA5:
@@ -360,3 +363,15 @@ def gl_plot (base_dir='./', fig_dir='./'):
     ax.set_yticklabels([])
     ax.set_title('Final grounding line position')
     finished_plot(fig, fig_name=fig_dir+'gl_final.png')
+
+
+# Make a Hovmoller plot of temperature and salinity in the Filchner Trough for each simulation.
+def filchner_trough_hovmollers (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    file_paths = [base_dir + d + hovmoller_file for d in sim_dirs]
+
+    for n in range(num_sim):
+        read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', base_dir+grid_path, smooth=6, fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
+    
