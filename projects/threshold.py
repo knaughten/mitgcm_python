@@ -310,7 +310,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     sim_names_ua = []
     colours_ua = []
     # Read time from an ocean file
-    time = netcdf_time(file_paths[0], monthly=False)
+    time = netcdf_time(file_paths[2], monthly=False)
     # Read data from each simulation
     for i in range(len(ua_timeseries)):
         var = ua_timeseries[i]
