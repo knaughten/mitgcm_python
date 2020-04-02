@@ -304,7 +304,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
                 fig_name += '_annual.png'
             else:
                 fig_name += '.png'
-        read_plot_timeseries_ensemble(var, file_paths, sim_names, precomputed=True, colours=colours, linestyles=linestyles, annual_average=annual_average, time_use=2, fig_name=fig_name)
+            read_plot_timeseries_ensemble(var, file_paths, sim_names, precomputed=True, colours=colours, linestyles=linestyles, annual_average=annual_average, time_use=2, fig_name=fig_name)
 
     # Now the Ua timeseries
     sim_names_ua = []
