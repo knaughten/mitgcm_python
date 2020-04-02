@@ -183,16 +183,6 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
 
-    # If we're zooming, we need to choose the correct colour bounds
-    if any([zmin, zmax]):
-        vmin_tmp, vmax_tmp = var_min_max_zt(data, grid, zmin=zmin, zmax=zmax)
-        if vmin is None:
-            vmin = vmin_tmp
-        if vmax is None:
-            vmax = vmax_tmp
-    # Get colourmap
-    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
-
     if monthly:
         # As in netcdf_time, the time axis will have been corrected so it is
         # marked with the beginning of each month. So to get the boundaries of
@@ -218,7 +208,17 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     data_cumsum = np.ma.concatenate((np.zeros((1,data.shape[1])), np.ma.cumsum(data, axis=0)), axis=0)
     data = (data_cumsum[t_first+smooth+1:t_last+smooth+1,:] - data_cumsum[t_first-smooth:t_last-smooth,:])/(2*smooth+1)
     # Now trim the time axis too
-    time_edges = time_edges[smooth:time_edges.size-smooth]            
+    time_edges = time_edges[smooth:time_edges.size-smooth]
+
+    # If we're zooming, we need to choose the correct colour bounds
+    if any([zmin, zmax]):
+        vmin_tmp, vmax_tmp = var_min_max_zt(data, grid, zmin=zmin, zmax=zmax)
+        if vmin is None:
+            vmin = vmin_tmp
+        if vmax is None:
+            vmax = vmax_tmp
+    # Get colourmap
+    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax)
 
     # Make the figure and axes, if needed
     existing_ax = ax is not None
