@@ -351,7 +351,7 @@ def plot_timeseries_regions (base_dir='./', fig_dir='./'):
             time = netcdf_time(file_paths[n], monthly=False)
             datas = []
             for loc in regions:
-                datas.append(read_netcdf(file_paths[n], var_names[m]+'_'+loc))
+                datas.append(read_netcdf(file_paths[n], loc+'_'+var_names[m]))
             timeseries_multi_plot(time, datas, region_labels, colours, title=var_titles[m]+', '+sim_names[n], units=units[m], fig_name=fig_dir+var_names[m]+'_'+sim_keys[n]+'.png')
 
 
