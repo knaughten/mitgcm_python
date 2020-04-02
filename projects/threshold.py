@@ -309,14 +309,8 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     # Now the Ua timeseries
     sim_names_ua = []
     colours_ua = []
-    time = []
-    import datetime
-    for year in range(150):
-        for month in range(12):
-            time.append(datetime.date(1850+year,month+1,1))
-    time = np.array(time)
     # Read time from an ocean file
-    #time = netcdf_time(file_paths[0], monthly=False)
+    time = netcdf_time(file_paths[0], monthly=False)
     # Read data from each simulation
     for i in range(len(ua_timeseries)):
         var = ua_timeseries[i]
