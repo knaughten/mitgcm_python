@@ -18,7 +18,7 @@ from ..postprocess import segment_file_paths
 from ..constants import deg_string, vaf_to_gmslr
 from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
-fro m..plot_misc import read_plot_hovmoller_ts
+from ..plot_misc import read_plot_hovmoller_ts
 
 
 # Global variables
