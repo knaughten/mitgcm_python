@@ -20,6 +20,7 @@ from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
 from ..timeseries import calc_annual_averages
+from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 
 
 # Global variables
@@ -400,4 +401,57 @@ def filchner_trough_hovmollers (base_dir='./', fig_dir='./'):
 
     for n in range(num_sim):
         read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', grid, smooth=6, t_contours=[-1.9], fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
-    
+
+
+# Plot anomalies in Ua variables (ice thickness and velocity) for four scenarios:
+# 1. Drift in piControl (last year minus first year)
+# 2. abrupt-4xCO2 minus piControl, after 75 years
+# 3. abrupt-4xCO2 minus piControl, after 150 years
+# 4. 1pctCO2 minus piControl, after 150 years
+def plot_ua_changes (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    var_names = ['h', 'velb']
+    var_titles = ['Change in ice thickness (m)', 'Change in basal velocity (m/y)']
+    vmin = [-100, -20]
+    vmax = [100, 20]
+
+    # Construct file paths
+    num_sims = 4
+    years = [[2910, 2984, 3059, 3059], [3059, 1924, 1999, 1999]]
+    sims = [['ctIO' for n in range(num_sims)], ['ctIO', 'abIO', 'abIO', '1pIO']]
+    titles = ['Drift in piControl (150 years)', 'abrupt-4xCO2 minus piControl (75 years)', 'abrupt-4xCO2 minus piControl (150 years)', '1pctCO2 minus piControl (150 years)']
+    gl_time_index = [150, 75, 150, 150]
+    file_paths = [[], []]
+    gl_files = []
+    for n in range(num_sims):
+        for m in range(2):
+            file_paths[m].append(base_dir+'WSFRIS_'+sims[m][n]+'/output/'+str(years[m][n])+'01/Ua/WSFRIS_'+sims[m][n]+'_'+str(years[m][n])+'01_0360.mat')
+        gl_files.append(base_dir+'WSFRIS_'+sims[1][n]+'/output/'+ua_post_file)
+
+    # Read grounding line data
+    xGL = []
+    yGL = []
+    for n in range(num_sims):
+        xGL_tmp, yGL_tmp = check_read_gl(gl_files[n], gl_time_index[n]-1)
+        xGL.append(xGL_tmp)
+        yGL.append(yGL_tmp)
+    x_bdry, y_bdry = read_ua_bdry(file_paths[0][0])
+
+    # Loop over variables
+    for i in range(len(var_names)):
+        print 'Processing ' + var_names[i]
+        data = []
+        for n in range(num_sims):
+            x, y, data_diff = read_ua_difference(var_names[i], file_paths[0][n], file_paths[1][n])
+            data.append(data_diff)
+        # Set up plot
+        fig, gs, cax = set_panels('2x2C1')
+        for n in range(num_sims):
+            ax = plt.subplot(gs[n/2, n%2])
+            img = ua_plot('reg', data[n], x, y, xGL=xGL[n], yGL=yGL[n], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[i], vmax=vmax[i], zoom_fris=True, title=titles[n], titlesize=16, extend=extend)
+        cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+        plt.suptitle(var_titles[i], fontsize=24)
+        finished_plot(fig_dir+'ua_changes_'+var_names[i]+'.png')
+        

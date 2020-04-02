@@ -239,16 +239,8 @@ def gl_final (file_path, fig_name=None, dpi=None):
     finished_plot(fig, fig_name, dpi=dpi)
 
 
-# Plot the difference between two Ua output steps for the given variable. This involves interpolating to a common grid.
-def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None):
-
-    import matplotlib
-    matplotlib.use('TkAgg')
-    import matplotlib.pyplot as plt
-
-    # Finer grid to interpolate to
-    nx = 1000
-    ny = 1000
+# Read the difference between two Ua output steps for the given variable, interpolated to a common grid.
+def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000):
 
     # Read the data for each output step
     def read_data (file_path):
@@ -262,16 +254,25 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
         else:
             data = f[var][:,0]
         return x_reg, y_reg, interp_nonreg_xy(x, y, data, x_reg, y_reg)
-
     x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
     x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
     if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
         print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
         sys.exit()
     data_diff = data_2 - data_1
-    xGL, yGL = check_read_gl(gl_file, gl_time_index)
+    return x_reg_1, y_reg_1, data_diff
+    
 
-    # Also read the boundary nodes - same for both files
+
+# Plot the difference between two Ua output steps for the given variable. This involves interpolating to a common grid.
+def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None, nx=1000, ny=1000):
+
+    import matplotlib
+    matplotlib.use('TkAgg')
+    import matplotlib.pyplot as plt
+
+    x, y, data_diff = read_ua_difference(var, file_path_1, file_path_2, nx=nx, ny=ny)
+    xGL, yGL = check_read_gl(gl_file, gl_time_index)
     x_bdry, y_bdry = read_ua_bdry(file_path_1)
 
     if title is None:
@@ -281,7 +282,7 @@ def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_tim
             title = var
         title = 'Change in ' + title[0].lower() + title[1:]
 
-    ua_plot('reg', data_diff, x_reg_1, y_reg_1, xGL=xGL, yGL=yGL, x_bdry=x_bdry, y_bdry=y_bdry, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    ua_plot('reg', data_diff, x, y, xGL=xGL, yGL=yGL, x_bdry=x_bdry, y_bdry=y_bdry, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, zoom_fris=zoom_fris, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
     
         
         
