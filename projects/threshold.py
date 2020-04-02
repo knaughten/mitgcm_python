@@ -453,6 +453,6 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
             img = ua_plot('reg', data[n], x, y, xGL=xGL[n], yGL=yGL[n], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[i], vmax=vmax[i], zoom_fris=True, title=titles[n], titlesize=16, extend='both')
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle(var_titles[i], fontsize=24)
-        finished_plot(fig) #, fig_name=fig_dir+'ua_changes_'+var_names[i]+'.png')
+        finished_plot(fig, fig_name=fig_dir+'ua_changes_'+var_names[i]+'.png')
        
  
