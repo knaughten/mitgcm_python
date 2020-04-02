@@ -335,7 +335,7 @@ def gl_plot (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     ua_files = [base_dir + d + ua_post_file for d in sim_dirs]
-    colours = ['black', 'blue', 'green', 'red']
+    colours = ['black', 'blue', 'red', 'green']
     labels = ['Initial']
 
     xGL_all = []
