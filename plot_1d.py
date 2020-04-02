@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff
+from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff, calc_annual_averages
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
@@ -333,15 +333,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         if calendar != '360_day' or not monthly or time.size%12 != 0:
             print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
             sys.exit()
-        # Get midpoint of each year
-        if time_use is None:
-            for n in range(len(time)):
-                time[n] = np.array([time[n][i] for i in range(6, time.size, 12)])
-        else:
-            time = np.array([time[i] for i in range(6,time.size,12)])
-        # Average in blocks of 12
-        for n in range(len(all_datas)):
-            all_datas[n] = np.mean(all_datas[n].reshape(all_datas[n].size/12, 12), axis=-1)
+        time, all_datas = calc_annual_averages(time, all_datas)
 
     # Set other things for plot
     title, units = set_parameters(var_name)[2:4]

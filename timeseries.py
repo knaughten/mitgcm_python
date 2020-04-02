@@ -692,6 +692,40 @@ def monthly_to_annual (data, time):
             ndays = 0
 
     return np.array(new_data), np.array(new_time)
+
+
+# Calculate annual averages from monthly data.
+# This only works properly if it's a 360-day calendar with full years.
+# Input arguments:
+# times: either an array of time values, or a list of several arrays of time values
+# datas: either an array of 1D data, or a list of several arrays of 1D data
+# Returns the annually-averaged version of each.
+def calc_annual_averages (times, datas):
+
+    time_single = not isinstance(times, list)
+    data_single = not isinstance(datas, list)
+
+    # Make each a list even if they're just singular
+    if time_single:
+        times = [times]
+    if data_single:
+        datas = [datas]
+
+    # Get midpoint of each year
+    for n in range(len(time)):
+        time[n] = np.array([time[n][i] for i in range(6, time.size, 12)])
+    # Average in blocks of 12
+    for n in range(len(datas)):
+        datas[n] = np.mean(datas[n].reshape(datas[n].size/12, 12), axis=-1)
+
+    if time_single:
+        times = times[0]
+    if data_single:
+        datas = datas[0]
+
+    return times, datas
+
+    
         
         
 

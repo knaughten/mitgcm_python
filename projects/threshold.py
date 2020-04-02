@@ -19,6 +19,7 @@ from ..constants import deg_string, vaf_to_gmslr
 from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
+from ..timeseries import calc_annual_averages
 
 
 # Global variables
@@ -352,6 +353,7 @@ def plot_timeseries_regions (base_dir='./', fig_dir='./'):
             datas = []
             for loc in regions:
                 datas.append(read_netcdf(file_paths[n], loc+'_'+var_names[m]))
+            time, datas = calc_annual_averages(time, datas)                
             timeseries_multi_plot(time, datas, region_labels, colours, title=var_titles[m]+', '+sim_names[n], units=units[m], fig_name=fig_dir+var_names[m]+'_'+sim_keys[n]+'.png')
 
 
