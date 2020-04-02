@@ -63,7 +63,11 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     clip = option=='reg' and x_bdry is not None and y_bdry is not None
     if clip:
         xy_bdry = np.stack((x_bdry, y_bdry), axis=-1)
-        x_2d, y_2d = np.meshgrid(x, y)
+        if len(x.shape) == 2:
+            x_2d = x
+            y_2d = y
+        else:
+            x_2d, y_2d = np.meshgrid(x, y)
         xy_points = np.stack((x_2d.ravel(), y_2d.ravel()), axis=-1)
         bdry_path = matplotlib.path.Path(xy_bdry)
         inside = bdry_path.contains_points(xy_points).reshape(data.shape)
@@ -82,13 +86,10 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         if clip:
             # Draw the outline of the domain
             ax.add_patch(bdry)
-        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax)
+        img = ax.contourf(x, y, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
     if make_cbar:
         # Add a colourbar
-        if option == 'tri':
-            plt.colorbar(img)
-        elif option == 'reg':
-            plt.colorbar(img, extend=extend)
+        plt.colorbar(img)
     if xGL is not None and yGL is not None:
         ax.plot(xGL, yGL, color='black')        
     # Set axes limits etc.
