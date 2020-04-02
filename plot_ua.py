@@ -86,7 +86,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         if clip:
             # Draw the outline of the domain
             ax.add_patch(bdry)
-        img = ax.pcolormesh(x, y, data, levels, cmap=cmap, vmin=vmin, vmax=vmax)
+        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax)
     if make_cbar:
         # Add a colourbar
         if option == 'tri':
