@@ -293,7 +293,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
     ua_titles = ['Ice volume above floatation', 'Total ice volume', 'Total grounded area', 'Sea level rise contribution']
     ua_units = ['m^3','m^3','m^2','m']
     file_paths = [base_dir + d + timeseries_file for d in sim_dirs]
-    colours = ['blue', 'blue', 'green', 'green', 'red', 'red']
+    colours = ['blue', 'blue', 'red', 'red', 'green', 'green']
     linestyles = ['solid', 'dashed', 'solid', 'dashed', 'solid', 'dashed']
     ua_files = [base_dir + d + ua_post_file for d in sim_dirs]
 
