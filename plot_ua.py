@@ -86,14 +86,17 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         if clip:
             # Draw the outline of the domain
             ax.add_patch(bdry)
-        img = ax.contourf(x, y, data, levels, cmap=cmap, vmin=vmin, vmax=vmax, extend=extend)
+        img = ax.pcolormesh(x, y, data, levels, cmap=cmap, vmin=vmin, vmax=vmax)
     if make_cbar:
         # Add a colourbar
-        plt.colorbar(img)
+        if option == 'tri':
+            plt.colorbar(img)
+        elif option == 'reg':
+            plt.colorbar(img, extend=extend)
     if xGL is not None and yGL is not None:
         ax.plot(xGL, yGL, color='black')        
     # Set axes limits etc.
-    latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
+    latlon_axes(ax, x, y, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True, ua=True)
     if title is not None:
         # Add a title
         plt.title(title, fontsize=titlesize)

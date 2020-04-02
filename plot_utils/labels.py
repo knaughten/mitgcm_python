@@ -67,11 +67,14 @@ def lat_label (x, max_decimals=0):
 # Set the limits of the x and y axes (pass 1D or 2D arrays, doesn't matter), and give them nice labels.
 # Setting zoom_fris=True will zoom into the FRIS cavity (bounds set in constants.py). You can also set specific limits on longitude and latitude (xmin etc.)
 # If pster=True, xmin etc. are assumed to be in polar stereographic units.
-def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True, pster=False, lon_lines=None, lat_lines=None, grid=None):
+# If ua=True, there is a different definition for zoom_fris.
+def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, label=True, pster=False, lon_lines=None, lat_lines=None, grid=None, ua=False):
     
     # Set limits on axes
     if zoom_fris:
-        if pster:
+        if ua:
+            [xmin, xmax, ymin, ymax] = region_bounds['fris_ua_plot']
+        elif pster:
             [xmin, xmax, ymin, ymax] = region_bounds['fris_pster_plot']
         else:
             [xmin, xmax, ymin, ymax] = region_bounds['fris_plot']

@@ -414,14 +414,14 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
     var_titles = ['Change in ice thickness (m)', 'Change in basal velocity (m/y)']
-    vmin = [-100, -20]
-    vmax = [100, 20]
+    vmin = [-80, -50]
+    vmax = [80, 50]
 
     # Construct file paths
     num_sims = 4
     years = [[2910, 2984, 3059, 3059], [3059, 1924, 1999, 1999]]
     sims = [['ctIO' for n in range(num_sims)], ['ctIO', 'abIO', 'abIO', '1pIO']]
-    titles = ['Drift in piControl (150 years)', 'abrupt-4xCO2 minus piControl (75 years)', 'abrupt-4xCO2 minus piControl (150 years)', '1pctCO2 minus piControl (150 years)']
+    titles = ['Drift in piControl (150 y)', 'abrupt-4xCO2 minus piControl (75 y)', 'abrupt-4xCO2 minus piControl (150 y)', '1pctCO2 minus piControl (150 y)']
     gl_time_index = [150, 75, 150, 150]
     file_paths = [[], []]
     gl_files = []
@@ -447,11 +447,12 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
             x, y, data_diff = read_ua_difference(var_names[i], file_paths[0][n], file_paths[1][n])
             data.append(data_diff)
         # Set up plot
-        fig, gs, cax = set_panels('2x2C1')
+        fig, gs, cax = set_panels('2x2C1', figsize=(9.5,10))
         for n in range(num_sims):
             ax = plt.subplot(gs[n/2, n%2])
-            img = ua_plot('reg', data[n], x, y, xGL=xGL[n], yGL=yGL[n], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[i], vmax=vmax[i], zoom_fris=True, title=titles[n], titlesize=16, extend=extend)
+            img = ua_plot('reg', data[n], x, y, xGL=xGL[n], yGL=yGL[n], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[i], vmax=vmax[i], zoom_fris=True, title=titles[n], titlesize=16, extend='both')
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle(var_titles[i], fontsize=24)
-        finished_plot(fig_dir+'ua_changes_'+var_names[i]+'.png')
-        
+        finished_plot(fig) #, fig_name=fig_dir+'ua_changes_'+var_names[i]+'.png')
+       
+ 
