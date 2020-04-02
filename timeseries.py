@@ -712,8 +712,8 @@ def calc_annual_averages (times, datas):
         datas = [datas]
 
     # Get midpoint of each year
-    for n in range(len(time)):
-        time[n] = np.array([time[n][i] for i in range(6, time.size, 12)])
+    for n in range(len(times)):
+        times[n] = np.array([times[n][i] for i in range(6, times[n].size, 12)])
     # Average in blocks of 12
     for n in range(len(datas)):
         datas[n] = np.mean(datas[n].reshape(datas[n].size/12, 12), axis=-1)
