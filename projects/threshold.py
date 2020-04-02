@@ -371,7 +371,8 @@ def filchner_trough_hovmollers (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     file_paths = [base_dir + d + hovmoller_file for d in sim_dirs]
+    grid = Grid(base_dir+grid_path)
 
     for n in range(num_sim):
-        read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', base_dir+grid_path, smooth=6, fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
+        read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', grid, smooth=6, fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
     
