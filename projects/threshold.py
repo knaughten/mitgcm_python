@@ -332,6 +332,29 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
         timeseries_multi_plot(time, datas, sim_names_ua, colours_ua, title=ua_titles[i], units=ua_units[i], fig_name=fig_dir+var+'.png')
 
 
+# For each of temperature, salinity, and density, plot all four key regions on the same axis, for a single simulation.
+def plot_timeseries_regions (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    file_paths = [base_dir + d + timeseries_file for d in sim_dirs]
+    var_names = ['temp', 'salt', 'density']
+    var_titles = ['Temperature', 'Salinity', 'Density']
+    units = [deg_string+'C', 'psu', r'kg/m$^3$']
+    regions = ['fris', 'filchner_trough', 'sws_shelf', 'wdw_core']
+    region_labels = ['FRIS', 'Filchner Trough', 'Continental Shelf', 'WDW core']
+    colours = ['blue', 'magenta', 'green', 'red']
+
+    for n in range(num_sim):
+        for m in range(len(var_names)):
+            time = netcdf_time(file_paths[n], monthly=False)
+            datas = []
+            for loc in regions:
+                datas.append(read_netcdf(file_paths[n], var_names[m]+'_'+loc))
+            timeseries_multi_plot(time, datas, region_labels, colours, title=var_titles[m]+', '+sim_names[n], units=units[m], fig_name=fig_dir+var_names[m]+'_'+sim_keys[n]+'.png')
+
+
 # Plot grounding line at the beginning of the ctIO simulation, and the end of each coupled simulation.
 def gl_plot (base_dir='./', fig_dir='./'):
 
