@@ -75,13 +75,13 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
             [xmin, xmax, ymin, ymax] = region_bounds['fris_pster_plot']
         else:
             [xmin, xmax, ymin, ymax] = region_bounds['fris_plot']
-    if xmin is None:
+    if xmin is None or np.amin(x) > xmin:
         xmin = np.amin(x)
-    if xmax is None:
+    if xmax is None or np.amax(x) < xmax:
         xmax = np.amax(x)
-    if ymin is None:
+    if ymin is None or np.amin(y) > ymin:
         ymin = np.amin(y)
-    if ymax is None:
+    if ymax is None or np.amax(y) < ymax:
         ymax = np.amax(y)
     ax.set_xlim([xmin, xmax])
     ax.set_ylim([ymin, ymax])
