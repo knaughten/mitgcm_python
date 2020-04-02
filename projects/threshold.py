@@ -299,7 +299,7 @@ def plot_all_timeseries (base_dir='./', fig_dir='./'):
 
     for var in timeseries_types:
         for annual_average in [False, True]:
-            fig_name = fig_dir + var_name
+            fig_name = fig_dir + var
             if annual_average:
                 fig_name += '_annual.png'
             else:
