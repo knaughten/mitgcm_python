@@ -624,7 +624,6 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     directories = [base_dir + sim_dirs[n] for n in [0,2,4]]
     sim_names_plot = [sim_names[n] for n in sim_numbers]
     sim_keys_plot = [sim_keys[n] for n in sim_numbers]
-    
     # Variables to plot
     var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown']
 
@@ -632,7 +631,7 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     for n in range(1, num_sim_plot):
         for var in var_names:
             for zoom in [False, True]:
-                fig_name = fig_dir+var_name+'_'+sim_keys_plot[n]
+                fig_name = fig_dir+var+'_'+sim_keys_plot[n]
                 if zoom:
                     fig_name += '_zoom.png'
                 else:
