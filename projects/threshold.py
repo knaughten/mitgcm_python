@@ -12,7 +12,7 @@ from ..grid import Grid, choose_grid
 from ..file_io import read_netcdf, NCfile, netcdf_time
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim
 from ..plot_utils.windows import finished_plot, set_panels
-from ..plot_utils.latlon import shade_land_ice, prepare_vel
+from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date
 from ..postprocess import segment_file_paths
 from ..constants import deg_string, vaf_to_gmslr
@@ -31,6 +31,7 @@ coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
+avg_file = 'last_10y.nc'
 num_sim = len(sim_keys)
 grid_path = 'WSFRIS_999/ini_grid/'  # Just for dimensions etc.
 
@@ -454,5 +455,63 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle(var_titles[i], fontsize=24)
         finished_plot(fig, fig_name=fig_dir+'ua_changes_'+var_names[i]+'.png')
-       
+
+
+# Plot bottom water temperature and velocity zoomed into the Filchner Trough region of the continental shelf break.
+def plot_inflow_zoom (base_dir='./', fig_dir='./'):
+
+    var_names = ['bwtemp', 'vel']
+    ctype = ['basic', 'vel']
+    var_titles = 
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_numbers = [0, 2, 4]
+    num_sim_plot = len(sim_numbers)
+    [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
+    h0 = -1500
+    chunk = 4
+
+    grid = Grid(grid_path)
+
+    # Loop over variables
+    for m in range(len(var_names)):
+        # Read the data
+        data = []
+        u = []
+        v = []
+        for n in sim_numbers:
+            file_path = base_dir + sim_dirs[n] + avg_file
+            if var_names[m] == 'bwtemp':
+                data.append(select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)))
+            elif var_names[m] == 'vel':
+                u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
+                v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+                speed, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid, vel_option='bottom')
+                data.append(speed)
+                u.append(u_tmp)
+                v.append(v_tmp)
+                
+            # Get the colour bounds
+            vmin = np.amax(data[0])
+            vmax = np.amin(data[0])
+            for n in range(num_sim_plot):
+                vmin_tmp, vmax_tmp = var_min_max(data[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+                vmin = min(vmin, vmin_tmp)
+                vmax = max(vmax, vmax_tmp)
+
+            # Make the plot
+            fig, gs, cax = set_panels('1x3C1')
+            for n in range(num_sim_plot):
+                ax = plt.subplot(gs[0,n])
+                img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[m], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names[n])
+                if var_names[m] == 'bwtemp':
+                    # Contour 1500 m isobath
+                    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[h0], colors='black', linestyles='dashed', linewidth=2)
+                elif var_names[n] == 'vel':
+                    # Overlay velocity vectors
+                    overlay_vectors(ax, u[n], v[n], grid, chunk=chunk)
+            plt.colorbar(img, cax=cax)
+            finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
+                    
+    
  
