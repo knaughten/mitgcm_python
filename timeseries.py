@@ -90,7 +90,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
     # Now we have multiple variables to add together.
     data = None
     for var in var_name:
-        if var_name == 'EXFwind':
+        if var == 'EXFwind':
             # Special case to get wind speed
             u = read_netcdf(file_path, 'EXFuwind', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
             v = read_netcdf(file_path, 'EXFvwind', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
