@@ -21,6 +21,7 @@ from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
+from ..diagnostics import density
 
 
 # Global variables
@@ -457,12 +458,12 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
         finished_plot(fig, fig_name=fig_dir+'ua_changes_'+var_names[i]+'.png')
 
 
-# Plot bottom water temperature and velocity zoomed into the Filchner Trough region of the continental shelf break.
+# Plot bottom water temperature, salinity, density, and velocity zoomed into the Filchner Trough region of the continental shelf break.
 def plot_inflow_zoom (base_dir='./', fig_dir='./'):
 
-    var_names = ['bwtemp', 'vel']
-    ctype = ['basic', 'vel']
-    var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom velocity (m/s)']
+    var_names = ['bwtemp', 'bwsalt', 'density', 'vel']
+    ctype = ['basic', 'basic', 'basic', 'vel']
+    var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom salinity (psu)', r'Bottom potential density (kg/m$^3$)', 'Bottom velocity (m/s)']
     sim_numbers = [0, 2, 4]
     num_sim_plot = len(sim_numbers)
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
@@ -474,6 +475,8 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
 
     # Loop over variables
+    bwtemp = []
+    bwsalt = []
     for m in range(len(var_names)):
         # Read the data
         data = []
@@ -482,14 +485,21 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
         for n in sim_numbers:
             file_path = base_dir + sim_dirs[n] + avg_file
             if var_names[m] == 'bwtemp':
-                data.append(select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)))
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+                # Save bottom water temperature for later
+                bwtemp.append(data_tmp)
+            elif var_names[n] == 'bwsalt':
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+                bwsalt.append(data_tmp)
+            elif var_names[n] == 'density':
+                data_tmp = density('MDJWF', salt, temp, 0)
             elif var_names[m] == 'vel':
                 u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
                 v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
-                speed, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid, vel_option='bottom')
-                data.append(speed)
+                data_tmp, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid, vel_option='bottom')
                 u.append(u_tmp)
                 v.append(v_tmp)
+            data.append(data_tmp)
                 
         # Get the colour bounds
         vmin = np.amax(data[0])
