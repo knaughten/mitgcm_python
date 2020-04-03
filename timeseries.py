@@ -347,7 +347,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['avg_3d', 'iceprod', 'avg_sfc']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
-        elif region in ['sws_shelf', 'filchner_trough']:
+        elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
             mask = grid.get_region_mask(region)
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
