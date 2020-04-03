@@ -471,6 +471,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
     h0 = -1250
     chunk = 4
+    vmin_salt = 33.6
 
     grid = Grid(grid_path)
     base_dir = real_dir(base_dir)
@@ -505,10 +506,14 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
         # Get the colour bounds
         vmin = np.amax(data[0])
         vmax = np.amin(data[0])
+        extend = 'neither'
         for n in range(num_sim_plot):
             vmin_tmp, vmax_tmp = var_min_max(data[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             vmin = min(vmin, vmin_tmp)
             vmax = max(vmax, vmax_tmp)
+        if var_names[m] == 'bwsalt':
+            extend = 'min'
+            vmin = vmin_salt
 
         # Make the plot
         fig, gs, cax = set_panels('1x3C1')
@@ -524,7 +529,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
             if var_names[m] == 'vel':
                 # Overlay velocity vectors
                 overlay_vectors(ax, u[n], v[n], grid, chunk=chunk)
-        plt.colorbar(img, cax=cax, orientation='horizontal')
+        plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
         plt.suptitle(var_titles[m]+' over last 10 years', fontsize=24)
         finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
                     
