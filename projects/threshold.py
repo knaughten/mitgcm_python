@@ -463,15 +463,15 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     var_names = ['bwtemp', 'vel']
     ctype = ['basic', 'vel']
     var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom velocity (m/s)']
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
     sim_numbers = [0, 2, 4]
     num_sim_plot = len(sim_numbers)
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
-    h0 = -1500
+    h0 = -1250
     chunk = 4
 
     grid = Grid(grid_path)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     # Loop over variables
     for m in range(len(var_names)):
@@ -491,28 +491,31 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
                 u.append(u_tmp)
                 v.append(v_tmp)
                 
-            # Get the colour bounds
-            vmin = np.amax(data[0])
-            vmax = np.amin(data[0])
-            for n in range(num_sim_plot):
-                vmin_tmp, vmax_tmp = var_min_max(data[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-                vmin = min(vmin, vmin_tmp)
-                vmax = max(vmax, vmax_tmp)
+        # Get the colour bounds
+        vmin = np.amax(data[0])
+        vmax = np.amin(data[0])
+        for n in range(num_sim_plot):
+            vmin_tmp, vmax_tmp = var_min_max(data[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+            vmin = min(vmin, vmin_tmp)
+            vmax = max(vmax, vmax_tmp)
 
-            # Make the plot
-            fig, gs, cax = set_panels('1x3C1')
-            for n in range(num_sim_plot):
-                ax = plt.subplot(gs[0,n])
-                img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[m], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names[n])
-                if var_names[m] == 'bwtemp':
-                    # Contour 1500 m isobath
-                    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[h0], colors='black', linestyles='dashed', linewidth=2)
-                elif var_names[n] == 'vel':
-                    # Overlay velocity vectors
-                    overlay_vectors(ax, u[n], v[n], grid, chunk=chunk)
-            plt.colorbar(img, cax=cax)
-            plt.title(var_titles[m]+' over last 10 years', fontsize=24)
-            finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
+        # Make the plot
+        fig, gs, cax = set_panels('1x3C1')
+        for n in range(num_sim_plot):
+            ax = plt.subplot(gs[0,n])
+            img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[m], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names[sim_numbers[n]])
+            if n != 0:
+                # Remove axis labels
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+            # Contour 1250 m isobath
+            ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[h0], colors='black', linestyles='dashed')
+            if var_names[m] == 'vel':
+                # Overlay velocity vectors
+                overlay_vectors(ax, u[n], v[n], grid, chunk=chunk)
+        plt.colorbar(img, cax=cax, orientation='horizontal')
+        plt.suptitle(var_titles[m]+' over last 10 years', fontsize=24)
+        finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
                     
     
  
