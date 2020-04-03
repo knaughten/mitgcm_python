@@ -471,7 +471,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
     h0 = -1250
     chunk = 4
-    vmin_salt = 33.6
+    vmin_impose = [None, 33.6, something, None]
 
     grid = Grid(grid_path)
     base_dir = real_dir(base_dir)
@@ -511,9 +511,11 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
             vmin_tmp, vmax_tmp = var_min_max(data[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
             vmin = min(vmin, vmin_tmp)
             vmax = max(vmax, vmax_tmp)
-        if var_names[m] == 'bwsalt':
+        if vmin_impose[m] is not None:
+            vmin = vmin_impose[m]
             extend = 'min'
-            vmin = vmin_salt
+        print vmin
+        print vmax
 
         # Make the plot
         fig, gs, cax = set_panels('1x3C1')
