@@ -18,7 +18,7 @@ from ..plot_utils.slices import transect_patches, transect_values, plot_slice_pa
 from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths
 from ..constants import deg_string, vaf_to_gmslr
-from ..plot_latlon import latlon_plot
+from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
 from ..plot_slices import get_loc
@@ -611,6 +611,36 @@ def filchner_trough_slices (base_dir='./', fig_dir='./'):
         plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle(var_titles[m] + ' from ' + loc_string + ', last 10 years', fontsize=24)
         finished_plot(fig, fig_name=fig_dir+'filchner_trough_slice_'+var_names[m]+'.png')
+
+
+# Plot changes in atmospheric forcing variables between simulations.
+def plot_forcing_changes (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    # ctO is baseline, abO and 1pO are sensitivity tests
+    sim_numbers = [0, 2, 4]
+    num_sim_plot = len(sim_numbers)
+    directories = [base_dir + sim_dirs[n] for n in [0,2,4]]
+    sim_names_plot = [sim_names[n] for n in sim_numbers]
+    sim_keys_plot = [sim_keys[n] for n in sim_numbers]
+    
+    # Variables to plot
+    var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown']
+
+    grid = Grid(base_dir+grid_path)
+    for n in range(1, num_sim_plot):
+        for var in var_names:
+            for zoom in [False, True]:
+                fig_name = fig_dir+var_name+'_'+sim_keys_plot[n]
+                if zoom:
+                    fig_name += '_zoom.png'
+                else:
+                    fig_name += '.png'
+                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[1], avg_name, grid=grid, fig_name=fig_name)
+
+    
+
             
             
 
