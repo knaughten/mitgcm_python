@@ -13,15 +13,18 @@ from ..file_io import read_netcdf, NCfile, netcdf_time
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
-from ..plot_utils.labels import latlon_axes, parse_date
+from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
+from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
+from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths
 from ..constants import deg_string, vaf_to_gmslr
 from ..plot_latlon import latlon_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
+from ..plot_slices import get_loc
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
-from ..diagnostics import density
+from ..diagnostics import density, parallel_vector
 
 
 # Global variables
@@ -532,6 +535,93 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
         plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
         plt.suptitle(var_titles[m]+' over last 10 years', fontsize=24)
         finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
+
+
+# Plot slices through the Filchner Trough for temperature, salinity, density, and along-transect velocity.
+def filchner_trough_slices (base_dir='./', fig_dir='./'):
+
+    # Two transects to plot
+    point0 = [(-43, -81), (-45, -81)]
+    point1 = [(-25, -72), (-27, -72)]
+    num_transects = len(point0)
+    # Variables to plot
+    var_names = ['temp', 'salt', 'rho', 'valong']
+    var_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)', 'Potential density (kg/m$^3$-1000', 'Along-transect velocity (m/s)']
+    ctype = ['basic', 'basic', 'basic', 'plusminus']
+    num_vars = len(var_names)
+    # Simulations to plot
+    sim_numbers = [0, 2, 4]
+    file_paths = [base_dir + sim_dirs[n] + avg_file for n in sim_numbers]
+    sim_names_plot = [sim_names[n] for n in sim_numbers]
+    num_sim_plot = len(sim_numbers)
+    zmin = -1500
+
+    grid = Grid(grid_path)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    for t in range(num_transects):
+        patches = None
+        for m in range(num_vars):
+            # Read data
+            data = []
+            temp = []
+            salt = []
+            for n in range(num_sim_plot):
+                if var_names[m] == 'temp':
+                    data_tmp = mask_3d(read_netcdf(file_paths[n], 'THETA', time_index=0), grid)
+                    # Save temperature for density calculation
+                    temp.append(data_tmp.data)
+                elif var_names[m] == 'salt':
+                    data_tmp = mask_3d(read_netcdf(file_paths[n], 'SALT', time_index=0), grid)
+                    # Save temperature for density calculation
+                    salt.append(data_tmp.data)
+                elif var_names[m] == 'rho':
+                    data_tmp = mask_3d(density('MDJWF', salt[n], temp[n], 0), grid)-1000
+                elif var_names[m] == 'valong':
+                    u = mask_3d(read_netcdf(file_paths[n], 'UVEL', time_index=0), grid, gtype='u')
+                    v = mask_3d(read_netcdf(file_paths[n], 'VVEL', time_index=0), grid, gtype='v')
+                    data_tmp = parallel_vector(u, v, grid, point0[t], point1[t])
+                data.append(data_tmp)
+                
+            # Make the patches and find the min and max values
+            vmin = np.amax(data[0])
+            vmax = np.amin(data[0])
+            values = []
+            for n in range(num_sim_plot):
+                if patches is None:
+                    patches, values_tmp, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above = transect_patches(data[n], grid, point0[t], point1[t], zmin=zmin, return_bdry=True)
+                else:
+                    values_tmp, vmin_tmp, vmax_tmp = transect_values(data[n], grid, point0[t], point1[t], left, right, below, above, hmin, hmax, zmin, zmax)
+                values.append(values_tmp)
+                vmin = min(vmin, vmin_tmp)
+                vmax = max(vmax, vmax_tmp)
+
+            # Make the plot
+            cmap, vmin, vmax = set_colours(values[0], ctype=ctype[m], vmin=vmin, vmax=vmax)
+            loc_string = get_loc(None, point0=point0[t], point1=point1[t])[1]
+            fig, gs, cax = set_panels('1x3C1')
+            for n in range(num_sim_plot):
+                ax = plt.subplot(gs[0,n])
+                img = plot_slice_patches(ax, patches, values[n], hmin, hmax, zmin, zmax, vmin, vmax, cmap=cmap)
+                slice_axes(ax, h_axis='trans')
+                if n != 0:
+                    ax.set_xticklabels([])
+                    ax.set_xlabel('')
+                    ax.set_yticklabels([])
+                    ax.set_ylabel('')
+                plt.title(sim_names_plot[n], fontsize=18)
+            plt.colorbar(img, cax=cax, orientation='horizontal')
+            plt.suptitle(var_titles[m] + ' ' + loc_string, fontsize=24)
+            finished_plot(fig, fig_name=fig_dir+'transect'+str(t)+'_'+var_names[m]+'.png')
+            
+            
+
+            
+                    
+
+    
+    
                     
     
  
