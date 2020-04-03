@@ -462,7 +462,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
 
     var_names = ['bwtemp', 'vel']
     ctype = ['basic', 'vel']
-    var_titles = 
+    var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom velocity (m/s)']
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     sim_numbers = [0, 2, 4]
@@ -511,6 +511,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
                     # Overlay velocity vectors
                     overlay_vectors(ax, u[n], v[n], grid, chunk=chunk)
             plt.colorbar(img, cax=cax)
+            plt.title(var_titles[m]+' over last 10 years', fontsize=24)
             finished_plot(fig, fig_name=fig_dir+'filchner_trough_zoom_'+var_names[m]+'.png')
                     
     
