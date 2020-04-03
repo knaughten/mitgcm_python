@@ -636,7 +636,7 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
                     fig_name += '_zoom.png'
                 else:
                     fig_name += '.png'
-                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[1], avg_file, grid=grid, time_index=0, zoom_fris=zoom, fig_name=fig_name)
+                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], avg_file, grid=grid, time_index=0, zoom_fris=zoom, fig_name=fig_name)
 
     
 
