@@ -625,7 +625,7 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     sim_names_plot = [sim_names[n] for n in sim_numbers]
     sim_keys_plot = [sim_keys[n] for n in sim_numbers]
     # Variables to plot
-    var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown']
+    var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown', 'iceprod']
 
     grid = Grid(base_dir+grid_path)
     for n in range(1, num_sim_plot):
@@ -636,7 +636,7 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
                     fig_name += '_zoom.png'
                 else:
                     fig_name += '.png'
-                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[1], avg_file, grid=grid, fig_name=fig_name)
+                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[1], avg_file, grid=grid, time_index=0, fig_name=fig_name)
 
     
 
