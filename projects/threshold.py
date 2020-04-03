@@ -471,7 +471,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
     h0 = -1250
     chunk = 4
-    vmin_impose = [None, 33.6, 1027, None]
+    vmin_impose = [None, 33.6, 27, None]
 
     grid = Grid(grid_path)
     base_dir = real_dir(base_dir)
