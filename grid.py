@@ -66,6 +66,11 @@ class Grid:
             self.dx_s = read_netcdf(path, 'dxG')
             self.dy_w = read_netcdf(path, 'dyG')
             self.dA = read_netcdf(path, 'rA')
+            # Something super weird happens sometimes and this is the only way to fix it (?!!)
+            try:
+                test = self.dA[0,:]
+            except(ValueError):
+                self.dA = self.dA.data
             self.z = read_netcdf(path, 'Z')
             self.z_edges = read_netcdf(path, 'Zp1')
             self.dz = read_netcdf(path, 'drF')

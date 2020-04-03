@@ -101,7 +101,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             # 3D variable; have to take surface
             if len(data_tmp.shape)==3:
                 # Just one timestep
-                data_tmp = data_tmp[0,:]
+                data_tmp = data_tmp[0,:,:]
             else:
                 data_tmp = data_tmp[:,0,:,:]                
         if data is None:
