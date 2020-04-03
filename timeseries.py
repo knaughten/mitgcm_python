@@ -12,7 +12,7 @@ from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, appl
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
-from constants import deg_string, region_names
+from constants import deg_string, region_names, temp_C2K
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (as specified in region_names in constants.py). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -97,6 +97,9 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             data_tmp = np.sqrt(u**2 + v**2)
         else:
             data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+            if var == 'EXFatemp':
+                # Convert from K to C
+                data_tmp -= temp_C2K
         if var in ['THETA', 'SALT']:
             # 3D variable; have to take surface
             if len(data_tmp.shape)==3:
