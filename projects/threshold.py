@@ -562,11 +562,11 @@ def filchner_trough_slices (base_dir='./', fig_dir='./'):
 
     for t in range(num_transects):
         patches = None
+        temp = []
+        salt = []
         for m in range(num_vars):
             # Read data
             data = []
-            temp = []
-            salt = []
             for n in range(num_sim_plot):
                 if var_names[m] == 'temp':
                     data_tmp = mask_3d(read_netcdf(file_paths[n], 'THETA', time_index=0), grid)
