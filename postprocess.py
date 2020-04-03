@@ -537,11 +537,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly, rho=rho, time_average=time_average)[1]
             set_update_var(id, num_time, data, 't', ts_name, title, units)
 
-    # Finished
-    if isinstance(id, nc.Dataset):
-        id.close()
-    elif isinstance(id, NCfile):
-        id.close()
+    id.close()
 
 
 # Precompute ocean timeseries from a coupled UaMITgcm simulation.

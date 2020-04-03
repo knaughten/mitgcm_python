@@ -97,7 +97,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             data_tmp = np.sqrt(u**2 + v**2)
         else:
             data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        if var_name in ['THETA', 'SALT']:
+        if var in ['THETA', 'SALT']:
             # 3D variable; have to take surface
             if len(data_tmp.shape)==3:
                 # Just one timestep
