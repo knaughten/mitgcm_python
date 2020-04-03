@@ -465,6 +465,8 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     ctype = ['basic', 'basic', 'basic', 'vel']
     var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom salinity (psu)', r'Bottom potential density (kg/m$^3$)', 'Bottom velocity (m/s)']
     sim_numbers = [0, 2, 4]
+    file_paths = [base_dir + sim_dirs[n] + avg_file for n in sim_numbers]
+    sim_names_plot = [sim_names[n] for n in sim_numbers]
     num_sim_plot = len(sim_numbers)
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
     h0 = -1250
@@ -482,20 +484,19 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
         data = []
         u = []
         v = []
-        for n in sim_numbers:
-            file_path = base_dir + sim_dirs[n] + avg_file
+        for n in range(num_sim_plot):
             if var_names[m] == 'bwtemp':
-                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_paths[n], 'THETA', time_index=0), grid))
                 # Save bottom water temperature for later
                 bwtemp.append(data_tmp)
             elif var_names[m] == 'bwsalt':
-                data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
+                data_tmp = select_bottom(mask_3d(read_netcdf(file_paths[n], 'SALT', time_index=0), grid))
                 bwsalt.append(data_tmp)
             elif var_names[m] == 'density':
                 data_tmp = density('MDJWF', bwsalt[n], bwtemp[n], 0)
             elif var_names[m] == 'vel':
-                u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
-                v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
+                u_tmp = mask_3d(read_netcdf(file_paths[n], 'UVEL', time_index=0), grid, gtype='u')
+                v_tmp = mask_3d(read_netcdf(file_paths[n], 'VVEL', time_index=0), grid, gtype='v')
                 data_tmp, u_tmp, v_tmp = prepare_vel(u_tmp, v_tmp, grid, vel_option='bottom')
                 u.append(u_tmp)
                 v.append(v_tmp)
@@ -513,7 +514,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
         fig, gs, cax = set_panels('1x3C1')
         for n in range(num_sim_plot):
             ax = plt.subplot(gs[0,n])
-            img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[m], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names[sim_numbers[n]])
+            img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[m], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names_plot[n])
             if n != 0:
                 # Remove axis labels
                 ax.set_xticklabels([])
