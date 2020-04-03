@@ -444,9 +444,12 @@ def set_update_file (precomputed_file, grid, dimensions):
         return NCfile(precomputed_file, grid, dimensions)
 
 # Define or update the time axis.
-def set_update_time (id, mit_file, monthly=True):
+def set_update_time (id, mit_file, monthly=True, time_average=False):
     # Read the time array from the MITgcm file, and its units
     time, time_units, calendar = netcdf_time(mit_file, return_units=True, monthly=monthly)
+    if time_average:
+        # Only save the first one
+        time = np.array([time[0]])
     if isinstance(id, nc.Dataset):
         # File is being updated
         # Update the units to match the old time array
@@ -492,7 +495,7 @@ def set_update_var (id, num_time, data, dimensions, var_name, title, units):
 # timeseries_types: list of timeseries types to compute (subset of the options from set_parameters). If None, a default set will be used.
 # lon0, lat0: if timeseries_types includes 'temp_polynya' and/or 'salt_polynya', use these points as the centre.
 
-def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS', eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None):
+def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS', eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, time_average=False):
 
     # Timeseries to compute
     if timeseries_types is None:
@@ -507,15 +510,15 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
     grid = Grid(mit_file)
     if any ([s.endswith('density') for s in timeseries_types]):
         # Precompute density so we don't have to re-calculate it for each density variable. If there's only one density variable, this won't make a difference.
-        temp = read_netcdf(mit_file, 'THETA')
-        salt = read_netcdf(mit_file, 'SALT')
+        temp = read_netcdf(mit_file, 'THETA', time_average=time_average)
+        salt = read_netcdf(mit_file, 'SALT', time_average=time_average)
         rho = density(eosType, salt, temp, 0, rhoConst=rhoConst, Tref=Tref, Sref=Sref, tAlpha=tAlpha, sBeta=sBeta)
     else:
         rho = None
 
     # Set up or update the file and time axis
     id = set_update_file(timeseries_file, grid, 't')
-    num_time = set_update_time(id, mit_file, monthly=monthly)
+    num_time = set_update_time(id, mit_file, monthly=monthly, time_average=time_average)
 
     # Now process all the timeseries
     for ts_name in timeseries_types:
@@ -523,7 +526,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
         # Get information about the variable; only care about title and units
         title, units = set_parameters(ts_name)[2:4]
         if ts_name == 'fris_mass_balance':
-            melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly)[1:]
+            melt, freeze = calc_special_timeseries(ts_name, mit_file, grid=grid, monthly=monthly, time_average=time_average)[1:]
             # We need two titles now
             title_melt = 'Total melting beneath FRIS'
             title_freeze = 'Total refreezing beneath FRIS'
@@ -531,7 +534,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             set_update_var(id, num_time, melt, 't', 'fris_total_melt', title_melt, units)
             set_update_var(id, num_time, freeze, 't', 'fris_total_freeze', title_freeze, units)
         else:
-            data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly, rho=rho)[1]
+            data = calc_special_timeseries(ts_name, mit_file, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly, rho=rho, time_average=time_average)[1]
             set_update_var(id, num_time, data, 't', ts_name, title, units)
 
     # Finished
@@ -548,12 +551,15 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 # file_name: name of the output NetCDF file within the output/XXXXXX/MITgcm/ directories. Default 'output.nc'.
 # segment_dir: list of date codes, in chronological order, corresponding to the subdirectories within output_dir. This must be specified if timeseries_file already exists. If it is not specified, all available subdirectories of output_dir will be used.
 # timeseries_types: as in precompute_timeseries
-def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None, key='WSFRIS'):
+# time_average: Average each year to create an annually averaged timeseries
+def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None, key='WSFRIS', time_average=False):
 
     if timeseries_types is None:
         if key == 'WSFRIS':
             timeseries_types = ['fris_mass_balance', 'fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']
             #timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        elif key == 'WSFRIS_pt2':
+            timeseries_types = ['fris_massloss', 'fris_temp', 'filchner_trough_temp', 'filchner_trough_salt', 'ronne_depression_temp', 'ronne_depression_salt', 'ronne_depression_iceprod', 'ronne_depression_atemp_avg', 'ronne_depression_wind_avg', 'ronne_depression_sst_avg', 'ronne_depression_sss_avg', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_iceprod', 'sws_shelf_atemp_avg', 'sws_shelf_wind_avg', 'sws_shelf_sst_avg', 'sws_shelf_sss_avg']
         elif key == 'FRIS':
             timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
@@ -568,7 +574,7 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
     # Call precompute_timeseries for each segment
     for file_path in file_paths:
         print 'Processing ' + file_path
-        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True)
+        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True, time_average=time_average)
 
 
 # Make animations of lat-lon variables throughout a coupled UaMITgcm simulation, and also images of the first and last frames.

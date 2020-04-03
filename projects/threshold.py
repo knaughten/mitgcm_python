@@ -631,6 +631,8 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     for n in range(1, num_sim_plot):
         for var in var_names:
             for zoom in [False, True]:
+                if var == 'iceprod':
+                    continue
                 fig_name = fig_dir+var+'_'+sim_keys_plot[n]
                 if zoom:
                     fig_name += '_zoom.png'

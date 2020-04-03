@@ -62,6 +62,7 @@ region_bounds = {
     'abbot2': [-99., -88.9, -73.4, -71.5],
     'venable': [-88.9, -85.6, -73.4, -72.7],
     'filchner_trough': [-45, -30, -79, -75],
+    'ronne_depression': [-65, -55, -76, -73],
     'wdw_core': [-60, -20, -75, -65]
 }
 # Regions that are in two parts
@@ -70,6 +71,7 @@ region_split = ['fris', 'abbot']
 region_bathy_bounds = {
     'sws_shelf': [-1250, None],
     'filchner_trough': [-1250, -650],
+    'ronne_depression': [None, -525],
     'wdw_core': [None, -2000]
 }
 # Depth bounds for 3D regions
@@ -89,6 +91,7 @@ region_names = {
     'venable': 'Venable Ice Shelf',
     'all': 'all ice shelves',
     'filchner_trough': 'Filchner Trough',
+    'ronne_depression': 'Ronne Depression',
     'sws_shelf': 'Southern Weddell Sea shelf',
     'wdw_core': 'Warm Deep Water core',
     'pine_island_bay': 'Pine Island Bay',
