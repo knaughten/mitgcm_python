@@ -613,7 +613,7 @@ def filchner_trough_slices (base_dir='./', fig_dir='./'):
                 plt.title(sim_names_plot[n], fontsize=18)
             plt.colorbar(img, cax=cax, orientation='horizontal')
             plt.suptitle(var_titles[m] + ' from ' + loc_string + ', last 10 years', fontsize=24)
-            finished_plot(fig) #, fig_name=fig_dir+'transect'+str(t)+'_'+var_names[m]+'.png')
+            finished_plot(fig, fig_name=fig_dir+'transect'+str(t)+'_'+var_names[m]+'.png')
             
             
 
