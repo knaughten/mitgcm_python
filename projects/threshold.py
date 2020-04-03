@@ -488,11 +488,11 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
                 data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid))
                 # Save bottom water temperature for later
                 bwtemp.append(data_tmp)
-            elif var_names[n] == 'bwsalt':
+            elif var_names[m] == 'bwsalt':
                 data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
                 bwsalt.append(data_tmp)
-            elif var_names[n] == 'density':
-                data_tmp = density('MDJWF', salt, temp, 0)
+            elif var_names[m] == 'density':
+                data_tmp = density('MDJWF', bwsalt[n], bwtemp[n], 0)
             elif var_names[m] == 'vel':
                 u_tmp = mask_3d(read_netcdf(file_path, 'UVEL', time_index=0), grid, gtype='u')
                 v_tmp = mask_3d(read_netcdf(file_path, 'VVEL', time_index=0), grid, gtype='v')
