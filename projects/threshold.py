@@ -35,7 +35,8 @@ coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
-avg_file = 'last_10y.nc'
+end_file = 'last_10y.nc'
+mid_file = 'years_26_35.nc'
 num_sim = len(sim_keys)
 grid_path = 'WSFRIS_999/ini_grid/'  # Just for dimensions etc.
 
@@ -468,7 +469,7 @@ def plot_inflow_zoom (base_dir='./', fig_dir='./'):
     ctype = ['basic', 'basic', 'basic', 'vel']
     var_titles = ['Bottom temperature ('+deg_string+'C)', 'Bottom salinity (psu)', r'Bottom potential density (kg/m$^3$-1000)', 'Bottom velocity (m/s)']
     sim_numbers = [0, 2, 4]
-    file_paths = [base_dir + sim_dirs[n] + avg_file for n in sim_numbers]
+    file_paths = [base_dir + sim_dirs[n] + end_file for n in sim_numbers]
     sim_names_plot = [sim_names[n] for n in sim_numbers]
     num_sim_plot = len(sim_numbers)
     [xmin, xmax, ymin, ymax] = [-50, -20, -77, -73]
@@ -549,7 +550,7 @@ def filchner_trough_slices (base_dir='./', fig_dir='./'):
     num_vars = len(var_names)
     # Simulations to plot
     sim_numbers = [0, 2, 4]
-    file_paths = [base_dir + sim_dirs[n] + avg_file for n in sim_numbers]
+    file_paths = [base_dir + sim_dirs[n] + end_file for n in sim_numbers]
     sim_names_plot = [sim_names[n] for n in sim_numbers]
     num_sim_plot = len(sim_numbers)
     zmin = -1500
@@ -638,16 +639,32 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
                     fig_name += '_zoom.png'
                 else:
                     fig_name += '.png'
-                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], avg_file, grid=grid, time_index=0, zoom_fris=zoom, fig_name=fig_name)
+                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], end_file, grid=grid, time_index=0, zoom_fris=zoom, fig_name=fig_name)
 
-    
 
-            
-            
+# Plot bottom density in and around the FRIS cavity in the piControl simulation and in the middle and end of the abrupt-4xCO2 simulation.
+def plot_density_stages (base_dir='./', fig_dir='./'):
 
-            
-                    
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    file_paths = [base_dir+sim_dirs[1]+end_file, base_dir+sim_dirs[3]+mid_file, base_dir+sim_dirs[3]+end_file]
+    titles = ['piControl', 'abrupt-4xCO2 (years 26-35)', 'abrupt-4xCO2 (years 141-150)']
 
+    grid = Grid(base_dir+grid_path)
+    data = []
+    for n in range(len(file_paths)):
+        bwtemp = select_bottom(mask_3d(read_netcdf(file_paths[n], 'THETA', time_index=0), grid))
+        bwsalt = select_bottom(mask_3d(read_netcdf(file_paths[n], 'SALT', time_index=0), grid))
+        data.append(mask_land(density('MDJWF', bwsalt, bwtemp, 0),grid)-1e3)
+
+    fig, gs, cax = set_panels('1x3C1')
+    for n in range(3):
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, zoom_fris=True, pster=True, title=titles[n])
+    plt.colorbar(img, cax=cax)
+    plt.suptitle(r'Bottom density (kg/m$^3$-1000)', fontsize=24)
+    finished_plot(fig, fig_name=fig_dir+'density_stages.png')
+        
     
     
                     
