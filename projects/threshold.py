@@ -647,9 +647,9 @@ def plot_density_stages (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    file_paths = [base_dir+sim_dirs[1]+end_file, base_dir+sim_dirs[3]+mid_file, base_dir+sim_dirs[3]+end_file]
+    file_paths = [base_dir+sim_dirs[0]+end_file, base_dir+sim_dirs[2]+mid_file, base_dir+sim_dirs[2]+end_file]
     titles = ['piControl', 'abrupt-4xCO2 (years 26-35)', 'abrupt-4xCO2 (years 141-150)']
-
+    
     grid = Grid(base_dir+grid_path)
     data = []
     for n in range(len(file_paths)):
@@ -661,9 +661,9 @@ def plot_density_stages (base_dir='./', fig_dir='./'):
     for n in range(3):
         ax = plt.subplot(gs[0,n])
         img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, zoom_fris=True, pster=True, title=titles[n])
-    plt.colorbar(img, cax=cax)
+    plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle(r'Bottom density (kg/m$^3$-1000)', fontsize=24)
-    finished_plot(fig, fig_name=fig_dir+'density_stages.png')
+    finished_plot(fig) #, fig_name=fig_dir+'density_stages.png')
         
     
     

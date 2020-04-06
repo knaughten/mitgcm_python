@@ -12,7 +12,7 @@ from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, appl
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, volume_average, vertical_average_column
 from interpolation import interp_bilinear
-from constants import deg_string, region_names, temp_C2K
+from constants import deg_string, region_names, temp_C2K, sec_per_year
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (as specified in region_names in constants.py). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -80,14 +80,14 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
 
 
 # Helper function for timeseries_avg_sfc and timeseries_int_sfc.
-def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, operator='add'):
     
     # Read the data
     if isinstance(var_name, str):
         # Just one variable
         # Make it a list
         var_name = [var_name]
-    # Now we have multiple variables to add together.
+    # Now we have multiple variables to add or subtract together.
     data = None
     for var in var_name:
         if var == 'EXFwind':
@@ -110,7 +110,13 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         if data is None:
             data = data_tmp
         else:
-            data += data_tmp
+            if operator == 'add':
+                data += data_tmp
+            elif operator == 'subtract':
+                data -= data_tmp
+            else:
+                print 'Error (timeseries_area_sfc): invalid operator ' + operator
+                sys.exit()
     if len(data.shape)==2:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
@@ -129,13 +135,13 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its area-averaged value over the sea surface.
-def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
-    return timeseries_area_sfc('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask)
+def timeseries_avg_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, operator='add'):
+    return timeseries_area_sfc('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, operator=operator)
 
 
 # Like timeseries_avg_sfc, but for area-integrals over the sea surface.
-def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
-    return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask)
+def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, operator='add'):
+    return timeseries_area_sfc('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, operator=operator)
 
 
 # Integrate the area of the sea surface where the given variable exceeds the given threshold.
@@ -301,6 +307,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 #          'watermass': calculates percentage volume of the water mass defined by any of tmin, tmax, smin, smax.
 #          'transport_transect': calculates net transport across a given transect
 #          'iceprod': calculates total sea ice production over the given region
+#          'pminuse': calculates total precipitation minus evaporation over the given region
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -323,7 +330,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None, time_average=False):
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pminuse'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -347,7 +354,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'iceprod', 'avg_sfc']:
+    if option in ['avg_3d', 'iceprod', 'avg_sfc', 'pminuse']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
@@ -389,6 +396,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_transport_transect(fname, grid, point0, point1, direction=direction, time_average=time_average)
         elif option == 'iceprod':
             values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask, time_average=time_average)*1e-3
+        elif option == 'pminuse':
+            values_tmp = timeseries_int_sfc(fname, ['EXFpreci', 'EXFevap'], grid, mask=mask, time_average=time_average, operator='subtract')*1e-3*sec_per_year
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
             # Just save the first time index
@@ -480,6 +489,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_sst_avg': sea surface temperature averaged over the given region (C)
 #      '*_sss_avg': sea surface salinity averaged over the given region (psu)
 #      '*_iceprod': total sea ice production over the given region (10^3 m^3/y)
+#      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/y)
 def set_parameters (var):
 
     var_name = None
@@ -660,6 +670,11 @@ def set_parameters (var):
         option = 'iceprod'
         region = var[:var.index('_iceprod')]
         title = 'Total sea ice production over ' + region_names[region]
+        units = r'10$^3$ m$^3$/y'
+    elif var.endswith('pminuse'):
+        option = 'pminuse'
+        region = var[:var.index('_pminuse')]
+        title = 'Total precipitation minus evaporation over ' + region_names[region]
         units = r'10$^3$ m$^3$/y'
     else:
         print 'Error (set_parameters): invalid variable ' + var

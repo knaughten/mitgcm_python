@@ -555,7 +555,7 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
             timeseries_types = ['fris_mass_balance', 'fris_massloss', 'fris_temp', 'fris_salt', 'fris_density', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_density', 'filchner_trough_temp', 'filchner_trough_salt', 'filchner_trough_density', 'wdw_core_temp', 'wdw_core_salt', 'wdw_core_density', 'seaice_area', 'wed_gyre_trans', 'filchner_trans', 'sws_shelf_iceprod']
             #timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
         elif key == 'WSFRIS_pt2':
-            timeseries_types = ['fris_massloss', 'fris_temp', 'filchner_trough_temp', 'filchner_trough_salt', 'ronne_depression_temp', 'ronne_depression_salt', 'ronne_depression_iceprod', 'ronne_depression_atemp_avg', 'ronne_depression_wind_avg', 'ronne_depression_sst_avg', 'ronne_depression_sss_avg', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_iceprod', 'sws_shelf_atemp_avg', 'sws_shelf_wind_avg', 'sws_shelf_sst_avg', 'sws_shelf_sss_avg']
+            timeseries_types = ['fris_massloss', 'fris_temp', 'filchner_trough_temp', 'filchner_trough_salt', 'ronne_depression_temp', 'ronne_depression_salt', 'ronne_depression_iceprod', 'ronne_depression_atemp_avg', 'ronne_depression_wind_avg', 'ronne_depression_sst_avg', 'ronne_depression_sss_avg', 'sws_shelf_temp', 'sws_shelf_salt', 'sws_shelf_iceprod', 'sws_shelf_atemp_avg', 'sws_shelf_wind_avg', 'sws_shelf_sst_avg', 'sws_shelf_sss_avg', 'sws_shelf_pminuse']
         elif key == 'FRIS':
             timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
 
