@@ -671,7 +671,7 @@ def plot_density_stages (base_dir='./', fig_dir='./'):
         vmax = max(vmax, vmax_tmp)
 
     fig, gs, cax = set_panels('1x2C1')
-    for n in range(len(fnames))):
+    for n in range(len(fnames)):
         ax = plt.subplot(gs[0,n])
         img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, zoom_fris=True, pster=True, title=titles[n], ctype='plusminus', vmin=vmin, vmax=vmax)
     plt.colorbar(img, cax=cax, orientation='horizontal')
