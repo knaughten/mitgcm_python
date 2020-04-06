@@ -662,21 +662,37 @@ def plot_density_stages (base_dir='./', fig_dir='./'):
             data_abs.append(mask_land(density('MDJWF', bwsalt, bwtemp, 0),grid)-1e3)
         data_diff.append(data_abs[1]-data_abs[0])
 
-    # Get bounds
-    vmin = np.amax(data_diff[0])
-    vmax = np.amin(data_diff[0])
-    for n in range(len(fnames)):
-        vmin_tmp, vmax_tmp = var_min_max(data_diff[n], grid, pster=True, zoom_Fris=True)
-        vmin = min(vmin, vmin_tmp)
-        vmax = max(vmax, vmax_tmp)
-
-    fig, gs, cax = set_panels('1x2C1')
+    fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(12,7))
+    cax = [cax1, cax2]
     for n in range(len(fnames)):
         ax = plt.subplot(gs[0,n])
-        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, zoom_fris=True, pster=True, title=titles[n], ctype='plusminus', vmin=vmin, vmax=vmax)
-    plt.colorbar(img, cax=cax, orientation='horizontal')
+        img = latlon_plot(data_diff[n], grid, ax=ax, make_cbar=False, zoom_fris=True, pster=True, title=titles[n])
+        plt.colorbar(img, cax=cax[n], orientation='horizontal')
     plt.suptitle(r'Bottom density anomaly (kg/m$^3$-1000), abrupt-4xCO2 minus piControl', fontsize=24)
     finished_plot(fig, fig_name=fig_dir+'density_stages.png')
+
+
+# Plot streamfunction in and around the cavity in the piControl simulation and at two stages of the abrupt-4xCO2 simulations.
+def plot_psi_stages (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    file_paths = [base_dir+sim_dirs[0]+end_file, base_dir+sim_dirs[2]+mid_file, base_dir+sim_dirs[2]+end_file]
+    titles = ['piControl', 'abrupt-4xCO2 (years 26-35)', 'abrupt-4xCO2 (years 141-150)']
+    vmin = -0.5
+    vmax = 0.5
+
+    grid = Grid(base_dir+grid_path)
+    fig, gs, cax = set_panels('1x3C1', figsize=(16,7))
+    for n in range(len(file_paths)):
+        data = np.sum(mask_3d(read_netcdf(file_paths[n], 'PsiVEL'), grid), axis=0)*1e-6
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(data, grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=True, pster=True, title=titles[n])
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle('Horizontal velocity streamfunction (Sv), vertically integrated', fontsize=24)
+    finished_plot(fig, fig_name=fig_dir+'psi_stages.png')
+
+        
         
     
     
