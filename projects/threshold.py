@@ -840,6 +840,6 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
-    writer = animation.FFMpegWriter(bitrate=2000, fps=1)
+    writer = animation.FFMpegWriter(bitrate=2000, fps=2)
     anim.save(mov_name, writer=writer)
  
