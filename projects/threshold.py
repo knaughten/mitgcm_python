@@ -814,7 +814,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
     # Inner function to plot one frame
     def plot_one_frame (t):
-        img = ax.pcolormesh(salt_edges, temp_edges, np.log(volume), vmin=min_vol, vmax=max_vol)
+        img = ax.pcolormesh(salt_edges, temp_edges, np.log(volume[t,:]), vmin=min_vol, vmax=max_vol)
         ax.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
         ax.contour(salt_centres, temp_centres, rho, rho_lev, colors=(0.6, 0.6, 0.6), linestyles='dotted')
         ax.grid(True)
