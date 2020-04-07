@@ -807,7 +807,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
     salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
     rho = density('MDJWF', salt_2d, temp_2d, 0)
     # Density contours to plot
-    rho_lev = arange(1026.6, 1028.4, 0.2)
+    rho_lev = np.arange(1026.6, 1028.4, 0.2)
     
     # Initialise the plot
     fig, ax = plt.subplots(figsize=(8,6))
