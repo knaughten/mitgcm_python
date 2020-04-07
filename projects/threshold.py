@@ -724,11 +724,11 @@ def precompute_ts_bounds (output_dir='./'):
 # Precompute the T/S distribution for the animation in the next function, and save to a NetCDF file.
 def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animation_fields.nc'):
 
-    if expt = 'abIO':
+    if expt == 'abIO':
         temp_bounds = [-3.203, 2.74]
         salt_bounds = [32.025, 34.847]
         start_year = 1850
-    elif expt = '1pIO':
+    elif expt == '1pIO':
         temp_bounds = [-3.226, 1.879]
         salt_bounds = [32.234, 34.881]
         start_year = 1850
