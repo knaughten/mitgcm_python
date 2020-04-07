@@ -790,6 +790,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
 def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4'):
 
     import matplotlib.animation as animation
+    smin = 32.5
 
     # Read data
     time = read_netcdf(file_path, 'time')
@@ -807,7 +808,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
     salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
     rho = density('MDJWF', salt_2d, temp_2d, 0)
     # Density contours to plot
-    rho_lev = np.arange(1026.6, 1028.4, 0.2)
+    rho_lev = np.arange(1025.4, 1028.4, 0.2)
     
     # Initialise the plot
     fig, ax = plt.subplots(figsize=(8,6))
@@ -818,7 +819,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
         ax.contour(salt_centres, temp_centres, rho, rho_lev, colors='black', linestyles='dotted')
         ax.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)        
         ax.grid(True)
-        ax.set_xlim([salt_edges[0], salt_edges[-1]])
+        ax.set_xlim([smin, salt_edges[-1]])
         ax.set_ylim([temp_edges[0], temp_edges[-1]])
         plt.xlabel('Salinity (psu)')
         plt.ylabel('Temperature ('+deg_string+'C)')
@@ -839,6 +840,6 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
-    writer = animation.FFMpegWriter(bitrate=2000, fps=12)
+    writer = animation.FFMpegWriter(bitrate=2000, fps=1)
     anim.save(mov_name, writer=writer)
  
