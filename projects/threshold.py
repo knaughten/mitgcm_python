@@ -754,7 +754,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
     for t in range(num_years):
         print 'Processing ' + file_paths[t]
         # Set up the masks
-        grid = Grid(file_path)
+        grid = Grid(file_paths[t])
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
         # Read data
         temp = read_netcdf(file_paths[t], 'THETA', time_average=True)
@@ -770,6 +770,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
     # Write to NetCDF
     id = nc.Dataset(out_file, 'w')
     id.createDimension('time', None)
+    id.createVariable('time', 'f8', ('time'))
     id.variables['time'][:] = np.arange(num_years)+start_year
     def add_dimension (data, dim_name):
         id.createDimension(dim_name, data.size)
