@@ -693,30 +693,26 @@ def plot_psi_stages (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'psi_stages.png')
 
 
-# Calculate the min and max annually-averaged temperature and salinity on the continental shelf and FRIS cavity over all simulations, to set the bounds for TS bins.
-def precompute_ts_bounds (base_dir='./'):
+# Calculate the min and max annually-averaged temperature and salinity on the continental shelf and FRIS cavity over one simulation, to set the bounds for TS bins.
+def precompute_ts_bounds (output_dir='./'):
 
     var_names = ['THETA', 'SALT']
     vmin = [100, 100]
     vmax = [-100, -100]
-    base_dir = real_dir(base_dir)
 
-    # Loop over experiments
-    for n in range(num_sim):
-        print 'Processing ' + sim_names[n]
-        # Loop over segments
-        all_file_paths = segment_file_paths(base_dir+sim_dirs[n])
-        for file_path in all_file_paths:
-            print 'Reading ' + file_path
-            grid = Grid(file_path)
-            # Get the indices on the continental shelf and FRIS cavity
-            loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
-            # Loop over variables
-            for n in range(len(var_names)):
-                print '...' + var_names[n]
-                data = read_netcdf(file_path, var_names[n], time_average=True)
-                vmin[n] = min(vmin[n], np.amin(data[loc_index]))
-                vmax[n] = max(vmax[n], np.amax(data[loc_index]))
+    # Loop over segments
+    all_file_paths = segment_file_paths(real_dir(output_dir))
+    for file_path in all_file_paths:
+        print 'Reading ' + file_path
+        grid = Grid(file_path)
+        # Get the indices on the continental shelf and FRIS cavity
+        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
+        # Loop over variables
+        for n in range(len(var_names)):
+            print '...' + var_names[n]
+            data = read_netcdf(file_path, var_names[n], time_average=True)
+            vmin[n] = min(vmin[n], np.amin(data[loc_index]))
+            vmax[n] = max(vmax[n], np.amax(data[loc_index]))
 
     # Print the results
     for n in range(len(var_names)):
