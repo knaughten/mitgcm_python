@@ -679,8 +679,8 @@ def plot_psi_stages (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     file_paths = [base_dir+sim_dirs[0]+end_file, base_dir+sim_dirs[2]+mid_file, base_dir+sim_dirs[2]+end_file]
     titles = ['piControl', 'abrupt-4xCO2 (years 26-35)', 'abrupt-4xCO2 (years 141-150)']
-    vmin = -0.5
-    vmax = 0.5
+    vmin = -0.25
+    vmax = 0.25
 
     grid = Grid(base_dir+grid_path)
     fig, gs, cax = set_panels('1x3C1', figsize=(16,7))
@@ -691,6 +691,41 @@ def plot_psi_stages (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Horizontal velocity streamfunction (Sv), vertically integrated', fontsize=24)
     finished_plot(fig, fig_name=fig_dir+'psi_stages.png')
+
+
+# Calculate the min and max annually-averaged temperature and salinity on the continental shelf and FRIS cavity over all simulations, to set the bounds for TS bins.
+def precompute_ts_bounds (base_dir='./'):
+
+    var_names = ['THETA', 'SALT']
+    vmin = [100, 100]
+    vmax = [-100, -100]
+    base_dir = real_dir(base_dir)
+
+    # Loop over experiments
+    for n in range(num_sim):
+        print 'Processing ' + sim_names[n]
+        # Loop over segments
+        all_file_paths = segment_file_paths(base_dir+sim_dirs[n])
+        for file_path in all_file_paths:
+            print 'Reading ' + file_path
+            grid = Grid(file_path)
+            # Get the indices on the continental shelf and FRIS cavity
+            loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
+            # Loop over variables
+            for n in range(len(var_names)):
+                print '...' + var_names[n]
+                data = read_netcdf(file_path, var_names[n], time_average=True)
+                vmin[n] = min(vmin[n], np.amin(data[loc_index]))
+                vmax[n] = max(vmax[n], np.amax(data[loc_index]))
+
+    # Print the results
+    for n in range(len(var_names)):
+        print var_names[n] + ' bounds: ' + str(vmin[n]) + ', ' + str(vmax[n])
+
+
+def precompute_ts_animation_fields (output_dir='./', out_file='ts_animation_fields.nc'):
+
+    pass
 
         
         
