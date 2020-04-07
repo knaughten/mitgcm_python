@@ -804,7 +804,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
     # Calculate surface freezing point
     tfreeze_sfc = tfreeze(salt_centres, 0)
     # Calculate potential density of bins
-    salt_2d, temp_2d = meshgrid(salt_centres, temp_centres)
+    salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
     rho = density('MDJWF', salt_2d, temp_2d, 0)
     # Density contours to plot
     rho_lev = arange(1026.6, 1028.4, 0.2)
