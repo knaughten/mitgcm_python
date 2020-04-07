@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from ..grid import Grid, choose_grid
 from ..file_io import read_netcdf, NCfile, netcdf_time
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
