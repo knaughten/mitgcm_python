@@ -7,6 +7,8 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import itertools
+import netCDF4 as nc
 
 from ..grid import Grid, choose_grid
 from ..file_io import read_netcdf, NCfile, netcdf_time
@@ -24,7 +26,7 @@ from ..plot_misc import read_plot_hovmoller_ts
 from ..plot_slices import get_loc
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
-from ..diagnostics import density, parallel_vector
+from ..diagnostics import density, parallel_vector, tfreeze
 
 
 # Global variables
@@ -719,14 +721,125 @@ def precompute_ts_bounds (output_dir='./'):
         print var_names[n] + ' bounds: ' + str(vmin[n]) + ', ' + str(vmax[n])
 
 
-def precompute_ts_animation_fields (output_dir='./', out_file='ts_animation_fields.nc'):
+# Precompute the T/S distribution for the animation in the next function, and save to a NetCDF file.
+def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animation_fields.nc'):
 
-    pass
+    if expt = 'abIO':
+        temp_bounds = [-3.203, 2.74]
+        salt_bounds = [32.025, 34.847]
+        start_year = 1850
+    elif expt = '1pIO':
+        temp_bounds = [-3.226, 1.879]
+        salt_bounds = [32.234, 34.881]
+        start_year = 1850
+    else:
+        print 'Error (precompute_ts_animation_fields): unknown expt ' + expt
+        sys.exit()
 
-        
-        
+    file_paths = segment_file_paths(real_dir(output_dir))
+    num_years = len(file_paths)
+    num_bins = 1000
     
+    # Set up bins
+    def set_bins (bounds):
+        eps = (bounds[1]-bounds[0])*1e-3
+        edges = np.linspace(bounds[0]-eps, bounds[1]+eps, num=num_bins+1)
+        centres = 0.5*(edges[:-1] + edges[1:])
+        return edges, centres
+    temp_edges, temp_centres = set_bins(temp_bounds)
+    salt_edges, salt_centres = set_bins(salt_bounds)
+    volume = np.zeros([num_years, num_bins, num_bins])
+
+    # Loop over years
+    for t in range(num_years):
+        print 'Processing ' + file_paths[t]
+        # Set up the masks
+        grid = Grid(file_path)
+        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
+        # Read data
+        temp = read_netcdf(file_paths[t], 'THETA', time_average=True)
+        salt = read_netcdf(file_paths[t], 'SALT', time_average=True)
+        # Loop over valid cells and categorise them into bins
+        for temp_val, salt_val, grid_val in itertools.izip(temp[loc_index], salt[loc_index], grid.dV[loc_index]):
+            temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
+            salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
+            volume[t, temp_index, salt_index] += grid_val
+    # Mask bins with zero volume
+    volume = np.ma.masked_where(volume==0, volume)
+
+    # Write to NetCDF
+    id = nc.Dataset(out_file, 'w')
+    id.createDimension('time', None)
+    id.variables['time'][:] = np.arange(num_years)+start_year
+    def add_dimension (data, dim_name):
+        id.createDimension(dim_name, data.size)
+        id.createVariable(dim_name, 'f8', (dim_name))
+        id.variables[dim_name][:] = data
+    add_dimension(temp_centres, 'temp_centres')
+    add_dimension(salt_centres, 'salt_centres')
+    add_dimension(temp_edges, 'temp_edges')
+    add_dimension(salt_edges, 'salt_edges')
+    id.createVariable('volume', 'f8', ('time', 'temp_centres', 'salt_centres'))
+    id.variables['volume'][:] = volume
+    id.close()
+
+
+# Make an animated T/S diagram through the simulation.
+# Type "load_animations" in the shell before calling this function.
+def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4'):
+
+    import matplotlib.animation as animation
+
+    fig_dir = real_dir(fig_dir)
+
+    # Read data
+    time = read_netcdf(file_path, 'time')
+    temp_edges = read_netcdf(file_path, 'temp_edges')
+    salt_edges = read_netcdf(file_path, 'salt_edges')
+    temp_centres = read_netcdf(file_path, 'temp_centres')
+    salt_centres = read_netcdf(file_path, 'salt_centres')
+    volume = read_netcdf(file_path, 'volume')
+    # Get volume bounds for plotting
+    min_vol = np.log(np.amin(volume))
+    max_vol = np.log(np.amax(volume))
+    # Calculate surface freezing point
+    tfreeze_sfc = tfreeze(salt_centres, 0)
+    # Calculate potential density of bins
+    salt_2d, temp_2d = meshgrid(salt_centres, temp_centres)
+    rho = density('MDJWF', salt_2d, temp_2d, 0)
+    # Density contours to plot
+    rho_lev = arange(1026.6, 1028.4, 0.2)
     
-                    
-    
+    # Initialise the plot
+    fig, ax = plt.subplots(figsize=(8,6))
+
+    # Inner function to plot one frame
+    def plot_one_frame (t):
+        img = ax.pcolormesh(salt_edges, temp_edges, np.log(volume), vmin=min_vol, vmax=max_vol)
+        ax.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
+        ax.contour(salt_centres, temp_centres, rho, rho_lev, colors=(0.6, 0.6, 0.6), linestyles='dotted')
+        ax.grid(True)
+        ax.set_xlim([salt_edges[0], salt_edges[-1]])
+        ax.set_ylim([temp_edges[0], temp_edges[-1]])
+        plt.xlabel('Salinity (psu)')
+        plt.ylabel('Temperature ('+deg_string+'C)')
+        plt.text(.9, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
+        plt.title(str(time[t]))
+        if t == 0:
+            return img
+
+    # First frame
+    img = plot_one_frame(0)
+    plt.colorbar(img)
+
+    # Function to update figure with the given frame
+    def animate(t):
+        print 'Frame ' + str(t+1) + ' of ' + str(time.size)
+        ax.cla()
+        plot_one_frame(t)
+
+    # Call this for each frame
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
+    writer = animation.FFMpegWriter(bitrate=2000, fps=12)
+    anim.save(mov_name, writer=writer)
  
