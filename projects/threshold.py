@@ -791,8 +791,6 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
     import matplotlib.animation as animation
 
-    fig_dir = real_dir(fig_dir)
-
     # Read data
     time = read_netcdf(file_path, 'time')
     temp_edges = read_netcdf(file_path, 'temp_edges')
