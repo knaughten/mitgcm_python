@@ -861,7 +861,7 @@ def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
     sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
     file_paths = [base_dir + sim_dirs[n] + timeseries_file_2 for n in sim_numbers]
     var_names = ['sws_shelf_pminuse', 'sws_shelf_iceprod']
-    var_titles = ['Precipitation minus evaporation', 'Sea ice production']
+    var_titles = ['Precipitation\nminus evaporation', 'Sea ice\nproduction']
     colours = ['green', 'blue']
 
     time = netcdf_time(file_paths[1], monthly=False)
