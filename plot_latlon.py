@@ -9,7 +9,7 @@ import sys
 import numpy as np
 
 from grid import Grid, choose_grid
-from file_io import read_netcdf, find_variable, netcdf_time, check_single_time
+from file_io import read_netcdf, find_variable, netcdf_time, check_single_time, read_iceprod
 from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max, real_dir
 from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import latlon_axes, check_date_string, parse_date
@@ -876,7 +876,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         elif var == 'hice':
             return mask_land_ice(read_netcdf(file_path, 'SIheff', time_index=time_index, time_average=time_average), grid), 'Sea ice thickness'
         elif var == 'iceprod':
-            return mask_land_ice(read_netcdf(file_path, 'SIdHbOCN', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbATC', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbATO', time_index=time_index, time_average=time_average) + read_netcdf(file_path, 'SIdHbFLO', time_index=time_index, time_average=time_average), grid)*sec_per_year, 'Net sea ice production (m/y)'
+            return mask_land_ice(read_iceprod(file_path, time_index=time_index, time_average=time_average), grid)*sec_per_year, 'Net sea ice production (m/y)'
         elif var == 'mld':
             return mask_land_ice(read_netcdf(file_path, 'MXLDEPTH', time_index=time_index, time_average=time_average), grid), 'Mixed layer depth (m)'
         elif var == 'vel':

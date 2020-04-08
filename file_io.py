@@ -590,14 +590,19 @@ def read_title_units (file_path, var_name):
 
     id = nc.Dataset(file_path)
     return id.variables[var_name].long_name, id.variables[var_name].units
-    
-
-    
 
 
+# Read sea ice production, which is the sum of 4 variables. Interface to read_netcdf and adding the four.
+def read_iceprod (file_path, time_index=None, t_start=None, t_end=None, time_average=False):
 
-
-    
+    data = None
+    for var_name in ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO']:
+        data_tmp = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if data is None:
+            data = data_tmp
+        else:
+            data += data_tmp
+    return data
 
 
 

@@ -9,10 +9,11 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import itertools
 import netCDF4 as nc
+from scipy import stats
 
 from ..grid import Grid, choose_grid
-from ..file_io import read_netcdf, NCfile, netcdf_time
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average
+from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
@@ -885,7 +886,66 @@ def plot_iceprod_pminuse (sim_key, smooth=2, base_dir='./', fig_dir='./'):
 
     timeseries_multi_plot(time, data, var_titles, colours, title=title, units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
     
-    
 
+# Plot a map of the average number of months per year with net sea ice formation during the piControl-IO simulation, as well as the trend over the abrupt-4xCO2-IO and 1pctCO2-IO simulations.
+def plot_freezing_months (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_numbers = [1, 3, 5]
+    directories = [sim_dirs[n] for n in sim_numbers]
+    titles = ['Average freezing months per year\n('+sim_names[sim_numbers[0]]+')', 'Trend over 150 years\n('+sim_names[sim_numbers[1]]+')', 'Trend over 150 years\n('+sim_names[sim_numbers[2]]+')']
+
+    # Grid, just for open ocean mask
+    grid = Grid(base_dir+grid_path)
+
+    data_plot = []
+    for n in range(len(directories)):
+        output_dir = directories[n]
+        file_paths = segment_file_paths(output_dir)
+        num_time = len(file_paths)
+        data = np.empty([num_time, grid.ny, grid.nx])
+        for t in range(num_time):
+            # Read sea ice production and add up all the freezing months this year
+            iceprod = read_iceprod(file_paths[t])
+            is_freezing = (iceprod > 0).astype(float)
+            data[t,:] = np.sum(is_freezing, axis=0)
+        if n == 0:
+            # Calculate the average
+            data_plot.append(mask_land_ice(np.mean(data, axis=0),grid))
+        else:
+            # Calculate the trend - have to do this individually for each data point
+            time = np.arange(num_years)
+            trend = np.empty([grid.ny, grid.nx])
+            for j in range(grid.ny):
+                for i in range(grid.nx):
+                    trend[j,i] = stats.linregress(time, data[:,j,i])[0]*num_time
+            data_plot.append(mask_land_ice(trend, grid))
+
+    # Get bounds on the two trend plots
+    vmin = 150
+    vmax = -150
+    for n in [1,2]:
+        vmin_tmp, vmax_tmp = var_min_max(data_plot[n], grid, pster=True, zoom_fris=True)
+        vmin = min(vmin, vmin_tmp)
+        vmax = max(vmax, vmax_tmp)
+
+    # Make the plot
+    fig, gs, cax1, cax2 = set_panels('1x3C2', figsize=(16,7))
+    vmin_plot = [None, vmin, vmin]
+    vmax_plot = [None, vmax, vmax]
+    cax = [cax1, None, cax2]
+    for n in range(len(sim_numbers)):
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(data_plot[n], grid, ax=ax, make_cbar=False, vmin=vmin_plot[n], vmax=vmax_plot[n], zoom_fris=True, pster=True, title=titles[n])
+        if cax[n] is not None:
+            plt.colorbar(img, cax=cax[n])            
+    finished_plot(fig, fig_name=fig_dir+'freezing_months.png')
+                   
+            
+            
+            
+            
+        
     
  
