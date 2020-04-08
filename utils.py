@@ -700,7 +700,24 @@ def trim_titles (titles):
         if title_start.endswith(s):
             title_start = title_start[:title_start.index(s)]
     return title_start, titles
-    
 
-    
-    
+
+# Smooth the given data with a moving average of the given radius, and trim the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
+def moving_average (data, radius, time=None):
+
+    # Will have to trim each end by one radius
+    t_first = radius
+    t_last = data.shape[0] - radius  # First one not selected, as per python convention
+    # Need to set up an array of zeros of the same shape as a single time index of data
+    shape = [1]
+    for t in range(1, len(data.shape)):
+        shape.append(data.shape[t])
+    zero_base = np.zeros(shape)
+    # Do the smoothing in two steps
+    data_cumsum = np.ma.concatenate((zero_base, np.ma.cumsum(data, axis=0)), axis=0)
+    data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,:] - data_cumsum[t_first-radius:t_last-radius,:])/(2*radius+1)
+    if time is not None:
+        time_trimmed = time[radius:time.size-radius]
+        return data_smoothed, time_trimmed
+    else:
+        return data_smoothed

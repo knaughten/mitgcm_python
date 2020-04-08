@@ -15,7 +15,7 @@ from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_l
 from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from plot_1d import timeseries_multi_plot
-from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box
+from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average
 from diagnostics import tfreeze
 from constants import deg_string, rignot_melt, region_bounds, region_names
 from interpolation import interp_bilinear
@@ -202,14 +202,8 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         time_edges = np.concatenate(([start_time], time))
 
     # Smooth with a moving average
-    # Will have to trim each end by one radius
-    t_first = smooth
-    t_last = data.shape[0]-smooth  # First one not selected as per python convection
-    data_cumsum = np.ma.concatenate((np.zeros((1,data.shape[1])), np.ma.cumsum(data, axis=0)), axis=0)
-    data = (data_cumsum[t_first+smooth+1:t_last+smooth+1,:] - data_cumsum[t_first-smooth:t_last-smooth,:])/(2*smooth+1)
-    # Now trim the time axis too
-    time_edges = time_edges[smooth:time_edges.size-smooth]
-
+    data, time_edges = moving_average(data, smooth, time=time_edges)
+    
     # If we're zooming, we need to choose the correct colour bounds
     if any([zmin, zmax]):
         vmin_tmp, vmax_tmp = var_min_max_zt(data, grid, zmin=zmin, zmax=zmax)
