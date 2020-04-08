@@ -859,7 +859,7 @@ def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
         print 'Error (plot_iceprod_pminuse): invalid sim_key ' + sim_key
         sys.exit()
     sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
-    file_paths = [base_dir + sim_dirs[n] for n in sim_numbers]
+    file_paths = [base_dir + sim_dirs[n] + timeseries_file_2 for n in sim_numbers]
     var_names = ['sws_shelf_pminuse', 'sws_shelf_iceprod']
     var_titles = ['Precipitation minus evaporation', 'Sea ice production']
     colours = ['green', 'blue']
