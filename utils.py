@@ -715,7 +715,7 @@ def moving_average (data, radius, time=None):
     zero_base = np.zeros(shape)
     # Do the smoothing in two steps
     data_cumsum = np.ma.concatenate((zero_base, np.ma.cumsum(data, axis=0)), axis=0)
-    data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,:] - data_cumsum[t_first-radius:t_last-radius,:])/(2*radius+1)
+    data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius+1)
     if time is not None:
         time_trimmed = time[radius:time.size-radius]
         return data_smoothed, time_trimmed
