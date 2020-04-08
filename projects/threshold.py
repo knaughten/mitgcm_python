@@ -35,6 +35,7 @@ sim_dirs = ['WSFRIS_'+key+'/output/' for key in sim_keys]
 sim_names = ['piControl-O','piControl-IO','abrupt-4xCO2-O','abrupt-4xCO2-IO','1pctCO2-O','1pctCO2-IO']
 coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
+timeseries_file_2 = 'timeseries2_annual.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -842,4 +843,38 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
     anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
     writer = animation.FFMpegWriter(bitrate=2000, fps=2)
     anim.save(mov_name, writer=writer)
+
+
+# Plot timeseries of changes in sea ice formation compared to changes in P-E over the continental shelf for the given simulation.
+def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    if sim_key in ['abO', '1pO']:
+        ctrl_key = 'ctO'
+    elif sim_key in ['abIO', '1pIO']:
+        ctrl_key = 'ctIO'
+    else:
+        print 'Error (plot_iceprod_pminuse): invalid sim_key ' + sim_key
+        sys.exit()
+    sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
+    file_paths = [base_dir + sim_dirs[n] for n in sim_numbers]
+    var_names = ['sws_shelf_pminuse', 'sws_shelf_iceprod']
+    var_titles = ['Precipitation minus evaporation', 'Sea ice production']
+    colours = ['green', 'blue']
+
+    time = netcdf_time(file_paths[1], monthly=False)
+    data = []
+    for var in var_names:
+        # Get average over control simulation
+        base_val = read_netcdf(file_paths[0], var, time_average=True)
+        # Now read the transient simulation and subtract the baseline value
+        data.append(read_netcdf(file_paths[1], var) - base_val)
+
+    timeseries_multi_plot(time, data, var_titles, colours, title='Anomalies on the continental shelf: '+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]], units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
+    
+    
+
+    
  
