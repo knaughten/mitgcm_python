@@ -397,7 +397,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'iceprod':
             values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask, time_average=time_average)*1e-3
         elif option == 'pminuse':
-            values_tmp = timeseries_int_sfc(fname, ['EXFpreci', 'EXFevap'], grid, mask=mask, time_average=time_average, operator='subtract')*1e-3*sec_per_year
+            values_tmp = timeseries_int_sfc(fname, ['EXFpreci', 'EXFevap'], grid, mask=mask, time_average=time_average, operator='subtract')*1e-3
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
             # Just save the first time index
@@ -488,8 +488,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_wind_avg': wind speed averaged over the given region (C)
 #      '*_sst_avg': sea surface temperature averaged over the given region (C)
 #      '*_sss_avg': sea surface salinity averaged over the given region (psu)
-#      '*_iceprod': total sea ice production over the given region (10^3 m^3/y)
-#      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/y)
+#      '*_iceprod': total sea ice production over the given region (10^3 m^3/s)
+#      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/s)
 def set_parameters (var):
 
     var_name = None
@@ -670,12 +670,12 @@ def set_parameters (var):
         option = 'iceprod'
         region = var[:var.index('_iceprod')]
         title = 'Total sea ice production over ' + region_names[region]
-        units = r'10$^3$ m$^3$/y'
+        units = r'10$^3$ m$^3$/s'
     elif var.endswith('pminuse'):
         option = 'pminuse'
         region = var[:var.index('_pminuse')]
         title = 'Total precipitation minus evaporation over ' + region_names[region]
-        units = r'10$^3$ m$^3$/y'
+        units = r'10$^3$ m$^3$/s'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

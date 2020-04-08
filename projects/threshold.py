@@ -872,7 +872,7 @@ def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
         # Now read the transient simulation and subtract the baseline value
         data.append(read_netcdf(file_paths[1], var) - base_val)
 
-    timeseries_multi_plot(time, data, var_titles, colours, title='Anomalies on the continental shelf: '+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]], units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
+    timeseries_multi_plot(time, data, var_titles, colours, title='Anomalies on the continental shelf:\n'+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]], units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
     
     
 
