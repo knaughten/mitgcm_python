@@ -847,7 +847,7 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
 
 # Plot timeseries of changes in sea ice formation compared to changes in P-E over the continental shelf for the given simulation. Smooth with the given radius.
-def plot_iceprod_pminuse (sim_key, smooth=2, base_dir='./', fig_dir='./'):
+def plot_iceprod_pminuse (sim_key, smooth=0, base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -895,17 +895,22 @@ def plot_freezing_months (base_dir='./', fig_dir='./'):
     sim_numbers = [1, 3, 5]
     directories = [sim_dirs[n] for n in sim_numbers]
     titles = ['Average freezing months per year\n('+sim_names[sim_numbers[0]]+')', 'Trend over 150 years\n('+sim_names[sim_numbers[1]]+')', 'Trend over 150 years\n('+sim_names[sim_numbers[2]]+')']
+    [xmin, xmax, ymin, ymax] = [-70, -24, -79, -72]
+    vmin = -3
+    vmax = 0
 
     # Grid, just for open ocean mask
     grid = Grid(base_dir+grid_path)
 
     data_plot = []
     for n in range(len(directories)):
+        print 'Processing ' + sim_names[sim_numbers[n]]
         output_dir = directories[n]
         file_paths = segment_file_paths(output_dir)
         num_time = len(file_paths)
         data = np.empty([num_time, grid.ny, grid.nx])
         for t in range(num_time):
+            print '...year ' + str(t+1) + ' of ' + str(num_time)
             # Read sea ice production and add up all the freezing months this year
             iceprod = read_iceprod(file_paths[t])
             is_freezing = (iceprod > 0).astype(float)
@@ -914,33 +919,81 @@ def plot_freezing_months (base_dir='./', fig_dir='./'):
             # Calculate the average
             data_plot.append(mask_land_ice(np.mean(data, axis=0),grid))
         else:
+            print 'Calculating trend'
             # Calculate the trend - have to do this individually for each data point
-            time = np.arange(num_years)
+            time = np.arange(num_time)
             trend = np.empty([grid.ny, grid.nx])
             for j in range(grid.ny):
                 for i in range(grid.nx):
                     trend[j,i] = stats.linregress(time, data[:,j,i])[0]*num_time
             data_plot.append(mask_land_ice(trend, grid))
 
-    # Get bounds on the two trend plots
-    vmin = 150
-    vmax = -150
-    for n in [1,2]:
-        vmin_tmp, vmax_tmp = var_min_max(data_plot[n], grid, pster=True, zoom_fris=True)
-        vmin = min(vmin, vmin_tmp)
-        vmax = max(vmax, vmax_tmp)
-
     # Make the plot
-    fig, gs, cax1, cax2 = set_panels('1x3C2', figsize=(16,7))
+    fig, gs, cax1, cax2 = set_panels('1x3C2')
     vmin_plot = [None, vmin, vmin]
     vmax_plot = [None, vmax, vmax]
     cax = [cax1, None, cax2]
+    extend = ['neither', 'both', 'both']
     for n in range(len(sim_numbers)):
         ax = plt.subplot(gs[0,n])
-        img = latlon_plot(data_plot[n], grid, ax=ax, make_cbar=False, vmin=vmin_plot[n], vmax=vmax_plot[n], zoom_fris=True, pster=True, title=titles[n])
+        img = latlon_plot(data_plot[n], grid, ax=ax, make_cbar=False, vmin=vmin_plot[n], vmax=vmax_plot[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n])
+        if n != 0:
+            # Remove axis labels
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
         if cax[n] is not None:
-            plt.colorbar(img, cax=cax[n])            
+            plt.colorbar(img, cax=cax[n], extend=extend[n])            
     finished_plot(fig, fig_name=fig_dir+'freezing_months.png')
+
+
+# Plot timeseries of changes in atmospheric temperature and wind speed, averaged over several different regions. Smooth with the given radius.
+def plot_atm_timeseries (sim_key, smooth=0, base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    if sim_key in ['abO', '1pO']:
+        ctrl_key = 'ctO'
+    elif sim_key in ['abIO', '1pIO']:
+        ctrl_key = 'ctIO'
+    else:
+        print 'Error (plot_atm_timeseries): invalid sim_key ' + sim_key
+        sys.exit()
+    sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
+    file_paths = [base_dir + sim_dirs[n] + timeseries_file_2 for n in sim_numbers]
+    var_names = ['atemp_avg', 'wind_avg']
+    var_titles = ['Average surface air temperature', 'Average wind speed']
+    var_units = [deg_string+'C', 'm/s']
+    region_names = ['sws_shelf', 'ronne_depression']
+    region_titles = ['Continental shelf', 'Ronne Depression']
+    colours = ['green', 'blue']
+    title_tail = '\n'+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]]
+
+    time = netcdf_time(file_paths[1], monthly=False)
+    for v in range(len(var_names)):
+        var = var_names[v]
+        data = []
+        for region in region_names:
+            full_var = region + '_' + var
+            # Get average over control simulation
+            base_val = read_netcdf(file_paths[0], full_var, time_average=True)
+            # Now read the transient simulation and subtract the baseline value
+            data_diff = read_netcdf(file_paths[1], full_var) - base_val
+            # Smooth
+            data_smoothed, time_trimmed = moving_average(data_diff, smooth, time=time)
+            if var == var_names[0] and region == region_names[0]:
+                # Replace the time array only once
+                time = time_trimmed
+            data.append(data_smoothed)
+        title = var_titles[v]
+        if smooth > 0:
+            title += ' ('+str(2*smooth+1)+'-year smoothed)'
+        title += title_tail
+        timeseries_multi_plot(time, data, region_titles, colours, title=title, units=var_units[v], fig_name=fig_dir+'timeseries_'+var[:var.index('_avg')]+'_'+sim_key+'.png')
+            
+            
+    
+    
                    
             
             
