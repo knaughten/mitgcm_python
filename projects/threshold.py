@@ -12,7 +12,7 @@ import netCDF4 as nc
 
 from ..grid import Grid, choose_grid
 from ..file_io import read_netcdf, NCfile, netcdf_time
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
@@ -845,8 +845,8 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
     anim.save(mov_name, writer=writer)
 
 
-# Plot timeseries of changes in sea ice formation compared to changes in P-E over the continental shelf for the given simulation.
-def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
+# Plot timeseries of changes in sea ice formation compared to changes in P-E over the continental shelf for the given simulation. Smooth with the given radius.
+def plot_iceprod_pminuse (sim_key, smooth=2, base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -870,9 +870,20 @@ def plot_iceprod_pminuse (sim_key, base_dir='./', fig_dir='./'):
         # Get average over control simulation
         base_val = read_netcdf(file_paths[0], var, time_average=True)
         # Now read the transient simulation and subtract the baseline value
-        data.append(read_netcdf(file_paths[1], var) - base_val)
+        data_diff = read_netcdf(file_paths[1], var) - base_val
+        # Smooth
+        data_smoothed, time_trimmed = moving_average(data_diff, smooth, time=time)
+        if var == var_names[0]:
+            # Replace the time array only once
+            time = time_trimmed
+        data.append(data_smoothed)
 
-    timeseries_multi_plot(time, data, var_titles, colours, title='Anomalies on the continental shelf:\n'+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]], units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
+    title = 'Anomalies on the continental shelf'
+    if smooth > 0:
+        title += ' ('+str(2*smooth+1)+'-year smoothed)'
+    title += ':\n'+sim_names[sim_numbers[1]]+' minus average of '+sim_names[sim_numbers[0]]
+
+    timeseries_multi_plot(time, data, var_titles, colours, title=title, units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_iceprod_pminuse_'+sim_key+'.png')
     
     
 
