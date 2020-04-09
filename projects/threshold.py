@@ -630,13 +630,13 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     sim_names_plot = [sim_names[n] for n in sim_numbers]
     sim_keys_plot = [sim_keys[n] for n in sim_numbers]
     # Variables to plot
-    var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown', 'iceprod']
+    var_names = ['atemp', 'wind', 'precip', 'iceprod']
     [xmin, xmax, ymin, ymax] = [-70, -24, -79, -72]
 
     grid = Grid(base_dir+grid_path)
     for n in range(1, num_sim_plot):
         for var in var_names:
-            fig_name = fig_dir+var+'_'+sim_keys_plot[n]
+            fig_name = fig_dir+var+'_'+sim_keys_plot[n]+'.png'
             read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], end_file, grid=grid, time_index=0, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
 
 
