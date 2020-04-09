@@ -631,19 +631,13 @@ def plot_forcing_changes (base_dir='./', fig_dir='./'):
     sim_keys_plot = [sim_keys[n] for n in sim_numbers]
     # Variables to plot
     var_names = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'precip', 'swdown', 'lwdown', 'iceprod']
+    [xmin, xmax, ymin, ymax] = [-70, -24, -79, -72]
 
     grid = Grid(base_dir+grid_path)
     for n in range(1, num_sim_plot):
         for var in var_names:
-            for zoom in [False, True]:
-                if var == 'iceprod':
-                    continue
-                fig_name = fig_dir+var+'_'+sim_keys_plot[n]
-                if zoom:
-                    fig_name += '_zoom.png'
-                else:
-                    fig_name += '.png'
-                read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], end_file, grid=grid, time_index=0, zoom_fris=zoom, fig_name=fig_name)
+            fig_name = fig_dir+var+'_'+sim_keys_plot[n]
+            read_plot_latlon_comparison(var, sim_names_plot[0], sim_names_plot[n], directories[0], directories[n], end_file, grid=grid, time_index=0, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, fig_name=fig_name)
 
 
 # Plot anomalies in bottom density in and around the FRIS cavity at two stages of the abrupt-4xCO2 simulation.
@@ -1014,11 +1008,11 @@ def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
         data_plot = []
         for n in range(len(directories)):
             print 'Processing ' + sim_names[sim_numbers[n]]
-            file_paths = segment_file_paths(output_dir)
+            file_paths = segment_file_paths(directories[n])
             num_years = len(file_paths)
             data = np.empty([num_years, grid.ny, grid.nx])
             for t in range(num_years):
-                print '...year ' + str(t+1) + ' of ' + str(num_time)
+                print '...year ' + str(t+1) + ' of ' + str(num_years)
                 if var_names[v] == 'atemp':
                     data[t,:] = read_netcdf(file_paths[t], 'EXFatemp', time_average=True) - temp_C2K
                 elif var_names[v] == 'windspeed':
@@ -1053,7 +1047,7 @@ def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
             if n != 0:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
-        plt.colorbar(img, cax=cax)
+        plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle('Trend in '+var_titles[v]+' ('+var_units[v]+' per 150 years)', fontsize=24)
         finished_plot(fig, fig_name=fig_dir+var_names[v]+'_trend.png')
         
