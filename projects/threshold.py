@@ -20,7 +20,7 @@ from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths
-from ..constants import deg_string, vaf_to_gmslr
+from ..constants import deg_string, vaf_to_gmslr, temp_C2K
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
@@ -990,6 +990,76 @@ def plot_atm_timeseries (sim_key, smooth=0, base_dir='./', fig_dir='./'):
             title += ' ('+str(2*smooth+1)+'-year smoothed)'
         title += title_tail
         timeseries_multi_plot(time, data, region_titles, colours, title=title, units=var_units[v], fig_name=fig_dir+'timeseries_'+var[:var.index('_avg')]+'_'+sim_key+'.png')
+
+
+# Plot maps of the trends in different atmospheric forcing variables over the transient simulations.
+def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_numbers = [3, 5]
+    directories = [sim_dirs[n] for n in sim_numbers]
+    var_names = ['atemp', 'windspeed', 'pminuse']
+    var_titles = ['surface air temperature', 'wind speed', 'precipitation minus evaporation']
+    var_units = [deg_string+'C', 'm/s', 'm/s']
+    ctype = ['basic', 'plusminus', 'basic']
+    [xmin, xmax, ymin, ymax] = [-70, -24, -79, -72]
+
+    # Grid, just for open ocean mask
+    grid = Grid(base_dir+grid_path)
+
+    # Loop over variables
+    for v in range(len(var_names)):
+        # Read all the data
+        data_plot = []
+        for n in range(len(directories)):
+            print 'Processing ' + sim_names[sim_numbers[n]]
+            file_paths = segment_file_paths(output_dir)
+            num_years = len(file_paths)
+            data = np.empty([num_years, grid.ny, grid.nx])
+            for t in range(num_years):
+                print '...year ' + str(t+1) + ' of ' + str(num_time)
+                if var_names[v] == 'atemp':
+                    data[t,:] = read_netcdf(file_paths[t], 'EXFatemp', time_average=True) - temp_C2K
+                elif var_names[v] == 'windspeed':
+                    # Calculate speed at each month and then time-average at the end
+                    u = read_netcdf(file_paths[t], 'UVEL')
+                    v = read_netcdf(file_paths[t], 'VVEL')
+                    speed = np.sqrt(u**2 + v**2)
+                    data[t,:] = np.mean(speed, axis=0)
+                elif var_names[v] == 'pminuse':
+                    data[t,:] = read_netcdf(file_paths[t], 'EXFpreci', time_average=True) - read_netcdf(file_paths[t], 'EXFevap', time_average=True)
+            print 'Calculating trend'
+            time = np.arange(num_years)
+            trend = np.empty([grid.ny, grid.nx])
+            for j in range(grid.ny):
+                for i in range(grid.nx):
+                    trend[j,i] = stats.linregress(time, data[:,j,i])[0]*num_years
+            data_plot.append(mask_land_ice(trend, grid))
+
+        # Get bounds on the trend
+        vmin = np.amax(data_plot[0])
+        vmax = np.amin(data_plot[0])
+        for n in range(len(directories)):
+            vmin_tmp, vmax_tmp = var_min_max(data_plot[n], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+            vmin = min(vmin, vmin_tmp)
+            vmax = max(vmax, vmax_tmp)
+
+        # Make the plot
+        fig, gs, cax = set_panels('1x2C1')
+        for n in range(len(directories)):
+            ax = plt.subplot(gs[0,n])
+            img = latlon_plot(data_plot[n], grid, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=sim_names[sim_numbers[n]])
+            if n != 0:
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+        plt.colorbar(img, cax=cax)
+        plt.suptitle('Trend in '+var_titles[v]+' ('+var_units[v]+' per 150 years)', fontsize=24)
+        finished_plot(fig, fig_name=fig_dir+var_names[v]+'_trend.png')
+        
+                                 
+                    
+        
             
             
     
