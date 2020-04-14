@@ -1190,7 +1190,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         ax.set_xticklabels([])
         ax.set_yticklabels([])
     plt.suptitle(var_title+' (last 10 years)', fontsize=24)
-    finished_plot(fig) #, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
+    finished_plot(fig, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
                     
             
         
