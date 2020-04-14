@@ -11,9 +11,9 @@ import itertools
 import netCDF4 as nc
 from scipy import stats
 
-from ..grid import Grid, choose_grid
+from ..grid import Grid, choose_grid, UKESMGrid
 from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
@@ -28,6 +28,7 @@ from ..plot_slices import get_loc
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze
+from ..interpolation import interp_reg_xy
 
 
 # Global variables
@@ -1077,7 +1078,8 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         print 'Error (plot_wind_changes): invalid sim_key ' + sim_key
         sys.exit()
 
-    ukesm_lon = fix_lon_range(ukesm_grid.lon)
+    ukesm_lon, ukesm_lat = ukesm_grid.get_lon_lat(dim=1)
+    ukesm_lon = fix_lon_range(ukesm_lon)
     i_split = np.nonzero(ukesm_lon < 0)[0][0]
     ukesm_lon = split_longitude(ukesm_lon, i_split)
 
@@ -1086,16 +1088,16 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
     for name, year_start, year_end in zip([ctrl_name, sim_name], [ctrl_year_start, trans_year_start], [ctrl_year_end, trans_year_end]):
         data = None
         for year in range(year_start, year_end+1):
-            u = read_binary(forcing_dir+name+'_uas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny], 'xyt')
-            v = read_binary(forcing_dir+name+'_vas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny_v], 'xyt')
+            u = read_binary(forcing_dir+name+'/'+name+'_uas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny], 'xyt')
+            v = read_binary(forcing_dir+name+'/'+name+'_vas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny_v], 'xyt')
             # Average in 30-day blocks to match model output
-            u = np.mean(np.reshape(u, (30, data.shape[0]/30, data.shape[1], data.shape[2]), order='F'), axis=0)
-            v = np.mean(np.reshape(u, (30, data.shape[0]/30, data.shape[1], data.shape[2]), order='F'), axis=0)
+            u = np.mean(np.reshape(u, (30, u.shape[0]/30, u.shape[1], u.shape[2]), order='F'), axis=0)
+            v = np.mean(np.reshape(v, (30, v.shape[0]/30, v.shape[1], v.shape[2]), order='F'), axis=0)
             # Interpolate to tracer grid
             u_t = np.empty(u.shape)
             u_t[:,:-1,:] = 0.5*(u[:,:-1,:] + u[:,1:,:])
             u_t[:,-1,:] = 0.5*(u[:,-1,:] + u[:,0,:])
-            v_t = 0.5*(v[:-1,:,:] + v[1:,:,:])            
+            v_t = 0.5*(v[:,:-1,:] + v[:,1:,:])            
             if var == 'windspeed':
                 data_tmp = np.sqrt(u_t**2 + v_t**2)
             elif var == 'uwind':
@@ -1114,20 +1116,21 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         data /= (year_end-year_start+1)
         # Interpolate to MITgcm grid
         data = split_longitude(data, i_split)
-        data = interp_reg_xy(ukesm_lon, ukesm_grid.lat, data, model_grid.lon_1d, model_grid.lat_1d)
+        data = interp_reg_xy(ukesm_lon, ukesm_lat, data, model_grid.lon_1d, model_grid.lat_1d)
         # Mask land and ice shelf
         data = mask_land_ice(data, model_grid)
         data_uncorr.append(data)
     # Now get the anomaly and percent anomaly
     data_uncorr.append(data_uncorr[1]-data_uncorr[0])
-    data_uncorr.append(data_uncorr[2]/data_uncorr[0])
+    data_uncorr.append(data_uncorr[2]/data_uncorr[0]*100)
 
     # Repeat for the corrected data, in model output
     data_corr = []
     for key, year_start, year_end in zip([ctrl_key, sim_key], [ctrl_year_start, trans_year_start], [ctrl_year_end, trans_year_end]):
         data = None
         for year in range(year_start, year_end+1):
-            file_path = base_dir+'WSFRIS_'+key+'/output/'+str(year)+'01/output.nc'
+            file_path = base_dir+'WSFRIS_'+key+'/output/'+str(year)+'01/MITgcm/output.nc'
+            print 'Reading ' + file_path
             u = read_netcdf(file_path, 'EXFuwind')
             v = read_netcdf(file_path, 'EXFvwind')
             if var == 'windspeed':
@@ -1148,7 +1151,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         data = mask_land_ice(data, model_grid)
         data_corr.append(data)
     data_corr.append(data_corr[1]-data_corr[0])
-    data_corr.append(data_corr[2]/data_corr[0])
+    data_corr.append(data_corr[2]/data_corr[0]*100)
 
     # Get the min and max values
     vmin = []
@@ -1158,6 +1161,13 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         vmin2, vmax2 = var_min_max(data_corr[n], model_grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
         vmin.append(min(vmin1, vmin2))
         vmax.append(max(vmax1, vmax2))
+    # First and second should be the same
+    vmin0 = min(vmin[0], vmin[1])
+    vmax0 = max(vmax[0], vmax[1])
+    vmin[0] = vmin0
+    vmin[1] = vmin0
+    vmax[0] = vmax0
+    vmax[1] = vmax0
 
     # Make the plot
     fig, gs, cax1, cax2, cax3 = set_panels('2x4C3')
@@ -1166,10 +1176,10 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
     for n in range(len(data_uncorr)):
         # Plot uncorrected
         ax = plt.subplot(gs[0,n])
-        latlon_plot(data_uncorr[n], model_grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n])
+        img = latlon_plot(data_uncorr[n], model_grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n])
         if n == 0:
-            plt.text(0.01, 0.7, 'uncorrected', fontsize=18, ha='right', va='center', transform=fig.transFigure)
-            plt.text(0.01, 0.2, 'corrected', fontsize=18, ha='right', va='center', transform=fig.transFigure)
+            plt.text(0.07, 0.7, 'uncorrected', fontsize=18, ha='center', va='center', transform=fig.transFigure)
+            plt.text(0.07, 0.3, 'corrected', fontsize=18, ha='center', va='center', transform=fig.transFigure)
         else:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
@@ -1180,7 +1190,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         ax.set_xticklabels([])
         ax.set_yticklabels([])
     plt.suptitle(var_title+' (last 10 years)', fontsize=24)
-    finished_plot(fig, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
+    finished_plot(fig) #, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
                     
             
         
