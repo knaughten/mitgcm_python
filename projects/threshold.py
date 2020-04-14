@@ -12,7 +12,7 @@ import netCDF4 as nc
 from scipy import stats
 
 from ..grid import Grid, choose_grid
-from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod
+from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
@@ -1050,18 +1050,138 @@ def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
         plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle('Trend in '+var_titles[v]+' ('+var_units[v]+' per 150 years)', fontsize=24)
         finished_plot(fig, fig_name=fig_dir+var_names[v]+'_trend.png')
-        
-                                 
+
+
+# Deep dive into wind anomalies before and after correction.
+def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', forcing_dir='/work/n02/n02/shared/baspog/MITgcm/UKESM/'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    forcing_dir = real_dir(forcing_dir)
+    [xmin, xmax, ymin, ymax] = [-70, -24, -79, -72]
+    model_grid = Grid(base_dir+grid_path)
+    ukesm_grid = UKESMGrid()
+    ctrl_year_start = 3050
+    ctrl_year_end = 3059
+    trans_year_start = 1990
+    trans_year_end = 1999
+    ctype = ['basic', 'basic', 'plusminus', 'plusminus']
+
+    ctrl_key = 'ctO'
+    ctrl_name = 'piControl'
+    if sim_key in ['abO', 'abIO']:
+        sim_name = 'abrupt-4xCO2'
+    elif sim_key in ['1pO', '1pIO']:
+        sim_name = '1pctCO2'
+    else:
+        print 'Error (plot_wind_changes): invalid sim_key ' + sim_key
+        sys.exit()
+
+    ukesm_lon = fix_lon_range(ukesm_grid.lon)
+    i_split = np.nonzero(ukesm_lon < 0)[0][0]
+    ukesm_lon = split_longitude(ukesm_lon, i_split)
+
+    # First read uncorrected data, straight from the forcing fields
+    data_uncorr = []
+    for name, year_start, year_end in zip([ctrl_name, sim_name], [ctrl_year_start, trans_year_start], [ctrl_year_end, trans_year_end]):
+        data = None
+        for year in range(year_start, year_end+1):
+            u = read_binary(forcing_dir+name+'_uas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny], 'xyt')
+            v = read_binary(forcing_dir+name+'_vas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny_v], 'xyt')
+            # Average in 30-day blocks to match model output
+            u = np.mean(np.reshape(u, (30, data.shape[0]/30, data.shape[1], data.shape[2]), order='F'), axis=0)
+            v = np.mean(np.reshape(u, (30, data.shape[0]/30, data.shape[1], data.shape[2]), order='F'), axis=0)
+            # Interpolate to tracer grid
+            u_t = np.empty(u.shape)
+            u_t[:,:-1,:] = 0.5*(u[:,:-1,:] + u[:,1:,:])
+            u_t[:,-1,:] = 0.5*(u[:,-1,:] + u[:,0,:])
+            v_t = 0.5*(v[:-1,:,:] + v[1:,:,:])            
+            if var == 'windspeed':
+                data_tmp = np.sqrt(u_t**2 + v_t**2)
+            elif var == 'uwind':
+                data_tmp = u_t
+            elif var == 'vwind':
+                data_tmp = v_t
+            else:
+                print 'Error (plot_wind_changes): invalid variable ' + var
+                sys.exit()
+            data_tmp = np.mean(data_tmp, axis=0)
+            if data is None:
+                data = data_tmp
+            else:
+                data += data_tmp
+        # Divide by number of years
+        data /= (year_end-year_start+1)
+        # Interpolate to MITgcm grid
+        data = split_longitude(data, i_split)
+        data = interp_reg_xy(ukesm_lon, ukesm_grid.lat, data, model_grid.lon_1d, model_grid.lat_1d)
+        # Mask land and ice shelf
+        data = mask_land_ice(data, model_grid)
+        data_uncorr.append(data)
+    # Now get the anomaly and percent anomaly
+    data_uncorr.append(data_uncorr[1]-data_uncorr[0])
+    data_uncorr.append(data_uncorr[2]/data_uncorr[0])
+
+    # Repeat for the corrected data, in model output
+    data_corr = []
+    for key, year_start, year_end in zip([ctrl_key, sim_key], [ctrl_year_start, trans_year_start], [ctrl_year_end, trans_year_end]):
+        data = None
+        for year in range(year_start, year_end+1):
+            file_path = base_dir+'WSFRIS_'+key+'/output/'+str(year)+'01/output.nc'
+            u = read_netcdf(file_path, 'EXFuwind')
+            v = read_netcdf(file_path, 'EXFvwind')
+            if var == 'windspeed':
+                var_title = 'Wind speed (m/s)'
+                data_tmp = np.sqrt(u**2 + v**2)
+            elif var == 'uwind':
+                var_title = 'Zonal wind (m/s)'
+                data_tmp = u
+            elif var == 'vwind':
+                var_title = 'Meridional wind (m/s)'
+                data_tmp = v
+            data_tmp = np.mean(data_tmp, axis=0)
+            if data is None:
+                data = data_tmp
+            else:
+                data += data_tmp
+        data /= (year_end-year_start+1)
+        data = mask_land_ice(data, model_grid)
+        data_corr.append(data)
+    data_corr.append(data_corr[1]-data_corr[0])
+    data_corr.append(data_corr[2]/data_corr[0])
+
+    # Get the min and max values
+    vmin = []
+    vmax = []
+    for n in range(len(data_uncorr)):
+        vmin1, vmax1 = var_min_max(data_uncorr[n], model_grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        vmin2, vmax2 = var_min_max(data_corr[n], model_grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        vmin.append(min(vmin1, vmin2))
+        vmax.append(max(vmax1, vmax2))
+
+    # Make the plot
+    fig, gs, cax1, cax2, cax3 = set_panels('2x4C3')
+    titles = [ctrl_name, sim_name, 'Anomaly', 'Percent anomaly']
+    cax = [None, cax1, cax2, cax3]
+    for n in range(len(data_uncorr)):
+        # Plot uncorrected
+        ax = plt.subplot(gs[0,n])
+        latlon_plot(data_uncorr[n], model_grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n])
+        if n == 0:
+            plt.text(0.01, 0.7, 'uncorrected', fontsize=18, ha='right', va='center', transform=fig.transFigure)
+            plt.text(0.01, 0.2, 'corrected', fontsize=18, ha='right', va='center', transform=fig.transFigure)
+        else:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            plt.colorbar(img, cax=cax[n], orientation='horizontal')
+        # Plot corrected
+        ax = plt.subplot(gs[1,n])
+        latlon_plot(data_corr[n], model_grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+    plt.suptitle(var_title+' (last 10 years)', fontsize=24)
+    finished_plot(fig, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
                     
-        
-            
-            
-    
-    
-                   
-            
-            
-            
             
         
     

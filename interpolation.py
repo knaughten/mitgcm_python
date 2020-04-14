@@ -48,7 +48,7 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask=Tru
         data_interp[...,:-1] = 0.5*(data_tmp[...,:-1] + data_tmp[...,1:])
         # Extend/wrap the easternmost column
         if periodic:
-            data_interp[...,-1] = data_interp[...,0]
+            data_interp[...,-1] = 0.5*(data_tmp[...,-1] + data_tmp[...,0])
         else:
             data_interp[...,-1] = data_tmp[...,-1]
     elif gtype_in == 'v' and gtype_out == 't':
