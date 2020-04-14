@@ -56,8 +56,8 @@ def set_panels (key, figsize=None):
             figsize = (8, 6)
         elif key == '2x1C2':
             figsize = (12, 7)
-        elif key == '2x4C3':
-            figsize = (16, 7)
+        elif key == '2x3C2':
+            figsize = (12, 7)
 
     fig = plt.figure(figsize=figsize)
     
@@ -181,13 +181,12 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(1,1)
         gs.update(left=0.1, right=0.97, bottom=0.15, top=0.95)
         cax = fig.add_axes([0.3, 0.04, 0.4, 0.03])
-    elif key == '2x4C3':
-        # 8 plots arranged into 2 rows and 4 columns, with colourbars beneath the last 3 columns, and space on the left for titles
-        gs = plt.GridSpec(2,4)
+    elif key == '2x3C2':
+        # 6 plots arranged into 2 rows and 3 columns, with colourbars beneath the last 2 columns, and space on the left for titles
+        gs = plt.GridSpec(2,3)
         gs.update(left=0.15, right=0.98, bottom=0.15, top=0.85, wspace=0.1, hspace=0.1)
-        cax1 = fig.add_axes([0.37, 0.05, 0.18, 0.03])
-        cax2 = fig.add_axes([0.5825, 0.05, 0.18, 0.03])
-        cax3 = fig.add_axes([0.795, 0.05, 0.18, 0.03])
+        cax1 = fig.add_axes([0.3, 0.05, 0.25, 0.03])
+        cax2 = fig.add_axes([0.7, 0.05, 0.25, 0.03])
         
     if key == 'CTD':
         return fig, gs_1, gs_2
