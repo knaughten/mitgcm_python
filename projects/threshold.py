@@ -1122,7 +1122,6 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         data_uncorr.append(data)
     # Now get the anomaly and percent anomaly
     data_uncorr.append(data_uncorr[1]-data_uncorr[0])
-    data_uncorr.append(data_uncorr[2]/data_uncorr[0]*100)
 
     # Repeat for the corrected data, in model output
     data_corr = []
@@ -1151,7 +1150,6 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         data = mask_land_ice(data, model_grid)
         data_corr.append(data)
     data_corr.append(data_corr[1]-data_corr[0])
-    data_corr.append(data_corr[2]/data_corr[0]*100)
 
     # Get the min and max values
     vmin = []
@@ -1170,9 +1168,9 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
     vmax[1] = vmax0
 
     # Make the plot
-    fig, gs, cax1, cax2, cax3 = set_panels('2x4C3')
-    titles = [ctrl_name, sim_name, 'Anomaly', 'Percent anomaly']
-    cax = [None, cax1, cax2, cax3]
+    fig, gs, cax1, cax2 = set_panels('2x3C2')
+    titles = [ctrl_name, sim_name, 'Anomaly']
+    cax = [None, cax1, cax2]
     for n in range(len(data_uncorr)):
         # Plot uncorrected
         ax = plt.subplot(gs[0,n])
@@ -1181,9 +1179,9 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
             plt.text(0.07, 0.7, 'uncorrected', fontsize=18, ha='center', va='center', transform=fig.transFigure)
             plt.text(0.07, 0.3, 'corrected', fontsize=18, ha='center', va='center', transform=fig.transFigure)
         else:
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
             plt.colorbar(img, cax=cax[n], orientation='horizontal')
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])            
         # Plot corrected
         ax = plt.subplot(gs[1,n])
         latlon_plot(data_corr[n], model_grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)

@@ -185,8 +185,8 @@ def set_panels (key, figsize=None):
         # 6 plots arranged into 2 rows and 3 columns, with colourbars beneath the last 2 columns, and space on the left for titles
         gs = plt.GridSpec(2,3)
         gs.update(left=0.15, right=0.98, bottom=0.15, top=0.85, wspace=0.1, hspace=0.1)
-        cax1 = fig.add_axes([0.3, 0.05, 0.25, 0.03])
-        cax2 = fig.add_axes([0.7, 0.05, 0.25, 0.03])
+        cax1 = fig.add_axes([0.4425, 0.05, 0.25, 0.03])
+        cax2 = fig.add_axes([0.7275, 0.05, 0.25, 0.03])
         
     if key == 'CTD':
         return fig, gs_1, gs_2
