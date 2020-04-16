@@ -1189,8 +1189,81 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         ax.set_yticklabels([])
     plt.suptitle(var_title+' (last 10 years)', fontsize=24)
     finished_plot(fig, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
-                    
-            
+
+
+def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/baspog/MITgcm/WS/WSFRIS/', base_dir='./', fig_dir='./', hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    obcs_dir = real_dir(obcs_dir)
+    grid = Grid(base_dir+grid_path)
+
+    base_name = 'piControl'
+    if sim_key in ['ctO', 'ctIO']:
+        sim_name = 'piControl'
+        base_year_start = 2910
+        base_year_end = 2919
+        sim_year_start = 3050
+        sim_year_end = 3059
+        expt_title = 'Drift in piControl (last 10 years minus first 10)'
+    else:
+        base_year_start = 3050
+        base_year_end = 3059
+        sim_year_start = 1990
+        sim_year_end = 1999
+        if sim_key in ['abO', 'abIO']:
+            sim_name = 'abrupt-4xCO2'
+        elif sim_key in ['1pO', '1pIO']:
+            sim_name = '1pctCO2'
+        else:
+            print 'Error (plot_obcs_change): invalid sim_key ' + sim_key
+            sys.exit()
+        expt_title = sim_name + ' minus piControl (last 10 years)'
+    if var == 'temp':
+        file_head = 'THETA_'
+        var_title = 'Change in temperature ('+deg_string+'C)'
+    elif var == 'salt':
+        file_head = 'SALT_'
+        var_title = 'Change in salinity (psu)'
+    else:
+        print 'Error (plot_obcs_change): invalid variable ' + var
+        sys.exit()
+    if direction == 'E':
+        dimensions = 'yzt'
+        shape = [grid.nz, grid.ny]
+        dir_title = ', eastern boundary\n'
+    elif direction == 'N':
+        dimensions = 'xzt'
+        shape = [grid.nz, grid.nx]
+        dir_title = ', northern boundary\n'
+    else:
+        print 'Error (plot_obcs_change): invalid direction ' + direction
+        sys.exit()
+    file_tail = '.OBCS_'+direction+'_'
+
+    all_data = []
+    for name, year_start, year_end in zip([base_name, sim_name], [base_year_start, sim_year_start], [base_year_end, sim_year_end]):
+        # Read all the data and time-average
+        data = np.zeros(shape)
+        for year in range(year_start, year_end+1):
+            file_path = forcing_dir + name + '/' + var_head + name + file_tail + str(year)
+            data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+            data += np.mean(data_tmp, axis=0)
+        data /= (year_end-year_start+1)
+        all_data.append(data)
+    # Now get difference
+    data_diff = all_data[1] - all_data[0]
+
+    # Make a dummy 3D version of the data to make slice plotting easy
+    if direction == 'E':
+        data_diff_3d = mask_3d(np.tile(np.expand_dims(data_diff, 2), (1, 1, grid.nx)), grid)
+        lon0 = grid.lon_1d[-1]
+        lat0 = None
+    elif direction == 'N':
+        data_diff_3d = mask_3d(np.tile(np.expand_dims(data_diff, 1), (1, grid.ny, 1)), grid)
+        lat0 = grid.lat_1d[-1]
+        lon0 = None
+    # Make the plot
+    slice_plot(data_diff_3d, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=var_title+dir_title+expt_title, fig_name=fig_dir+'obcs_'+var+'_'+direction+'_'+sim_key+'.png')
         
     
- 
