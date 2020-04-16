@@ -145,8 +145,7 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
     depth_above_2[0,:] = depth_above[0,:]  # No other option for surface
     # Should never be nonzero in the same place
     if np.any(depth_above*depth_above_2 != 0):
-        print 'Error (get_slice_boundaries): something went wrong in calculation of partial cells'
-        sys.exit()
+        print 'Warning (get_slice_boundaries): something went wrong in calculation of partial cells'
     # Add them together to capture all the nonzero values
     above = depth_above + depth_above_2
     # Anything still zero is just the regular z levels
@@ -157,8 +156,7 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
     depth_below_2[:-1,:] = depth_above[1:,:]
     depth_below_2[-1,:] = depth_below[-1,:]
     if np.any(depth_below*depth_below_2 != 0):
-        print 'Error (get_slice_boundaries): something went wrong in calculation of partial cells'
-        sys.exit()
+        print 'Warning (get_slice_boundaries): something went wrong in calculation of partial cells'
     below = depth_below + depth_below_2
     index = below == 0
     below[index] = lev_below[index]
