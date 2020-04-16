@@ -24,7 +24,7 @@ from ..constants import deg_string, vaf_to_gmslr, temp_C2K
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
-from ..plot_slices import get_loc
+from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze
@@ -1191,6 +1191,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
     finished_plot(fig, fig_name=fig_dir+var+'_anomalies_'+sim_key+'.png')
 
 
+# Plot the change in temperature or salinity at the given boundary: either the last 10 years of the transient simulation minus the last 10 years of piControl, or the drift in piControl itself (last 10 years minus first 10 years).
 def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/baspog/MITgcm/WS/WSFRIS/', base_dir='./', fig_dir='./', hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None):
 
     base_dir = real_dir(base_dir)
@@ -1231,11 +1232,9 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
     if direction == 'E':
         dimensions = 'yzt'
         shape = [grid.nz, grid.ny]
-        dir_title = ', eastern boundary\n'
     elif direction == 'N':
         dimensions = 'xzt'
         shape = [grid.nz, grid.nx]
-        dir_title = ', northern boundary\n'
     else:
         print 'Error (plot_obcs_change): invalid direction ' + direction
         sys.exit()
@@ -1246,7 +1245,7 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         # Read all the data and time-average
         data = np.zeros(shape)
         for year in range(year_start, year_end+1):
-            file_path = forcing_dir + name + '/' + var_head + name + file_tail + str(year)
+            file_path = obcs_dir + name + '/' + file_head + name + file_tail + str(year)
             data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
             data += np.mean(data_tmp, axis=0)
         data /= (year_end-year_start+1)
@@ -1264,6 +1263,6 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         lat0 = grid.lat_1d[-1]
         lon0 = None
     # Make the plot
-    slice_plot(data_diff_3d, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=var_title+dir_title+expt_title, fig_name=fig_dir+'obcs_'+var+'_'+direction+'_'+sim_key+'.png')
+    slice_plot(data_diff_3d, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=expt_title+'\n'+var_title, fig_name=fig_dir+'obcs_'+var+'_'+direction+'_'+sim_key+'.png')
         
     
