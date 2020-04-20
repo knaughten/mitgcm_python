@@ -318,6 +318,8 @@ class Grid:
             if zmax is None:
                 zmax = self.z[0]
             mask = xy_to_xyz(mask, self)
+            # Make sure to mask out closed cells in 3D
+            mask *= self.hfac!=0
             z_3d = z_to_xyz(self.z, self)
             mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
 
