@@ -1264,5 +1264,3 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         lon0 = None
     # Make the plot
     slice_plot(data_diff_3d, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=expt_title+'\n'+var_title, fig_name=fig_dir+'obcs_'+var+'_'+direction+'_'+sim_key+'.png')
-        
-    

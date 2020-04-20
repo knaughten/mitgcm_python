@@ -10,9 +10,9 @@ from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
-from calculus import over_area, area_integral, volume_average, vertical_average_column
+from calculus import over_area, area_integral, over_volume, vertical_average_column
 from interpolation import interp_bilinear
-from constants import deg_string, region_names, temp_C2K, sec_per_year
+from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (as specified in region_names in constants.py). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -80,7 +80,7 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
 
 
 # Helper function for timeseries_avg_sfc and timeseries_int_sfc.
-def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, operator='add'):
+def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, operator='add', rhoConst=1035.):
     
     # Read the data
     if isinstance(var_name, str):
@@ -100,7 +100,13 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             if var == 'EXFatemp':
                 # Convert from K to C
                 data_tmp -= temp_C2K
-        if var in ['THETA', 'SALT']:
+            if var == 'SFLUX':
+                # Divide by density
+                data_tmp /= rhoConst
+            if var == 'WSLTMASS':
+                # Swap sign
+                data_tmp *= -1
+        if var in ['THETA', 'SALT', 'WSLTMASS']:
             # 3D variable; have to take surface
             if len(data_tmp.shape)==3:
                 # Just one timestep
@@ -161,8 +167,8 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. Restrict it to the given mask (default just mask out the land).
-def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+# Helper function for timeseries_avg_3d and timeseries_int_3d.
+def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
 
     if var_name == 'RHO':
         if rho is None:
@@ -171,6 +177,9 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
         data = rho
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if var_name == 'TOTSTEND':
+            # Convert units
+            data /= sec_per_day
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
@@ -181,9 +190,19 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
             data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
         else:
             data_tmp = apply_mask(data[t,:], np.invert(mask), depth_dependent=True)
-        # Volume average
-        timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
+        # Volume average or integrate
+        timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
     return np.array(timeseries)
+
+
+# Read the given 3D variable from the given NetCDF file, and calculate timeseries of its volume-averaged value. Restrict it to the given mask (default just mask out the land).
+def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    return timeseries_vol_3d('average', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
+
+
+# Same but volume-integrate.
+def timeseries_int_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    return timeseries_vol_3d('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -288,7 +307,34 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
             sys.exit()
         timeseries.append(trans)
     return np.array(timeseries)    
-    
+
+
+# Calculate the net horizontal advection or diffusion into the given 3D region.
+def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+
+    # We were given the variable name for the x-component, now get the y-component
+    var_x = var_name
+    var_y = var_name.replace('x', 'y')
+    data_x = read_netcdf(file_path, var_x, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    data_y = read_netcdf(file_path, var_y, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data_x.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        data_x = np.expand_dims(data_x,0)
+        data_y = np.expand_dims(data_y,0)
+    # Process one time index at a time to save memory
+    timeseries = []
+    for t in range(data_x.shape[0]):
+        # Sum the fluxes across each face, padding with zeros at the eastern and northern boundaries
+        data_tmp = np.ma.zeros(data_x.shape[1:])
+        data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
+        # Sum over the given region
+        if mask is None:
+            data_tmp = mask_3d(data_tmp, grid)
+        else:
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+        timeseries.append(np.sum(data_tmp))
+    return np.array(timeseries)            
+
 
 # Calculate timeseries from one or more files.
 
@@ -302,6 +348,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
 #          'int_sfc': calculates area-integrated value over the sea surface
 #          'area_threshold': calculates area of sea surface where the variable exceeds the given threshold
 #          'avg_3d': calculates volume-averaged value over the given region.
+#          'int_3d': calculates volume-integrated value over the given region.
 #          'point_vavg': calculates depth-averaged value interpolated to a specific lat-lon point
 #          'wed_gyre_trans': calculates Weddell Gyre transport.
 #          'watermass': calculates percentage volume of the water mass defined by any of tmin, tmax, smin, smax.
@@ -354,7 +401,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'iceprod', 'avg_sfc', 'pminuse']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pminuse', 'adv_dif']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
@@ -384,6 +431,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_area_threshold(fname, var_name, threshold, grid, gtype=gtype, time_average=time_average)
         elif option == 'avg_3d':
             values_tmp = timeseries_avg_3d(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'int_3d':
+            values_tmp = timeseries_int_3d(fname, var_name, grid, gtype=gtype, mask=mask, time_average=time_average)
         elif option == 'point_vavg':
             values_tmp = timeseries_point_vavg(fname, var_name, lon0, lat0, grid, gtype=gtype, time_average=time_average)
         elif option == 'wed_gyre_trans':
@@ -398,6 +447,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_int_sfc(fname, ['SIdHbOCN', 'SIdHbATC', 'SIdHbATO', 'SIdHbFLO'], grid, mask=mask, time_average=time_average)*1e-3
         elif option == 'pminuse':
             values_tmp = timeseries_int_sfc(fname, ['EXFpreci', 'EXFevap'], grid, mask=mask, time_average=time_average, operator='subtract')*1e-3
+        elif option == 'adv_dif':
+            values_tmp = timeseries_adv_dif(fname, var_name, grid, mask=mask, time_average=time_average)
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
             # Just save the first time index
@@ -490,6 +541,11 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_sss_avg': sea surface salinity averaged over the given region (psu)
 #      '*_iceprod': total sea ice production over the given region (10^3 m^3/s)
 #      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/s)
+#      '*_salt_adv': horizontal advection of salt integrated over the given region (psu m^3/s)
+#      '*_salt_dif': horizontal diffusion of salt integrated over the given region (psu m^3/s)
+#      '*_sfc_salt': surface salt flux integrated over the given region (psu m^3/s)
+#      '*_sfc_salt_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
+#      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 def set_parameters (var):
 
     var_name = None
@@ -676,6 +732,36 @@ def set_parameters (var):
         region = var[:var.index('_pminuse')]
         title = 'Total precipitation minus evaporation over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
+    elif var.endswith('salt_adv'):
+        option = 'adv_dif'
+        var_name = 'ADVx_SLT'
+        region = var[:var.index('_salt_adv')]
+        title = 'Total horizontal advection of salt into ' + region_names[region]
+        units = r'psu m$^3$/s'
+    elif var.endswith('salt_dif'):
+        option = 'adv_dif'
+        var_name = 'DFxE_SLT'
+        region = var[:var.index('_salt_dif')]
+        title = 'Total horizontal diffusion of salt into ' + region_names[region]
+        units = r'psu m$^3$/s'
+    elif var.endswith('sfc_salt'):
+        option = 'int_sfc'
+        var_name = 'SFLUX'
+        region = var[:var.index('_sfc_salt')]
+        title = 'Total surface salt flux over ' + region_names[region]
+        units = r'psu m$^3$/s'
+    elif var.endswith('sfc_salt_corr'):
+        option = 'int_sfc'
+        var_name = 'WSLTMASS'
+        region = var[:var.index('sfc_salt_corr')]
+        title = 'Total linear free surface salt correction over ' + region_names[region]
+        units = r'psu m$^3/s'
+    elif var.endswith('salt_tend'):
+        option = 'int_3d'
+        var_name = 'TOTSTEND'
+        region = var[:var.index('salt_tend')]
+        title = 'Total tendency of salinity over ' + region_names[region]
+        units = r'psu m$^3/s'        
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
