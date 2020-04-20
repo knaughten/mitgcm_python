@@ -759,7 +759,7 @@ def set_parameters (var):
     elif var.endswith('salt_tend'):
         option = 'int_3d'
         var_name = 'TOTSTEND'
-        region = var[:var.index('salt_tend')]
+        region = var[:var.index('_salt_tend')]
         title = 'Total tendency of salinity over ' + region_names[region]
         units = r'psu m$^3/s'        
     else:
