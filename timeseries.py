@@ -186,9 +186,10 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
-        if mask is None:
-            data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
-        else:
+        # First mask the land and ice shelves
+        data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
+        if mask is not None:
+            # Also mask outside the given region
             data_tmp = apply_mask(data[t,:], np.invert(mask), depth_dependent=True)
         # Volume average or integrate
         timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
@@ -405,7 +406,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
-            mask = grid.get_region_mask(region, is_3d=(option in ['avg_3d', 'int_3d', 'adv_dif']))
+            mask = grid.get_region_mask(region)
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
         elif region == 'all':

@@ -312,7 +312,10 @@ class Grid:
 
         if is_3d:
             # Add a depth dimension and restrict to depth bounds
-            [zmin, zmax] = region_depth_bounds[region]
+            try:
+                [zmin, zmax] = region_depth_bounds[region]
+            except(KeyError):
+                pass
             if zmin is None:
                 zmin = self.z[-1]
             if zmax is None:
