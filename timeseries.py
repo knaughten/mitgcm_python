@@ -753,7 +753,7 @@ def set_parameters (var):
     elif var.endswith('salt_sfc_corr'):
         option = 'int_sfc'
         var_name = 'WSLTMASS'
-        region = var[:var.index('salt_sfc_corr')]
+        region = var[:var.index('_salt_sfc_corr')]
         title = 'Total linear free surface salt correction over ' + region_names[region]
         units = r'psu m$^3/s'
     elif var.endswith('salt_tend'):
