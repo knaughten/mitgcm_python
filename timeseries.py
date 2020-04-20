@@ -543,8 +543,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/s)
 #      '*_salt_adv': horizontal advection of salt integrated over the given region (psu m^3/s)
 #      '*_salt_dif': horizontal diffusion of salt integrated over the given region (psu m^3/s)
-#      '*_sfc_salt': surface salt flux integrated over the given region (psu m^3/s)
-#      '*_sfc_salt_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
+#      '*_salt_sfc': surface salt flux integrated over the given region (psu m^3/s)
+#      '*_salt_sfc_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 def set_parameters (var):
 
@@ -744,16 +744,16 @@ def set_parameters (var):
         region = var[:var.index('_salt_dif')]
         title = 'Total horizontal diffusion of salt into ' + region_names[region]
         units = r'psu m$^3$/s'
-    elif var.endswith('sfc_salt'):
+    elif var.endswith('salt_sfc'):
         option = 'int_sfc'
         var_name = 'SFLUX'
-        region = var[:var.index('_sfc_salt')]
+        region = var[:var.index('_salt_sfc')]
         title = 'Total surface salt flux over ' + region_names[region]
         units = r'psu m$^3$/s'
-    elif var.endswith('sfc_salt_corr'):
+    elif var.endswith('salt_sfc_corr'):
         option = 'int_sfc'
         var_name = 'WSLTMASS'
-        region = var[:var.index('sfc_salt_corr')]
+        region = var[:var.index('salt_sfc_corr')]
         title = 'Total linear free surface salt correction over ' + region_names[region]
         units = r'psu m$^3/s'
     elif var.endswith('salt_tend'):
