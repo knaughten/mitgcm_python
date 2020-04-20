@@ -427,7 +427,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'avg_sfc':
             values_tmp = timeseries_avg_sfc(fname, var_name, grid, gtype=gtype, mask=mask, time_average=time_average)
         elif option == 'int_sfc':
-            values_tmp = timeseries_int_sfc(fname, var_name, grid, gtype=gtype, time_average=time_average)
+            values_tmp = timeseries_int_sfc(fname, var_name, grid, gtype=gtype, mask=mask, time_average=time_average)
         elif option == 'area_threshold':
             values_tmp = timeseries_area_threshold(fname, var_name, threshold, grid, gtype=gtype, time_average=time_average)
         elif option == 'avg_3d':
