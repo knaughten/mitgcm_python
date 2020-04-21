@@ -362,10 +362,10 @@ class Grid:
         # Build the region mask itself
         mask = self.get_region_mask(region, gtype=gtype)
         if ignore_iceberg:
-            # Consider grounded iceberg A23A as part of the mask
+            # Remove grounded iceberg A23A from the mask
             [xmin, xmax, ymin, ymax] = region_bounds['a23a']
             index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-            mask[index] = True
+            mask[index] = False
 
         # Inner function to select points at each boundary
         def get_boundary (condition_mask):
