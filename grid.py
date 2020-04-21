@@ -327,8 +327,55 @@ class Grid:
             mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
 
         return mask
-        
 
+    
+    # For the given region, build and return masks of the 4 boundaries:
+    # 1. upstream: eastern boundary on continental shelf
+    # 2. downstream: northern boundary on continental shelf
+    # 3. openocean: other side of critical isobath denoting shelf
+    # 4. icefront: ice shelf or land
+    # Each mask consists of points which are within the given region, but which have at least one neighbour that is outside of the region for the respective reason. The masks do not overlap; #1 takes precendence, followed by #2, etc.
+    # This was written specifically for the sws_shelf region but could easily be edited to work for other regions.
+    def get_region_boundary_mask (self, region, gtype='t'):
+
+        from interpolation import neighbours
+
+        if region != 'sws_shelf':
+            print 'Error (get_region_boundary_mask): code only works for sws_shelf case so far, you will have to edit and test it'
+            sys.exit()
+
+        land_mask = self.get_land_mask(gtype=gtype)
+        ice_mask = self.get_ice_mask(gtype=gtype)
+        lon, lat = self.get_lon_lat(gtype=gtype)
+
+        # Get threshold parameters for boundaries
+        lon_east = region_bounds[region][1]
+        lat_north = region_bounds[region][3]
+        bathy_deep = region_bathy_bounds[region][0]
+
+        # Make 1-0 masks for cells that violate these conditions in particular ways
+        too_east = (lon >= lon_east).astype(float)
+        too_north = (lat >= lat_north).astype(float)
+        ice_or_land = (ice_mask + land_mask).astype(float)
+        too_deep = (self.bathy < bathy_deep).astype(float)        
+
+        # Build the region mask itself
+        mask = self.get_region_mask(region, gtype=gtype)
+
+        # Inner function to select points at each boundary
+        def get_boundary (condition_mask):
+            num_neighbours_violate = neighbours(condition_mask, missing_val=0)[-1]
+            return mask*(num_neighbours_violate > 0)
+
+        # Create each mask, making sure there's no overlap
+        upstream_mask = get_boundary(too_east)
+        downstream_mask = get_boundary(too_north)*np.invert(upstream_mask)
+        openocean_mask = get_boundary(too_deep)*np.invert(upstream_mask)*np.invert(downstream_mask)
+        icefront_mask = get_boundary(ice_or_land)*np.invert(upstream_mask)*np.invert(downstream_mask)*(np.invert(openocean_mask))
+
+        return upstream_mask, downstream_mask, openocean_mask, icefront_mask
+
+    
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
     def get_coast_mask (self, gtype='t', ignore_iceberg=True):
         from interpolation import neighbours
