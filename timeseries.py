@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, over_volume, vertical_average_column
 from interpolation import interp_bilinear, neighbours
@@ -353,19 +353,21 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
     data_y_plus1 = neighbours(data_y)[3]
     # Find which points have neighbours outside the region, in each direction
     outside_w, outside_e, outside_s, outside_n = neighbours(region_mask.astype(float), missing_val=1)[4:8]
+    def face_bdry_mask (outside):
+        return xy_to_xyz(bdry_mask*outside.astype(bool), grid)*(grid.hfac != 0)
+    index_w = face_bdry_mask(outside_w)
+    index_e = face_bdry_mask(outside_e)
+    index_s = face_bdry_mask(outside_s)
+    index_n = face_bdry_mask(outside_n)
     # Process one time index at a time
     timeseries = []
     for t in range(data_x.shape[0]):
         # Sum the flux across the western faces of all cells whose western faces are on the boundary of the region
-        index = bdry_mask*outside_w.astype(bool)
-        net_flux = np.sum(data_x[t,index])
+        net_flux = np.sum(data_x[t,index_w])
         # Similarly for the other boundaries
-        index = bdry_mask*outside_e.astype(bool)
-        net_flux += np.sum(-1*data_x_plus1[t,index])
-        index = bdry_mask*outside_s.astype(bool)
-        net_flux += np.sum(data_y[t,index])
-        index = bdry_mask*outside_n.astype(bool)
-        net_flux += np.sum(-1*data_y_plus1[t,index])
+        net_flux += np.sum(-1*data_x_plus1[t,index_e])
+        net_flux += np.sum(data_y[t,index_s])
+        net_flux += np.sum(-1*data_y_plus1[t,index_n])
         timeseries.append(net_flux)
     return np.array(timeseries)   
 
@@ -393,6 +395,7 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
 # region: ice shelf (for option='ismr') or region (for option='avg_3d').
+# bdry: boundary key (for option='adv_dif_bdry')
 # mass_balance, result: as in function timeseries_ismr. Only matters for 'ismr'.
 # var_name: variable name to process. Doesn't matter for 'ismr' or 'wed_gyre_trans'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
@@ -409,7 +412,7 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None, time_average=False):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None, time_average=False):
 
     if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pminuse'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
@@ -426,6 +429,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if var_name == 'RHO' and rho is None:
         print 'Error (calc_timeseries): must precompute density'
         sys.exit()
+    if option == 'adv_dif_bdry' and bdry is None:
+        print 'Error (calc_timeseries): must specify bdry'
+        sys.exit()
 
     if isinstance(file_path, str):
         # Just one file - make it a list of length 1
@@ -435,7 +441,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pminuse', 'adv_dif']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pminuse', 'adv_dif', 'adv_dif_bdry']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
@@ -444,6 +450,11 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_region_mask(region, is_3d=True)
         elif region == 'all':
             mask = None
+        else:
+            print 'Error (calc_timeseries): unsupported region'
+            sys.exit()
+    if option == 'adv_dif_bdry':
+        bdry_mask = grid.get_region_bdry_mask(region, bdry)
     
     melt = None
     freeze = None
@@ -483,6 +494,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_int_sfc(fname, ['EXFpreci', 'EXFevap'], grid, mask=mask, time_average=time_average, operator='subtract')*1e-3
         elif option == 'adv_dif':
             values_tmp = timeseries_adv_dif(fname, var_name, grid, mask=mask, time_average=time_average)
+        elif option == 'adv_dif_bdry':
+            values_tmp = timeseries_adv_dif_bdry(fname, var_name, grid, mask, bdry_mask, time_average=time_average)
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
             # Just save the first time index
@@ -530,15 +543,15 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly, rho=rho)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly, rho=rho)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly, rho=rho)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, direction=direction, monthly=monthly, rho=rho)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
@@ -577,6 +590,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_pminuse': total precipitation minus evaporation over the given region (10^3 m^3/s)
 #      '*_salt_adv': horizontal advection of salt integrated over the given region (psu m^3/s)
 #      '*_salt_dif': horizontal diffusion of salt integrated over the given region (psu m^3/s)
+#      '*_salt_adv_*', '*_salt_dif_*': as above but integrated over the given boundary (psu m^3/s)
 #      '*_salt_sflx': surface salt flux integrated over the given region (psu m^3/s)
 #      '*_salt_sflx_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
@@ -588,6 +602,7 @@ def set_parameters (var):
     ymin = None
     ymax = None
     region = None
+    bdry = None
     mass_balance = None
     result = None
     threshold = None
@@ -766,18 +781,28 @@ def set_parameters (var):
         region = var[:var.index('_pminuse')]
         title = 'Total precipitation minus evaporation over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
-    elif var.endswith('salt_adv'):
-        option = 'adv_dif'
+    elif 'salt_adv' in var:
         var_name = 'ADVx_SLT'
         region = var[:var.index('_salt_adv')]
-        title = 'Total horizontal advection of salt into ' + region_names[region]
         units = r'psu m$^3$/s'
-    elif var.endswith('salt_dif'):
-        option = 'adv_dif'
+        title = 'Net horizontal advection of salt into ' + region_names[region]
+        if var.endswith('salt_adv'):
+            option = 'adv_dif'
+        else:
+            option = 'adv_dif_bdry'
+            bdry = var[var.index('salt_adv_')+len('salt_adv_'):]
+            title += ' from ' + region_names[bdry]
+    elif 'salt_dif' in var:
         var_name = 'DFxE_SLT'
-        region = var[:var.index('_salt_dif')]
-        title = 'Total horizontal diffusion of salt into ' + region_names[region]
+        region = var[:var.index('_salt_adv')]
         units = r'psu m$^3$/s'
+        title = 'Net horizontal diffusion of salt into ' + region_names[region]
+        if var.endswith('salt_dif'):
+            option = 'adv_dif'
+        else:
+            option = 'adv_dif_bdry'
+            bdry = var[var.index('salt_dif_')+len('salt_dif_'):]
+            title += ' from ' + region_names[bdry]
     elif var.endswith('salt_sfc'):
         option = 'int_sfc'
         var_name = 'SFLUX'
@@ -800,14 +825,14 @@ def set_parameters (var):
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, region, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True, rho=None, time_average=False):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, region, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
@@ -826,7 +851,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True, rho=None, time_average=False):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, region, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, direction = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:

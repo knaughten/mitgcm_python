@@ -95,7 +95,11 @@ region_names = {
     'sws_shelf': 'Southern Weddell Sea shelf',
     'wdw_core': 'Warm Deep Water core',
     'pine_island_bay': 'Pine Island Bay',
-    'dotson_front': 'Dotson Front'
+    'dotson_front': 'Dotson Front',
+    'icefront': 'ice shelf fronts',
+    'upstream': 'upstream continental shelf',
+    'downstream': 'downstream continental shelf',
+    'openocean': 'open ocean'
 }
 
 # Resolution of SOSE grid in degrees

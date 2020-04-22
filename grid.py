@@ -334,14 +334,15 @@ class Grid:
     # 2. openocean: other side of critical isobath denoting shelf
     # 3. upstream: eastern boundary on continental shelf
     # 4. downstream: northern boundary on continental shelf
+    # Set the argument bdry to one of these names, or 'all'.
     # Each mask consists of points which are within the given region, but which have at least one neighbour that is outside of the region for the respective reason. The masks do not overlap; #1 takes precendence, followed by #2, etc.
     # This was written specifically for the sws_shelf region but could easily be edited to work for other regions.
-    def get_region_boundary_mask (self, region, gtype='t', ignore_iceberg=True):
+    def get_region_bdry_mask (self, region, bdry, gtype='t', ignore_iceberg=True):
 
         from interpolation import neighbours
 
         if region != 'sws_shelf':
-            print 'Error (get_region_boundary_mask): code only works for sws_shelf case so far, you will have to edit and test it'
+            print 'Error (get_region_bdry_mask): code only works for sws_shelf case so far, you will have to edit and test it'
             sys.exit()
 
         land_mask = self.get_land_mask(gtype=gtype)
@@ -378,7 +379,19 @@ class Grid:
         upstream_mask = get_boundary(too_east)*np.invert(icefront_mask)*np.invert(openocean_mask)
         downstream_mask = get_boundary(too_north)*np.invert(icefront_mask)*np.invert(openocean_mask)*np.invert(upstream_mask)
 
-        return icefront_mask, openocean_mask, upstream_mask, downstream_mask
+        if bdry == 'icefront':
+            return icefront_mask
+        elif bdry == 'openocean':
+            return openocean_mask
+        elif bdry == 'upstream':
+            return upstream_mask
+        elif bdry == 'downstream':
+            return downstream_mask
+        elif bdry == 'all':
+            return icefront_mask, openocean_mask, upstream_mask, downstream_mask
+        else:
+            print 'Error (get_region_bdry_mask): invalid bdry ' + bdry
+            sys.exit()
 
     
     # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
