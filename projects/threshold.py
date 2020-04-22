@@ -19,7 +19,7 @@ from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours
-from ..postprocess import segment_file_paths
+from ..postprocess import segment_file_paths, precompute_timeseries_coupled
 from ..constants import deg_string, vaf_to_gmslr, temp_C2K
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
@@ -1264,3 +1264,38 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         lon0 = None
     # Make the plot
     slice_plot(data_diff_3d, grid, lon0=lon0, lat0=lat0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', title=expt_title+'\n'+var_title, fig_name=fig_dir+'obcs_'+var+'_'+direction+'_'+sim_key+'.png')
+
+
+# Plot a bunch of timeseries about the salt budget on the continental shelf.
+def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_budget.nc', fig_dir='./'):
+
+    output_dir = real_dir(output_dir)
+    fig_dir = real_dir(fig_dir)
+    file_path = output_dir+timeseries_file
+    
+    if not os.path.isfile(file_path):
+        precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_dif', 'sws_shelf_salt_sflux', 'sws_shelf_salt_sflux_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
+    
+    time = netcdf_time(file_path, monthly=False)
+    adv = read_netcdf(file_path, 'sws_shelf_salt_adv')
+    dif = read_netcdf(file_path, 'sws_shelf_salt_dif')
+    sflux = read_netcdf(file_path, 'sws_shelf_salt_sflux')
+    sflux_corr = read_netcdf(file_path, 'sws_shelf_salt_sflux_corr')
+    total_flux = adv + dif + sflux + sflux_corr
+    tend = read_netcdf(file_path, 'sws_shelf_salt_tend')
+    timeseries_multi_plot(time, [adv, dif, sflux, sflux_corr, total_flux, tend], ['Advection', 'Diffusion', 'Surface flux', 'Linear FS correction', 'Total', 'Tendency'], ['magenta', 'cyan', 'green', 'yellow', 'red', 'blue'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget.png')
+    timeseries_multi_plot(time, [adv+sflux_corr, dif, sflux, total_flux, tend], ['Advection + correction', 'Diffusion', 'Surface flux', 'Total', 'Tendency'], ['magenta', 'cyan', 'green', 'red', 'blue'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_combined.png')
+
+    icefront = read_netcdf(file_path, 'sws_shelf_salt_adv_icefront')
+    openocean = read_netcdf(file_path, 'sws_shelf_salt_adv_openocean')
+    upstream = read_netcdf(file_path, 'sws_shelf_salt_adv_upstream')
+    downstream = read_netcdf(file_path, 'sws_shelf_salt_adv_downstream')
+    total_adv = icefront + openocean + upstream + downstream
+    timeseries_multi_plot(time, [icefront, openocean, upstream, downstream, total_adv, adv], ['Ice shelf fronts', 'Open ocean', 'Upstream shelf', 'Downstream shelf', 'Total', 'Integrated'], ['cyan', 'yellow', 'magenta', 'green', 'red', 'blue'], title='Advection of salt into Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_adv.png')
+
+    melt = read_netcdf(file_path, 'sws_shelf_seaice_melt')
+    freeze = read_netcdf(file_path, 'sws_shelf_seaice_freeze')
+    pmepr = read_netcdf(file_path, 'sws_shelf_pmepr')
+    total_fw = melt + freeze + pmepr
+    timeseries_multi_plot(time, [melt, freeze, pmepr, total_fw], ['Sea ice melting', 'Sea ice freezing', 'Precip, evap, runoff', 'Total'], ['cyan', 'red', 'green', 'blue'], title='Surface freshwater budget of Southern Weddell Sea continental shelf', units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_sfc_fw_budget.png')
+    
