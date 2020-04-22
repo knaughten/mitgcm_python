@@ -791,7 +791,7 @@ def set_parameters (var):
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
     elif var.endswith('pmepr'):
-        option = 'pmepr':
+        option = 'pmepr'
         region = var[:var.index('_pmepr')]
         title = 'Total freshwater flux from precipitation, evaporation, and runoff over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
