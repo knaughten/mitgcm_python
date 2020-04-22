@@ -1275,13 +1275,13 @@ def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_bu
     file_path = output_dir+timeseries_file
     
     if not os.path.isfile(file_path):
-        precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_dif', 'sws_shelf_salt_sflux', 'sws_shelf_salt_sflux_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
+        precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_dif', 'sws_shelf_salt_sflx', 'sws_shelf_salt_sflx_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
     
     time = netcdf_time(file_path, monthly=False)
     adv = read_netcdf(file_path, 'sws_shelf_salt_adv')
     dif = read_netcdf(file_path, 'sws_shelf_salt_dif')
-    sflux = read_netcdf(file_path, 'sws_shelf_salt_sflux')
-    sflux_corr = read_netcdf(file_path, 'sws_shelf_salt_sflux_corr')
+    sflux = read_netcdf(file_path, 'sws_shelf_salt_sflx')
+    sflux_corr = read_netcdf(file_path, 'sws_shelf_salt_sflx_corr')
     total_flux = adv + dif + sflux + sflux_corr
     tend = read_netcdf(file_path, 'sws_shelf_salt_tend')
     timeseries_multi_plot(time, [adv, dif, sflux, sflux_corr, total_flux, tend], ['Advection', 'Diffusion', 'Surface flux', 'Linear FS correction', 'Total', 'Tendency'], ['magenta', 'cyan', 'green', 'yellow', 'red', 'blue'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget.png')
