@@ -10,6 +10,8 @@ gravity = 9.81
 rho_fw = 1e3
 # Density of ice (kg/m^3)
 rho_ice = 917.
+# Reference density of seawater (kg/m^3)
+rhoConst = 1035.
 # Seconds per day
 sec_per_day = 24*60*60.
 # Seconds per year
