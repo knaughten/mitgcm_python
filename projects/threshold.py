@@ -2,6 +2,7 @@
 # Weddell Sea threshold paper
 ##################################################################
 
+import os
 import numpy as np
 import sys
 import matplotlib
