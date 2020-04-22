@@ -127,7 +127,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
     ax.grid(True)
     if crosses_zero:
         # Add a line at 0
-        ax.axhline(color='black')
+        ax.axhline(color='black', linestyle='dashed')
     if not monthly:
         monthly_ticks(ax)
     plt.title(title, fontsize=18)

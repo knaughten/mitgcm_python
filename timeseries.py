@@ -350,12 +350,17 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
     # Process one time index at a time
     timeseries = []
     for t in range(data_x.shape[0]):
+        net_flux = 0
         # Sum the flux across the western faces of all cells whose western faces are on the boundary of the region
-        net_flux = np.sum(data_x[t,index_w])
+        if np.count_nonzero(index_w) > 0:
+            net_flux += np.sum(data_x[t,index_w])
         # Similarly for the other boundaries
-        net_flux += np.sum(-1*data_x_plus1[t,index_e])
-        net_flux += np.sum(data_y[t,index_s])
-        net_flux += np.sum(-1*data_y_plus1[t,index_n])
+        if np.count_nonzero(index_e) > 0:
+            net_flux += np.sum(-1*data_x_plus1[t,index_e])
+        if np.count_nonzero(index_s) > 0:
+            net_flux += np.sum(data_y[t,index_s])
+        if np.count_nonzero(index_n) > 0:
+            net_flux += np.sum(-1*data_y_plus1[t,index_n])
         timeseries.append(net_flux)
     return np.array(timeseries)   
 
