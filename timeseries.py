@@ -587,8 +587,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_salt_adv': horizontal advection of salt integrated over the given region (psu m^3/s)
 #      '*_salt_dif': horizontal diffusion of salt integrated over the given region (psu m^3/s)
 #      '*_salt_adv_*', '*_salt_dif_*': as above but integrated over the given boundary (psu m^3/s)
-#      '*_salt_sflx': surface salt flux integrated over the given region (psu m^3/s)
-#      '*_salt_sflx_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
+#      '*_salt_sfc': surface salt flux integrated over the given region (psu m^3/s)
+#      '*_salt_sfc_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 def set_parameters (var):
 
