@@ -168,9 +168,6 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         data = rho
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        if var_name == 'TOTSTEND':
-            # Convert units
-            data /= sec_per_day
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
