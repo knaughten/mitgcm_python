@@ -809,7 +809,7 @@ def set_parameters (var):
             title += ' from ' + region_names[bdry]
     elif 'salt_dif' in var:
         var_name = 'DFxE_SLT'
-        region = var[:var.index('_salt_adv')]
+        region = var[:var.index('_salt_dif')]
         units = r'psu m$^3$/s'
         title = 'Net horizontal diffusion of salt into ' + region_names[region]
         if var.endswith('salt_dif'):
