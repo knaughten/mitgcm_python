@@ -11,7 +11,7 @@ from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
 from calculus import over_area, area_integral, over_volume, vertical_average_column
-from interpolation import interp_bilinear
+from interpolation import interp_bilinear, neighbours
 from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day
 
 
@@ -307,11 +307,11 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
             print 'Error (timeseries_transport_transect): invalid direction ' + direction
             sys.exit()
         timeseries.append(trans)
-    return np.array(timeseries)    
+    return np.array(timeseries)
 
 
-# Calculate the net horizontal advection or diffusion into the given 3D region.
-def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+# Helper function for timeseries_adv_dif and timeseries_adv_dif_bdry: read the x and y components of the data
+def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None, time_average=False):
 
     # We were given the variable name for the x-component, now get the y-component
     var_x = var_name
@@ -322,10 +322,17 @@ def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None
         # Just one timestep; add a dummy time dimension
         data_x = np.expand_dims(data_x,0)
         data_y = np.expand_dims(data_y,0)
+    return data_x, data_y
+
+
+# Calculate the net horizontal advection or diffusion into the given 3D region.
+def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+
+    data_x, data_y = read_data_xy(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data_x.shape[0]):
-        # Sum the fluxes across each face, padding with zeros at the eastern and northern boundaries
+        # Sum the fluxes across each face, padding with zeros at the eastern and northern boundaries of the domain
         data_tmp = np.ma.zeros(data_x.shape[1:])
         data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
         # Sum over the given region
@@ -334,7 +341,33 @@ def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None
         else:
             data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
         timeseries.append(np.sum(data_tmp))
-    return np.array(timeseries)            
+    return np.array(timeseries)
+
+
+# Calculate the net horizontal advection or diffusion across the given boundary into the given region.
+def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    data_x, data_y = read_data_xy(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Now get data_x and data_y shifted one index to the east and north respectively
+    data_x_plus1 = neighbours(data_x)[1]
+    data_y_plus1 = neighbours(data_y)[3]
+    # Find which points have neighbours outside the region, in each direction
+    outside_w, outside_e, outside_s, outside_n = neighbours(region_mask.astype(float), missing_val=1)[4:8]
+    # Process one time index at a time
+    timeseries = []
+    for t in range(data_x.shape[0]):
+        # Sum the flux across the western faces of all cells whose western faces are on the boundary of the region
+        index = bdry_mask*outside_w.astype(bool)
+        net_flux = np.sum(data_x[t,index])
+        # Similarly for the other boundaries
+        index = bdry_mask*outside_e.astype(bool)
+        net_flux += np.sum(-1*data_x_plus1[t,index])
+        index = bdry_mask*outside_s.astype(bool)
+        net_flux += np.sum(data_y[t,index])
+        index = bdry_mask*outside_n.astype(bool)
+        net_flux += np.sum(-1*data_y_plus1[t,index])
+        timeseries.append(net_flux)
+    return np.array(timeseries)   
 
 
 # Calculate timeseries from one or more files.
