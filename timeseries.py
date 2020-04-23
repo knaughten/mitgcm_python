@@ -382,8 +382,8 @@ def timeseries_cavity_res_time (file_path, grid, shelf, time_index=None, t_start
     # Loop over timesteps
     timeseries = []
     for t in range(psi.shape[0]):
-        # Area-average absolute value of streamfunction
-        psi_mean = area_average(np.abs(psi[t,:]), grid)
+        # Area-average streamfunction
+        psi_mean = area_average(psi[t,:], grid)
         # Divide volume by this value to get mean residence time, convert to years
         res_time = cavity_vol/psi_mean/sec_per_year
         timeseries.append(res_time)
