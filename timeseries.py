@@ -624,6 +624,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_salt_sfc_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 #      '*_res_time': mean cavity residence time for the given ice shelf (years)
+#      '*_mean_psi': mean absolute value of the barotropic streamfunction for the given region (Sv)
 def set_parameters (var):
 
     var_name = None
@@ -878,6 +879,13 @@ def set_parameters (var):
         region = var[:var.index('_res_time')]
         title = 'Mean residence time of ' + region_names[region] + ' cavity'
         units = 'y'
+    elif var.endswith('mean_psi'):
+        option = 'avg_sfc'
+        var_name = 'PsiVEL'
+        region = var[:var.index('_mean_psi')]
+        title = 'Mean absolute barotropic streamfunction for ' + region_names[region]
+        units = 'Sv'
+        factor = 1e-6
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
