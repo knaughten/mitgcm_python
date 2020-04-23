@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from ..grid import ERA5Grid, PACEGrid
+from ..grid import ERA5Grid, PACEGrid, Grid
 from ..file_io import read_binary, write_binary
 from ..utils import real_dir, daily_to_monthly
 from ..plot_utils.colours import set_colours
