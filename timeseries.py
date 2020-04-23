@@ -375,15 +375,15 @@ def timeseries_cavity_res_time (file_path, grid, shelf, time_index=None, t_start
     # Read streamfunction, vertically integrate, and mask to given region
     psi = read_netcdf(file_path, 'PsiVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     psi = np.sum(psi, axis=-3)
-    psi = apply_mask(psi, shelf_mask, time_dependent=True)
     if len(psi.shape)==2:
         # Just one timestep; add a dummy time dimension
         psi = np.expand_dims(psi,0)
+    psi = apply_mask(psi, np.invert(shelf_mask), time_dependent=True)    
     # Loop over timesteps
     timeseries = []
     for t in range(psi.shape[0]):
-        # Area-average streamfunction
-        psi_mean = area_average(psi[t,:], grid)
+        # Area-average absolute value of streamfunction
+        psi_mean = area_average(np.mean(psi[t,:]), grid)
         # Divide volume by this value to get mean residence time, convert to years
         res_time = cavity_vol/psi_mean/sec_per_year
         timeseries.append(res_time)
