@@ -234,17 +234,20 @@ def plot_all_biases (clim_dir, fig_dir='./'):
 
 
 # Ground the Abbot Ice Shelf in the given topography files.
-def ground_abbot (grid_path, bathy_file_in, draft_file_in, bathy_file_out, draft_file_out):
+def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_file_out, draft_file_out, pload_file_out):
 
     grid = Grid(grid_path)
     bathy = read_binary(bathy_file_in, [grid.nx, grid.ny], 'xy', prec=64)
     draft = read_binary(draft_file_in, [grid.nx, grid.ny], 'xy', prec=64)
+    pload = read_binary(pload_file_in, [grid.nx, grid.ny], 'xy', prec=64)
     ice_mask = draft != 0  # Differs slightly from ice_mask in finished Grid because of hFacMinDr requirements applied at run-time
     abbot_mask = grid.restrict_mask(draft!=0, 'abbot')
     bathy[abbot_mask] = 0
     draft[abbot_mask] = 0
+    pload[abbot_mask] = 0
     write_binary(bathy, bathy_file_out, prec=64)
     write_binary(draft, draft_file_out, prec=64)
+    write_binary(draft, pload_file_out, prec=64)
     
 
     
