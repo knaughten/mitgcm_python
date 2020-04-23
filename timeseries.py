@@ -10,7 +10,7 @@ from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz
 from diagnostics import total_melt, wed_gyre_trans, transport_transect
-from calculus import over_area, area_integral, over_volume, vertical_average_column
+from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average
 from interpolation import interp_bilinear, neighbours
 from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst
 
@@ -362,7 +362,32 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
         if np.count_nonzero(index_n) > 0:
             net_flux += np.sum(-1*data_y_plus1[t,index_n])
         timeseries.append(net_flux)
-    return np.array(timeseries)   
+    return np.array(timeseries)
+
+
+# Calculate the mean residence time of the given cavity from the barotropic streamfunction.
+def timeseries_cavity_res_time (file_path, grid, shelf, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    # Get the 2D mask for this ice shelf
+    shelf_mask = grid.get_ice_mask(shelf=shelf)
+    # Calculate volume of cavity
+    cavity_vol = np.sum(grid.dV*xy_to_xyz(shelf_mask, grid))
+    # Read streamfunction, vertically integrate, and mask to given region
+    psi = read_netcdf(file_path, 'PsiVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    psi = np.sum(psi, axis=-3)
+    psi = apply_mask(psi, shelf_mask, time_dependent=True)
+    if len(psi.shape)==2:
+        # Just one timestep; add a dummy time dimension
+        psi = np.expand_dims(psi,0)
+    # Loop over timesteps
+    timeseries = []
+    for t in range(psi.shape[0]):
+        # Area-average absolute value of streamfunction
+        psi_mean = area_average(np.abs(psi[t,:]), grid)
+        # Divide volume by this value to get mean residence time, convert to years
+        res_time = cavity_vol/psi_mean/sec_per_year
+        timeseries.append(res_time)
+    return np.array(timeseries)
 
 
 # Calculate timeseries from one or more files.
@@ -384,6 +409,7 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
 #          'transport_transect': calculates net transport across a given transect
 #          'iceprod': calculates total sea ice production over the given region
 #          'pmepr': calculates total precipitation minus evaporation plus runoff over the given region
+#          'res_time': calculates mean cavity residence time over the given ice shelf cavity
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -409,7 +435,7 @@ def timeseries_adv_dif_bdry (file_path, var_name, grid, region_mask, bdry_mask, 
 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -491,6 +517,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_adv_dif(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'adv_dif_bdry':
             values_tmp = timeseries_adv_dif_bdry(fname, var_name, grid, mask, bdry_mask, time_average=time_average)
+        elif option == 'res_time':
+            values_tmp = timeseries_cavity_res_time(fname, grid, region, time_average=time_average)
         values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
@@ -592,6 +620,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_salt_sfc': surface salt flux integrated over the given region (psu m^3/s)
 #      '*_salt_sfc_corr': surface salt correction term (from linear free surface) integrated over the given region (psu m^3/s) - assumes linFSConserve=false
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
+#      '*_res_time': mean cavity residence time for the given ice shelf (years)
 def set_parameters (var):
 
     var_name = None
@@ -841,6 +870,11 @@ def set_parameters (var):
         title = 'Total tendency of salinity over ' + region_names[region]
         units = r'psu m$^3/s'
         factor = 1./sec_per_day
+    elif var.endswith('res_time'):
+        option = 'res_time'
+        region = var[:var.index('_res_time')]
+        title = 'Mean residence time of ' + region_names[region] + ' cavity'
+        units = 'y'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
