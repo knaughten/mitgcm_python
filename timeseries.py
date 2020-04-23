@@ -103,7 +103,10 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
                 # Just one timestep
                 data_tmp = data_tmp[0,:,:]
             else:
-                data_tmp = data_tmp[:,0,:,:]                
+                data_tmp = data_tmp[:,0,:,:]
+        if var == 'PsiVEL':
+            # Special case to get absolute value of vertically integrated streamfunction
+            data_tmp = np.abs(np.sum(data_tmp, axis=-3))
         if data is None:
             data = data_tmp
         else:
