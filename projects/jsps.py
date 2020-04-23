@@ -237,9 +237,10 @@ def plot_all_biases (clim_dir, fig_dir='./'):
 def ground_abbot (grid_path, bathy_file_in, draft_file_in, bathy_file_out, draft_file_out):
 
     grid = Grid(grid_path)
-    abbot_mask = grid.get_ice_mask(shelf='abbot')
     bathy = read_binary(bathy_file_in, [grid.nx, grid.ny], 'xy', prec=64)
     draft = read_binary(draft_file_in, [grid.nx, grid.ny], 'xy', prec=64)
+    ice_mask = draft != 0  # Differs slightly from ice_mask in finished Grid because of hFacMinDr requirements applied at run-time
+    abbot_mask = grid.restrict_mask(draft!=0, shelf='abbot')
     bathy[abbot_mask] = 0
     draft[abbot_mask] = 0
     write_binary(bathy, bathy_file_out, prec=64)
