@@ -399,7 +399,7 @@ def timeseries_delta_rho (file_path, grid, point0, point1, z0, time_index=None, 
     # Inner function to read a variable (temperature or salinity) and interpolate it to the given point
     def read_interp_var (var_name, point):
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        if len(data.shape)==2:
+        if len(data.shape)==3:
             # Add a time dimension
             data = np.expand_dims(data,0)
         # Interpolate to the given depth
