@@ -226,7 +226,8 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 time, data = calc_special_timeseries_diff(var, file_path[0], file_path[1], grid=grid, monthly=monthly)
             else:
                 time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-        time, data = calc_annual_averages(time, data)
+        if annual_average:
+            time, data = calc_annual_averages(time, data)
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
