@@ -394,20 +394,24 @@ def timeseries_cavity_res_time (file_path, grid, shelf, time_index=None, t_start
 
 
 # Calculate the difference in density between the two points.
-def timeseries_delta_rho (file_path, grid, point0, point1, z0, time_index=None, t_start=None, t_end=None, time_average=False, eosType='MDJWF', rho=None):
+def timeseries_delta_rho (file_path, grid, point0, point1, z0, time_index=None, t_start=None, t_end=None, time_average=False, eosType='MDJWF'):
 
-    if rho is None:
-        # Read temperature and salinity to calculate density
-        salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        rho = density(eosType, salt, temp, z0)
-    # Interpolate to the given depth
-    rho_xy = interp_to_depth(rho, z0, grid, time_dependent=True)
-    # Interpolate to each point
-    rho0 = interp_bilinear(rho_xy, point0[0], point0[1], grid)
-    rho1 = interp_bilinear(rho_xy, point1[0], point1[1], grid)
-    # Return the difference timeseries
-    return rho0-rho1    
+    # Inner function to read a variable (temperature or salinity) and interpolate it to the given point
+    def read_interp_var (var_name, point):
+        data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        # Interpolate to the given depth
+        data_xy = interp_to_depth(data, z0, grid, time_dependent=True)
+        # Interpolate to the given point
+        return interp_bilinear(data_xy, point[0], point[1], grid)
+    
+    # Inner function to do this for both temperature and salinity, and then calculate the timeseries of density at that point
+    def density_point (point):
+        salt0 = read_interp_var('SALT', point)
+        temp0 = read_interp_var('THETA', point)
+        return density(eosType, salt0, temp0, z0)
+
+    # Return the difference between the two points
+    return density_point(point0) - density_point(point1)
 
 
 # Calculate timeseries from one or more files.
@@ -545,7 +549,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'res_time':
             values_tmp = timeseries_cavity_res_time(fname, grid, region, time_average=time_average)
         elif option == 'delta_rho':
-            values_tmp = timeseries_delta_rho(fname, grid, point0, point1, z0,  rho=rho, time_average=time_average)
+            values_tmp = timeseries_delta_rho(fname, grid, point0, point1, z0, time_average=time_average)
         values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
