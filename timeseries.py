@@ -501,7 +501,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_region_mask(region)
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
-        elif region == 'all':
+        elif region == 'all' or region is None:
             mask = None
         else:
             print 'Error (calc_timeseries): unsupported region'
