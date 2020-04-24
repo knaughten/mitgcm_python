@@ -83,7 +83,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     from plot_latlon import read_plot_latlon
     from plot_slices import read_plot_ts_slice
     from plot_misc import read_plot_hovmoller_ts
-    from plot_misc import ctd_cast_compare
+    from plot_misc import ctd_cast_compare, amundsen_rignot_comparison
 
     if time_average:
         time_index = None
@@ -124,11 +124,12 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
     for var in var_names:
         read_plot_timeseries(var, output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_'+var+'.png', monthly=monthly)
 
-    # Hovmoller plots and CTD casts
+    # Hovmoller plots, CTD casts, and melt rate comparisons
     if key == 'PAS':
         for loc in ['pine_island_bay', 'dotson_front']:
             read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly, smooth=6)
             ctd_cast_compare(loc, hovmoller_file, ctd_file, grid, fig_name=fig_dir+'casts_'+loc+'.png')
+        amundsen_rignot_comparison(output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'rignot.png') 
 
     # Lat-lon plots
     var_names = ['ismr', 'bwtemp', 'bwsalt', 'sst', 'sss', 'aice', 'hice', 'eta', 'vel', 'velice']
@@ -1128,7 +1129,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
     from plot_1d import read_plot_timeseries_multi
     from plot_latlon import read_plot_latlon_comparison
-    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff
+    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, amundsen_rignot_comparison
 
     if key == 'PAS':
         latlon_names_forcing = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'windangle', 'precip', 'swdown', 'lwdown']
@@ -1173,5 +1174,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         for n in range(2):
             read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png', smooth=6)
         read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
+    if key == 'PAS':
+        amundsen_rignot_comparison(dir_1+fname, file_path_2=dir_2+fname, precomputed=True, sim_names=[name_1, name_2], fig_name=fig_dir+'rignot.png')
     
 
