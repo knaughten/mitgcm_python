@@ -883,7 +883,7 @@ def set_parameters (var):
         option = 'avg_sfc'
         var_name = 'PsiVEL'
         region = var[:var.index('_mean_psi')]
-        title = 'Mean absolute barotropic streamfunction for ' + region_names[region]
+        title = 'Mean absolute barotropic streamfunction\nfor ' + region_names[region]
         units = 'Sv'
         factor = 1e-6
     else:

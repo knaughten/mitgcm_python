@@ -161,7 +161,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
+def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, annual_average=False):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
         print 'Error (read_plot_timeseries): must pass a list of 2 file paths when diff=True.'
@@ -204,6 +204,8 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 time, melt, freeze = calc_special_timeseries_diff(var, file_path[0], file_path[1], grid=grid, monthly=monthly)
             else:
                 time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
+        if annual_average:
+            time, [melt, freeze] = calc_annual_averages(time, [melt, freeze])
         timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
     else:
         if precomputed:
@@ -216,6 +218,7 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 time, data = calc_special_timeseries_diff(var, file_path[0], file_path[1], grid=grid, monthly=monthly)
             else:
                 time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+        time, data = calc_annual_averages(time, data)
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
