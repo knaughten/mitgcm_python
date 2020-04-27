@@ -1275,7 +1275,7 @@ def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_bu
     file_path = output_dir+timeseries_file
     
     if not os.path.isfile(file_path):
-        precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_dif', 'sws_shelf_salt_sfc', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
+        precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_sfc', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
     
     time = netcdf_time(file_path, monthly=False)
     adv = read_netcdf(file_path, 'sws_shelf_salt_adv')
