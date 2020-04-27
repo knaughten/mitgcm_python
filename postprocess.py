@@ -1129,7 +1129,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
     from plot_1d import read_plot_timeseries_multi
     from plot_latlon import read_plot_latlon_comparison
-    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, amundsen_rignot_comparison
+    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, amundsen_rignot_comparison, ctd_cast_compare
 
     if key == 'PAS':
         latlon_names_forcing = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'windangle', 'precip', 'swdown', 'lwdown']
