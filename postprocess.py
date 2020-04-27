@@ -1125,7 +1125,7 @@ def precompute_hovmoller_all_coupled (output_dir='./', hovmoller_file='hovmoller
 # Optional keyword arguments:
 # hovmoller_file, timeseries_file: 
 # key: simulation type key which will set variable types and other settings
-def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmoller_file='hovmoller.nc', timeseries_file='timeseries.nc', key='PAS'):
+def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmoller_file='hovmoller.nc', timeseries_file='timeseries.nc', key='PAS', ctd_file='../../ctddatabase.mat'):
 
     from plot_1d import read_plot_timeseries_multi
     from plot_latlon import read_plot_latlon_comparison
@@ -1169,10 +1169,11 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
     for n in range(2):
         read_plot_timeseries_multi(melt_types, dirs[n]+timeseries_file, precomputed=True, fig_name=fig_dir+'timeseries_melt_multi_'+names[n]+'.png')
     read_plot_timeseries_multi(melt_types, [dir_1+timeseries_file, dir_2+timeseries_file], diff=True, precomputed=True, fig_name=fig_dir+'timeseries_melt_multi_diff.png')
-    # Plot Hovmoller plots: 1, 2, and difference
+    # Plot CTD casts and Hovmoller plots: 1, 2, and difference
     for loc in hovmoller_loc:
         for n in range(2):
-            read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png', smooth=6)
+            ctd_cast_compare(loc, dirs[n]+hovmoller_file, ctd_file, grid, fig_name=fig_dir+'casts_'+loc+'_'+names[n]+'.png')
+            read_plot_hovmoller_ts(dirs[n]+hovmoller_file, loc, grid, tmin=hovmoller_bounds[0], tmax=hovmoller_bounds[1], smin=hovmoller_bounds[2], smax=hovmoller_bounds[3], t_contours=hovmoller_t_contours, s_contours=hovmoller_s_contours, fig_name=fig_dir+'hovmoller_ts_'+loc+'_'+names[n]+'.png', smooth=6)            
         read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
     if key == 'PAS':
         amundsen_rignot_comparison(dir_1+timeseries_file, file_path_2=dir_2+timeseries_file, precomputed=True, sim_names=[name_1, name_2], fig_name=fig_dir+'rignot.png')
