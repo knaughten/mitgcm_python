@@ -8,8 +8,8 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top
-from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, t_minus_tf
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, add_time_dim, z_to_xyz
+from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average
 from interpolation import interp_bilinear, neighbours, interp_to_depth
 from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst
@@ -97,11 +97,15 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             data_tmp = np.sqrt(u**2 + v**2)
         elif var == 'TminusTf':
             # Special case to get thermal driving
-            temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-            salt = read_netcdf(file_path, 'SALT', time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-            data_3d = t_minus_tf(temp, salt, grid, time_dependent=len(temp.shape)==4)
-            # Now select the surface layer
-            data_tmp = select_top(data_3d, masked=False, grid=grid, time_dependent=len(temp.shape)==4)
+            temp_3d = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+            salt_3d = read_netcdf(file_path, 'SALT', time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+            time_dependent = len(temp_3d.shape)==4
+            temp = select_top(temp_3d, masked=False, grid=grid, time_dependent=time_dependent)
+            salt = select_top(salt_3d, masked=False, grid=grid, time_dependent=time_dependent)
+            z = select_top(z_to_xyz(grid.z, grid), masked=False, grid=grid)
+            if time_dependent:
+                z = add_time_dim(z, temp.shape[0])
+            data_tmp = in_situ_temp(temp, salt, z) - tfreeze(salt, z)
         else:
             data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         if var in ['THETA', 'SALT', 'WSLTMASS']:
