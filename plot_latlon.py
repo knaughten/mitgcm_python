@@ -242,6 +242,9 @@ def plot_tminustf (temp, salt, grid, tf_option='min', vmin=None, vmax=None, zoom
     if tf_option == 'bottom':
         tmtf_plot = select_bottom(tminustf)
         title_end = '\n(bottom layer)'
+    elif tf_option == 'top':
+        tmtf_plot = select_top(tminustf)
+        title_end = '\n(boundary layer)'
     elif tf_option == 'max':
         tmtf_plot = np.amax(tminustf, axis=0)
         title_end = '\n(maximum over depth)'
