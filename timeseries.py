@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average
 from interpolation import interp_bilinear, neighbours, interp_to_depth
@@ -98,12 +98,8 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         else:
             data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         if var in ['THETA', 'SALT', 'WSLTMASS']:
-            # 3D variable; have to take surface
-            if len(data_tmp.shape)==3:
-                # Just one timestep
-                data_tmp = data_tmp[0,:,:]
-            else:
-                data_tmp = data_tmp[:,0,:,:]
+            # 3D variable; have to take surface layer
+            data_tmp = select_top(data_tmp, masked=False, grid=grid, time_dependent=len(data_tmp.shape)==4)
         if var == 'PsiVEL':
             # Special case to get absolute value of vertically integrated streamfunction
             data_tmp = np.abs(np.sum(data_tmp, axis=-3))
@@ -656,6 +652,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 #      '*_res_time': mean cavity residence time for the given ice shelf (years)
 #      '*_mean_psi': mean absolute value of the barotropic streamfunction for the given region (Sv)
+#      '*_ustar': area-averaged friction velocity under the given ice shelf (m/s)
+#      '*_bdrytemp': area-averaged ice-ocean boundary temperature under the given ice shelf (C)
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 def set_parameters (var):
 
@@ -919,6 +917,18 @@ def set_parameters (var):
         title = 'Mean absolute barotropic streamfunction\nfor ' + region_names[region]
         units = 'Sv'
         factor = 1e-6
+    elif var.endswith('ustar'):
+        option = 'avg_sfc'
+        var_name = 'SHIuStar'
+        region = var[:var.index('_ustar')]
+        title = 'Mean friction velocity beneath ' + region_names[region]
+        units = 'm/s'
+    elif var.endswith('bdrytemp'):
+        option = 'avg_sfc'
+        var_name = 'THETA'
+        region = var[:var.index('_bdrytemp')]
+        title = 'Mean boundary temperature beneath ' + region_names[region]
+        units = deg_string+'C'
     elif var == 'ft_sill_delta_rho':
         option = 'delta_rho'
         point0 = (-32, -75.5)
