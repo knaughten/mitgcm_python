@@ -103,6 +103,13 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
         if var == 'PsiVEL':
             # Special case to get absolute value of vertically integrated streamfunction
             data_tmp = np.abs(np.sum(data_tmp, axis=-3))
+        if var == 'TminusTf':
+            # Special case to get thermal driving
+            temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+            salt = read_netcdf(file_path, 'SALT', time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+            data_3d = t_minus_tf(temp, salt, grid, time_dependent=len(temp.shape)==4)
+            # Now select the surface layer
+            data_tmp = select_top(data_3d, masked=False, grid=grid, time_dependent=len(temp.shape)==4)
         if data is None:
             data = data_tmp
         else:
@@ -653,7 +660,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_res_time': mean cavity residence time for the given ice shelf (years)
 #      '*_mean_psi': mean absolute value of the barotropic streamfunction for the given region (Sv)
 #      '*_ustar': area-averaged friction velocity under the given ice shelf (m/s)
-#      '*_bdrytemp': area-averaged ice-ocean boundary temperature under the given ice shelf (C)
+#      '*_thermal_driving': area-averaged ice-ocean boundary temperature minus in-situ freezing point under the given ice shelf (C)
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 def set_parameters (var):
 
@@ -923,11 +930,11 @@ def set_parameters (var):
         region = var[:var.index('_ustar')]
         title = 'Mean friction velocity beneath ' + region_names[region]
         units = 'm/s'
-    elif var.endswith('bdrytemp'):
+    elif var.endswith('thermal_driving'):
         option = 'avg_sfc'
-        var_name = 'THETA'
-        region = var[:var.index('_bdrytemp')]
-        title = 'Mean boundary temperature beneath ' + region_names[region]
+        var_name = 'TminusTf'
+        region = var[:var.index('_thermal_driving')]
+        title = 'Mean thermal driving beneath ' + region_names[region]
         units = deg_string+'C'
     elif var == 'ft_sill_delta_rho':
         option = 'delta_rho'
