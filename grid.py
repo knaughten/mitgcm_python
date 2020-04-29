@@ -12,7 +12,7 @@ import sys
 import os
 
 from file_io import read_netcdf, find_cmip6_files
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points
 from constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -341,8 +341,8 @@ class Grid:
 
         from interpolation import neighbours
 
-        if region not in ['sws_shelf', 'filchner_trough'] or (region == 'filchner_trough' and bdry != 'icefront'):
-            print 'Error (get_region_bdry_mask): code only works for sws_shelf case and filchner_trough icefront so far, you will have to edit and test it'
+        if region != 'sws_shelf':
+            print 'Error (get_region_bdry_mask): code only works for sws_shelf case, you will have to edit and test it'
             sys.exit()
 
         land_mask = self.get_land_mask(gtype=gtype)
@@ -393,8 +393,21 @@ class Grid:
             print 'Error (get_region_bdry_mask): invalid bdry ' + bdry
             sys.exit()
 
+
+    # Build and return a mask for the ice shelf front points of the given ice shelf.
+    def get_icefront_mask (self, shelf='all', gtype='t'):
+
+        if shelf == 'filchner':
+            shelf_use = 'fris'
+            [xmin, xmax, ymin, ymax] = region_bounds['filchner_front']
+        else:
+            shelf_use = shelf
+            [xmin, xmax, ymin, ymax] = [None, None, None, None]
+        ice_mask = self.get_ice_mask(shelf=shelf_use, gtype=gtype)
+        return ice_shelf_front_points(self, ice_mask=ice_mask, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+
     
-    # Build and a return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
+    # Build and return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
     def get_coast_mask (self, gtype='t', ignore_iceberg=True):
         from interpolation import neighbours
         open_ocean = self.get_open_ocean_mask(gtype=gtype)

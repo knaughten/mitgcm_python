@@ -65,7 +65,8 @@ region_bounds = {
     'venable': [-88.9, -85.6, -73.4, -72.7],
     'filchner_trough': [-45, -30, -79, -75],
     'ronne_depression': [-65, -55, -76, -73],
-    'wdw_core': [-60, -20, -75, -65]
+    'wdw_core': [-60, -20, -75, -65],
+    'filchner_front': [-45, -36, -79, -77]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
