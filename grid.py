@@ -341,8 +341,8 @@ class Grid:
 
         from interpolation import neighbours
 
-        if region != 'sws_shelf':
-            print 'Error (get_region_bdry_mask): code only works for sws_shelf case so far, you will have to edit and test it'
+        if region not in ['sws_shelf', 'filchner_trough'] or (region == 'filchner_trough' and bdry != 'icefront'):
+            print 'Error (get_region_bdry_mask): code only works for sws_shelf case and filchner_trough icefront so far, you will have to edit and test it'
             sys.exit()
 
         land_mask = self.get_land_mask(gtype=gtype)
