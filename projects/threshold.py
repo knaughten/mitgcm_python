@@ -39,6 +39,8 @@ sim_names = ['piControl-O','piControl-IO','abrupt-4xCO2-O','abrupt-4xCO2-IO','1p
 coupled = [False, True, False, True, False, True]
 timeseries_file = 'timeseries.nc'
 timeseries_file_2 = 'timeseries2_annual.nc'
+timeseries_file_psi = 'timeseries_psi.nc'
+timeseries_file_drho = 'timeseries_drho.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -1297,4 +1299,23 @@ def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_bu
     pmepr = read_netcdf(file_path, 'sws_shelf_pmepr')
     total_fw = melt + freeze + pmepr
     timeseries_multi_plot(time, [melt, freeze, pmepr, total_fw], ['Sea ice melting', 'Sea ice freezing', 'Precip, evap, runoff', 'Total'], ['cyan', 'red', 'green', 'blue'], title='Surface freshwater budget of Southern Weddell Sea continental shelf', units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_sfc_fw_budget.png')
+
+
+# Plot the most promising timeseries for the coupled simulations.
+def timeseries_contenders (base_dir='./', fig_dir='./'):
+
+    sim_numbers = [1,5,3]
+    sim_names_plot = [sim_names[n] for n in sim_numbers]
+    colours = ['blue', 'green', 'red']
+        
+    var_names = ['sws_shelf_salt', 'fris_mean_psi', 'fris_temp', 'fris_massloss', 'ft_sill_delta_rho']
+    file_names = [timeseries_file, timeseries_file_psi, timeseries_file, timeseries_file, timeseries_file_drho]
+    smooths = [0, 2, 0, 0, 0]
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    for var, fname, smooth in zip(var_names, file_names, smooths):
+        file_paths = [base_dir+sim_dirs[n]+fname for n in sim_numbers]
+        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, time_use=1, colours=colours, smooth=smooth, fig_name=fig_dir+'timeseries_'+var+'.png')
     

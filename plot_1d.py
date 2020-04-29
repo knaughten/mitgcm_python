@@ -12,7 +12,7 @@ from timeseries import calc_special_timeseries, calc_special_timeseries_diff, se
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
-from utils import trim_titles
+from utils import trim_titles, moving_average
 
 
 # Helper function to plot timeseries.
@@ -161,7 +161,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
 # fig_name: as in function finished_plot
 # monthly: indicates the model output is monthly-averaged
 
-def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, annual_average=False):
+def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, annual_average=False, smooth=0):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
         print 'Error (read_plot_timeseries): must pass a list of 2 file paths when diff=True.'
@@ -214,6 +214,8 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 time, melt, freeze = calc_special_timeseries(var, file_path, grid=grid, monthly=monthly)
         if annual_average:
             time, [melt, freeze] = calc_annual_averages(time, [melt, freeze])
+        melt = moving_average(melt, smooth, time=time)[0]
+        freeze, time = moving_average(freeze, smooth, time=time)
         timeseries_multi_plot(time, [melt, freeze, melt+freeze], ['Melting', 'Freezing', 'Net'], ['red', 'blue', 'black'], title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre)
     else:
         if precomputed:
@@ -228,6 +230,7 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
                 time, data = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
         if annual_average:
             time, data = calc_annual_averages(time, data)
+        data, time = moving_average(data, smooth, time=time)
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
@@ -242,7 +245,7 @@ def default_colours (n):
 
 
 # NetCDF interface to timeseries_multi_plot, for multiple variables in the same simulation (that have the same units). Can set diff=True and file_path as a list of two file paths if you want a difference plot.
-def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None):
+def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, smooth=0):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
         print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
@@ -289,6 +292,10 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
             else:
                 time, data_tmp = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
             data.append(data_tmp)
+    for n in range(len(data)):
+        data_tmp, time_tmp = moving_average(data[n], smooth, time=time)
+        data[n] = data_tmp
+    time = time_tmp
     title, labels = trim_titles(labels)
     if diff:
         title = 'Change in ' + title[0].lower() + title[1:]
@@ -313,7 +320,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # linestyles: list of length N of linestyles to use for the plot (default solid for all)
 # fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0):
 
     if var_name.endswith('mass_balance'):
         print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
@@ -346,6 +353,11 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
             sys.exit()
         time, all_datas = calc_annual_averages(time, all_datas)
+
+    for n in range(len(all_datas)):
+        data_tmp, time_tmp = moving_average(all_datas[n], smooth, time=time)
+        all_datas[n] = data_tmp
+    time = time_tmp
 
     # Set other things for plot
     title, units = set_parameters(var_name)[2:4]
