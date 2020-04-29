@@ -178,7 +178,10 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
             time = netcdf_time(file_path, monthly=(monthly and not precomputed))
             calendar = netcdf_time(file_path, return_units=True)[2]
     else:
-        calendar = netcdf_time(file_path, return_units=True)[2]
+        if isinstance(file_path, list):
+            calendar = netcdf_time(file_path[0], return_units=True)[2]
+        else:
+            calendar = netcdf_time(file_path, return_units=True)[2]
 
     if annual_average:
         # Make sure it's an integer number of 30-day months
