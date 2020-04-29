@@ -177,17 +177,6 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
         else:
             time = netcdf_time(file_path, monthly=(monthly and not precomputed))
             calendar = netcdf_time(file_path, return_units=True)[2]
-    else:
-        if isinstance(file_path, list):
-            calendar = netcdf_time(file_path[0], return_units=True)[2]
-        else:
-            calendar = netcdf_time(file_path, return_units=True)[2]
-
-    if annual_average:
-        # Make sure it's an integer number of 30-day months
-        if calendar != '360_day' or not monthly or time.size%12 != 0:
-            print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
-            sys.exit()
 
     # Set parameters (only care about title and units)
     title, units = set_parameters(var)[2:4]
