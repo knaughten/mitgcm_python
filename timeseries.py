@@ -424,6 +424,24 @@ def timeseries_delta_rho (file_path, grid, point0, point1, z0, time_index=None, 
     return density_point(point0) - density_point(point1)
 
 
+# Calculate the maximum value of the given variable along the given ice shelf front.
+def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    mask = grid.get_icefront_mask(shelf=shelf)
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    is_3d = var_name in ['THETA', 'SALT']  # Update this as needed when more variables are used
+    if is_3d:
+        mask = xy_to_xyz(mask, grid)*(grid.hfac!=0)
+    if (is_3d and len(data.shape)==3) or len(data.shape)==2:
+        # Just one timestep
+        data = np.expand_dims(data,0)
+    timeseries = []
+    for t in range(data.shape[0]):
+        data_tmp = data[t,:]
+        timeseries.append(np.amax(data_tmp[mask]))
+    return np.array(timeseries)
+
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -444,6 +462,7 @@ def timeseries_delta_rho (file_path, grid, point0, point1, z0, time_index=None, 
 #          'iceprod': calculates total sea ice production over the given region
 #          'pmepr': calculates total precipitation minus evaporation plus runoff over the given region
 #          'res_time': calculates mean cavity residence time over the given ice shelf cavity
+#          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -560,6 +579,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_cavity_res_time(fname, grid, region, time_average=time_average)
         elif option == 'delta_rho':
             values_tmp = timeseries_delta_rho(fname, grid, point0, point1, z0, time_average=time_average)
+        elif option == 'icefront_max':
+            values_tmp = timeseries_icefront_max(fname, var_name, grid, region, time_average=time_average)
         values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
@@ -666,6 +687,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_ustar': area-averaged friction velocity under the given ice shelf (m/s)
 #      '*_thermal_driving': area-averaged ice-ocean boundary temperature minus in-situ freezing point under the given ice shelf (C)
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
+#      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
 def set_parameters (var):
 
     var_name = None
@@ -947,6 +969,12 @@ def set_parameters (var):
         z0 = -600
         title = 'Difference in density at 600 m across the Filchner Trough sill'
         units = r'kg/m$^3$'
+    elif var.endswith('front_tmax'):
+        option = 'icefront_max'
+        var_name = 'THETA'
+        region = var[:var.index('_front_tmax')]
+        title = 'Maximum temperature at the ' + region_names[region] + ' front'
+        units = deg_string+'C'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

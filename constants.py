@@ -102,7 +102,8 @@ region_names = {
     'icefront': 'ice shelf fronts',
     'upstream': 'upstream continental shelf',
     'downstream': 'downstream continental shelf',
-    'openocean': 'open ocean'
+    'openocean': 'open ocean',
+    'filchner': 'Filchner Ice Shelf'
 }
 
 # Resolution of SOSE grid in degrees
