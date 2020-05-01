@@ -1321,7 +1321,7 @@ def salt_budget_ensembles (base_dir='./', fig_dir='./'):
     read_plot_timeseries_ensemble(['sws_shelf_salt_adv', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_sfc'], file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, title='Total salt fluxes (except diffusion)', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_total.png', print_mean=True)
 
     # Loop over other variables    
-    var_names = ['sws_shelf_salt_tend', 'sws_shelf_salt_sfc', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr']
+    var_names = ['sws_shelf_salt_tend', 'sws_shelf_salt_sfc', 'sws_shelf_salt_adv', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr']
     for var in var_names:
         fig_name = fig_dir + 'timeseries_' + var[var.index('sws_shelf_')+len('sws_shelf_'):] + '.png'
         read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, fig_name=fig_name, print_mean=True)
