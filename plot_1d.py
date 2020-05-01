@@ -299,7 +299,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # NetCDF interface to timeseries_multi_plot, for the same variable in multiple simulations.
 
 # Arguments:
-# var_name: name of timeseries variable to plot (anything from function set_parameters in timeseries.py)
+# var_name: name of timeseries variable to plot (anything from function set_parameters in timeseries.py) - can also be several such variable names, which will be added together (must set title and units)
 # file_paths: list of length N, of file paths to MITgcm output files or precomputed timeseries files from different simulations.
 
 # Optional keyword arguments:
@@ -313,22 +313,31 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # colours: list of length N of colours to use for plot - if not set, will choose colours automatically
 # linestyles: list of length N of linestyles to use for the plot (default solid for all)
 # fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
+# title, units: set these strings if var_name is multiple variables to sum.
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None):
 
-    if var_name.endswith('mass_balance'):
-        print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
-        sys.exit()
+    if isinstance(var_name, str):
+        var_name = [var_name]
 
     # Read data
     all_times = []
     all_datas = []
     for f in file_paths:
-        if precomputed:
-            time = netcdf_time(f, monthly=False)
-            data = read_netcdf(f, var_name)
-        else:
-            time, data = calc_special_timeseries(var_name, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+        data = None
+        for var in var_name:
+            if var.endswith('mass_balance'):
+                print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
+                sys.exit()
+            if precomputed:
+                time = netcdf_time(f, monthly=False)
+                data_tmp = read_netcdf(f, var)
+            else:
+                time, data_tmp = calc_special_timeseries(var, f, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
+            if data is None:
+                data = data_tmp
+            else:
+                data += data_tmp
         all_times.append(time)
         all_datas.append(data)
     if time_use is None:
@@ -354,7 +363,11 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     time = time_tmp
 
     # Set other things for plot
-    title, units = set_parameters(var_name)[2:4]
+    if len(var_name)==1:
+        title, units = set_parameters(var_name)[2:4]
+    elif title is None or units is None:
+        print 'Error (read_plot_timeseries_ensemble): must set title and units'
+        sys.exit()
     if colours is None:
         colours = default_colours(len(file_paths))
 

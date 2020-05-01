@@ -1307,6 +1307,25 @@ def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_bu
     timeseries_multi_plot(time, [melt, freeze, pmepr, total_fw], ['Sea ice melting', 'Sea ice freezing', 'Precip, evap, runoff', 'Total'], ['cyan', 'red', 'green', 'blue'], title='Surface freshwater budget of Southern Weddell Sea continental shelf', units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_sfc_fw_budget.png')
 
 
+# Plot ensembles of the salt budget terms in the three test simulations.
+def salt_budget_ensembles (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    file_paths = [base_dir+'WSFRIS_'+key+'/output/timeseries_salt_budget.nc' for key in ['cD1', 'aD1', 'aD2']]
+    sim_names_plot = ['piControl (2920s)', 'abrupt-4xCO2 (1860s)', 'abrupt-4xCO2 (1900s)']
+    colours = ['blue', 'green', 'red']
+
+    # Special case for sum of advection and surface correction terms
+    read_plot_timeseries_ensemble(['sws_shelf_salt_adv', 'sws_shelf_salt_sfc_corr'], file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, title='Advection + linear free surface correction\nof salt into Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_adv_plus_sfc_corr.png')
+
+    # Loop over other variables    
+    var_names = ['sws_shelf_salt_tend', 'sws_shelf_salt_sfc', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr']
+    for var in var_names:
+        fig_name = fig_dir + 'timeseries_' + var[var.index('sws_shelf_')+len('sws_shelf_'):] + '.png'
+        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, fig_name=fig_name)
+
+
 # Plot the most promising timeseries for the coupled simulations.
 def timeseries_contenders (base_dir='./', fig_dir='./'):
 
