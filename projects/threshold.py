@@ -1270,7 +1270,7 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
 
 
 # Plot a bunch of timeseries about the salt budget on the continental shelf.
-def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_budget.nc', fig_dir='./', annual_average=True):
+def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_budget.nc', fig_dir='./'):
 
     output_dir = real_dir(output_dir)
     fig_dir = real_dir(fig_dir)
@@ -1279,26 +1279,32 @@ def timeseries_salt_budget (output_dir='./', timeseries_file='timeseries_salt_bu
     if not os.path.isfile(file_path):
         precompute_timeseries_coupled(output_dir=output_dir, timeseries_file=timeseries_file, timeseries_types=['sws_shelf_salt_adv', 'sws_shelf_salt_sfc', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_tend', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr'])
     
-    time = netcdf_time(file_path, monthly=False)
+    time_orig = netcdf_time(file_path, monthly=False)
     adv = read_netcdf(file_path, 'sws_shelf_salt_adv')
     sflux = read_netcdf(file_path, 'sws_shelf_salt_sfc')
     sflux_corr = read_netcdf(file_path, 'sws_shelf_salt_sfc_corr')
     tend = read_netcdf(file_path, 'sws_shelf_salt_tend')
-    timeseries_multi_plot(time, [adv, sflux, sflux_corr, tend], ['Advection', 'Surface flux', 'Linear FS correction', 'Tendency'], ['red', 'green', 'blue', 'black'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget.png', annual_average=annual_average)
-    timeseries_multi_plot(time, [adv+sflux_corr, sflux, tend], ['Advection + correction', 'Surface flux', 'Tendency'], ['red', 'green', 'black'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_combined.png', annual_average=annual_average)
+    time, data = calc_annual_averages(time_orig, [adv, sflux, sflux_corr, tend])
+    [adv, sflux, sflux_corr, tend] = data
+    timeseries_multi_plot(time, [adv, sflux, sflux_corr, tend], ['Advection', 'Surface flux', 'Linear FS correction', 'Tendency'], ['red', 'green', 'blue', 'black'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget.png')
+    timeseries_multi_plot(time, [adv+sflux_corr, sflux, tend], ['Advection + correction', 'Surface flux', 'Tendency'], ['red', 'green', 'black'], title='Salt budget on Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_combined.png')
 
     icefront = read_netcdf(file_path, 'sws_shelf_salt_adv_icefront')
     openocean = read_netcdf(file_path, 'sws_shelf_salt_adv_openocean')
     upstream = read_netcdf(file_path, 'sws_shelf_salt_adv_upstream')
     downstream = read_netcdf(file_path, 'sws_shelf_salt_adv_downstream')
+    data = calc_annual_averages(time_orig, [icefront, openocean, upstream, downstream])[1]
+    [icefront, openocean, upstream, downstream] = data
     total_adv = icefront + openocean + upstream + downstream
-    timeseries_multi_plot(time, [icefront, openocean, upstream, downstream, total_adv, adv], ['Ice shelf fronts', 'Open ocean', 'Upstream shelf', 'Downstream shelf', 'Total', 'Integrated'], ['cyan', 'red', 'magenta', 'green', 'blue', 'black'], title='Advection of salt into Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_adv.png', annual_average=annual_average)
+    timeseries_multi_plot(time, [icefront, openocean, upstream, downstream, total_adv, adv], ['Ice shelf fronts', 'Open ocean', 'Upstream shelf', 'Downstream shelf', 'Total', 'Integrated'], ['cyan', 'red', 'magenta', 'green', 'blue', 'black'], title='Advection of salt into Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_budget_adv.png')
 
     melt = read_netcdf(file_path, 'sws_shelf_seaice_melt')
     freeze = read_netcdf(file_path, 'sws_shelf_seaice_freeze')
     pmepr = read_netcdf(file_path, 'sws_shelf_pmepr')
+    data = calc_annual_averages(time_orig, [melt, freeze, pmepr])[1]
+    [melt, freeze, pmepr] = data
     total_fw = melt + freeze + pmepr
-    timeseries_multi_plot(time, [melt, freeze, pmepr, total_fw], ['Sea ice melting', 'Sea ice freezing', 'Precip, evap, runoff', 'Total'], ['cyan', 'red', 'green', 'blue'], title='Surface freshwater budget of Southern Weddell Sea continental shelf', units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_sfc_fw_budget.png', annual_average=annual_average)
+    timeseries_multi_plot(time, [melt, freeze, pmepr, total_fw], ['Sea ice melting', 'Sea ice freezing', 'Precip, evap, runoff', 'Total'], ['cyan', 'red', 'green', 'blue'], title='Surface freshwater budget of Southern Weddell Sea continental shelf', units=r'10$^3$ m$^3$/y', fig_name=fig_dir+'timeseries_sfc_fw_budget.png')
 
 
 # Plot the most promising timeseries for the coupled simulations.
