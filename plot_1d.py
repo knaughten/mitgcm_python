@@ -314,8 +314,9 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # linestyles: list of length N of linestyles to use for the plot (default solid for all)
 # fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
 # title, units: set these strings if var_name is multiple variables to sum.
+# print_mean: set to True if you want to print the mean value for each ensemble member
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False):
 
     if isinstance(var_name, str):
         var_name = [var_name]
@@ -388,5 +389,10 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         colours.append('black')
         if sim_names is not None:
             sim_names.append('Mean')
+
+    if print_mean:
+        print 'Mean values for ' + title + ':'
+        for data, sim in zip(all_datas, sim_names):
+            print sim + ': ' + np.mean(data) + ' ' + units
 
     timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles)
