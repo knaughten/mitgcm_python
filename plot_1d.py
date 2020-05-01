@@ -315,8 +315,9 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # fig_name, monthly, legend_in_centre, dpi: as in timeseries_multi_plot
 # title, units: set these strings if var_name is multiple variables to sum.
 # print_mean: set to True if you want to print the mean value for each ensemble member
+# operator: 'add' or 'subtract' each additional variable name after the first one (if var_name is a list); default add
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add'):
 
     if isinstance(var_name, str):
         var_name = [var_name]
@@ -338,7 +339,13 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             if data is None:
                 data = data_tmp
             else:
-                data += data_tmp
+                if operator == 'add':
+                    data += data_tmp
+                elif operator == 'subtract':
+                    data -= data_tmp
+                else:
+                    print 'Error (read_plot_timeseries_ensemble): invalid operator ' + operator
+                    sys.exit()
         all_times.append(time)
         all_datas.append(data)
     if time_use is None:
