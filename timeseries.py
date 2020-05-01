@@ -767,13 +767,13 @@ def set_parameters (var):
         elif region == 'fris':
             title += 'in FRIS cavity'
         elif region.endswith('icefront'):
-            title += 'in '+region_names[region[:region.index('_icefront')]]+' '+region_names['icefront']
+            title += 'in '+region_names[region[:region.index('_icefront')]]+'\n'+region_names['icefront']
         elif region.endswith('openocean'):
-            title += 'in '+region_names[region[:region.index('_openocean')]]+' '+region_names['openocean']
+            title += 'in '+region_names[region[:region.index('_openocean')]]+'\n'+region_names['openocean']
         elif region.endswith('upstream'):
-            title += 'in '+region_names[region[:region.index('_upstream')]]+' '+region_names['upstream']
+            title += 'in '+region_names[region[:region.index('_upstream')]]+'\n'+region_names['upstream']
         elif region.endswith('downstream'):
-            title += 'in '+region_names[region[:region.index('_downstream')]]+' '+region_names['downstream']
+            title += 'in '+region_names[region[:region.index('_downstream')]]+'\n'+region_names['downstream']
         else:
             title += 'in '+region_names[region]
     elif var in ['hice_corner', 'mld_ewed']:
