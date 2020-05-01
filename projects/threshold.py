@@ -1319,7 +1319,7 @@ def salt_budget_ensembles (base_dir='./', fig_dir='./'):
     # Special case for sum of advection and surface correction terms
     read_plot_timeseries_ensemble(['sws_shelf_salt_adv', 'sws_shelf_salt_sfc_corr'], file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, title='Advection + linear free surface correction\nof salt into Southern Weddell Sea continental shelf', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_adv_plus_sfc_corr.png', print_mean=True)
     # And for diffusion (residual of tendency and other terms)
-    read_plot_timeseries_ensemble(['sws_shelf_salt_tend', 'sws_shelf_salt_adv', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_sfc'], file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, title='Residual salt fluxes (diffusion)', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_diff.png', print_mean=True)
+    read_plot_timeseries_ensemble(['sws_shelf_salt_tend', 'sws_shelf_salt_adv', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_sfc'], file_paths, sim_names=sim_names_plot, precomputed=True, annual_average=True, colours=colours, title='Residual salt fluxes (diffusion)', units=r'psu m$^3$/s', fig_name=fig_dir+'timeseries_salt_diff.png', print_mean=True, operator='subtract')
 
     # Loop over other variables    
     var_names = ['sws_shelf_salt_tend', 'sws_shelf_salt_sfc', 'sws_shelf_salt_adv', 'sws_shelf_salt_adv_icefront', 'sws_shelf_salt_adv_openocean', 'sws_shelf_salt_adv_upstream', 'sws_shelf_salt_adv_downstream', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr']
