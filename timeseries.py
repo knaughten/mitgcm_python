@@ -525,6 +525,14 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_ice_mask(shelf=region)
         elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
             mask = grid.get_region_mask(region)
+        elif region.endswith('icefront'):
+            mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
+        elif region.endswith('openocean'):
+            mask = grid.get_region_bdry_mask(region[:region.index('_openocean')], 'openocean')
+        elif region.endswith('upstream'):
+            mask = grid.get_region_bdry_mask(region[:region.index('_upstream')], 'upstream')
+        elif region.endswith('downstream'):
+            mask = grid.get_region_bdry_mask(region[:region.index('_downstream')], 'downstream')
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
         elif region == 'all' or region is None:
@@ -879,14 +887,14 @@ def set_parameters (var):
         option = 'int_sfc'
         var_name = 'SIfwmelt'
         region = var[:var.index('_seaice_melt')]
-        title = 'Total frewshwater flux from sea ice melting over ' + region_names[region]
+        title = 'Total freshwater flux from sea ice melting over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
     elif var.endswith('seaice_freeze'):
         option = 'int_sfc'
         var_name = 'SIfwfrz'
         region = var[:var.index('_seaice_freeze')]
-        title = 'Total frewshwater flux from sea ice freezing over ' + region_names[region]
+        title = 'Total freshwater flux from sea ice freezing over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
     elif var.endswith('pmepr'):
