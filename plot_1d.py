@@ -364,7 +364,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
 
     # Set other things for plot
     if len(var_name)==1:
-        title, units = set_parameters(var_name)[2:4]
+        title, units = set_parameters(var_name[0])[2:4]
     elif title is None or units is None:
         print 'Error (read_plot_timeseries_ensemble): must set title and units'
         sys.exit()
