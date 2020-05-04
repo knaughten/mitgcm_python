@@ -248,7 +248,6 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     ax.set_xlim([time_edges[0], time_edges[-1]])
     # Make nice axes labels
     depth_axis(ax)
-    ax.set_xlabel('Year', fontsize=14)
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
@@ -287,6 +286,8 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
         if i == 0:
             # Remove x-tick labels from top plot
             ax.set_xticklabels([])
+        else:
+            ax.set_xlabel('Year', fontsize=14)
     if title is None:
         title = loc_string
     plt.suptitle(title, fontsize=22)
