@@ -1091,7 +1091,7 @@ def calc_annual_averages (times, datas):
         times[n] = np.array([times[n][i] for i in range(6, times[n].size, 12)])
     # Average in blocks of 12
     for n in range(len(datas)):
-        new_shape = np.concatenate(([data.shape[0]/12], data.shape[1:], [12]))
+        new_shape = np.concatenate(([datas[n].shape[0]/12], datas[n].shape[1:], [12]))
         datas[n] = np.mean(datas[n].reshape(new_shape), axis=-1)
 
     if time_single:
