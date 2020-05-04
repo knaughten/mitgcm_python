@@ -14,6 +14,7 @@ import sys
 # 'basic': just the 'jet' colourmap
 # 'plusminus': a red/blue colour map where 0 is white
 # 'ratio': as above, but 1 is white and the data does not go below 0
+# 'centered': as plusminus, but centered on the given value with white
 # 'vel': the 'cool' colourmap starting at 0; good for plotting velocity
 # 'ismr': a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink.
 # 'psi': a special colour map for streamfunction contours, with negative values in blue and positive values in red, but small values more visible than regular plus-minus.
@@ -42,6 +43,11 @@ def plusminus_cmap (vmin, vmax):
         min_colour = 0.5*(1 + vmin/vmax)
         max_colour = 1
     return truncate_colourmap(plt.get_cmap('RdBu_r'), min_colour, max_colour)
+
+
+def centered_cmap (vmin, vmax, val0):
+
+    return plusminus_cmap(vmin-val0, vmax-val0)
 
 
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
@@ -126,7 +132,7 @@ def ratio_cmap (vmin, vmax):
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
 
 
-def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
+def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, val0=None):
 
     # Work out bounds
     if vmin is None:
@@ -144,6 +150,12 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None):
 
     elif ctype == 'plusminus':
         return plusminus_cmap(vmin, vmax), vmin, vmax
+
+    elif ctype == 'centered':
+        if val0 is None or vmin > val0 or vmax < val0:
+            print 'Error (set_colours): invalid val0'
+            sys.exit()
+        return centered_cmap(vmin, vmax, val0), vmin, vmax
 
     elif ctype == 'vel':
         # Make sure it starts at 0

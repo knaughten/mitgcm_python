@@ -1349,7 +1349,7 @@ def timeseries_contenders (base_dir='./', fig_dir='./'):
 
 
 # Make a fancy 3-part timeseries
-def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
+def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
     # Temperature threshold at Filchner Ice Shelf front
     temp_threshold = -1.5
@@ -1443,3 +1443,24 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png')
+
+
+# Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
+def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
+
+    sim = sim_keys.index(sim_key)
+    sim_name = sim_names[sim][:-3]
+    file_path = sim_dirs[sim] + hovmoller_file
+    t0 = -1.9
+    s0 = 34.
+    title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
+    
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(base_dir+grid_path)
+    
+    read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], annual_average=True, date_since_start=True, ctype='centered', t0=t0, s0=s0, title=title, figsize=(8,5)) #, fig_name=fig_dir+'hovmoller.png')
+
+    
+
+    
