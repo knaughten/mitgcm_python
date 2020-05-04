@@ -1463,7 +1463,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
 
-    read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), mark_year=threshold_year) #, fig_name=fig_dir+'hovmoller.png')
+    read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), mark_year=threshold_year) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
 
     
 
