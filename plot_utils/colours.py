@@ -14,7 +14,7 @@ import sys
 # 'basic': just the 'jet' colourmap
 # 'plusminus': a red/blue colour map where 0 is white
 # 'ratio': as above, but 1 is white and the data does not go below 0
-# 'centered': as plusminus, but centered on the given value with white
+# 'centered': as above, but centered on the given value with white
 # 'vel': the 'cool' colourmap starting at 0; good for plotting velocity
 # 'ismr': a special colour map for ice shelf melting/refreezing, with negative values in blue, 0 in white, and positive values moving from yellow to orange to red to pink.
 # 'psi': a special colour map for streamfunction contours, with negative values in blue and positive values in red, but small values more visible than regular plus-minus.
@@ -47,7 +47,9 @@ def plusminus_cmap (vmin, vmax):
 
 def centered_cmap (vmin, vmax, val0):
 
-    return plusminus_cmap(vmin-val0, vmax-val0)
+    cmap_vals = np.array([vmin, val0, vmax])
+    cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
+    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'centered')
 
 
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
