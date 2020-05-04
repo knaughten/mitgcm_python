@@ -1367,6 +1367,9 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
+    vmin = [0.015, -2.28, 25]
+    vmax = [0.066, -1.45, 365]
+    ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(50, 450, 100)]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1388,11 +1391,10 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
     data_smoothed = []
     time = []
     time_smoothed = []
+    pi_mean = []
     for v in range(num_vars):
         # Calculate the pi-Control mean
-        pi_mean = np.mean(read_netcdf(sim_dir_base+fnames[v], var_names[v]))
-        print titles[v] + ', piControl mean: ' + str(pi_mean)
-
+        pi_mean.append(np.mean(read_netcdf(sim_dir_base+fnames[v], var_names[v])))
         # Now loop over simulations
         data_sim = []
         data_sim_smooth = []
@@ -1402,8 +1404,6 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
             data_tmp = read_netcdf(file_path, var_names[v])
             # Calculate annual averages
             time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
-            # Now get the anomaly
-            data_tmp -= pi_mean
             # Smooth if needed (smooth=0 will do nothing)
             data_smooth_tmp, time_smooth_tmp = moving_average(data_tmp, smooth[v], time=time_tmp)
             # Save the results
@@ -1421,23 +1421,25 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         ax = plt.subplot(gs[v,0])
         for n in range(num_sims):
-            # Black line at 0
-            ax.axhline(color='black')
             if smooth[v] != 0:
                 # Plot unsmoothed versions in a lighter colour and thinner weight
                 ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
             # Plot smoothed versions on top
             ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
             # Dashed vertical line at threshold year
-            ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed')
+            ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+        # Black line for piControl mean
+        ax.axhline(pi_mean[v], color='black', linewidth=1)
         ax.grid(True)
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
         ax.set_xlim([time[0][0], time[0][-1]])
+        ax.set_ylim([vmin[v], vmax[v]])
         if v==num_vars-1:
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
+        ax.set_yticks(ticks[v])
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims)
-    plt.suptitle('Filchner-Ronne Ice Shelf\nanomalies from piControl mean', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'timeseries.png')
+    plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries.png', dpi=300)

@@ -192,7 +192,7 @@ def set_panels (key, figsize=None):
     elif key == '3x1C0':
         # 3 plots arranged vertically, with space for a legend at the bottom but no colourbar
         gs = plt.GridSpec(3,1)
-        gs.update(left=0.15, right=0.95, bottom=0.12, top=0.85, hspace=0.2)
+        gs.update(left=0.12, right=0.95, bottom=0.12, top=0.9, hspace=0.2)
         
     if key == 'CTD':
         return fig, gs_1, gs_2
