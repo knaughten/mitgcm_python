@@ -120,30 +120,21 @@ def psi_cmap (vmin, vmax, change_points=None):
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'psi')
 
 
-def ratio_cmap (vmin, vmax):
-    # 0 is dark blue, 1 is white, vmax is dark red
-    cmap_vals = np.array([0, 1, vmax])
-    cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
-    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
-
-
 def centered_cmap (vmin, vmax, val0):
 
     ncolours = 256
-    half_colours = ncolours/2
-    
-    cmap_vals = []
-    cmap_colours = []
 
     set1 = np.linspace(vmin, val0, num=half_colours, endpoint=False)
-    for n in range(half_colours):
-        cmap_vals.append(set1[n])
-        cmap_colours.append(plt.get_cmap('RdBu_r')(n))
     set2 = np.linspace(val0, vmax, num=half_colours)
-    for n in range(half_colours, ncolours):
-        cmap_vals.append(set2[n-half_colours])
+    cmap_vals = np.concatenate((set1, set2))
+    cmap_colours = []
+    for n in range(ncolours):
         cmap_colours.append(plt.get_cmap('RdBu_r')(n))
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'centered')
+
+
+def ratio_cmap (vmin, vmax):
+    return centered_cmap(0, vmax, 1)
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, val0=None):
