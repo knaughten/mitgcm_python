@@ -11,7 +11,7 @@ import datetime
 
 from grid import choose_grid, Grid
 from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
-from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label
+from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label, reduce_cbar_labels
 from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from plot_1d import timeseries_multi_plot
@@ -282,7 +282,8 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
         img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, val0=val0[i])
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
-        plt.colorbar(img, cax=cax[i], extend=extend)
+        cbar = plt.colorbar(img, cax=cax[i], extend=extend)
+        reduce_cbar_labels(cbar)
         if i == 0:
             # Remove x-tick labels from top plot
             ax.set_xticklabels([])
