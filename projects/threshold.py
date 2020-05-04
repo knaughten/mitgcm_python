@@ -1359,22 +1359,85 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
     sim_dir_base = sim_dirs[sim_number_base]
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['blue', 'red']
+    var_names = ['fris_mean_psi', 'fris_temp', 'fris_massloss']
+    fnames = [timeseries_file_psi, timeseries_file, timeseries_file]
+    smooth = [5, 0, 2]
+    titles = ['a) Circulation strength in cavity', 'b) Average temperature in cavity', 'c) Basal mass loss from ice shelf']
+    units = ['Sv', deg_string+'C', 'Gt/y']
+    num_sims = len(sim_numbers)
+    num_vars = len(var_names)
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     # Get year that Stage 2 begins for each simulation
     threshold_year = []
-    for n in range(len(sim_numbers)):
-        file_path = sim_dirs_plot[n] + timeseries_file_tmax
+    for n in range(num_sims):
+        file_path = base_dir + sim_dirs_plot[n] + timeseries_file_tmax
         time = netcdf_time(file_path, monthly=False)
         tmax = read_netcdf(file_path, 'filchner_front_tmax')
         time, tmax = calc_annual_averages(time, tmax)
         i = np.where(tmax > temp_threshold)[0][0]
-        threshold_year.append(time[i].year)
-        
+        year_cross = time[i].year-time[0].year
+        threshold_year.append(year_cross)
+        print sim_names_plot[n] + ' crosses threshold in year ' + str(year_cross)
 
-    # Read timeseries of filchner_front_tmax (in timeseries_tmax.nc) to get first year that annual average exceeds a threshold: -1 or -1.5?
-    # Three panels: circulation strength, cavity temperature, FRIS mass loss
-    # Show departure from piControl mean for each of abrupt-4xCO2 and 1pctCO2
-    # Plot smoothed (11-year, 0-year, 5-year) version as thicker line on top; thinner/lighter lines in background show unsmoothed version
-    # Plot dashed lines showing stage 1 and stage 2 for each case, based on filchner_front_tmax threshold
-    # Arrange panels vertically with legend at bottom
-    
+    # Read the data, looping over variables
+    data = []
+    data_smoothed = []
+    time = []
+    time_smoothed = []
+    for v in range(num_vars):
+        # Calculate the pi-Control mean
+        pi_mean = np.mean(read_netcdf(sim_dir_base+fnames[v], var_names[v]))
+        print titles[v] + ', piControl mean: ' + str(pi_mean)
+
+        # Now loop over simulations
+        data_sim = []
+        data_sim_smooth = []
+        for n in range(num_sims):
+            file_path = sim_dirs_plot[n] + fnames[v]
+            time_tmp = netcdf_time(file_path, monthly=False)
+            data_tmp = read_netcdf(file_path, var_names[v])
+            # Calculate annual averages
+            time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+            # Now get the anomaly
+            data_tmp -= pi_mean
+            # Smooth if needed (smooth=0 will do nothing)
+            data_smooth_tmp, time_smooth_tmp = moving_average(data_tmp, smooth[v], time=time_tmp)
+            # Save the results
+            data_sim.append(data_tmp)
+            data_sim_smooth.append(data_smooth_tmp)
+            if n == 0:
+                # Also save time arrays, but just the year since start
+                time.append([t.year-time_tmp[0].year for t in time_tmp])
+                time_smoothed.append([(t.year-time_tmp[0].year) for t in time_smooth_tmp])
+        data.append(data_sim)
+        data_smoothed.append(data_sim_smooth)
+
+    # Set up plot
+    fig, gs = set_panels('3x1C0')
+    for v in range(num_vars):
+        ax = plt.subplot(gs[v,0])
+        for n in range(num_sims):
+            # Black line at 0
+            ax.axhline(color='black')
+            if smooth[v] != 0:
+                # Plot unsmoothed versions in a lighter colour and thinner weight
+                ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
+            # Plot smoothed versions on top
+            ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
+            # Dashed vertical line at threshold year
+            ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed')
+        ax.grid(True)
+        ax.set_title(titles[v], fontsize=18)
+        ax.set_ylabel(units[v], fontsize=13)
+        ax.set_xlim([time[0][0], time[0][-1]])
+        if v==num_vars-1:
+            ax.set_xlabel('Year', fontsize=13)
+        else:
+            ax.set_xticklabels([])
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims)
+    plt.suptitle('Filchner-Ronne Ice Shelf\nanomalies from piControl mean', fontsize=22)
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries.png')
