@@ -48,7 +48,8 @@ def plusminus_cmap (vmin, vmax):
 def centered_cmap (vmin, vmax, val0):
 
     cmap_vals = np.array([vmin, val0, vmax])
-    cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
+    cmap_orig = plt.get_cmap('RdBu_r')
+    cmap_colours = [cmap_orig(0), cmap_orig(128), cmap_orig(255)]
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'centered')
 
 
