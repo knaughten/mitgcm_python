@@ -248,6 +248,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     ax.set_xlim([time_edges[0], time_edges[-1]])
     # Make nice axes labels
     depth_axis(ax)
+    ax.set_xlabel('Year', fontsize=14)
     if make_cbar:
         # Add a colourbar
         plt.colorbar(img, extend=extend)
