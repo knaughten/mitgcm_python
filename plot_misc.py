@@ -206,7 +206,7 @@ def hovmoller_plot (data, time, grid, smooth=0, annual_average=False, ax=None, m
         
     if date_since_start:
         time_years = [t.year + t.month/12. for t in time_edges]
-        time_edges = [t - time_years[0] for t in time_years]
+        time_edges = np.array([t - time_years[0] for t in time_years])
 
     # Smooth with a moving average
     data, time_edges = moving_average(data, smooth, time=time_edges)
