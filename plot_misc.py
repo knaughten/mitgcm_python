@@ -184,12 +184,12 @@ def hovmoller_plot (data, time, grid, smooth=0, annual_average=False, ax=None, m
         extend = get_extend(vmin=vmin, vmax=vmax)
 
     if monthly:
-        if annual_average:
-            time, data = calc_annual_averages(time, data)
-            end_time = datetime.datetime(time[-1].year+1, time[-1].month, time[-1].day)
         # As in netcdf_time, the time axis will have been corrected so it is
         # marked with the beginning of each month. So to get the boundaries of
-        # each time index, we just need to add one month to the end.
+        # each time index, we just need to add one month (or year if annual_average) to the end.
+        if annual_average:
+            time, data = calc_annual_averages(time, data)
+            end_time = datetime.datetime(time[-1].year+1, time[-1].month, time[-1].day)        
         elif time[-1].month == 12:
             end_time = datetime.datetime(time[-1].year+1, 1, 1)
         else:

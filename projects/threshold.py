@@ -1454,11 +1454,11 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     t0 = -1.9
     s0 = 34.
     title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
-    
+
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
-    
+
     read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], annual_average=True, date_since_start=True, ctype='centered', t0=t0, s0=s0, title=title, figsize=(8,5)) #, fig_name=fig_dir+'hovmoller.png')
 
     

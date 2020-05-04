@@ -1073,7 +1073,7 @@ def monthly_to_annual (data, time):
 # This only works properly if it's a 360-day calendar with full years.
 # Input arguments:
 # times: either an array of time values, or a list of several arrays of time values
-# datas: either an array of 1D data, or a list of several arrays of 1D data
+# datas: either an array of data, or a list of several arrays of data. They can be any dimension as long as the first dimension is time.
 # Returns the annually-averaged version of each.
 def calc_annual_averages (times, datas):
 
@@ -1091,7 +1091,8 @@ def calc_annual_averages (times, datas):
         times[n] = np.array([times[n][i] for i in range(6, times[n].size, 12)])
     # Average in blocks of 12
     for n in range(len(datas)):
-        datas[n] = np.mean(datas[n].reshape(datas[n].size/12, 12), axis=-1)
+        new_shape = np.concatenate(([data.shape[0]/12], data.shape[1:], [12]))
+        datas[n] = np.mean(datas[n].reshape(new_shape), axis=-1)
 
     if time_single:
         times = times[0]
