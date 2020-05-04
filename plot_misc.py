@@ -245,6 +245,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         k_top = np.argwhere(np.invert(data[0,:].mask))[0][0]
         zmax = grid.z_edges[k_top]    
     ax.set_ylim([zmin, zmax])
+    ax.set_xlim([time_edges[0], time_edges[-1]])
     # Make nice axes labels
     depth_axis(ax)
     if make_cbar:
