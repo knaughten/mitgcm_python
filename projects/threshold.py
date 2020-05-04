@@ -1352,7 +1352,7 @@ def timeseries_contenders (base_dir='./', fig_dir='./'):
 def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
     # Temperature threshold at Filchner Ice Shelf front
-    temp_threshold = -1.5
+    temp_threshold = -1
 
     sim_number_base = 1
     sim_numbers = [5,3]
