@@ -239,7 +239,7 @@ def default_colours (n):
 
 
 # NetCDF interface to timeseries_multi_plot, for multiple variables in the same simulation (that have the same units). Can set diff=True and file_path as a list of two file paths if you want a difference plot.
-def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, smooth=0):
+def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, smooth=0, annual_average=False):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
         print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
@@ -260,7 +260,9 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
     
     data = []
     labels = []
-    units = None        
+    units = None
+    if annual_average:
+        time_orig = np.copy(time)
     # Loop over variables
     for var in var_names:
         if var.endswith('mass_balance'):
@@ -277,18 +279,20 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
             if diff:
                 data_1 = read_netcdf(file_path[0], var)
                 data_2 = read_netcdf(file_path[1], var)
-                data.append(trim_and_diff(time_1, time_2, data_1, data_2)[1])
+                data_tmp = trim_and_diff(time_1, time_2, data_1, data_2)[1]
             else:
-                data.append(read_netcdf(file_path, var))
+                data_tmp = read_netcdf(file_path, var)
         else:
             if diff:
                 time, data_tmp = calc_special_timeseries_diff(var, file_path[0], file_path[1], grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
             else:
                 time, data_tmp = calc_special_timeseries(var, file_path, grid=grid, lon0=lon0, lat0=lat0, monthly=monthly)
-            data.append(data_tmp)
+        if annual_average:
+            time, data_tmp = calc_annual_averages(time_orig, data_tmp)
+        data.append(data_tmp)
     for n in range(len(data)):
-        data_tmp, time_tmp = moving_average(data[n], smooth, time=time)
-        data[n] = data_tmp
+        data_tmp, time_tmp = moving_average(data[n], smooth, time=time)        
+        data[n] = data_tmp        
     time = time_tmp
     title, labels = trim_titles(labels)
     if diff:
