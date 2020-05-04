@@ -1448,18 +1448,18 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 # Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
 def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
-sim = sim_keys.index(sim_key)
-sim_name = sim_names[sim][:-3]
-file_path = sim_dirs[sim] + hovmoller_file
-t0 = -1.9
-s0 = 34.
-title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
+    sim = sim_keys.index(sim_key)
+    sim_name = sim_names[sim][:-3]
+    file_path = sim_dirs[sim] + hovmoller_file
+    t0 = -1.9
+    s0 = 34.
+    title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
 
-base_dir = real_dir(base_dir)
-fig_dir = real_dir(fig_dir)
-grid = Grid(base_dir+grid_path)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(base_dir+grid_path)
 
-read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6)) #, fig_name=fig_dir+'hovmoller.png')
+    read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6)) #, fig_name=fig_dir+'hovmoller.png')
 
     
 
