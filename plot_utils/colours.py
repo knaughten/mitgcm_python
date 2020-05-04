@@ -45,14 +45,6 @@ def plusminus_cmap (vmin, vmax):
     return truncate_colourmap(plt.get_cmap('RdBu_r'), min_colour, max_colour)
 
 
-def centered_cmap (vmin, vmax, val0):
-
-    cmap_vals = np.array([vmin, val0, vmax])
-    cmap_orig = plt.get_cmap('RdBu_r')
-    cmap_colours = [cmap_orig(0), cmap_orig(128), cmap_orig(255)]
-    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'centered')
-
-
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
 def special_cmap (cmap_vals, cmap_colours, vmin, vmax, name):
 
@@ -133,6 +125,25 @@ def ratio_cmap (vmin, vmax):
     cmap_vals = np.array([0, 1, vmax])
     cmap_colours = [(0, 0, 0.5), (1, 1, 1), (0.5, 0, 0)]
     return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'ratio')
+
+
+def centered_cmap (vmin, vmax, val0):
+
+    ncolours = 256
+    half_colours = ncolours/2
+    
+    cmap_vals = []
+    cmap_colours = []
+
+    set1 = np.linspace(vmin, val0, num=half_colours, endpoint=False)
+    for n in range(half_colours):
+        cmap_vals.append(set1[n])
+        cmap_colours.append(plt.get_cmap('RdBu_r')(n))
+    set2 = np.linspace(val0, vmax, num=half_colours)
+    for n in range(half_colours, ncolours):
+        cmap_vals.append(set2[n-half_colours])
+        cmap_colours.append(plt.get_cmap('RdBu_r')(n))
+    return special_cmap(cmap_vals, cmap_colours, vmin, vmax, 'centered')
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, val0=None):
