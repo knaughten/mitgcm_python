@@ -177,7 +177,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, smooth=0, annual_average=False, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
+def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -186,11 +186,8 @@ def hovmoller_plot (data, time, grid, smooth=0, annual_average=False, ax=None, m
     if monthly:
         # As in netcdf_time, the time axis will have been corrected so it is
         # marked with the beginning of each month. So to get the boundaries of
-        # each time index, we just need to add one month (or year if annual_average) to the end.
-        if annual_average:
-            time, data = calc_annual_averages(time, data)
-            end_time = datetime.datetime(time[-1].year+1, time[-1].month, time[-1].day)        
-        elif time[-1].month == 12:
+        # each time index, we just need to add one month.
+        if time[-1].month == 12:
             end_time = datetime.datetime(time[-1].year+1, 1, 1)
         else:
             end_time = datetime.datetime(time[-1].year, time[-1].month+1, 1)
@@ -266,7 +263,7 @@ def hovmoller_plot (data, time, grid, smooth=0, annual_average=False, ax=None, m
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, annual_average=False, title=None, date_since_start=False, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2', figsize=figsize)
@@ -281,7 +278,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], annual_average=annual_average, date_since_start=date_since_start, val0=val0[i])
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, val0=val0[i])
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         plt.colorbar(img, cax=cax[i], extend=extend)
@@ -317,14 +314,14 @@ def read_plot_hovmoller (var_name, hovmoller_file, grid, smooth=0, zmin=None, zm
 
 
 # Read precomputed data for temperature and salinity and make a T/S Hovmoller plot.
-def read_plot_hovmoller_ts (hovmoller_file, loc, grid, smooth=0, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, annual_average=False, date_since_start=False, ctype='basic', t0=None, s0=None, title=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
+def read_plot_hovmoller_ts (hovmoller_file, loc, grid, smooth=0, zmin=None, zmax=None, tmin=None, tmax=None, smin=None, smax=None, t_contours=None, s_contours=None, date_since_start=False, ctype='basic', t0=None, s0=None, title=None, fig_name=None, monthly=True, figsize=(12,7), dpi=None):
 
     grid = choose_grid(grid, None)
     temp = read_netcdf(hovmoller_file, loc+'_temp')
     salt = read_netcdf(hovmoller_file, loc+'_salt')
     time = netcdf_time(hovmoller_file, monthly=False)
     loc_string = region_names[loc]
-    hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, annual_average=annual_average, title=title, date_since_start=date_since_start, ctype=ctype, t0=t0, s0=s0, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, title=title, date_since_start=date_since_start, ctype=ctype, t0=t0, s0=s0, fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
 # Helper function for difference plots
