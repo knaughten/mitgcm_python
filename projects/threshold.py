@@ -41,6 +41,7 @@ timeseries_file = 'timeseries.nc'
 timeseries_file_2 = 'timeseries2_annual.nc'
 timeseries_file_psi = 'timeseries_psi.nc'
 timeseries_file_drho = 'timeseries_drho.nc'
+timeseries_file_tmax = 'timeseries_tmax.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -1350,12 +1351,30 @@ def timeseries_contenders (base_dir='./', fig_dir='./'):
 # Make a fancy 3-part timeseries
 def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
 
+    # Temperature threshold at Filchner Ice Shelf front
+    temp_threshold = -1.5
+
+    sim_number_base = 1
+    sim_numbers = [5,3]
+    sim_dir_base = sim_dirs[sim_number_base]
+    sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+
+    # Get year that Stage 2 begins for each simulation
+    threshold_year = []
+    for n in range(len(sim_numbers)):
+        file_path = sim_dirs_plot[n] + timeseries_file_tmax
+        time = netcdf_time(file_path, monthly=False)
+        tmax = read_netcdf(file_path, 'filchner_front_tmax')
+        time, tmax = calc_annual_averages(time, tmax)
+        i = np.where(tmax > temp_threshold)[0][0]
+        threshold_year.append(time[i].year)
+        
+
     # Read timeseries of filchner_front_tmax (in timeseries_tmax.nc) to get first year that annual average exceeds a threshold: -1 or -1.5?
     # Three panels: circulation strength, cavity temperature, FRIS mass loss
     # Show departure from piControl mean for each of abrupt-4xCO2 and 1pctCO2
     # Plot smoothed (11-year, 0-year, 5-year) version as thicker line on top; thinner/lighter lines in background show unsmoothed version
     # Plot dashed lines showing stage 1 and stage 2 for each case, based on filchner_front_tmax threshold
     # Arrange panels vertically with legend at bottom
-
-    pass
     
