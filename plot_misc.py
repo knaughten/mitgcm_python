@@ -236,7 +236,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         plt.contour(time_centres, grid.z, np.transpose(data), levels=contours, colors='black', linestyles='solid')
 
     if mark_year is not None:
-        ax.axvline(mark_year, linestyle='dashed', linewidth=2)
+        ax.axvline(mark_year, linestyle='dashed', color='black')
 
     # Set depth limits
     if zmin is None:
