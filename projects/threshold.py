@@ -1442,4 +1442,4 @@ def plot_3pt_timeseries (base_dir='./', fig_dir='./'):
         ax.set_yticks(ticks[v])
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'timeseries.png')
