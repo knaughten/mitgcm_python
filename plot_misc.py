@@ -288,6 +288,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
             ax.set_xticklabels([])
         else:
             ax.set_xlabel('Year', fontsize=14)
+            ax.set_ylabel('')
     if title is None:
         title = loc_string
     plt.suptitle(title, fontsize=22)
