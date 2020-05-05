@@ -14,15 +14,15 @@ import netCDF4 as nc
 from scipy import stats
 
 from ..grid import Grid, choose_grid, UKESMGrid
-from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude
+from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary, NCfile_basiclatlon
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
-from ..constants import deg_string, vaf_to_gmslr, temp_C2K
+from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
@@ -1486,32 +1486,86 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
 
 # Plot the basic parts of the schematic.
-def plot_schematic (base_dir='./', fig_dir='./'):
+def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaight/bedmap2_icemask_grounded_and_shelves.flt', mask_file='antarctica_mask.nc'):
 
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
+    from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
 
     titles = ['Baseline', 'Stage 1', 'Stage 2']
     val0 = -100
-    vmin = -200
+    vmin = -250
     vmax = 0
+    num_pts = 1000
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-
     grid = Grid(base_dir+grid_path)
-    # Get an array of all -100
+
+    if not os.path.isfile(mask_file):
+        # Create the whole-Antarctica mask file
+        
+        # Read the BEDMAP mask data: 0 is grounded ice, 1 is ice shelf, -9999 is open ocean
+        bedmap_x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
+        bedmap_y = np.copy(bedmap_x)
+        bedmap_mask = np.flipud(np.fromfile(bedmap_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+        # Replace open ocean values to be 2
+        bedmap_mask[bedmap_mask==-9999] = 2
+        # Interpolate to coarse-resolution polar stereographic coordinates
+        aa_x = np.linspace(-bedmap_bdry, bedmap_bdry, num=num_pts)
+        aa_y = np.copy(x)
+        bedmap_interpolant = RectBivariateSpline(bedmap_y, bedmap_x, bedmap_mask)
+        mask_interp = bedmap_interpolant(aa_y, aa_x)
+        
+        # Now replace with model mask inside model domain
+        model_x, model_y = polar_stereo(grid.lon_2d, grid.lat_2d)
+        # Construct so 0 is grounded ice ("land"), 1 is ice shelf, 2 is open ocean
+        model_mask = 2*(1 - grid.land_mask) - grid.ice_mask
+        model_interpolant = RegularGridInterpolator((model_y, model_x), model_mask, bounds_error=False)
+        aa_x_2d, aa_y_2d = np.meshgrid(aa_x, aa_y)
+        mask_interp_2 = model_interpolant((aa_y_2d, aa_x_2d))
+        # Fill in the first mask with this new data where it exists
+        missing = np.isnan(mask_interp_2)
+        mask_interp[~missing] = mask_interp_2[~missing]
+
+        # Now deal with intermediate values
+        aa_grounded_mask = (mask_interp < 0.5).astype(float)
+        aa_ocean_mask = (mask_interp > 1.5).astype(float)
+
+        # Save to file - it's xy not lat-lon but who cares!
+        ncfile = NCfile_basiclatlon(mask_file, aa_x, aa_y)
+        ncfile.add_variable('grounded', aa_grounded_mask)
+        ncfile.add_variable('ocean', aa_ocean_mask)
+        ncfile.close()
+
+    else:
+        # Read the precomputed data
+        aa_x = read_netcdf(mask_file, 'lon')
+        aa_y = read_netcdf(mask_file, 'lat')
+        aa_grounded_mask = read_netcdf(mask_file, 'grounded')
+        aa_ocean_mask = read_netcdf(mask_file, 'ocean')
+    
+    # Get an array of all -100 for the model open ocean
     data = val0*mask_land_ice(grid.get_open_ocean_mask().astype(float), grid)
 
     fig, gs = set_panels('1x3C0', figsize=(9,3.5))
     for i in range(3):
         ax = plt.subplot(gs[0,i])
         ax.axis('equal')
+        # Shade open ocean in light blue
         img = latlon_plot(data, grid, ax=ax, ctype='plusminus', make_cbar=False, zoom_fris=True, pster=True, title=titles[i], vmin=vmin, vmax=vmax, contour_shelf=False)
-        [xmin, xmax] = ax.get_xlim()
-        [ymin, ymax] = ax.get_ylim()
         if i==0:
+            # Plot the whole of Antarctica to show the cutout
+            [xmin, xmax] = ax.get_xlim()
+            [ymin, ymax] = ax.get_ylim()
             ax2 = inset_axes(ax, "30%", "30%", loc=2, borderpad=0.2)
+            data2 = np.ma.masked_where(np.invert(aa_ocean_mask), np.ones([num_pts, num_pts]))
+            # Shade the grounded ice in grey
+            ax2.contourf(aa_x, aa_y, np.ma.masked_where(np.invert(aa_grounded_mask), aa_grounded_mask), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+            # Shade the open ocean in light blue
+            ax2.contourf(aa_x, aa_y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu_r')(150)]))
+            # Now overlay the limits in a red box
+            ax2.plot([xmin, xmax, xmax, xmin, xmin], [ymax, ymax, ymin, ymin, ymax], color='red')
             ax2.set_xticks([])
             ax2.set_yticks([])
     finished_plot(fig) #, fig_name=fig_dir+'schematic_base.png')
