@@ -1429,7 +1429,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             # Dashed vertical line at threshold year
             ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
         # Black line for piControl mean
-        ax.axhline(pi_mean[v], color='black', linewidth=1)
+        ax.axhline(pi_mean[v], color='black', linewidth=1, label='piControl mean')
         ax.grid(True)
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
@@ -1440,7 +1440,13 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         else:
             ax.set_xticklabels([])
         ax.set_yticks(ticks[v])
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims)
+        if v==1:
+            # Add Stage 1 and Stage 2 text
+            plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
+            plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.48,-0.5), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png')
 
@@ -1465,7 +1471,15 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
 
-    read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), mark_year=threshold_year, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
+    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    for ax in axs:
+        ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
+    axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
+    if sim_key == 'abIO':
+        axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
+    elif sim_key == '1pIO':
+        axs[0].text(threshold_year-2, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
 
     
 
