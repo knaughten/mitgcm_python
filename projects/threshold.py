@@ -1478,8 +1478,8 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     if sim_key == 'abIO':
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
-        axs[0].text(threshold_year-2, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
+        axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
 
     
 
