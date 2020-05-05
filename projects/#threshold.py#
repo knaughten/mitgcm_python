@@ -1454,32 +1454,32 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 # Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
 def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
-    sim = sim_keys.index(sim_key)
-    sim_name = sim_names[sim][:-3]
-    file_path = sim_dirs[sim] + hovmoller_file
-    t0 = -1.9
-    s0 = 34.
-    title = 'Conditions averaged over Filchner Trough'
-    if sim_key == 'abIO':
-        threshold_year = 79
-        title += ' (abrupt-4xCO2)'
-    elif sim_key == '1pIO':
-        threshold_year = 146
-        title += ' (1pctCO2)'
+sim = sim_keys.index(sim_key)
+sim_name = sim_names[sim][:-3]
+file_path = sim_dirs[sim] + hovmoller_file
+t0 = -1.9
+s0 = 34.
+title = 'Conditions averaged over Filchner Trough'
+if sim_key == 'abIO':
+    threshold_year = 79
+    title += ' (abrupt-4xCO2)'
+elif sim_key == '1pIO':
+    threshold_year = 146
+    title += ' (1pctCO2)'
 
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-    grid = Grid(base_dir+grid_path)
+base_dir = real_dir(base_dir)
+fig_dir = real_dir(fig_dir)
+grid = Grid(base_dir+grid_path)
 
-    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
-    for ax in axs:
-        ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
-    axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
-    if sim_key == 'abIO':
-        axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
-    elif sim_key == '1pIO':
-        axs[0].text(threshold_year-2, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
+fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+for ax in axs:
+    ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
+axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
+if sim_key == 'abIO':
+    axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
+elif sim_key == '1pIO':
+    axs[0].text(threshold_year-2, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
 
     
 

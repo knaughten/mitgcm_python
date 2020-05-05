@@ -331,11 +331,7 @@ def read_plot_hovmoller_ts (hovmoller_file, loc, grid, smooth=0, zmin=None, zmax
     salt = read_netcdf(hovmoller_file, loc+'_salt')
     time = netcdf_time(hovmoller_file, monthly=False)
     loc_string = region_names[loc]
-    if return_fig:
-        fig, ax = hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, title=title, date_since_start=date_since_start, ctype=ctype, t0=t0, s0=s0, figsize=figsize, dpi=dpi, return_fig=return_fig)
-    else:
-        hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, title=title, date_since_start=date_since_start, ctype=ctype, t0=t0, s0=s0, figsize=figsize, dpi=dpi, fig_name=fig_name)
-        
+    return hovmoller_ts_plot(temp, salt, time, grid, smooth=smooth, tmin=tmin, tmax=tmax, smin=smin, smax=smax, zmin=zmin, zmax=zmax, monthly=monthly, t_contours=t_contours, s_contours=s_contours, loc_string=loc_string, title=title, date_since_start=date_since_start, ctype=ctype, t0=t0, s0=s0, figsize=figsize, dpi=dpi, return_fig=return_fig, fig_name=fig_name)        
 
 
 # Helper function for difference plots
