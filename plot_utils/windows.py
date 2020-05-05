@@ -109,7 +109,7 @@ def set_panels (key, figsize=None):
     elif key == '1x3C0':
         # Three side-by-side plots with no colourbar
         gs = plt.GridSpec(1,3)
-        gs.update(left=0.05, right=0.98, bottom=0.05, top=0.85, wspace=0.05)
+        gs.update(left=0.02, right=0.98, bottom=0.05, top=0.85, wspace=0.03)
     elif key == '1x3C3':
         # Three side-by-side plots with three colourbars below
         gs = plt.GridSpec(1,3)

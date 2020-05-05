@@ -8,6 +8,7 @@ import sys
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.colors as cl
 import itertools
 import netCDF4 as nc
 from scipy import stats
@@ -1454,6 +1455,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 # Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
 def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
     sim = sim_keys.index(sim_key)
     sim_name = sim_names[sim][:-3]
     file_path = sim_dirs[sim] + hovmoller_file
@@ -1480,6 +1483,40 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
     finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
+
+
+# Plot the basic parts of the schematic.
+def plot_schematic (base_dir='./', fig_dir='./'):
+
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.colors as cl
+
+    titles = ['Baseline', 'Stage 1', 'Stage 2']
+    val0 = -100
+    vmin = -200
+    vmax = 0
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    grid = Grid(base_dir+grid_path)
+    # Get an array of all -100
+    data = val0*mask_land_ice(grid.get_open_ocean_mask().astype(float), grid)
+
+    fig, gs = set_panels('1x3C0', figsize=(9,3.5))
+    for i in range(3):
+        ax = plt.subplot(gs[0,i])
+        ax.axis('equal')
+        img = latlon_plot(data, grid, ax=ax, ctype='plusminus', make_cbar=False, zoom_fris=True, pster=True, title=titles[i], vmin=vmin, vmax=vmax, contour_shelf=False)
+        [xmin, xmax] = ax.get_xlim()
+        [ymin, ymax] = ax.get_ylim()
+        if i==0:
+            ax2 = inset_axes(ax, "30%", "30%", loc=2, borderpad=0.2)
+            ax2.set_xticks([])
+            ax2.set_yticks([])
+    finished_plot(fig) #, fig_name=fig_dir+'schematic_base.png')
+    
+    
 
     
 
