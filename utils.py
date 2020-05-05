@@ -210,7 +210,7 @@ def select_year (time, year):
     return t_start, t_end
 
 
-# Convert longitude and latitude to polar stereographic projection used by BEDMAP2. Adapted from polarstereo_fwd.m in the MITgcm Matlab toolbox.
+# Convert longitude and latitude to polar stereographic projection used by BEDMAP2. Adapted from polarstereo_fwd.m in the MITgcm Matlab toolbox for Bedmap.
 def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
 
     # Deep copies of arrays in case they are reused
@@ -238,7 +238,7 @@ def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     x = pm*rho*np.sin(lon - lon0)
     y = -pm*rho*np.cos(lon - lon0)
 
-    return x, y    
+    return x, y
 
 
 # Determine the x and y coordinates based on whether the user wants polar stereographic or not.

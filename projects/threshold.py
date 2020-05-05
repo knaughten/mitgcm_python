@@ -1486,65 +1486,29 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
 
 # Plot the basic parts of the schematic.
-def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaight/bedmap2_icemask_grounded_and_shelves.flt', mask_file='antarctica_mask.nc'):
+def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaight/bedmap2_icemask_grounded_and_shelves.flt'):
 
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
-    from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
 
     titles = ['Baseline', 'Stage 1', 'Stage 2']
     val0 = -100
     vmin = -250
     vmax = 0
-    num_pts = 1000
+    [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
 
-    if not os.path.isfile(mask_file):
-        # Create the whole-Antarctica mask file
-        
-        # Read the BEDMAP mask data: 0 is grounded ice, 1 is ice shelf, -9999 is open ocean
-        bedmap_x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
-        bedmap_y = np.copy(bedmap_x)
-        bedmap_mask = np.flipud(np.fromfile(bedmap_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
-        # Replace open ocean values to be 2
-        bedmap_mask[bedmap_mask==-9999] = 2
-        # Interpolate to coarse-resolution polar stereographic coordinates
-        aa_x = np.linspace(-bedmap_bdry, bedmap_bdry, num=num_pts)
-        aa_y = np.copy(x)
-        bedmap_interpolant = RectBivariateSpline(bedmap_y, bedmap_x, bedmap_mask)
-        mask_interp = bedmap_interpolant(aa_y, aa_x)
-        
-        # Now replace with model mask inside model domain
-        model_x, model_y = polar_stereo(grid.lon_2d, grid.lat_2d)
-        # Construct so 0 is grounded ice ("land"), 1 is ice shelf, 2 is open ocean
-        model_mask = 2*(1 - grid.land_mask) - grid.ice_mask
-        model_interpolant = RegularGridInterpolator((model_y, model_x), model_mask, bounds_error=False)
-        aa_x_2d, aa_y_2d = np.meshgrid(aa_x, aa_y)
-        mask_interp_2 = model_interpolant((aa_y_2d, aa_x_2d))
-        # Fill in the first mask with this new data where it exists
-        missing = np.isnan(mask_interp_2)
-        mask_interp[~missing] = mask_interp_2[~missing]
+    # Read the BEDMAP mask data: 0 is grounded ice, 1 is ice shelf, -9999 is open ocean
+    x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
+    y = np.copy(x)
+    mask = np.flipud(np.fromfile(bedmap_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    # Extract grounded ice and open ocean
+    grounded_mask = mask==0
+    ocean_mask = mask==-9999
 
-        # Now deal with intermediate values
-        aa_grounded_mask = (mask_interp < 0.5).astype(float)
-        aa_ocean_mask = (mask_interp > 1.5).astype(float)
-
-        # Save to file - it's xy not lat-lon but who cares!
-        ncfile = NCfile_basiclatlon(mask_file, aa_x, aa_y)
-        ncfile.add_variable('grounded', aa_grounded_mask)
-        ncfile.add_variable('ocean', aa_ocean_mask)
-        ncfile.close()
-
-    else:
-        # Read the precomputed data
-        aa_x = read_netcdf(mask_file, 'lon')
-        aa_y = read_netcdf(mask_file, 'lat')
-        aa_grounded_mask = read_netcdf(mask_file, 'grounded')
-        aa_ocean_mask = read_netcdf(mask_file, 'ocean')
-    
     # Get an array of all -100 for the model open ocean
     data = val0*mask_land_ice(grid.get_open_ocean_mask().astype(float), grid)
 
@@ -1559,19 +1523,22 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             [xmin, xmax] = ax.get_xlim()
             [ymin, ymax] = ax.get_ylim()
             ax2 = inset_axes(ax, "30%", "30%", loc=2, borderpad=0.2)
-            data2 = np.ma.masked_where(np.invert(aa_ocean_mask), np.ones([num_pts, num_pts]))
+            ax2.axis('equal')
+            data2 = np.ma.masked_where(np.invert(ocean_mask==1), np.ones(ocean_mask.shape))
             # Shade the grounded ice in grey
-            ax2.contourf(aa_x, aa_y, np.ma.masked_where(np.invert(aa_grounded_mask), aa_grounded_mask), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
-            # Shade the open ocean in light blue
-            ax2.contourf(aa_x, aa_y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu_r')(150)]))
+            ax2.pcolormesh(x, y, np.ma.masked_where(np.invert(grounded_mask), grounded_mask.astype(float)), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+            # Shade the open ocean in light pink
+            ax2.pcolormesh(x, y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu')(100)]))
             # Now overlay the limits in a red box
             ax2.plot([xmin, xmax, xmax, xmin, xmin], [ymax, ymax, ymin, ymin, ymax], color='red')
             ax2.set_xticks([])
             ax2.set_yticks([])
-    finished_plot(fig) #, fig_name=fig_dir+'schematic_base.png')
-    
-    
+            ax2.set_xlim([x0, x1])
+            ax2.set_ylim([y0, y1])
+    finished_plot(fig, fig_name=fig_dir+'schematic_base.png', dpi=300)
 
-    
+
+
+
 
     
