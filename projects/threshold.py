@@ -1492,13 +1492,12 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     import matplotlib.colors as cl
 
     titles = ['Baseline', 'Stage 1', 'Stage 2']
-    val0 = -100
-    vmin = -250
-    vmax = 0
     [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
     labels = ['BI', 'RIS', 'FIS', 'RD', 'BB', 'FT', 'A']
-    labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6, 0.45]
-    labels_y = [0.49, 0.3, 0.56, 0.56, 0.65, 0.7, 0.8]
+    labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6, 0.44]
+    labels_y = [0.49, 0.3, 0.56, 0.56, 0.62, 0.7, 0.77]
+    captions = ['Pre-industrial', 'Circulation weakens\nMelting decreases', 'Warm water inflow\nMelting increases']
+    caption_width = [None, "68%", "63%"]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1512,16 +1511,24 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     grounded_mask = mask==0
     ocean_mask = mask==-9999
 
-    # Get an array of all -100 for the model open ocean
-    data = val0*mask_land_ice(grid.get_open_ocean_mask().astype(float), grid)
+    # Open-ocean bathymetry in km
+    bathy = mask_land_ice(grid.bathy, grid)*1e-3
+    bounds = np.concatenate((np.linspace(-4, -2, num=6), np.linspace(-2, -1, num=10), np.linspace(-1, -0.5, num=12), np.linspace(-0.5, 0, num=15)))
+    norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
 
     fig, gs = set_panels('1x3C0', figsize=(9,3.5))
     for i in range(3):
         ax = plt.subplot(gs[0,i])
         ax.axis('equal')
-        # Shade open ocean in light blue
-        img = latlon_plot(data, grid, ax=ax, ctype='plusminus', make_cbar=False, zoom_fris=True, pster=True, title=titles[i], vmin=vmin, vmax=vmax, contour_shelf=False)
+        # Shade open ocean
+        img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, zoom_fris=True, pster=True, title=titles[i], contour_shelf=False)
         if i==0:
+            # Add a little colourbar for bathymetry
+            cax = inset_axes(ax, "5%", "20%", loc=4)
+            cbar = plt.colorbar(img, cax=cax, ticks=[-2, -1, 0])
+            cax.yaxis.set_ticks_position('left')
+            cbar.ax.set_yticklabels(['2', '1', '0'])
+            cbar.ax.tick_params(labelsize=10)
             # Plot the whole of Antarctica to show the cutout
             [xmin, xmax] = ax.get_xlim()
             [ymin, ymax] = ax.get_ylim()
@@ -1530,8 +1537,8 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             data2 = np.ma.masked_where(np.invert(ocean_mask==1), np.ones(ocean_mask.shape))
             # Shade the grounded ice in grey
             ax2.pcolormesh(x, y, np.ma.masked_where(np.invert(grounded_mask), grounded_mask.astype(float)), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
-            # Shade the open ocean in light pink
-            ax2.pcolormesh(x, y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu')(100)]))
+            # Shade the open ocean in light blue
+            ax2.pcolormesh(x, y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu')(170)]))
             # Now overlay the limits in a red box
             ax2.plot([xmin, xmax, xmax, xmin, xmin], [ymax, ymax, ymin, ymin, ymax], color='red')
             ax2.set_xticks([])
@@ -1541,11 +1548,12 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             # Add region labels
             for l in range(len(labels)):
                 ax.text(labels_x[l], labels_y[l], labels[l], fontsize=10, transform=ax.transAxes, ha='center', va='center')
-        elif i==1:
-            # Overlay descriptive text
-            ax.text(0.02, 0.98, 'Circulation weakens\nMelting decreases', fontsize=13, transform=ax.transAxes, ha='left', va='top')
-        elif i==2:
-            ax.text(0.02, 0.98, 'Warm water inflow\nMelting increases', fontsize=13, transform=ax.transAxes, ha='left', va='top')
+        else:
+            # Overlay descriptive text on white box
+            ax2 = inset_axes(ax, caption_width[i], "15%", loc=2, borderpad=0.1)
+            ax2.set_xticks([])
+            ax2.set_yticks([])
+            ax2.text(0.02, 0.98, captions[i], fontsize=13, transform=ax.transAxes, ha='left', va='top')
     finished_plot(fig, fig_name=fig_dir+'schematic_base.png', dpi=300)
 
 
