@@ -1449,7 +1449,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.48,-0.5), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'timeseries.png')
+    finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
 
 # Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
@@ -1482,7 +1482,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png')
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
 # Plot the basic parts of the schematic.
@@ -1496,6 +1496,9 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     vmin = -250
     vmax = 0
     [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
+    labels = ['BI', 'RIS', 'FIS', 'RD', 'BB', 'FT', 'A']
+    labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6, 0.45]
+    labels_y = [0.49, 0.3, 0.56, 0.56, 0.65, 0.7, 0.8]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1535,6 +1538,14 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             ax2.set_yticks([])
             ax2.set_xlim([x0, x1])
             ax2.set_ylim([y0, y1])
+            # Add region labels
+            for l in range(len(labels)):
+                ax.text(labels_x[l], labels_y[l], labels[l], fontsize=10, transform=ax.transAxes, ha='center', va='center')
+        elif i==1:
+            # Overlay descriptive text
+            ax.text(0.02, 0.98, 'Circulation weakens\nMelting decreases', fontsize=13, transform=ax.transAxes, ha='left', va='top')
+        elif i==2:
+            ax.text(0.02, 0.98, 'Warm water inflow\nMelting increases', fontsize=13, transform=ax.transAxes, ha='left', va='top')
     finished_plot(fig, fig_name=fig_dir+'schematic_base.png', dpi=300)
 
 
