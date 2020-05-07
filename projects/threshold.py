@@ -22,7 +22,7 @@ from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
-from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res
+from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res, deg2rad
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
@@ -1565,24 +1565,26 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     fig_dir = real_dir(fig_dir)
 
     grid = Grid(base_dir+grid_path)
-    scale = mask_land_ice(read_binary(input_dir+scale_file, [grid.nx, grid.ny], 'xy'), grid)
-    rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy'), grid)/deg2rad
+    scale = mask_land_ice(read_binary(input_dir+scale_file, [grid.nx, grid.ny], 'xy', prec=64), grid)
+    rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy', prec=64), grid)/deg2rad
 
-    fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(8,4))
+    fig, gs, cax1, cax2 = set_panels('1x2C2')
     data = [scale, rotate]
     ctype = ['ratio', 'plusminus']
     cax = [cax1, cax2]
-    title = ['Wind scaling factor', 'Wind rotation angle']
+    titles = ['Wind scaling factor', 'Wind rotation angle']
+    ticks = [None, np.arange(-150, 150+30, 30)]
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], include_shelf=False, title=titles[i])
-        cbar = plt.colorbar(img, cax=cax[i])
+        cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal')
         if i==1:
             # Add degree signs to ticks
-            labels = cbar.ax.get_yticklabels([])
-            for n in range(len(labels)):
-                labels[n] = labels[n] + deg_string
+            labels = [str(tick)+deg_string for tick in ticks[i]]
             cbar.ax.set_yticklabels(labels)
+            # Remove lat/lon labels
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
     finished_plot(fig) #, fig_name=fig_dir+'katabatic_correction.png')
     
     

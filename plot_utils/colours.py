@@ -134,7 +134,7 @@ def centered_cmap (vmin, vmax, val0):
 
 
 def ratio_cmap (vmin, vmax):
-    return centered_cmap(0, vmax, 1)
+    return centered_cmap(vmin, vmax, 1)
 
 
 def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, val0=None):
