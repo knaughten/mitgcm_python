@@ -1314,8 +1314,8 @@ def salt_budget_ensembles (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    file_paths = [base_dir+'WSFRIS_'+key+'/output/timeseries_salt_budget.nc' for key in ['cD1', 'aD1', 'aD2']]
-    sim_names_plot = ['piControl (2920s)', 'abrupt-4xCO2 (1860s)', 'abrupt-4xCO2 (1900s)']
+    file_paths = [base_dir+'WSFRIS_'+key+'/output/timeseries_salt_budget.nc' for key in ['cD1', 'aD1', 'aD2', 'aD3']]
+    sim_names_plot = ['piControl (2920s)', 'abrupt-4xCO2 (1860s)', 'abrupt-4xCO2 (1900s)', 'abrupt-4xCO2 (1990s)']
     colours = ['blue', 'green', 'red']
 
     # Special case for sum of advection and surface correction terms
