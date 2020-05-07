@@ -1568,16 +1568,19 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     scale = mask_land_ice(read_binary(input_dir+scale_file, [grid.nx, grid.ny], 'xy', prec=64), grid)
     rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy', prec=64), grid)/deg2rad
 
-    fig, gs, cax1, cax2 = set_panels('1x2C2')
+    fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(10,5) )
     data = [scale, rotate]
     ctype = ['ratio', 'plusminus']
     cax = [cax1, cax2]
     titles = ['Wind scaling factor', 'Wind rotation angle']
-    ticks = [None, np.arange(-150, 150+30, 30)]
+    ticks = [np.arange(0.5, 2.5+0.5, 0.5), np.arange(-90, 90+30, 30)]
+    vmin = [None, -90]
+    vmax = [None, 90]
+    extend = ['neither', 'both']
     for i in range(2):
         ax = plt.subplot(gs[0,i])
-        img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], include_shelf=False, title=titles[i])
-        cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal')
+        img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], include_shelf=False, title=titles[i])
+        cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal', extend=extend[i])
         if i==1:
             # Add degree signs to ticks
             labels = [str(tick)+deg_string for tick in ticks[i]]
@@ -1585,7 +1588,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
             # Remove lat/lon labels
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-    finished_plot(fig) #, fig_name=fig_dir+'katabatic_correction.png')
+    finished_plot(fig, fig_name=fig_dir+'katabatic_correction.png')
     
     
 
