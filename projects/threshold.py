@@ -1557,6 +1557,28 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     finished_plot(fig, fig_name=fig_dir+'schematic_base.png', dpi=300)
 
 
+# Make a 2x1 plot showing the katabatic scaling factor and rotation angle.
+def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/baspog/MITgcm/WS/WSFRIS/', scale_file='katabatic_scale', rotate_file='katabatic_rotate', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    input_dir = real_dir(input_dir)
+    fig_dir = real_dir(fig_dir)
+
+    grid = Grid(base_dir+grid_path)
+    scale = mask_land_ice(read_binary(input_dir+scale_file, [grid.nx, grid.ny], 'xy'), grid)
+    rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy'), grid)*rad2deg
+
+    fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(8,4))
+    data = [scale, rotate]
+    ctype = ['ratio', 'plusminus']
+    cax = [cax1, cax2]
+    title = ['Wind scaling factor', 'Wind rotation angle']
+    #for i in range(2):
+        
+    
+    
+
+
 
 
 
