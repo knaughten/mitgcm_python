@@ -1566,15 +1566,24 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
 
     grid = Grid(base_dir+grid_path)
     scale = mask_land_ice(read_binary(input_dir+scale_file, [grid.nx, grid.ny], 'xy'), grid)
-    rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy'), grid)*rad2deg
+    rotate = mask_land_ice(read_binary(input_dir+rotate_file, [grid.nx, grid.ny], 'xy'), grid)/deg2rad
 
     fig, gs, cax1, cax2 = set_panels('1x2C2', figsize=(8,4))
     data = [scale, rotate]
     ctype = ['ratio', 'plusminus']
     cax = [cax1, cax2]
     title = ['Wind scaling factor', 'Wind rotation angle']
-    #for i in range(2):
-        
+    for i in range(2):
+        ax = plt.subplot(gs[0,i])
+        img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], include_shelf=False, title=titles[i])
+        cbar = plt.colorbar(img, cax=cax[i])
+        if i==1:
+            # Add degree signs to ticks
+            labels = cbar.ax.get_yticklabels([])
+            for n in range(len(labels)):
+                labels[n] = labels[n] + deg_string
+            cbar.ax.set_yticklabels(labels)
+    finished_plot(fig) #, fig_name=fig_dir+'katabatic_correction.png')
     
     
 
