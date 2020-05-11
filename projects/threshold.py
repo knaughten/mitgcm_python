@@ -1589,6 +1589,69 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
             ax.set_xticklabels([])
             ax.set_yticklabels([])
     finished_plot(fig, fig_name=fig_dir+'katabatic_correction.png')
+
+
+# Ice sheet changes plot for supplementary information
+def plot_icesheet_changes (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    var_names = ['h', 'velb']
+    var_titles = ['Change in ice thickness (m)', 'Change in basal velocity (m/y)']
+    years = [74, 149]
+    sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
+    suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
+    vmin = [-80, -50]
+    vmax = [80, 50]
+    start_year_base = 2910
+    start_year = 1850
+    base_key = 'ctIO'
+    sim_key = 'abIO'
+    num_years = len(years)
+    num_vars = len(var_names)
+
+    # Construct file paths
+    def get_file_path (sim, start_year, year, post=False):
+        return base_dir + 'WSFRIS_' + sim + '/output/' + str(start_year+year) + '01/Ua/WSFRIS_' + sim + '_' + str(start_year+year) + '01_0360.mat'
+    
+    base_files = [get_file_path(base_key, start_year_base, year) for year in years]
+    sim_files = [get_file_path(sim_key, start_year, year) for year in years]
+    gl_file = base_dir + 'WSFRIS_' + sim_key + 'output/' + ua_post_file
+
+    # Read the data for each variable
+    data = []
+    for var in var_names:
+        data_var = []
+        for t in range(num_years):
+            x, y, data_diff = read_ua_difference(var, base_files[t], sim_files[t])
+            data_var.append(data_diff)
+        data.append(data_var)
+
+    # Read grounding line data
+    xGL = []
+    yGL = []
+    for year in years:
+        xGL_tmp, yGL_tmp = check_read_gl(gl_file, year)
+        xGL.append(xGL_tmp)
+        yGL.append(yGL_tmp)
+    # Read boundary nodes
+    x_bdry, y_bdry = read_ua_bdry(base_files[0])
+
+    # Set up plot
+    fig, gs, cax1, cax2 = set_panels('2x2C2')
+    cax = [cax2, cax2]
+    for v in range(num_vars):
+        for t in range(num_years):
+            ax = plt.subplot(gs[v,t])
+            ax.axis('equal')
+            img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=14, extend='both')
+        cbar = plt.colorbar(img, cax=cax[v], orientation='horizontal')
+        plt.text(0.5, 0.4+0.5*v, var_titles[v], fontsize=16, transform=fig.transFigure, ha='center', va='top')
+    plt.suptitle(suptitle, fontsize=20)
+    finished_plot(fig) #, fig_names=fig_dir+'icesheet_changes.png', dpi=300)
+    
+    
+    
     
     
 
