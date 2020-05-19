@@ -614,7 +614,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'avg_bottom':
             values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_z0':
-            values_tmp = timeseries_avg_z0(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average, z0=z0)
+            values_tmp = timeseries_avg_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
