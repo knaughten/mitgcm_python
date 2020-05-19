@@ -64,9 +64,12 @@ region_bounds = {
     'abbot2': [-99., -88.9, -73.4, -71.5],
     'venable': [-88.9, -85.6, -73.4, -72.7],
     'filchner_trough': [-45, -30, -79, -75],
-    'ronne_depression': [-65, -55, -76, -73],
+    'ronne_depression': [-70, -55, -76, -73],
+    'berkner_bank': [-49, -44, -78, -77],
     'wdw_core': [-60, -20, -75, -65],
-    'filchner_front': [-45, -36, -79, -77]
+    'filchner_front': [-45, -36, -79, -77],
+    'deep_ronne_cavity': [-85, -55, -85, -75.5],
+    'offshore_filchner': [-40, -25, -75, -72]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -74,8 +77,11 @@ region_split = ['fris', 'abbot']
 region_bathy_bounds = {
     'sws_shelf': [-1250, None],
     'filchner_trough': [-1250, -650],
-    'ronne_depression': [None, -525],
-    'wdw_core': [None, -2000]
+    'ronne_depression': [None, -550],
+    'berkner_bank': [-275, None],
+    'deep_ronne_cavity': [None, -1000],
+    'wdw_core': [None, -2000],
+    'offshore_filchner': [None, -2000],
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {
@@ -103,7 +109,10 @@ region_names = {
     'upstream': 'upstream continental shelf',
     'downstream': 'downstream continental shelf',
     'openocean': 'open ocean',
-    'filchner': 'Filchner Ice Shelf'
+    'filchner': 'Filchner Ice Shelf',
+    'berkner_bank': 'Berkner Bank',
+    'deep_ronne_cavity': 'Deep Ronne Ice Shelf cavity',
+    'offshore_filchner': 'Offshore of Filchner Trough sill'
 }
 
 # Resolution of SOSE grid in degrees

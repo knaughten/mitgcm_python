@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, add_time_dim, z_to_xyz
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average
 from interpolation import interp_bilinear, neighbours, interp_to_depth
@@ -168,8 +168,8 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Helper function for timeseries_avg_3d and timeseries_int_3d.
-def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0.
+def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None, z0=None):
 
     if var_name == 'RHO':
         if rho is None:
@@ -186,11 +186,26 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
     for t in range(data.shape[0]):
         # First mask the land and ice shelves
         data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
-        if mask is not None:
-            # Also mask outside the given region
-            data_tmp = apply_mask(data[t,:], np.invert(mask), depth_dependent=True)
-        # Volume average or integrate
-        timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
+        if option in ['average', 'integrate']:
+            # 3D volume average
+            if mask is not None:
+                # Also mask outside the given region
+                data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+            # Volume average or integrate
+            timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
+        elif option in ['bottom', 'z0']:
+            # 2D area-average
+            if option == 'bottom':
+                # Select the bottom layer
+                data_tmp = select_bottom(data_tmp)
+            elif option == 'z0':
+                # Interpolate to the given depth
+                data_tmp = interp_to_depth(data_tmp, z0, grid, gtype=gtype)
+            if mask is not None:
+                # Mask outside the given region
+                data_tmp = apply_mask(data_tmp, np.invert(mask))
+            # Area-average
+            timeseries.append(area_average(data_tmp, grid, gtype=gtype))
     return np.array(timeseries)
 
 
@@ -202,6 +217,16 @@ def timeseries_avg_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 # Same but volume-integrate.
 def timeseries_int_3d (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     return timeseries_vol_3d('integrate', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
+
+
+# Same but the area-averaged value over the bottom layer.
+def timeseries_avg_bottom (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    return timeseries_vol_3d('bottom', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
+
+
+# Same but area-averaged value over the given depth.
+def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    return timeseries_vol_3d('z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -520,11 +545,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0']:
         if region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
-        elif region in ['sws_shelf', 'filchner_trough', 'ronne_depression']:
-            mask = grid.get_region_mask(region)
         elif region.endswith('icefront'):
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
         elif region.endswith('openocean'):
@@ -538,8 +561,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif region == 'all' or region is None:
             mask = None
         else:
-            print 'Error (calc_timeseries): unsupported region'
-            sys.exit()
+            mask = grid.get_region_mask(region)
     if option == 'adv_dif_bdry':
         bdry_mask = grid.get_region_bdry_mask(region, bdry)
     
@@ -589,6 +611,10 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_delta_rho(fname, grid, point0, point1, z0, time_average=time_average)
         elif option == 'icefront_max':
             values_tmp = timeseries_icefront_max(fname, var_name, grid, region, time_average=time_average)
+        elif option == 'avg_bottom':
+            values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'avg_z0':
+            values_tmp = timeseries_avg_z0(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average, z0=z0)
         values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
         if time_average:
@@ -656,12 +682,9 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_massloss': net mass loss beneath the given ice shelf
 #      '*_melting': average melt rate beneath the given ice shelf
 #      '*_temp', '*_salt', '*_age', '*_density':
-#                volume-averaged temperature, salinity, age tracer, or potential density in the given region:
-#                'fris' (FRIS cavity),
-#                'sws_shelf' (Southern Weddell Sea continental shelf),
-#                'filchner_trough' (Filchner Trough),
-#                'wdw_core' (WDW core region offshore),
-#                'avg' (entire domain)
+#                volume-averaged temperature, salinity, age tracer, or potential density in the given region (defined in constants.py)
+#      '*_density_bottom': area-averaged bottom density over the given region
+#      '*_density_*m': area-averaged density at the given depth (positive, in metres) over the given region - eg offshore_filchner_density_600m
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
@@ -776,6 +799,19 @@ def set_parameters (var):
             title += 'in '+region_names[region[:region.index('_downstream')]]+'\n'+region_names['downstream']
         else:
             title += 'in '+region_names[region]
+    elif var.endswith('_density_bottom'):
+        option = 'avg_bottom'
+        region = var[:var.index('_density_bottom')]
+        var_name = 'RHO'
+        title = 'Bottom density in '+region_names[region]
+        units = r'kg/m^$3$'
+    elif '_density_' in var and var.endswith('m'):
+        option = 'avg_z0'
+        region = var[:var.index('_density_')]
+        z0 = -1*int(var[len(region+'_density_'):-1])
+        var_name = 'RHO'
+        title = str(abs(z0))+'m density in '+region_names[region]
+        units = r'kg/m^$3$'        
     elif var in ['hice_corner', 'mld_ewed']:
         # Maximum between spatial bounds
         option = 'max'

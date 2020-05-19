@@ -285,7 +285,7 @@ class Grid:
     # Build and return a mask for a given region of the ocean. These points must be:
     # 1. within the lat/lon bounds of the given region,
     # 2. within the isobaths defining the region (optional),
-    # 3. not ice shelf or land points.
+    # 3. not ice shelf or land points (unless the region ends with "cavity", in which case only consider ice shelf points)
     # If is_3d=True, will return a 3D mask within the depth bounds of the given region.
     def get_region_mask(self, region, gtype='t', is_3d=False):
 
@@ -306,6 +306,8 @@ class Grid:
             shallow_bound = np.amax(self.bathy)
 
         # Restrict based on isobaths, land, and ice shelves
+        if region.endswith('cavity'):
+            ice_mask = np.invert(ice_mask)
         mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
         # Now restrict based on lat-lon bounds
         mask =  self.restrict_mask(mask, region, gtype=gtype)
