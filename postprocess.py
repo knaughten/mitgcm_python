@@ -509,7 +509,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Build the grid
     grid = Grid(mit_file)
-    if any ([s.endswith('density') for s in timeseries_types]):
+    if any (['density' in s for s in timeseries_types]):
         # Precompute density so we don't have to re-calculate it for each density variable. If there's only one density variable, this won't make a difference.
         temp = read_netcdf(mit_file, 'THETA', time_average=time_average)
         salt = read_netcdf(mit_file, 'SALT', time_average=time_average)
