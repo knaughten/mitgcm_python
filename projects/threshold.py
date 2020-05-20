@@ -1717,7 +1717,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
             plt.text(threshold_year[1]+7, -0.26, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
     plt.suptitle('Difference in potential density', fontsize=22)
     ax.legend(loc='lower center', bbox_to_anchor=(0.46,-0.4), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_density.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_density.png')
 
 
 
