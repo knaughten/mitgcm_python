@@ -1831,7 +1831,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     file_tail = '_tas.nc'
     file_path = [timeseries_dir + e + file_tail for e in expt]
     base_file = timeseries_dir + 'piControl' + file_tail
-    obs_file = 'HadCRUT.4.6.0.0.annual_ns_avg.txt'
+    obs_file = timeseries_dir+'HadCRUT.4.6.0.0.annual_ns_avg.txt'
     titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
     colours = ['blue', 'red', 'black', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'Grey']
     var_name = 'tas_mean'
