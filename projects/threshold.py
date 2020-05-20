@@ -1720,7 +1720,34 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'timeseries_density.png')
 
 
+# Plot a map of all the regions used in other figures.
+def plot_region_map (base_dir='./', fig_dir='./'):
 
+    regions = ['sws_shelf', 'ronne_depression', 'deep_ronne_cavity', 'filchner_trough', 'offshore_filchner']
+    colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
+    region_titles = ['Southern\nWeddell Sea\ncontinental shelf', 'Ronne\nDepression', 'Deep Ronne\nIce Shelf cavity', 'Filchner\nTrough', 'Offshore\nWDW']
+    region_title_loc = [[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
+    num_regions = len(regions)
+    [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.85e6]
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    grid = Grid(base_dir+grid_path)
+    x, y = polar_stereo(grid.lon_2d, grid.lat_2d)
+
+    # Plot an empty map
+    fig, ax = plt.subplots(figsize=(5,6))
+    ax.axis('equal')
+    img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)    
+    # Now trace and label the regions
+    for n in range(num_regions):
+        mask = grid.get_region_mask(regions[n], include_iceberg=True).astype(float)
+        ax.contour(x, y, mask, levels=[0.5], colors=(colours[n]), linewidths=1)
+        plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=colours[n])
+    plt.title('Regions used in analysis', fontsize=18)
+    plt.tight_layout()
+    finished_plot(fig, fig_name=fig_dir+'region_map.png')
 
 
 

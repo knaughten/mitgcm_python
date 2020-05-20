@@ -287,7 +287,7 @@ class Grid:
     # 2. within the isobaths defining the region (optional),
     # 3. not ice shelf or land points (unless the region ends with "cavity", in which case only consider ice shelf points)
     # If is_3d=True, will return a 3D mask within the depth bounds of the given region.
-    def get_region_mask(self, region, gtype='t', is_3d=False):
+    def get_region_mask(self, region, gtype='t', is_3d=False, include_iceberg=False):
 
         land_mask = self.get_land_mask(gtype=gtype)
         ice_mask = self.get_ice_mask(gtype=gtype)
@@ -311,6 +311,12 @@ class Grid:
         mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
         # Now restrict based on lat-lon bounds
         mask =  self.restrict_mask(mask, region, gtype=gtype)
+
+        if include_iceberg and region=='sws_shelf':
+            # Add grounded iceberg A23A to the mask
+            [xmin, xmax, ymin, ymax] = region_bounds['a23a']
+            index = (self.lon_2d >= xmin)*(self.lon_2d <= xmax)*(self.lat_2d >= ymin)*(self.lat_2d <= ymax)*(self.land_mask)
+            mask[index] = True
 
         if is_3d:
             # Add a depth dimension and restrict to depth bounds
