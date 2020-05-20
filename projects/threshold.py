@@ -1817,7 +1817,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
         ax.legend(loc='right', bbox_to_anchor=(1.36,0.5), fontsize=12)
     plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.nc')
+    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png')
                     
                 
                 
