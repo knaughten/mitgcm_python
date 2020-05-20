@@ -1815,11 +1815,68 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
-        ax.legend(loc='right', bbox_to_anchor=(1.36,0.5), fontsize=12)
+        ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
     finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png')
-                    
-                
+
+
+# Plot global mean temperature anomaly in all the different UKESM scenarios and with observations on top.
+def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
+
+    timeseries_dir = real_dir(timeseries_dir)
+    fig_dir = real_dir(fig_dir)
+    
+    expt = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'ssp126', 'ssp245', 'ssp370', 'ssp585']
+    num_expt = len(expt)
+    file_tail = '_tas.nc'
+    file_path = [timeseries_dir + e + file_tail for e in expt]
+    base_file = timeseries_dir + 'piControl' + file_tail
+    obs_file = 'HadCRUT.4.6.0.0.annual_ns_avg.txt'
+    titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
+    colours = ['blue', 'red', 'black', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'Grey']
+    var_name = 'tas_mean'
+    threshold_year = [146, 79]
+
+    # First read the piControl mean
+    pi_mean = np.mean(read_netcdf(base_file, var_name))
+    # Now loop over experiments
+    data = []
+    time = []
+    for n in range(num_expt):
+        data_sim = read_netcdf(file_path[n], var_name) - pi_mean
+        data.append(data_sim)
+        time.append(read_netcdf(file_path[n], 'time'))
+    # Now read the HadCRUT data
+    data_obs = []
+    time_obs = []
+    f = open(obs_file, 'r')
+    for line in f:
+        words = line.split()
+        time_obs.append(float(words[0]))
+        data_obs.append(float(words[1]))    
+    # Trim 2020 because it's not complete, and change baseline to 1850
+    data.append(np.array(data_obs[:-1])-data_obs[0])
+    time.append(np.array(time_obs[:-1]))
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(10,6))
+    for n in range(num_expt+1):
+        ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
+        if n < 2:
+            ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
+            print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
+    plt.title('Global mean surface air temperature anomaly', fontsize=18)
+    plt.ylabel(deg_string+'C', fontsize=14)
+    plt.xlabel('Year', fontsize=14)
+    ax.grid(True)
+    ax.set_xlim([1850, 2100])
+    ax.set_yticks(np.arange(8+1))
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
+    finished_plot(fig) #, fig_name=fig_dir+'tas_scenarios.png')
+        
+    
                 
 
 
