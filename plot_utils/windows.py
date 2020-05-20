@@ -62,6 +62,8 @@ def set_panels (key, figsize=None):
             figsize = (12, 7)
         elif key == '3x1C0':
             figsize = (6, 9)
+        elif key == '2x1C0':
+            figsize = (6, 8)
 
     fig = plt.figure(figsize=figsize)
     
@@ -201,6 +203,10 @@ def set_panels (key, figsize=None):
         # 3 plots arranged vertically, with space for a legend at the bottom but no colourbar
         gs = plt.GridSpec(3,1)
         gs.update(left=0.12, right=0.95, bottom=0.12, top=0.9, hspace=0.2)
+    elif key == '2x1C0':
+        # 2 plots arranged vertically, with space for a legend at the bottom but no colourbar
+        gs = plt.GridSpec(2,1)
+        gs.update(left=0.15, right=0.95, bottom=0.12, top=0.85, hspace=0.3)   
         
     if key == 'CTD':
         return fig, gs_1, gs_2

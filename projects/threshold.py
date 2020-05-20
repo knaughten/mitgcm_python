@@ -43,6 +43,7 @@ timeseries_file_2 = 'timeseries2_annual.nc'
 timeseries_file_psi = 'timeseries_psi.nc'
 timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
+timeseries_file_density = 'timeseries_density.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -1649,6 +1650,74 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
         plt.text(0.45, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
+
+
+# Plot density timeseries for supplementary.
+def plot_density_timeseries (base_dir='./', fig_dir='./'):
+
+    sim_number_base = 1
+    sim_numbers = [5,3]
+    sim_dir_base = sim_dirs[sim_number_base]
+    sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['blue', 'red']
+    threshold_year = [146, 79]
+    var_names_1 = ['ronne_depression_density_bottom', 'filchner_trough_density_bottom']
+    var_names_2 = ['deep_ronne_cavity_density_bottom', 'offshore_filchner_density_600m']
+    titles = ['a) Ronne Depression minus deep\nRonne Ice Shelf cavity (bottom layers)', 'b) Filchner Trough (bottom layer)\nminus offshore WDW (600m)']
+    units = r'kg/m$^3$'
+    num_sims = len(sim_numbers)
+    num_vars = len(var_names_1)
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    # Read the data, looping over variables
+    data = []
+    time = []
+    pi_mean = []
+    for v in range(num_vars):
+        # Calculate the piControl mean
+        pi_file = sim_dir_base + timeseries_file_density
+        pi_mean.append(np.mean(read_netcdf(pi_file, var_names_1[v]) - read_netcdf(pi_file, var_names_2[v])))
+        # Now loop over simulations
+        data_sim = []
+        for n in range(num_sims):
+            file_path = sim_dirs_plot[n] + timeseries_file_density
+            time_tmp = netcdf_time(file_path, monthly=False)
+            data_tmp = read_netcdf(file_path, var_names_1[v]) - read_netcdf(file_path, var_names_2[v])
+            data_sim.append(data_tmp)
+            if n == 0:
+                time.append([t.year-time_tmp[0].year for t in time_tmp])
+        data.append(data_sim)
+
+    # Set up plot
+    fig, gs = set_panels('2x1C0')
+    for v in range(num_vars):
+        ax = plt.subplot(gs[v,0])
+        for n in range(num_sims):
+            ax.plot(time[v], data[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
+            # Dashed vertical line at threshold year
+            ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+        # Black line for piControl mean
+        ax.axhline(pi_mean[v], color='black', linewidth=1, label='piControl mean')
+        ax.grid(True)
+        ax.set_title(titles[v], fontsize=18)
+        ax.set_ylabel(units, fontsize=13)
+        ax.set_xlim([time[0][0], time[0][-1]])
+        if v==num_vars-1:
+            ax.set_xlabel('Year', fontsize=13)
+        else:
+            ax.set_xticklabels([])
+        if v==0:
+            # Add Stage 1 and Stage 2 text
+            plt.text(2, -0.21, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
+            plt.text(2, -0.26, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[0]+4, -0.18, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[1]+7, -0.26, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+    plt.suptitle('Difference in potential density', fontsize=22)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.46,-0.4), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_density.png', dpi=300)
 
 
 
