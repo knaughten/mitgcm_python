@@ -44,6 +44,7 @@ timeseries_file_psi = 'timeseries_psi.nc'
 timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
 timeseries_file_density = 'timeseries_density.nc'
+timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -1748,6 +1749,78 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     plt.title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png')
+
+
+# Plot a timeseries of the salt budget anomalies.
+# This is just a placeholder for now.
+def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_dir = [base_dir+'WSFRIS_'+key+'/output/' for key in ['cD1', 'aD1', 'aD2', 'aD3']]
+    var_names = [['adv_plus_corr', 'diffusion', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
+    var_titles = [['Advection', 'Diffusion', 'Surface flux', 'Total'], ['Sea ice\nmelting', 'Sea ice\nfreezing', 'Precipitation\n- evaporation\n+ runoff', 'Total']]
+    colours = [['red', 'blue', 'magenta', 'black'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
+    plot_titles = ['Salt fluxes', 'Surface freshwater fluxes']
+    units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
+    num_plots = len(var_names)
+    smooth = 1
+
+    fig, gs = set_panels('2x1C0', figsize=(8,7.5))
+    gs.update(left=0.1, right=0.75, bottom=0.08, top=0.85, hspace=0.2)
+    for n in range(num_plots):
+        ax = plt.subplot(gs[n,0])
+        ax.axhline(color='black', linewidth=1)
+        for v in range(len(var_names[n])):
+            var = var_names[n][v]
+            for directory in sim_dir:
+                file_path = directory + timeseries_file_salt_budget
+                # Read the data
+                if var == 'adv_plus_corr':
+                    # Special case
+                    data = read_netcdf(file_path, 'sws_shelf_salt_adv') + read_netcdf(file_path, 'sws_shelf_salt_sfc_corr')
+                elif var == 'diffusion':
+                    print 'Remember to update diffusion with new simulations'
+                    data = read_netcdf(file_path, 'sws_shelf_salt_tend') - read_netcdf(file_path, 'sws_shelf_salt_adv') - read_netcdf(file_path, 'sws_shelf_salt_sfc_corr') - read_netcdf(file_path, 'sws_shelf_salt_sfc')
+                elif var == 'total_fw':
+                    data = read_netcdf(file_path, 'sws_shelf_seaice_melt') + read_netcdf(file_path, 'sws_shelf_seaice_freeze') + read_netcdf(file_path, 'sws_shelf_pmepr')
+                else:
+                    data = read_netcdf(file_path, var)
+                if n==0:
+                    # Divide by 10^5
+                    data *= 1e-5
+                if directory == sim_dir[0]:
+                    # Get the piControl mean for anomalies
+                    pi_mean = np.mean(data)
+                else:
+                    # Calculate anomaly
+                    data -= pi_mean
+                    # Read the time axis
+                    time = netcdf_time(file_path, monthly=False)
+                    # Convert to years since beginning
+                    time = np.array([t.year-1850 for t in time])
+                    time, data = calc_annual_averages(time, data)
+                    data, time = moving_average(data, smooth, time=time)
+                    # Add to plot
+                    if directory == sim_dir[-1]:
+                        label = var_titles[n][v]
+                    else:
+                        label = None
+                    ax.plot(time, data, color=colours[n][v], linewidth=1.75, label=label)
+        ax.grid(True)
+        ax.set_title(plot_titles[n], fontsize=18)
+        ax.set_ylabel(units[n], fontsize=13)
+        ax.set_xlim([0, 149])
+        if n==1:
+            ax.set_xlabel('Year', fontsize=13)
+        else:
+            ax.set_xticklabels([])
+        ax.legend(loc='right', bbox_to_anchor=(1.36,0.5), fontsize=12)
+    plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.nc')
+                    
+                
+                
 
 
 
