@@ -1859,7 +1859,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     time.append(np.array(time_obs[:-1]))
 
     # Plot
-    fig, ax = plt.subplots(figsize=(10,6))
+    fig, ax = plt.subplots(figsize=(9,5))
     for n in range(num_expt+1):
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
@@ -1874,7 +1874,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
-    finished_plot(fig) #, fig_name=fig_dir+'tas_scenarios.png')
+    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png')
         
     
                 
