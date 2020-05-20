@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 ##################################################################
 # Weddell Sea threshold paper
 ##################################################################
@@ -1907,7 +1909,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
 
     fig, gs, cax = set_panels('1x2C1', figsize=(9, 4.5))
     data = [ismr, ismr_obs_interp]
-    title = ['Model', 'Observations']
+    title = [u'ÚaMITgcm', 'Moholdt et al. (2014)']
     for n in range(2):
         ax = plt.subplot(gs[0,n])
         ax.axis('equal')
