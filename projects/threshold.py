@@ -23,7 +23,7 @@ from ..plot_utils.slices import transect_patches, transect_values, plot_slice_pa
 from ..plot_utils.colours import set_colours
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
 from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res, deg2rad
-from ..plot_latlon import latlon_plot, read_plot_latlon_comparison
+from ..plot_latlon import latlon_plot, read_plot_latlon_comparison, latlon_comparison_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts
 from ..plot_slices import get_loc, slice_plot
@@ -1877,12 +1877,41 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png')
         
     
-                
+# Plot time-averaged historical melt rates versus Moholdt observations.
+def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
 
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    moholdt_file = base_dir + 'moholdt.nc'
+    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'
+    [xmin, xmax, ymin, ymax] = [-1.5e6, -4.95e5, 1.1e5, 1.1e6]
+    change_points = [1, 2, 4]
 
+    x_obs = read_netcdf(moholdt_file, 'x')
+    y_obs = np.flipud(read_netcdf(moholdt_file, 'y'))
+    ismr_obs = np.flipud(-1*read_netcdf(moholdt_file, 'basalMassBalance'))
+    mask = ismr_obs.mask
+    ismr_obs = ismr_obs.data
+    ismr_obs[mask] = 0
 
+    grid = Grid(base_dir+grid_path)
+    x, y = polar_stereo(grid.lon_2d, grid.lat_2d)
+    ismr = mask_except_ice(convert_ismr(read_netcdf(mit_file, 'SHIfwFlx', time_index=0)), grid)
+    ismr_obs_interp = interp_reg_xy(x_obs, y_obs, ismr_obs, x, y)
+    ismr_obs_interp = mask_except_ice(ismr_obs_interp, grid)
 
+    vmin_1, vmax_1 = var_min_max(ismr, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
+    vmin_2, vmax_2 = var_min_max(ismr_obs_interp, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, pster=True)
+    vmin = min(vmin_1, vmin_2)
+    vmax = max(vmax_1, vmax_2)
 
-
-
-    
+    fig, gs, cax = set_panels('1x2C1', figsize=(9, 4.5))
+    data = [ismr, ismr_obs_interp]
+    title = ['Model', 'Observations']
+    for n in range(2):
+        ax = plt.subplot(gs[0,n])
+        ax.axis('equal')
+        img = latlon_plot(data[n], grid, ax=ax, ctype='ismr', make_cbar=False, vmin=vmin, vmax=vmax, change_points=change_points, title=title[n], pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle('Ice shelf melt rates (m/y)', fontsize=20)
+    finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png')
