@@ -548,7 +548,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0']:
         if region == 'all' or region is None:
             mask = None
-        eif region == 'fris':
+        elif region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region.endswith('icefront'):
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
