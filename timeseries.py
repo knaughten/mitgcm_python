@@ -546,7 +546,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
 
     # Set region mask, if needed
     if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0']:
-        if region == 'fris':
+        if region == 'all' or region is None:
+            mask = None
+        eif region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
         elif region.endswith('icefront'):
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
@@ -558,8 +560,6 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_region_bdry_mask(region[:region.index('_downstream')], 'downstream')
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
-        elif region == 'all' or region is None:
-            mask = None
         else:
             mask = grid.get_region_mask(region)
     if option == 'adv_dif_bdry':
