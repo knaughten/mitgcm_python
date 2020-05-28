@@ -1602,7 +1602,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
-    var_titles = ['Change in ice thickness (m)', 'Change in basal velocity (m/y)']
+    var_titles = ['a) Change in ice thickness (m)', 'b) Change in basal velocity (m/y)']
     years = [74, 149]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
@@ -1614,6 +1614,11 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     sim_key = 'abIO'
     num_years = len(years)
     num_vars = len(var_names)
+    labels = ['Bailey', 'Slessor', 'Support\nForce', 'Foundation', 'Evans']
+    labels_x = [0.81, 0.9235, 0.9, 0.86, 0.07]
+    labels_y = [0.86, 0.82, 0.37, 0.19, 0.25]
+    final_ocean_file = base_dir + sim_dirs[sim_keys.index(sim_key)] + '199901/MITgcm/output.nc'
+    wdw_temp = 0
 
     # Construct file paths
     def get_file_path (sim, start_year, year, post=False):
@@ -1636,11 +1641,18 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     xGL = []
     yGL = []
     for year in years:
-        xGL_tmp, yGL_tmp = check_read_gl(gl_file, year)
+        xGL_tmp, yGL_tmp = check_read_gl(gl_file, year*12)
         xGL.append(xGL_tmp)
         yGL.append(yGL_tmp)
     # Read boundary nodes
     x_bdry, y_bdry = read_ua_bdry(base_files[0])
+
+    # Read ocean temperature averaged over the last year
+    grid = Grid(final_ocean_file)
+    x_ocean, y_ocean = polar_stereo(grid.lon_2d, grid.lat_2d)
+    ocean_temp = mask_3d(read_netcdf(final_ocean_file, 'THETA', time_average=True), grid)
+    # Get maximum in water column and mask open ocean
+    ocean_tmax = mask_except_ice(np.amax(ocean_temp, axis=0), grid)
 
     # Set up plot
     fig, gs, cax1, cax2 = set_panels('2x2C2')
@@ -1651,6 +1663,15 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
             img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            if v==0 and t==0:
+                # Add ice stream labels
+                for l in range(len(labels)):
+                    ax.text(labels_x[l], labels_y[l], labels[l], fontsize=10, transform=ax.transAxes, ha='center', va='center')
+            if v==0 and t==1:
+                # Contour WDW intrusion in cavity
+                CS = ax.contour(x_ocean, y_ocean, ocean_tmax, levels=[wdw_temp], colors=('magenta'))
+                for line in CS.collections:
+                    line.set_linestyle((0, (5,3)))
         cbar = plt.colorbar(img, cax=cax[v], extend='both')
         plt.text(0.45, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
