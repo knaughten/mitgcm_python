@@ -178,25 +178,30 @@ def slice_axes (ax, h_axis='lat'):
 # Option 1: set keyword argument "date" with a Datetime object.
 # Option 2: set keyword arguments "file_path" and "time_index" to read the date from a NetCDF file.
 # The keyword argument "monthly" indicates that the output is monthly averaged.
-def parse_date (date=None, file_path=None, time_index=None, monthly=True):
+def parse_date (date=None, file_path=None, time_index=None, monthly=True, base_year=None):
 
     # Create the Datetime object if needed
     if date is None:
         date = netcdf_time(file_path, monthly=monthly)[time_index]
-    if monthly:
-        # Return month and year
-        if date.year < 1900:
-            # strftime bug
-            date2 = datetime.date(1900, date.month, date.day)
-            return date2.strftime('%b ')+str(date.year)
+    if base_year is None:
+        if monthly:
+            # Return month and year
+            if date.year < 1900:
+                # strftime bug
+                date2 = datetime.date(1900, date.month, date.day)
+                return date2.strftime('%b ')+str(date.year)
+            else:
+                return date.strftime('%b %Y')
         else:
-            return date.strftime('%b %Y')
+            # Just go with the day that's in the timestamp, even though it's not representative of the averaging period
+            if date.year < 1900:
+                return str(date.day)+'-'+str(date.month)+'-'+str(date.year)
+            else:
+                return date.strftime('%d %b %Y')
     else:
-        # Just go with the day that's in the timestamp, even though it's not representative of the averaging period
-        if date.year < 1900:
-            return str(date.day)+'-'+str(date.month)+'-'+str(date.year)
-        else:
-            return date.strftime('%d %b %Y')
+        string1 = 'Year ' + str(date.year-base_year+1) + ', '
+        string2 = parse_date(date=date, monthly=monthly)[:-4]
+        return string1 + string2
 
 
 # Determine if we need to create a date string, and do so if needed.

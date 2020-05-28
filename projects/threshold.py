@@ -238,11 +238,12 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     # Read data from precomputed file
     time = netcdf_time(animation_file)
+    base_year = time[0].year
     num_time = time.size
     # Parse dates
     dates = []
     for date in time:
-        dates.append(parse_date(date=date))
+        dates.append(parse_date(date=date, base_year=base_year))
     land_mask = read_netcdf(animation_file, 'land_mask') == 1
     data = []
     extend = []    
