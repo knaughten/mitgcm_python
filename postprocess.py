@@ -1090,7 +1090,10 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
             print '...at ' + l
             loc_name = region_names[l]
             # Average over the correct region
-            mask = grid.get_region_mask(l)
+            if l == 'filchner_front':
+                mask = grid.get_icefront_mask(shelf='filchner')
+            else:
+                mask = grid.get_region_mask(l)
             data = apply_mask(data_full, np.invert(mask), time_dependent=True, depth_dependent=True)
             data = area_average(data, grid, time_dependent=True)
             set_update_var(id, num_time, data, 'zt', l+'_'+v, loc_name+' '+title, units)
