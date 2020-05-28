@@ -33,7 +33,7 @@ def truncate_colourmap (cmap, minval=0.0, maxval=1.0, n=-1):
     return new_cmap
 
 
-def plusminus_cmap (vmin, vmax):
+def plusminus_cmap (vmin, vmax, reverse=False):
 
     # Truncate the RdBu_r colourmap as needed, so that 0 is white and no unnecessary colours are shown.    
     if abs(vmin) > vmax:
@@ -42,7 +42,11 @@ def plusminus_cmap (vmin, vmax):
     else:
         min_colour = 0.5*(1 + vmin/vmax)
         max_colour = 1
-    return truncate_colourmap(plt.get_cmap('RdBu_r'), min_colour, max_colour)
+    if reverse:
+        cmap = plt.get_cmap('RdBu')
+    else:
+        cmap = plt.get_cmap('RdBu_r')
+    return truncate_colourmap(cmap, min_colour, max_colour)
 
 
 # Create a linear segmented colourmap from the given values and colours. Helper function for ismr_cmap and psi_cmap.
@@ -155,6 +159,8 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
 
     elif ctype == 'plusminus':
         return plusminus_cmap(vmin, vmax), vmin, vmax
+    elif ctype == 'plusminus_r':
+        return plusminus_cmap(vmin, vmax, reverse=True), vmin, vmax
 
     elif ctype == 'centered':
         if val0 is None or vmin > val0 or vmax < val0:
