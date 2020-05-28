@@ -1645,11 +1645,12 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     # Set up plot
     fig, gs, cax1, cax2 = set_panels('2x2C2')
     cax = [cax1, cax2]
+    ctype = ['plusminus_r', 'plusminus']
     for v in range(num_vars):
         for t in range(num_years):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
-            img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus_r', vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=16)
         cbar = plt.colorbar(img, cax=cax[v], extend='both')
         plt.text(0.45, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
