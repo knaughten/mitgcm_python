@@ -47,7 +47,7 @@ timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
 timeseries_file_density = 'timeseries_density.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
-hovmoller_file = 'hovmoller_front.nc'
+hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
 mid_file = 'years_26_35.nc'
@@ -1457,7 +1457,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
 
-# Make a fancy Hovmoller plot in the Filchner Trough for the given simulation.
+# Make a fancy Hovmoller plot of the Filchner Trough for the given simulation.
 def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -1467,7 +1467,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     file_path = sim_dirs[sim] + hovmoller_file
     t0 = -1.9
     s0 = 34.
-    title = 'Filchner Ice Shelf front (abrupt-4xCO2)'
+    title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
     if sim_key == 'abIO':
         threshold_year = 79
         title += ' (abrupt-4xCO2)'
@@ -1479,7 +1479,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
 
-    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_front', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in axs:
         ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
     axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
