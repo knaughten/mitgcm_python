@@ -274,7 +274,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
     vmax = [tmax, smax]
     val0 = [t0, s0]
     contours = [t_contours, s_contours]
-    titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
+    titles = ['a) Temperature ('+deg_string+'C)', 'b) Salinity (psu)']
     cax = [cax_t, cax_s]
     axs = []
     for i in range(2):

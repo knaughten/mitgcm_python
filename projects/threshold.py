@@ -47,7 +47,7 @@ timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
 timeseries_file_density = 'timeseries_density.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
-hovmoller_file = 'hovmoller.nc'
+hovmoller_file = 'hovmoller_front.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
 mid_file = 'years_26_35.nc'
@@ -1467,7 +1467,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     file_path = sim_dirs[sim] + hovmoller_file
     t0 = -1.9
     s0 = 34.
-    title = 'Conditions averaged over Filchner Trough'
+    title = 'Filchner Ice Shelf front (abrupt-4xCO2)'
     if sim_key == 'abIO':
         threshold_year = 79
         title += ' (abrupt-4xCO2)'
@@ -1596,7 +1596,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     finished_plot(fig, fig_name=fig_dir+'katabatic_correction.png')
 
 
-# Ice sheet changes plot for supplementary information
+# Ice sheet changes plot
 def plot_icesheet_changes (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
