@@ -2004,6 +2004,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     vmin = [smin, tmin]
     vmax = [smax, tmax]
     cax = [cax1, cax2]
+    cticks = [np.arange(33.8,34.8+0.2,0.2), np.arange(-2.2,-1.2+0.2,0.2)]
     ytitle = [0.9, 0.42]
     var_title = ['a) Salinity (psu)', 'b) Temperature ('+deg_string+'C)']
     source_title = [u'ÚaMITgcm', 'PS111']
@@ -2014,7 +2015,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=5, vmin=vmin[v], vmax=vmax[v])
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=5, vmin=vmin[v], vmax=vmax[v], edgecolors=None)
             plt.title(source_title[n], fontsize=16)
             ax.set_xticks(xticks)
             if v==0 and n==0:
@@ -2027,7 +2028,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
             else:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])            
-        cbar = plt.colorbar(img, cax=cax[v])
+        cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v])
         plt.text(0.5, ytitle[v], var_title[v], fontsize=18, transform=fig.transFigure, ha='center', va='center')
     # Add map in top corner
     ax = fig.add_axes([0.01, 0.87, 0.18, 0.12])
