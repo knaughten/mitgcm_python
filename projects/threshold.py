@@ -2038,5 +2038,5 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
     obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
     ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
-    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
 
