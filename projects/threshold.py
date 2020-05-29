@@ -2033,10 +2033,10 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
         cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v])
         plt.text(0.5, ytitle[v], var_title[v], fontsize=18, transform=fig.transFigure, ha='center', va='center')
     # Add map in top corner
-    ax = fig.add_axes([0.01, 0.87, 0.18, 0.12])
+    ax = fig.add_axes([0.01, 0.87, 0.16, 0.12])
     empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
     latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
     obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
     ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
-    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
+    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png', dpi=300)
 
