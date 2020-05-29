@@ -64,6 +64,8 @@ def set_panels (key, figsize=None):
             figsize = (6, 9)
         elif key == '2x1C0':
             figsize = (6, 8)
+        elif key == 'PS111_2x2C2':
+            figsize = (8, 8)
 
     fig = plt.figure(figsize=figsize)
     
@@ -206,7 +208,13 @@ def set_panels (key, figsize=None):
     elif key == '2x1C0':
         # 2 plots arranged vertically, with space for a legend at the bottom but no colourbar
         gs = plt.GridSpec(2,1)
-        gs.update(left=0.15, right=0.95, bottom=0.12, top=0.85, hspace=0.3)   
+        gs.update(left=0.15, right=0.95, bottom=0.12, top=0.85, hspace=0.3)
+    elif key == 'PS111_2x2C2':
+        # Like 2x2C2 but space for map inset at top left
+        gs = plt.GridSpec(2,2)
+        gs.update(left=0.09, right=0.9, bottom=0.02, top=0.85, wspace=0.03, hspace=0.35)
+        cax1 = fig.add_axes([0.915, 0.53, 0.025, 0.3])
+        cax2 = fig.add_axes([0.915, 0.04, 0.025, 0.3])
         
     if key == 'CTD':
         return fig, gs_1, gs_2

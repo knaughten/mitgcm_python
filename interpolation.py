@@ -475,12 +475,25 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
     if gtype == 'w':
         print 'Error (interp_to_depth): w-grids not supported yet'
         sys.exit()
-    # Make depth positive so array is increasing and we can get right coefficients
-    k1, k2, c1, c2 = interp_slice_helper(-z, -z0)
-    if time_dependent:
-        return c1*data[:,k1,:] + c2*data[:,k2,:]
+    if z0 > grid.z[0]:
+        # Return surface layer
+        k1 = 0
+        k2 = 0
+        c1 = 1
+        c2 = 0
+    elif z0 < grid.z[-1]:
+        # Return bottom layer
+        k1 = -1
+        k2 = -1
+        c1 = 1
+        c2 = 0
     else:
-        return c1*data[k1,:] + c2*data[k2,:]
+        # Make depth positive so array is increasing and we can get right coefficients
+        k1, k2, c1, c2 = interp_slice_helper(-z, -z0)
+    if time_dependent:
+        return c1*data[:,k1,...] + c2*data[:,k2,...]
+    else:
+        return c1*data[k1,...] + c2*data[k2,...]
 
 
 # Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).

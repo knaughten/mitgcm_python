@@ -32,7 +32,7 @@ from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze
-from ..interpolation import interp_reg_xy
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear
 
 
 # Global variables
@@ -1908,7 +1908,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     moholdt_file = base_dir + 'moholdt.nc'
-    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'
+    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'  # Change this to historical average
     [xmin, xmax, ymin, ymax] = [-1.5e6, -4.95e5, 1.1e5, 1.1e6]
     change_points = [1, 2, 4]
 
@@ -1940,3 +1940,100 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Ice shelf melt rates (m/y)', fontsize=20)
     finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png')
+
+
+# Temperature and salinity transects at the ice shelf front, comparing model and PS111
+def ts_front_ps111 (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'  # Change this to historical average of February
+    ps111_file = base_dir + 'PS111_phys_oce.tab'
+    num_bounds = 3
+    xmin = [-70, -50, -40]
+    xmax = [-50, -40, -36]
+    ymin = -78
+    ymax = [-74, -76, -77]
+    t0 = -1.9
+    s0 = 34.4
+
+    # Read the observations
+    obs = np.loadtxt(ps111_file, dtype=np.str, delimiter='\t')
+    obs_lat = obs[:,2].astype(float)
+    obs_lon = obs[:,3].astype(float)
+    obs_depth = -1*obs[:,5].astype(float)
+    obs_salt = obs[:,9].astype(float)
+    obs_temp = obs[:,10].astype(float)
+    # Select just the ones near the ice front
+    index = None
+    for n in range(num_bounds):
+        index_tmp = (obs_lon >= xmin[n])*(obs_lon <= xmax[n])*(obs_lat >= ymin)*(obs_lat <= ymax[n])
+        if index is None:
+            index = index_tmp
+        else:
+            index += index_tmp
+    obs_lat = obs_lat[index]
+    obs_lon = obs_lon[index]
+    obs_depth = obs_depth[index]
+    obs_salt = obs_salt[index]
+    obs_temp = obs_temp[index]
+    num_obs = len(obs_temp)
+
+    # Read model fields
+    grid = Grid(base_dir+grid_path)  # Original grid is fine because no obs in cavity
+    temp = mask_3d(read_netcdf(mit_file, 'THETA', time_index=0), grid)
+    salt = mask_3d(read_netcdf(mit_file, 'SALT', time_index=0), grid)
+    # Interpolate to observed points
+    model_temp = np.empty(num_obs)
+    model_salt = np.empty(num_obs)
+    for n in range(num_obs):
+        model_temp[n] = interp_to_depth(interp_bilinear(temp, obs_lon[n], obs_lat[n], grid), obs_depth[n], grid)
+        model_salt[n] = interp_to_depth(interp_bilinear(salt, obs_lon[n], obs_lat[n], grid), obs_depth[n], grid)
+    model_temp = np.ma.masked_where(np.isnan(model_temp), model_temp)
+    model_salt = np.ma.masked_where(np.isnan(model_salt), model_salt)
+
+    def get_vmin_vmax (data1, data2):
+        return min(np.amin(data1), np.amin(data2)), max(np.amax(data1), np.amax(data2))
+
+    tmin, tmax = get_vmin_vmax(obs_temp, model_temp)
+    smin, smax = get_vmin_vmax(obs_salt, model_salt)
+
+    fig, gs, cax1, cax2 = set_panels('PS111_2x2C2')
+    data = [[model_salt, obs_salt], [model_temp, obs_temp]]
+    vmin = [smin, tmin]
+    vmax = [smax, tmax]
+    cax = [cax1, cax2]
+    ytitle = [0.9, 0.42]
+    var_title = ['a) Salinity (psu)', 'b) Temperature ('+deg_string+'C)']
+    source_title = [u'ÚaMITgcm', 'PS111']
+    xticks = np.arange(-60,-35+5,5)
+    labels = ['RD', 'BB', 'FT']
+    labels_x = [-60, -48, -38.5]
+    labels_y = [-0.7, -0.33, -0.9]
+    for v in range(2):
+        for n in range(2):
+            ax = plt.subplot(gs[v,n])
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=5, vmin=vmin[v], vmax=vmax[v])
+            plt.title(source_title[n], fontsize=16)
+            ax.set_xticks(xticks)
+            if v==0 and n==0:
+                ticklabels = [str(-1*tick)+deg_string+'W' for tick in xticks]
+                ax.set_xticklabels(ticklabels)
+                plt.xlabel('Longitude')
+                plt.ylabel('Depth (km)')
+                for l in range(len(labels)):
+                    plt.text(labels_x[l], labels_y[l], labels[l], fontsize=12, ha='center', va='center')
+            else:
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])            
+        cbar = plt.colorbar(img, cax=cax[v])
+        plt.text(0.5, ytitle[v], var_title[v], fontsize=18, transform=fig.transFigure, ha='center', va='center')
+    # Add map in top corner
+    ax = fig.add_axes([0.01, 0.87, 0.18, 0.12])
+    empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
+    latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
+    obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
+    ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
+    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
+
