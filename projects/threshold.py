@@ -2015,7 +2015,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=5, vmin=vmin[v], vmax=vmax[v], edgecolors=None)
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=5, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             plt.title(source_title[n], fontsize=16)
             ax.set_xticks(xticks)
             if v==0 and n==0:
