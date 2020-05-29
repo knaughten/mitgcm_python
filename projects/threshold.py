@@ -1479,7 +1479,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
 
-    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_front', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in axs:
         ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
     axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
