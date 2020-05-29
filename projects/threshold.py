@@ -1467,7 +1467,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     file_path = sim_dirs[sim] + hovmoller_file
     t0 = -1.9
     s0 = 34.
-    title = 'Conditions averaged over Filchner Trough (abrupt-4xCO2)'
+    title = 'Conditions averaged over Filchner Trough'
     if sim_key == 'abIO':
         threshold_year = 79
         title += ' (abrupt-4xCO2)'
