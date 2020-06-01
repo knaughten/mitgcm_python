@@ -1998,6 +1998,8 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
 
     tmin, tmax = get_vmin_vmax(obs_temp, model_temp)
     smin, smax = get_vmin_vmax(obs_salt, model_salt)
+    smin = 33.8
+    tmax = -1.2
 
     fig, gs, cax1, cax2 = set_panels('PS111_2x2C2')
     data = [[model_salt, obs_salt], [model_temp, obs_temp]]
@@ -2012,6 +2014,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     labels = ['RD', 'BB', 'FT']
     labels_x = [-60, -48, -38.5]
     labels_y = [-0.7, -0.33, -0.9]
+    extend = ['min', 'max']
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
@@ -2030,7 +2033,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
             else:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])            
-        cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v])
+        cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v], extend=extend[v])
         plt.text(0.5, ytitle[v], var_title[v], fontsize=18, transform=fig.transFigure, ha='center', va='center')
     # Add map in top corner
     ax = fig.add_axes([0.01, 0.87, 0.16, 0.12])
