@@ -1908,7 +1908,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     moholdt_file = base_dir + 'moholdt.nc'
-    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'  # Change this to historical average
+    mit_file = base_dir + 'WSFRIS_hist/output/hist_avg.nc'
     [xmin, xmax, ymin, ymax] = [-1.5e6, -4.95e5, 1.1e5, 1.1e6]
     change_points = [1, 2, 4]
 
@@ -1948,7 +1948,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    mit_file = base_dir + sim_dirs[1] + 'last_10y.nc'  # Change this to historical average of February
+    mit_file = base_dir + 'WSFRIS_hist/output/avg_feb.nc'
     ps111_file = base_dir + 'PS111_phys_oce.tab'
     num_bounds = 3
     xmin = [-70, -50, -40]
