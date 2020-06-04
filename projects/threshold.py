@@ -1382,6 +1382,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
     # Get year that Stage 2 begins for each simulation
     threshold_year = []
+    threshold_index = []
     for n in range(num_sims):
         file_path = base_dir + sim_dirs_plot[n] + timeseries_file_tmax
         time = netcdf_time(file_path, monthly=False)
@@ -1390,6 +1391,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         i = np.where(tmax > temp_threshold)[0][0]
         year_cross = time[i].year-time[0].year
         threshold_year.append(year_cross)
+        threshold_index.append(i)
         print sim_names_plot[n] + ' crosses threshold in year ' + str(year_cross)
 
     # Read the data, looping over variables
@@ -1421,6 +1423,12 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                 time_smoothed.append([(t.year-time_tmp[0].year) for t in time_smooth_tmp])
         data.append(data_sim)
         data_smoothed.append(data_sim_smooth)
+
+    # Calculate % decrease in mass loss over Stage 1.
+    for n in range(num_sims):
+        stage1_mean = np.mean(data[-1][n][threshold_index[n]:])
+        percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
+        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec)
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
