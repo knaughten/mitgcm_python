@@ -1504,11 +1504,11 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
 
-    titles = ['Pre-industrial', 'Stage 1', 'Stage 2']
+    titles = ['a) Initial', 'b) Stage 1', 'c) Stage 2']
     [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
-    labels = ['BI', 'RIS', 'FIS', 'RD', 'BB', 'FT', 'A']
-    labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6, 0.44]
-    labels_y = [0.49, 0.3, 0.56, 0.56, 0.62, 0.7, 0.77]
+    labels = ['BI', 'RIS', 'FIS', 'RD', 'BB', 'FT']
+    labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6]
+    labels_y = [0.49, 0.3, 0.56, 0.56, 0.62, 0.7]
     captions = [None, 'Circulation weakens\nMelting decreases', 'Warm water inflow\nMelting increases']
     caption_width = [None, "68%", "63%"]
 
