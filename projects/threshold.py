@@ -1426,7 +1426,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
     # Calculate % decrease in mass loss over Stage 1.
     for n in range(num_sims):
-        stage1_mean = np.mean(data[-1][n][threshold_index[n]:])
+        stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
         percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
         print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec)
 
