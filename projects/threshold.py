@@ -1577,7 +1577,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     data = [scale, rotate]
     ctype = ['ratio', 'plusminus']
     cax = [cax1, cax2]
-    titles = ['Wind scaling factor', 'Wind rotation angle']
+    titles = ['a) Wind scaling factor', 'b) Wind rotation angle']
     ticks = [np.arange(0.5, 2.5+0.5, 0.5), np.arange(-90, 90+30, 30)]
     vmin = [None, -90]
     vmax = [None, 90]
