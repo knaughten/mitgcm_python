@@ -1432,7 +1432,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     # Calculate final factor of increase in mass loss in abrupt-4xCO2.
     final_melt = data[-1][-1][-1]
     factor_inc = final_melt/pi_mean[-1]
-    print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(percent_inc) + ' over final year'
+    print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
     # Calculate final increase in temperature in abrupt-4xCO2.
     final_temp = data[1][-1][-1]
     temp_inc = final_temp - pi_mean[1]
