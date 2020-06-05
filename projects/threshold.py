@@ -1436,7 +1436,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     # Calculate final increase in temperature in abrupt-4xCO2.
     final_temp = data[1][-1][-1]
     temp_inc = final_temp - pi_mean[1]
-    print sim_names_plot_[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
+    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
