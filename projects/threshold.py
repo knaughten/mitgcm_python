@@ -1428,7 +1428,15 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     for n in range(num_sims):
         stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
         percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
-        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec)
+        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
+    # Calculate final % increase in mass loss in abrupt-4xCO2.
+    final_melt = data[-1][-1][-1]
+    percent_inc = (final_melt - pi_mean[-1])/pi_mean[-1]*100
+    print sim_names_plot[-1] + ' mass loss increases by ' + str(percent_inc) + '% over final year'
+    # Calculate final increase in temperature in abrupt-4xCO2.
+    final_temp = data[1][-1][-1]
+    temp_inc = final_temp - pi_mean[1]
+    print sim_names_plot_[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
