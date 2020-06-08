@@ -1948,7 +1948,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
 
     fig, gs, cax = set_panels('1x2C1', figsize=(9, 4.5))
     data = [ismr, ismr_obs_interp]
-    title = [u'ÚaMITgcm', 'Moholdt et al. (2014)']
+    title = [u'a) ÚaMITgcm', 'b) Moholdt et al. (2014)']
     for n in range(2):
         ax = plt.subplot(gs[0,n])
         ax.axis('equal')
