@@ -786,6 +786,7 @@ def set_parameters (var):
             region = var[:var.index('_age')]
             var_name = 'TRAC01'
             title += 'age tracer'
+            units = 'years'
         if region == 'avg':
             region = 'all'
         elif region == 'fris':
