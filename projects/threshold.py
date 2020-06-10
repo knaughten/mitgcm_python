@@ -22,7 +22,7 @@ from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
 from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
-from ..plot_utils.colours import set_colours
+from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
 from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res, deg2rad
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison, latlon_comparison_plot
@@ -2030,11 +2030,11 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     labels_x = [-60, -48, -38.5]
     labels_y = [-0.7, -0.33, -0.9]
     extend = ['min', 'neither']
-    ctype = ['viridis', 'viridis']
+    cmap = parula_cmap()
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap=ctype[v], s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap=cmap, s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             ax.set_xlim([np.amin(obs_lon)-0.2, np.amax(obs_lon)])
             ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, 0])
             plt.title(source_title[n], fontsize=16)
@@ -2057,7 +2057,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
     obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
     ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
-    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
+    finished_plot(fig) #, fig_name=fig_dir+'ps111_comparison.png')
 
 
 # Test the significance of trends in piControl timeseries.
