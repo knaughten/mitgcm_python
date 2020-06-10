@@ -2030,10 +2030,11 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     labels_x = [-60, -48, -38.5]
     labels_y = [-0.7, -0.33, -0.9]
     extend = ['min', 'neither']
+    ctype = ['viridis', 'plasma']
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='plasma', s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap=ctype[v], s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             ax.set_xlim([np.amin(obs_lon)-0.2, np.amax(obs_lon)])
             ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, 0])
             plt.title(source_title[n], fontsize=16)
@@ -2064,5 +2065,5 @@ def control_trends (base_dir='./'):
 
     base_dir = real_dir(base_dir)
     file_path = base_dir + sim_dirs[1] + timeseries_file
-    var_names = ['fris_massloss', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_temp', 'fris_salt']
+    var_names = ['fris_massloss', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_temp', 'fris_salt', 'seaice_area']
 
