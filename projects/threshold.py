@@ -2073,7 +2073,7 @@ def control_trends (base_dir='./'):
     for var in var_names:
         data_full = read_netcdf(file_path, var)
         time, data = calc_annual_averages(time_full, data_full)
-        slope, intercept, r_value, p_value, std_err = linregress(time, data)
+        slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size), data)
         print var + ': p-value=' + str(p_value)
     
 
