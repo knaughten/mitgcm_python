@@ -1971,6 +1971,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     xmax = [-50, -40, -36]
     ymin = -78
     ymax = [-74, -76, -77]
+    zmax = -100
     t0 = -1.9
     s0 = 34.4
 
@@ -1984,7 +1985,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     # Select just the ones near the ice front
     index = None
     for n in range(num_bounds):
-        index_tmp = (obs_lon >= xmin[n])*(obs_lon <= xmax[n])*(obs_lat >= ymin)*(obs_lat <= ymax[n])
+        index_tmp = (obs_lon >= xmin[n])*(obs_lon <= xmax[n])*(obs_lat >= ymin)*(obs_lat <= ymax[n])*(obs_depth < zmax)
         if index is None:
             index = index_tmp
         else:
@@ -2014,14 +2015,13 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
 
     tmin, tmax = get_vmin_vmax(obs_temp, model_temp)
     smin, smax = get_vmin_vmax(obs_salt, model_salt)
-    smin = 33.8
 
     fig, gs, cax1, cax2 = set_panels('PS111_2x2C2')
     data = [[model_salt, obs_salt], [model_temp, obs_temp]]
     vmin = [smin, tmin]
     vmax = [smax, tmax]
     cax = [cax1, cax2]
-    cticks = [np.arange(33.8,34.8+0.2,0.2), np.arange(-2.2,-1.2+0.2,0.2)]
+    cticks = [np.arange(34.3,34.8+0.1,0.1), np.arange(-2.2,-1.6+0.2,0.2)]
     ytitle = [0.9, 0.42]
     var_title = ['a) Salinity (psu)', 'b) Temperature ('+deg_string+'C)']
     source_title = [u'ÚaMITgcm', 'PS111']
@@ -2029,14 +2029,13 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     labels = ['RD', 'BB', 'FT']
     labels_x = [-60, -48, -38.5]
     labels_y = [-0.7, -0.33, -0.9]
-    extend = ['min', 'neither']
     cmap = parula_cmap()
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
             img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap=cmap, s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             ax.set_xlim([np.amin(obs_lon)-0.2, np.amax(obs_lon)])
-            ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, 0])
+            ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, zmax*1e-3])
             plt.title(source_title[n], fontsize=16)
             ax.set_xticks(xticks)
             if v==0 and n==0:
@@ -2049,7 +2048,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
             else:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])            
-        cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v], extend=extend[v])
+        cbar = plt.colorbar(img, cax=cax[v], ticks=cticks[v]) 
         plt.text(0.5, ytitle[v], var_title[v], fontsize=18, transform=fig.transFigure, ha='center', va='center')
     # Add map in top corner
     ax = fig.add_axes([0.01, 0.87, 0.16, 0.12])
@@ -2057,7 +2056,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
     obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
     ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
-    finished_plot(fig) #, fig_name=fig_dir+'ps111_comparison.png')
+    finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
 
 
 # Test the significance of trends in piControl timeseries.
