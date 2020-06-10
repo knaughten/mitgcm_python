@@ -2030,7 +2030,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     labels_x = [-60, -48, -38.5]
     labels_y = [-0.7, -0.33, -0.9]
     extend = ['min', 'neither']
-    ctype = ['viridis', 'plasma']
+    ctype = ['viridis', 'viridis']
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
@@ -2063,7 +2063,17 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
 # Test the significance of trends in piControl timeseries.
 def control_trends (base_dir='./'):
 
+    from scipy.stats import linregress
+
     base_dir = real_dir(base_dir)
     file_path = base_dir + sim_dirs[1] + timeseries_file
     var_names = ['fris_massloss', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_temp', 'fris_salt', 'seaice_area']
+
+    time_full = netcdf_time(file_path, monthly=False)
+    for var in var_names:
+        data_full = read_netcdf(file_path, var)
+        time, data = calc_annual_averages(time_full, data_full)
+        slope, intercept, r_value, p_value, std_err = linregress(time, data)
+        print var + ': p-value=' + str(p_value)
+    
 
