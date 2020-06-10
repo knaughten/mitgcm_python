@@ -2033,7 +2033,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='jet', s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='viridis', s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             ax.set_xlim([np.amin(obs_lon)-0.2, np.amax(obs_lon)])
             ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, 0])
             plt.title(source_title[n], fontsize=16)
