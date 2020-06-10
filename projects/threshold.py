@@ -2033,7 +2033,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     for v in range(2):
         for n in range(2):
             ax = plt.subplot(gs[v,n])
-            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='viridis', s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
+            img = ax.scatter(obs_lon, obs_depth*1e-3, c=data[v][n], cmap='plasma', s=10, vmin=vmin[v], vmax=vmax[v], edgecolors='none')
             ax.set_xlim([np.amin(obs_lon)-0.2, np.amax(obs_lon)])
             ax.set_ylim([np.amin(obs_depth*1e-3)-0.05, 0])
             plt.title(source_title[n], fontsize=16)
@@ -2057,4 +2057,12 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
     ax.plot(obs_x, obs_y, '.', color='red', markersize=1)
     finished_plot(fig, fig_name=fig_dir+'ps111_comparison.png')
+
+
+# Test the significance of trends in piControl timeseries.
+def control_trends (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    file_path = base_dir + sim_dirs[1] + timeseries_file
+    var_names = ['fris_massloss', 'sws_shelf_temp', 'sws_shelf_salt', 'fris_temp', 'fris_salt']
 
