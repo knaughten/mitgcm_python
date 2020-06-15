@@ -2092,5 +2092,5 @@ def cmip_co2 (fig_dir='./'):
     co2_abrupt = np.copy(co2_pi)
     co2_abrupt[spinup_years:] = 4*co2_base
 
-    timeseries_multi_plot(np.arange(-30,150), [co2_pi, co2_1pct, co2_abrupt], titles, colours, title=r'CO$_2$ concentration', units='ppm', dates=False, fig_name=fig_dir+'co2_cmip.png', legend_in_centre=True)
+    timeseries_multi_plot(np.arange(-30,150), [co2_pi, co2_1pct, co2_abrupt], titles, colours, title=r'CO$_2$ concentration', units='ppm', dates=False, fig_name=fig_dir+'co2_cmip.png', legend_outside=False)
 
