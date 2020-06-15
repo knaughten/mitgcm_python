@@ -1443,12 +1443,11 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         ax = plt.subplot(gs[v,0])
         for n in range(num_sims):
-            i = threshold_index[n]
             if smooth[v] != 0:
                 # Plot unsmoothed versions in a lighter colour and thinner weight
-                ax.plot(time[v][:i], data[v][n][:i], color=sim_colours[n], alpha=0.6, linewidth=1)
+                ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
             # Plot smoothed versions on top
-            ax.plot(time_smoothed[v][:i-smooth[v]], data_smoothed[v][n][:i-smooth[v]], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
+            ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
             # Dashed vertical line at threshold year
             ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
         # Black line for piControl mean
@@ -1457,18 +1456,18 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
         ax.set_xlim([time[0][0], time[0][-1]])
-        #ax.set_ylim([vmin[v], vmax[v]])
+        ax.set_ylim([vmin[v], vmax[v]])
         if v==num_vars-1:
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
-        #ax.set_yticks(ticks[v])
-        #if v==1:
+        ax.set_yticks(ticks[v])
+        if v==1:
             # Add Stage 1 and Stage 2 text
-            #plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
-            #plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            #plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
-            #plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
+            plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.48,-0.5), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
@@ -1498,12 +1497,13 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
     fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in axs:
-        ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
-    axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
-    if sim_key == 'abIO':
-        axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
-    elif sim_key == '1pIO':
-        axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+        ax.set_xlim([0, threshold_year])
+        #ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
+    #axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
+    #if sim_key == 'abIO':
+        #axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
+    #elif sim_key == '1pIO':
+        #axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
     finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
