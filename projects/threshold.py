@@ -1462,13 +1462,13 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
-        ax.set_yticks(ticks[v])
-        if v==1:
+        #ax.set_yticks(ticks[v])
+        #if v==1:
             # Add Stage 1 and Stage 2 text
-            plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
-            plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            #plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
+            #plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            #plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
+            #plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.48,-0.5), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
     plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
