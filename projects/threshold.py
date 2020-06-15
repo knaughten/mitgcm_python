@@ -1410,6 +1410,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             file_path = sim_dirs_plot[n] + fnames[v]
             time_tmp = netcdf_time(file_path, monthly=False)
             data_tmp = read_netcdf(file_path, var_names[v])
+            data_tmp[threshold_index[n]:] = np.ma.masked
             # Calculate annual averages
             time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
             # Smooth if needed (smooth=0 will do nothing)
@@ -1456,7 +1457,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
         ax.set_xlim([time[0][0], time[0][-1]])
-        ax.set_ylim([vmin[v], vmax[v]])
+        #ax.set_ylim([vmin[v], vmax[v]])
         if v==num_vars-1:
             ax.set_xlabel('Year', fontsize=13)
         else:
