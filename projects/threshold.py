@@ -1410,9 +1410,9 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             file_path = sim_dirs_plot[n] + fnames[v]
             time_tmp = netcdf_time(file_path, monthly=False)
             data_tmp = read_netcdf(file_path, var_names[v])
-            data_tmp[threshold_index[n]:] = np.ma.masked
             # Calculate annual averages
             time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+            data_tmp[threshold_index[n]:] = np.ma.masked
             # Smooth if needed (smooth=0 will do nothing)
             data_smooth_tmp, time_smooth_tmp = moving_average(data_tmp, smooth[v], time=time_tmp)
             # Save the results
