@@ -1412,7 +1412,6 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             data_tmp = read_netcdf(file_path, var_names[v])
             # Calculate annual averages
             time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
-            data_tmp[threshold_index[n]:] = np.ma.masked
             # Smooth if needed (smooth=0 will do nothing)
             data_smooth_tmp, time_smooth_tmp = moving_average(data_tmp, smooth[v], time=time_tmp)
             # Save the results
@@ -1444,11 +1443,12 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         ax = plt.subplot(gs[v,0])
         for n in range(num_sims):
+            i = threshold_index[n]
             if smooth[v] != 0:
                 # Plot unsmoothed versions in a lighter colour and thinner weight
-                ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
+                ax.plot(time[v][:i], data[v][n][:i], color=sim_colours[n], alpha=0.6, linewidth=1)
             # Plot smoothed versions on top
-            ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
+            ax.plot(time_smoothed[v][:i-smooth[v]], data_smoothed[v][n][:i-smooth[v]], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
             # Dashed vertical line at threshold year
             ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
         # Black line for piControl mean
