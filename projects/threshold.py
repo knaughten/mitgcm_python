@@ -1904,7 +1904,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
 
     # Plot
     fig, ax = plt.subplots(figsize=(9,5))
-    for n in range(num_expt+1):
+    for n in range(2): #num_expt+1):
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
