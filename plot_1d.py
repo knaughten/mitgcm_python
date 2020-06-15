@@ -132,6 +132,8 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
         monthly_ticks(ax)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
+    if not dates:
+        plt.xlabel('Years', fontsize=16)
     if plot_legend:
         if legend_outside:
             # Move plot over to make room for legend
