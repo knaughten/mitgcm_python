@@ -2120,7 +2120,7 @@ def salt_timeseries (base_dir='./', fig_dir='./'):
         time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
         data.append(data_tmp-pi_mean)
         if n == 0:
-            time = [t.year-time_tmp[0].year for t in time_tmp]
+            time = np.array([t.year-time_tmp[0].year for t in time_tmp])
 
     timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Salinity anomaly on continental shelf', units='psu', dates=False, fig_name=fig_dir+'timeseries_sws_shelf_salt.png')
     
