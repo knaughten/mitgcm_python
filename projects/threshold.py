@@ -2074,5 +2074,23 @@ def control_trends (base_dir='./'):
         time, data = calc_annual_averages(time_full, data_full)
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size), data)
         print var + ': slope=' + str(slope) + ', r^2=' + str(r_value**2) + ', p-value=' + str(p_value)
-    
+
+
+def cmip_co2 (fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+    co2_base = 284.317  # From Meinshausen et al 2017 doi:10.5194/gmd-10-2057-2017
+    num_years = 150
+    spinup_years = 30
+    colours = ['blue', 'green', 'red']
+    titles = ['piControl', '1pctCO2', 'abrupt-4xCO2']
+
+    co2_pi = np.zeros(spinup_years+num_years) + co2_base
+    co2_1pct = np.copy(co2_pi)
+    for year in range(spinup_years, num_years+spinup_years):
+        co2_1pct[year] = 1.01*co2_1pct[year-1]
+    co2_abrupt = np.copy(co2_pi)
+    co2_abrupt[spinup_years:] = 4*co2_base
+
+    timeseries_multi_plot(np.arange(150)+1, [co2_pi, co2_1pct, co2_abrupt], colours, title=r'CO$_2$ concentration', units='ppm', dates=False, fig_name=fig_dir+'co2_cmip.png')
 
