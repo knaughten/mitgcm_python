@@ -1763,7 +1763,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
 
 
 # Plot a map of all the regions used in other figures.
-def plot_region_map (base_dir='./', fig_dir='./'):
+def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
 
     regions = ['sws_shelf', 'ronne_depression', 'deep_ronne_cavity', 'filchner_trough', 'offshore_filchner']
     colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
@@ -1784,6 +1784,8 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)    
     # Now trace and label the regions
     for n in range(num_regions):
+        if plot_regions is not None and regions[n] not in plot_regions:
+            continue
         mask = grid.get_region_mask(regions[n], include_iceberg=True).astype(float)
         ax.contour(x, y, mask, levels=[0.5], colors=(colours[n]), linewidths=1)
         plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=colours[n])
@@ -2082,7 +2084,7 @@ def cmip_co2 (fig_dir='./'):
     co2_base = 284.317  # From Meinshausen et al 2017 doi:10.5194/gmd-10-2057-2017
     num_years = 150
     spinup_years = 30
-    colours = ['blue', 'green', 'red']
+    colours = ['black', 'blue', 'red']
     titles = ['piControl', '1pctCO2', 'abrupt-4xCO2']
 
     co2_pi = np.zeros(spinup_years+num_years) + co2_base
@@ -2093,4 +2095,33 @@ def cmip_co2 (fig_dir='./'):
     co2_abrupt[spinup_years:] = 4*co2_base
 
     timeseries_multi_plot(np.arange(-30,150), [co2_pi, co2_1pct, co2_abrupt], titles, colours, title=r'CO$_2$ concentration', units='ppm', dates=False, fig_name=fig_dir+'co2_cmip.png')
+
+
+def salt_timeseries (base_dir='./', fig_dir='./'):
+
+    sim_number_base = 1
+    sim_numbers = [5,3]
+    sim_dir_base = sim_dirs[sim_number_base]
+    sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['blue', 'red']
+    num_sims = len(sim_numbers)
+    var_name = 'sws_shelf_salt'
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    pi_mean = np.mean(read_netcdf(sim_dir_base+timeseries_file, var_name))
+    data = []
+    for n in range(num_sims):
+        file_path = sim_dirs_plot[n]+timeseries_file
+        time_tmp = netcdf_time(file_path, monthly=False)
+        data_tmp = read_netcdf(file_path, var_name)
+        time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+        data.append(data_tmp-pi_mean)
+        if n == 0:
+            time = [t.year-time_tmp[0].year for t in time_tmp]
+
+    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Salinity anomaly on continental shelf', units='psu', dates=False, fig_name=fig_dir+'timeseries_sws_shelf_salt.png')
+    
 
