@@ -73,7 +73,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, dates=True, thick_last=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -103,10 +103,10 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
     if linestyles is None:
         linestyles = ['solid' for n in range(len(labels))]
 
-    if legend_in_centre:
-        figsize=(8,6)
-    else:
+    if legend_outside:
         figsize=(11,6)
+    else:
+        figsize=(8,6)
     fig, ax = plt.subplots(figsize=figsize)
     # Plot each line
     for i in range(len(datas)):
@@ -133,16 +133,16 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
     if plot_legend:
-        if legend_in_centre:
-            # Make legend
-            ax.legend(loc='center')
-        else:
+        if legend_outside:
             # Move plot over to make room for legend
             box = ax.get_position()
             ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
             # Make legend
             ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
-    
+        elif legend_in_centre:
+            ax.legend(loc='center')
+        else:
+            ax.legend(loc='best')
     finished_plot(fig, fig_name=fig_name, dpi=dpi)
     
 
