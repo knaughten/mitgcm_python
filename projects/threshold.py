@@ -14,6 +14,7 @@ import matplotlib.colors as cl
 import itertools
 import netCDF4 as nc
 from scipy import stats
+import datetime
 
 from ..grid import Grid, choose_grid, UKESMGrid
 from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary, NCfile_basiclatlon
@@ -1511,7 +1512,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
 # Plot the basic parts of the schematic.
