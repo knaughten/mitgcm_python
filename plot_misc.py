@@ -177,7 +177,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
+def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, start=0, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -203,7 +203,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         
     if date_since_start:
         time_years = [t.year + t.month/12. for t in time_edges]
-        time_edges = np.array([t - time_years[0] for t in time_years])
+        time_edges = np.array([t - time_years[start] for t in time_years])
 
     # Smooth with a moving average
     data, time_edges = moving_average(data, smooth, time=time_edges)
@@ -264,7 +264,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2', figsize=figsize)
@@ -280,7 +280,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, val0=val0[i])
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i])
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         cbar = plt.colorbar(img, cax=cax[i], extend=extend)
