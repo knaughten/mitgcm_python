@@ -1360,30 +1360,30 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     # Temperature threshold at Filchner Ice Shelf front
     temp_threshold = -1
 
-    sim_number_base = 1
-    sim_numbers = [5,3]
-    sim_dir_base = sim_dirs[sim_number_base]
+    #sim_number_base = 1
+    sim_numbers = [1,5,3]
+    #sim_dir_base = sim_dirs[sim_number_base]
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
-    sim_colours = ['blue', 'red']
+    sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_mean_psi', 'fris_temp', 'fris_massloss']
     fnames = [timeseries_file_psi, timeseries_file, timeseries_file]
     smooth = [5, 0, 2]
-    titles = ['a) Circulation strength in cavity', 'b) Average temperature in cavity', 'c) Basal mass loss from ice shelf']
+    titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
-    vmin = [0.015, -2.28, 25]
-    vmax = [0.066, -1.45, 365]
-    ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(50, 450, 100)]
+    vmin = [0.015, -2.28, 0]
+    vmax = [0.066, -1.45, 250]
+    ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(0, 300, 50)]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Get year that Stage 2 begins for each simulation
-    threshold_year = []
-    threshold_index = []
-    for n in range(num_sims):
+    # Get year that Stage 2 begins for each transient simulation
+    threshold_year = [None]
+    threshold_index = [None]
+    for n in range(1,num_sims):
         file_path = base_dir + sim_dirs_plot[n] + timeseries_file_tmax
         time = netcdf_time(file_path, monthly=False)
         tmax = read_netcdf(file_path, 'filchner_front_tmax')
@@ -1399,10 +1399,10 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     data_smoothed = []
     time = []
     time_smoothed = []
-    pi_mean = []
+    #pi_mean = []
     for v in range(num_vars):
         # Calculate the pi-Control mean
-        pi_mean.append(np.mean(read_netcdf(sim_dir_base+fnames[v], var_names[v])))
+        #pi_mean.append(np.mean(read_netcdf(sim_dir_base+fnames[v], var_names[v])))
         # Now loop over simulations
         data_sim = []
         data_sim_smooth = []
@@ -1425,18 +1425,18 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         data_smoothed.append(data_sim_smooth)
 
     # Calculate % decrease in mass loss over Stage 1.
-    for n in range(num_sims):
-        stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
-        percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
-        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
+    #for n in range(1,num_sims):
+        #stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
+        #percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
+        #print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
     # Calculate final factor of increase in mass loss in abrupt-4xCO2.
-    final_melt = data[-1][-1][-1]
-    factor_inc = final_melt/pi_mean[-1]
-    print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
+    #final_melt = data[-1][-1][-1]
+    #factor_inc = final_melt/pi_mean[-1]
+    #print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
     # Calculate final increase in temperature in abrupt-4xCO2.
-    final_temp = data[1][-1][-1]
-    temp_inc = final_temp - pi_mean[1]
-    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
+    #final_temp = data[1][-1][-1]
+    #temp_inc = final_temp - pi_mean[1]
+    #print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
@@ -1449,9 +1449,10 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             # Plot smoothed versions on top
             ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
             # Dashed vertical line at threshold year
-            ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+            if n > 0:
+                ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
         # Black line for piControl mean
-        ax.axhline(pi_mean[v], color='black', linewidth=1, label='piControl mean')
+        #ax.axhline(pi_mean[v], color='black', linewidth=1, label='piControl mean')
         ax.grid(True)
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
@@ -1464,23 +1465,25 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         ax.set_yticks(ticks[v])
         if v==1:
             # Add Stage 1 and Stage 2 text
-            plt.text(2, -1.62, 'Stage 1', color=sim_colours[0], ha='left', va='top', fontsize=13)
-            plt.text(2, -1.49, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[0]+4, -1.62, 'Stage 2', color=sim_colours[0], rotation=-90, ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.48,-0.5), ncol=num_sims+1, fontsize=13.5, columnspacing=1)
-    plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
+            plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
+    #plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
 
 # Make a fancy Hovmoller plot of the Filchner Trough for the given simulation.
 def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
-    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    
     sim = sim_keys.index(sim_key)
     sim_name = sim_names[sim][:-3]
-    file_path = sim_dirs[sim] + hovmoller_file
+    file_path = base_dir + sim_dirs[sim] + hovmoller_file
+    file_path_base = base_dir + 'WSFRIS_SpIO/output/' + hovmoller_file
     t0 = -1.9
     s0 = 34.
     title = 'Conditions averaged over Filchner Trough'
@@ -1491,19 +1494,19 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         threshold_year = 146
         title += ' (1pctCO2)'
 
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
     grid = Grid(base_dir+grid_path)
+    temp = np.concatenate((read_netcdf(file_path_base, 'filchner_trough_temp'), read_netcdf(file_path, 'filchner_trough_temp')), axis=0)
+    salt = np.concatenate((read_netcdf(file_path_base, 'filchner_trough_salt'), read_netcdf(file_path, 'filchner_trough_salt')), axis=0)
+    time = np.concatenate((netcdf_time(file_path_base, monthly=False), netcdf_time(file_path_base, monthly=False)), axis=0)
 
-    fig, axs = read_plot_hovmoller_ts(file_path, 'filchner_trough', grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in axs:
-        ax.set_xlim([0, threshold_year])
-        #ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
-    #axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
-    #if sim_key == 'abIO':
-        #axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
-    #elif sim_key == '1pIO':
-        #axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+        ax.axvline(threshold_year, linestyle='dashed', color='black', linewidth=1)
+    axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
+    if sim_key == 'abIO':
+        axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
+    elif sim_key == '1pIO':
+        axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
     finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
@@ -1904,7 +1907,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
 
     # Plot
     fig, ax = plt.subplots(figsize=(9,5))
-    for n in range(2): #num_expt+1):
+    for n in range(num_expt+1):
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
