@@ -1628,11 +1628,12 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
     var_titles = ['a) Change in ice thickness (m)', 'b) Change in basal velocity (m/y)']
+    mask = ['grounded', 'floating']
     years = [74, 149]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
-    vmin = [-75, -40]
-    vmax = [75, 40]
+    vmin = [None, None] #[-75, -40]
+    vmax = [None, None] #[75, 40]
     start_year_base = 2910
     start_year = 1850
     base_key = 'ctIO'

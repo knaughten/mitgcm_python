@@ -243,7 +243,7 @@ def gl_final (file_path, fig_name=None, dpi=None):
 
 
 # Read the difference between two Ua output steps for the given variable, interpolated to a common grid.
-def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000):
+def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=None):
 
     # Read the data for each output step
     def read_data (file_path):
@@ -256,6 +256,16 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000):
             data = np.sqrt(f['ub'][:,0]**2 + f['vb'][:,0]**2)
         else:
             data = f[var][:,0]
+        if mask is not None:
+            # Read ice base elevation and bedrock depth
+            ice_base = f['b'][:,0]
+            bedrock = f['B'][:,0]
+            if mask == 'floating':
+                # Mask out the floating ice
+                data = np.ma.masked_where(ice_base>bedrock, data)
+            elif mask == 'grounded':
+                # Mask out the grounded ice
+                data = np.ma.masked_where(ice_base<=bedrock, data)
         return x_reg, y_reg, interp_nonreg_xy(x, y, data, x_reg, y_reg)
     x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
     x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
