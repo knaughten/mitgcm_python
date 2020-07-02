@@ -72,7 +72,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         bdry_path = matplotlib.path.Path(xy_bdry)
         inside = bdry_path.contains_points(xy_points).reshape(data.shape)
         data[~inside] = np.ma.masked        
-        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black')        
+        bdry = matplotlib.patches.Polygon(xy_bdry, facecolor='none', edgecolor='black', linestyle='dotted', linewidth=2)        
         
     # Make the figure and axes, if needed
     existing_ax = ax is not None

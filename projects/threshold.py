@@ -25,7 +25,7 @@ from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
-from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res, deg2rad
+from ..constants import deg_string, vaf_to_gmslr, temp_C2K, bedmap_dim, bedmap_bdry, bedmap_res, deg2rad, region_bounds
 from ..plot_latlon import latlon_plot, read_plot_latlon_comparison, latlon_comparison_plot
 from ..plot_1d import read_plot_timeseries_ensemble, timeseries_multi_plot
 from ..plot_misc import read_plot_hovmoller_ts, hovmoller_ts_plot
@@ -1622,29 +1622,27 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
 
 
 # Ice sheet changes plot
-# TODO: fix new label position, plot model boundary in different colour and possibly plot the topography outside the Ua domain, try showing speed as % change
 def plot_icesheet_changes (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
-    var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (%)']
+    var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (m/y)']
     mask = ['grounded', 'floating']
-    percent = [False, True]
     years = [74, 149]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
-    vmin = [-75, -40]
-    vmax = [75, 40]
+    vmin = [-75, -10]
+    vmax = [75, 10]
     start_year_base = 2910
     start_year = 1850
     base_key = 'ctIO'
     sim_key = 'abIO'
     num_years = len(years)
     num_vars = len(var_names)
-    labels = ['Bailey', 'Slessor', 'Recovery', 'Support\nForce', 'Foundation', 'Institute', 'Rutford', 'Evans']
-    labels_x = [0.81, 0.9235, 0.9, 0.9, 0.86, 0.6, 0.25, 0.07]
-    labels_y = [0.86, 0.82, 0.7, 0.37, 0.19, 0.1, 0.02, 0.25]
+    labels = ['Bailey', 'Slessor', 'Reco-\nvery', 'Support\nForce', 'Foundation', 'Institute', 'Rutford', 'Evans']
+    labels_x = [0.81, 0.9235, 0.9, 0.9, 0.86, 0.6, 0.27, 0.07]
+    labels_y = [0.86, 0.82, 0.6, 0.37, 0.19, 0.11, 0.02, 0.25]
     final_ocean_file = base_dir + sim_dirs[sim_keys.index(sim_key)] + '199901/MITgcm/output.nc'
     wdw_temp = 0
 
@@ -1661,7 +1659,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         data_var = []
         for t in range(num_years):
-            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v], percent=percent[v])
+            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v])
             data_var.append(data_diff)
         data.append(data_var)
 
@@ -1681,6 +1679,12 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     ocean_temp = mask_3d(read_netcdf(final_ocean_file, 'THETA', time_average=True), grid)
     # Get maximum in water column and mask open ocean
     ocean_tmax = mask_except_ice(np.amax(ocean_temp, axis=0), grid)
+    # Now prepare to contour the coastline
+    ocean_mask = grid.get_open_ocean_mask().astype(float)
+    # Remove grounded iceberg A23a
+    [xmin, xmax, ymin, ymax] = region_bounds['a23a']
+    index = (grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax)*(grid.land_mask)
+    ocean_mask[index] = 1
 
     # Set up plot
     fig, gs, cax1, cax2 = set_panels('2x2C2')
@@ -1691,6 +1695,8 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
             img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            # Contour coastline from MITgcm
+            ax.contour(x_ocean, y_ocean, ocean_mask, levels=[0.5], colors=('black'))
             if v==0 and t==0:
                 # Add ice stream labels
                 for l in range(len(labels)):
@@ -1703,7 +1709,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
         cbar = plt.colorbar(img, cax=cax[v], extend='both')
         plt.text(0.45, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
-    finished_plot(fig) #, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
 
 
 # Plot density timeseries for supplementary.
