@@ -146,7 +146,7 @@ def check_read_gl (gl_file, gl_time_index):
 
 
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None, mask=None):
+def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -159,16 +159,6 @@ def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None
         data = np.sqrt(u**2 + v**2)
     else:
         data = read_data(var)
-    if mask is not None:
-        # Read ice base elevation and bedrock depth
-        ice_base = f['b'][:,0]
-        bedrock = f['B'][:,0]
-        if mask == 'floating':
-            # Mask out the floating ice
-            data = np.ma.masked_where(ice_base>bedrock, data)
-        elif mask == 'grounded':
-            # Mask out the grounded ice
-            data = np.ma.masked_where(ice_base<=bedrock, data)
     xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
     if title is None:
@@ -266,17 +256,21 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
             data = np.sqrt(f['ub'][:,0]**2 + f['vb'][:,0]**2)
         else:
             data = f[var][:,0]
+        data_reg = interp_nonreg_xy(x, y, data, x_reg, y_reg)
         if mask is not None:
             # Read ice base elevation and bedrock depth
             ice_base = f['b'][:,0]
             bedrock = f['B'][:,0]
+            flt_mask = interp_nonreg_xy(x, y, (ice_base>bedrock).astype(float), x_reg, y_reg)
+            flt_mask[flt_mask<0.5] = 0
+            flt_mask[flt_mask>=0.5] = 1
             if mask == 'floating':
                 # Mask out the floating ice
-                data = np.ma.masked_where(ice_base>bedrock, data)
+                data_reg = np.ma.masked_where(flt_mask==1, data_reg)
             elif mask == 'grounded':
                 # Mask out the grounded ice
-                data = np.ma.masked_where(ice_base<=bedrock, data)
-        return x_reg, y_reg, interp_nonreg_xy(x, y, data, x_reg, y_reg)
+                data_reg = np.ma.masked_where(flt_mask==0, data_reg)
+        return x_reg, y_reg, data_reg
     x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
     x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
     if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
