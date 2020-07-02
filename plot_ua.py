@@ -243,7 +243,7 @@ def gl_final (file_path, fig_name=None, dpi=None):
 
 
 # Read the difference between two Ua output steps for the given variable, interpolated to a common grid.
-def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=None):
+def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=None, percent=False):
 
     # Read the data for each output step
     def read_data (file_path):
@@ -277,6 +277,8 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
         print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
         sys.exit()
     data_diff = data_2 - data_1
+    if percent:
+        data_diff /= data_1*1e2
     return x_reg_1, y_reg_1, data_diff
     
 

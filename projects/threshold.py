@@ -1622,14 +1622,15 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
 
 
 # Ice sheet changes plot
-# TODO: fix masking, fix new label position, plot model boundary in different colour and possibly plot the topography outside the Ua domain, try showing speed as % change
+# TODO: fix new label position, plot model boundary in different colour and possibly plot the topography outside the Ua domain, try showing speed as % change
 def plot_icesheet_changes (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
-    var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (m/y)']
+    var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (%)']
     mask = ['grounded', 'floating']
+    percent = [False, True]
     years = [74, 149]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
@@ -1642,8 +1643,8 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     num_years = len(years)
     num_vars = len(var_names)
     labels = ['Bailey', 'Slessor', 'Recovery', 'Support\nForce', 'Foundation', 'Institute', 'Rutford', 'Evans']
-    labels_x = [0.81, 0.9235, 0.9, 0.9, 0.86, 0.5, 0.2, 0.07]
-    labels_y = [0.86, 0.82, 0.5, 0.37, 0.19, 0.1, 0.05, 0.25]
+    labels_x = [0.81, 0.9235, 0.9, 0.9, 0.86, 0.6, 0.25, 0.07]
+    labels_y = [0.86, 0.82, 0.7, 0.37, 0.19, 0.1, 0.02, 0.25]
     final_ocean_file = base_dir + sim_dirs[sim_keys.index(sim_key)] + '199901/MITgcm/output.nc'
     wdw_temp = 0
 
@@ -1660,7 +1661,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         data_var = []
         for t in range(num_years):
-            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v])
+            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v], percent=percent[v])
             data_var.append(data_diff)
         data.append(data_var)
 
