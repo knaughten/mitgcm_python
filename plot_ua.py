@@ -276,9 +276,10 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
     if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
         print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
         sys.exit()
-    data_diff = data_2 - data_1
     if percent:
-        data_diff /= data_1*1e2
+        data_diff = (data_2 - data_1)/data_1*1e2
+    else:
+        data_diff = data_2 - data_1
     return x_reg_1, y_reg_1, data_diff
     
 
