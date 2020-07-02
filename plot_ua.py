@@ -146,7 +146,7 @@ def check_read_gl (gl_file, gl_time_index):
 
 
 # Read a variable from an Ua output file and plot it.
-def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None):
+def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None, mask=None):
 
     # Read the file
     f = loadmat(file_path)
@@ -159,6 +159,16 @@ def read_plot_ua_tri (var, file_path, gl_file=None, gl_time_index=-1, title=None
         data = np.sqrt(u**2 + v**2)
     else:
         data = read_data(var)
+    if mask is not None:
+        # Read ice base elevation and bedrock depth
+        ice_base = f['b'][:,0]
+        bedrock = f['B'][:,0]
+        if mask == 'floating':
+            # Mask out the floating ice
+            data = np.ma.masked_where(ice_base>bedrock, data)
+        elif mask == 'grounded':
+            # Mask out the grounded ice
+            data = np.ma.masked_where(ice_base<=bedrock, data)
     xGL, yGL = check_read_gl(gl_file, gl_time_index)
 
     if title is None:
