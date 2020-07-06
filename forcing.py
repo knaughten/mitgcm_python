@@ -963,29 +963,30 @@ def ukesm_tas_timeseries (out_dir='./'):
         for e in range(1, num_ens+1):
             if expt[n] in ['piControl', 'abrupt-4xCO2'] and e>1:
                 continue
+            print 'Ensemble member ' + str(e)
             ensemble_member = 'r'+str(e)+'i1p1f2'
             in_files, start_years, end_years = find_cmip6_files(directory, expt[n], ensemble_member, var, time_code)
-        timeseries = []
-        # Loop over each file
-        for t in range(len(in_files)):
-            t_start = 0
-            t_end = t_start+days_per_year
-            for year in range(start_years[t], end_years[t]+1):
-                if year >= start_year[n] and year <= end_year[n]:
-                    print '...' + str(year)
-                    # Read data for this year and time-average
-                    data = np.mean(read_netcdf(in_files[t], var, t_start=t_start, t_end=t_end), axis=0)
-                    # Area-average
-                    data = np.sum(data*grid.dA)/np.sum(grid.dA)
-                    timeseries.append(data)
-                t_start = t_end
+            timeseries = []
+            # Loop over each file
+            for t in range(len(in_files)):
+                t_start = 0
                 t_end = t_start+days_per_year
-        out_file = out_dir + expt[n] + '_e' + str(e) + '_tas.nc'
-        print 'Writing ' + out_file
-        ncfile = NCfile(out_file, grid, 't')
-        ncfile.add_time(range(start_year[n], end_year[n]+1), units='year')
-        ncfile.add_variable('tas_mean', timeseries, 't', long_name='global mean surface air temperature', units='K')
-        ncfile.close()
+                for year in range(start_years[t], end_years[t]+1):
+                    if year >= start_year[n] and year <= end_year[n]:
+                        print '...' + str(year)
+                        # Read data for this year and time-average
+                        data = np.mean(read_netcdf(in_files[t], var, t_start=t_start, t_end=t_end), axis=0)
+                        # Area-average
+                        data = np.sum(data*grid.dA)/np.sum(grid.dA)
+                        timeseries.append(data)
+                    t_start = t_end
+                    t_end = t_start+days_per_year
+            out_file = out_dir + expt[n] + '_e' + str(e) + '_tas.nc'
+            print 'Writing ' + out_file
+            ncfile = NCfile(out_file, grid, 't')
+            ncfile.add_time(range(start_year[n], end_year[n]+1), units='year')
+            ncfile.add_variable('tas_mean', timeseries, 't', long_name='global mean surface air temperature', units='K')
+            ncfile.close()
         
         
         
