@@ -1521,13 +1521,15 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
 
-    titles = ['a) Initial', 'b) Stage 1', 'c) Stage 2']
+    titles = ['a) Historical', 'b) Stage 1', 'c) Stage 2']
     [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
     labels = ['BI', 'RIS', 'FIS', 'RD', 'BB', 'FT']
     labels_x = [0.62, 0.43, 0.75, 0.19, 0.47, 0.6]
     labels_y = [0.49, 0.3, 0.56, 0.56, 0.62, 0.7]
     captions = [None, 'Circulation weakens\nMelting decreases', 'Warm water inflow\nMelting increases']
     caption_width = [None, "68%", "63%"]
+    compass_centre = [-25, -78]
+    compass_rad = [4, 1]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1546,6 +1548,12 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
     bounds = np.concatenate((np.linspace(-4, -2, num=6), np.linspace(-2, -1, num=10), np.linspace(-1, -0.5, num=12), np.linspace(-0.5, 0, num=15)))
     norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
 
+    # Generate coordinates for compass outline - will be overlaid with pretty arrows and N/S/E/W in Corel Draw
+    compass_lon = np.linspace(compass_centre[0]-compass_rad[0], compass_centre[0]+compass_rad[0])
+    compass_lat = np.linspace(compass_centre[1]-compass_rad[1], compass_centre[1]+compass_rad[1])
+    compass_lon_x, compass_lon_y = polar_stereo(compass_lon, np.zeros(compass_lon.size)+compass_centre[1])
+    compass_lat_x, compass_lat_y = polar_stereo(np.zeros(compass_lat.size)+compass_centre[0], compass_lat)
+
     fig, gs = set_panels('1x3C0', figsize=(9,3.5))
     for i in range(3):
         ax = plt.subplot(gs[0,i])
@@ -1553,6 +1561,9 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
         # Shade open ocean
         img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, zoom_fris=True, pster=True, title=titles[i], contour_shelf=False)
         if i==0:
+            # Plot outline of compass
+            ax.plot(compass_lon_x, compass_lon_y, color='black')
+            ax.plot(compass_lat_x, compass_lat_y, color='black')
             # Add a little colourbar for bathymetry
             cax = inset_axes(ax, "5%", "20%", loc=4)
             cbar = plt.colorbar(img, cax=cax, ticks=[-2, -1, 0])
