@@ -1887,14 +1887,14 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
 
     timeseries_dir = real_dir(timeseries_dir)
     fig_dir = real_dir(fig_dir)
-    
+
     expt = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'ssp126', 'ssp245', 'ssp370', 'ssp585']
     num_expt = len(expt)
     file_tail = '_tas.nc'
     base_file = timeseries_dir + 'piControl_e1' + file_tail
     obs_file = timeseries_dir+'HadCRUT.4.6.0.0.annual_ns_avg.txt'
     titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
-    colours = ['blue', 'red', 'black', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'Grey']
+    colours = ['blue', 'red', 'Grey', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'black']
     var_name = 'tas_mean'
     threshold_year = [146, 79]
     num_ens = 4
@@ -1903,18 +1903,29 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     pi_mean = np.mean(read_netcdf(base_file, var_name))
     # Now loop over experiments
     data = []
+    data_min = []
+    data_max = []
     time = []
     for n in range(num_expt):
-        data_sim = []
-        for e in range(1, num_ens+1):
-            if expt[n] == 'abrupt-4xCO2' and e > 1:
+        for e in range(num_ens):
+            if expt[n] == 'abrupt-4xCO2' and e > 0:
                 continue
-            file_path = timeseries_dir + expt[n] + '_e'+str(e) + file_tail
-            data_sim.append(read_netcdf(file_path[n], var_name) - pi_mean)
-            if e == 1:
-                time.append(read_netcdf(file_path[n], 'time'))
-        data.append(data_sim)
-        
+            file_path = timeseries_dir + expt[n] + '_e'+str(e+1) + file_tail
+            data_tmp = read_netcdf(file_path, var_name) - pi_mean
+            if e == 0:
+                data.append(data_tmp)
+                data_sim = np.empty([4, data_tmp.size])
+                data_sim[0,:] = data_tmp
+                time.append(read_netcdf(file_path, 'time'))
+            else:
+                data_sim[e,:] = data_tmp
+        if expt[n] == 'abrupt-4xCO2':
+            data_min.append(None)
+            data_max.append(None)
+        else:
+            data_min.append(np.amin(data_sim, axis=0))
+            data_max.append(np.amax(data_sim, axis=0))
+
     # Now read the HadCRUT data
     data_obs = []
     time_obs = []
@@ -1926,14 +1937,17 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     # Trim 2020 because it's not complete, and change baseline to 1850
     data.append(np.array(data_obs[:-1])-data_obs[0])
     time.append(np.array(time_obs[:-1]))
+    data_min.append(None)
+    data_max.append(None)
 
     # Plot
     fig, ax = plt.subplots(figsize=(9,5))
     for n in range(num_expt+1):
-        for data_sim in data[n]:
-            ax.plot(time[n], data_sim, color=colours[n], label=titles[n], linewidth=1.5)
+        if data_min[n] is not None:
+            ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
+        ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
-            ax.plot(threshold_year[n]+1850, data[n][0][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
+            ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
     plt.title('Global mean surface air temperature anomaly', fontsize=18)
     plt.ylabel(deg_string+'C', fontsize=14)
@@ -1944,7 +1958,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
-    finished_plot(fig) #, fig_name=fig_dir+'tas_scenarios.png')
+    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png')
         
     
 # Plot time-averaged historical melt rates versus Moholdt observations.
