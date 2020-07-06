@@ -950,7 +950,7 @@ def ukesm_tas_timeseries (out_dir='./'):
     mip = ['CMIP' for  n in range(4)] + ['ScenarioMIP' for n in range(5)]
     start_year = [2910] + [1850 for n in range(3)] + [2015 for n in range(5)]
     end_year = [3059] + [1999 for n in range(2)] + [2014] + [2100 for n in range(5)]
-    ensemble_member = 'r1i1p1f2'
+    num_ens = 4
     var = 'tas'
     time_code = 'day'
     out_dir = real_dir(out_dir)
@@ -960,7 +960,11 @@ def ukesm_tas_timeseries (out_dir='./'):
     for n in range(num_expt):
         print 'Processing ' + expt[n]
         directory = base_path+mip[n]+'/MOHC/UKESM1-0-LL/'
-        in_files, start_years, end_years = find_cmip6_files(directory, expt[n], ensemble_member, var, time_code)
+        for e in range(1, num_ens+1):
+            if expt[n] in ['piControl', 'abrupt-4xCO2'] and e>1:
+                continue
+            ensemble_member = 'r'+str(e)+'i1p1f2'
+            in_files, start_years, end_years = find_cmip6_files(directory, expt[n], ensemble_member, var, time_code)
         timeseries = []
         # Loop over each file
         for t in range(len(in_files)):
@@ -976,7 +980,7 @@ def ukesm_tas_timeseries (out_dir='./'):
                     timeseries.append(data)
                 t_start = t_end
                 t_end = t_start+days_per_year
-        out_file = out_dir + expt[n] + '_tas.nc'
+        out_file = out_dir + expt[n] + '_e' + str(e) + '_tas.nc'
         print 'Writing ' + out_file
         ncfile = NCfile(out_file, grid, 't')
         ncfile.add_time(range(start_year[n], end_year[n]+1), units='year')
