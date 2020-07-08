@@ -2175,5 +2175,74 @@ def salt_timeseries (base_dir='./', fig_dir='./'):
             time = np.array([t.year-time_tmp[0].year for t in time_tmp])
 
     timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Salinity anomaly on continental shelf', units='psu', dates=False, fig_name=fig_dir+'timeseries_sws_shelf_salt.png')
+
+
+# Casts of temperature and salinity along different regions of the ice shelf front, comparing each year of the model to PS111
+def ts_casts_ps111 (base_dir='./', fig_dir='./'):
+
+    from scipy.interpolate import interp1d
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    mit_dir = base_dir + 'WSFRIS_hist/output/'
+    start_year = 1979
+    end_year = 2014
+    num_years = end_year-start_year+1
+    file_tail = '01/MITgcm/output.nc'
+    num_months = 3
+    ps111_file = base_dir + 'PS111_phys_oce.tab'
+    loc = ['ronne_depression', 'berkner_bank', 'filchner_trough']
+    num_loc = 3
+
+    grid = Grid(base_dir+grid_path)  # Original grid is fine because no obs in cavity
+    loc_masks = [grid.get_region_mask(l).astype(float) for l in loc]
+
+    # Read the observations as individual points
+    obs = np.loadtxt(ps111_file, dtype=np.str, delimiter='\t')
+    obs_lat_pts = obs[:,2].astype(float)
+    obs_lon_pts = obs[:,3].astype(float)
+    obs_depth_pts = -1*obs[:,5].astype(float)
+    obs_salt_pts = obs[:,9].astype(float)
+    obs_temp_pts = obs[:,10].astype(float)    
+    # Restructure as casts instead of points, interpolated to the MITgcm depth levels
+    obs_lonlat = np.unique(np.stack((obs_lon_pts, obs_lat_pts)), axis=1)
+    num_casts = obs_lonlat.shape[1]
+    obs_salt = np.ma.empty([num_casts, grid.nz])
+    obs_temp = np.ma.empty([num_casts, grid.nz])
+    # Also flag whether each point is in any of the three regions
+    mask_flag = np.zeros((num_loc, num_casts))
+    for n in range(num_casts):
+        # Find all the depth-varying points within this lat-lon point
+        [lon0, lat0] = obs_lonlat[:,n]
+        index = (obs_lon_pts==lon0)*(obs_lat_pts==lat0)
+        depth_cast = obs_depth_pts[index]
+        # Interpolate temperature and salinity to the MITgcm depth levels
+        def interp_cast (data_cast):
+            interpolant = interp1d(depth_cast, data_cast, bounds_error=False)
+            data_interp = interpolant(grid.z)
+            return np.ma.masked_where(np.isnan(data_interp), data_interp)
+        obs_salt[n,:] = interp_cast(obs_salt_pts[index])
+        obs_temp[n,:] = interp_cast(obs_temp_pts[index])
+        # Interpolate each mask to this point to see which region we're in
+        for l in range(num_loc):
+            mask0 = interp_bilinear(loc_masks[l], lon0, lat0, grid)
+            if mask0 == 1:
+                mask_flag[l,n] = 1
+
+    # Read each year of model output, average over correct season, and interpolate to each point
+    model_salt = np.ma.empty([num_years, num_casts, grid.nz])
+    model_temp = np.ma.empty([num_years, num_casts, grid.nz])
+    for year in range(start_year, end_year+1):
+        file_path = mit_dir + str(year) + file_tail
+        def read_interp (var_name):
+            data_3d = mask_3d(read_netcdf(file_path, var_name, t_end=num_months, time_average=True), grid)
+            data_interp = np.empty([num_casts, grid.nz])
+            for n in range(num_casts):
+                [lon0, lat0] = obs_lonlat[:,n]
+                data_interp[n,:] = interp_bilinear(data_3d, lon0, lat0, grid)
+            return data_interp
+        model_salt[year-start_year,:] = read_interp('SALT')
+        model_temp[year-start_year,:] = read_interp('THETA')
     
 
