@@ -2273,51 +2273,51 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     smax += 0.05
 
     # Plot
-vmin = [tmin, smin]
-vmax = [tmax, smax]
-model_data = [model_temp_regions, model_salt_regions]
-obs_data = [obs_temp_regions, obs_salt_regions]
-titles = ['Temperature', 'Salinity']
-units = [deg_string+'C', 'psu']
-num_vars = len(units)
-fig, gs = set_panels('PS111_3x2C0')
-loc_titles = ['a) Ronne Depression', 'b) Berkner Bank', 'c) Filchner Trough']
-ytitle = [0.89, 0.59, 0.295]
-loc_labels = ['a', 'b', 'c']
-loc_labels_x = [0.04, 0.09, 0.13]
-loc_labels_y = [0.955, 0.96, 0.975]
-loc_colours = ['red', 'blue', 'green']
-# 3x2 plot showing 3 locations and 2 variables
-for l in range(num_loc):
-    for v in range(num_vars):
-        ax = plt.subplot(gs[l,v])
-        # Plot each model year in a different colour
-        for t in range(num_years):
-            ax.plot(model_data[v][t,l,:], grid.z, alpha=0.5)
-        # Plot observations in thick black
-        ax.plot(obs_data[v][l,:], obs_depth, color='black', linewidth=3)
-        ax.set_xlim([vmin[v], vmax[v]])
-        ax.grid(True)
-        plt.title(titles[v], fontsize=16)
-        if l == num_loc-1:
-            plt.xlabel(units[v])
-        if v == 0:
-            depth_axis(ax)
-            plt.ylabel('depth (m)')
-        else:
-            ax.set_yticklabels([])
-    plt.text(0.5, ytitle[l], loc_titles[l], fontsize=20, transform=fig.transFigure, ha='center', va='center')
-# Main title
-plt.text(0.6, 0.95, u'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
-# Add map in top corner showing where casts are
-ax = fig.add_axes([0.01, 0.88, 0.2, 0.11])
-empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
-latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
-obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
-for l in range(num_loc):
-    for n in range(num_casts):
-        if mask_flag[l,n] == 1:
-            ax.plot(obs_x[n], obs_y[n], '.', color=loc_colours[l], markersize=5)
-    plt.text(loc_labels_x[l], loc_labels_y[l], loc_labels[l], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=loc_colours[l])
-finished_plot(fig, fig_name=fig_dir+'ps111_casts.png')
+    vmin = [tmin, smin]
+    vmax = [tmax, smax]
+    model_data = [model_temp_regions, model_salt_regions]
+    obs_data = [obs_temp_regions, obs_salt_regions]
+    titles = ['Temperature', 'Salinity']
+    units = [deg_string+'C', 'psu']
+    num_vars = len(units)
+    fig, gs = set_panels('PS111_3x2C0')
+    loc_titles = ['a) Ronne Depression', 'b) Berkner Bank', 'c) Filchner Trough']
+    ytitle = [0.89, 0.59, 0.295]
+    loc_labels = ['a', 'b', 'c']
+    loc_labels_x = [0.04, 0.09, 0.13]
+    loc_labels_y = [0.955, 0.96, 0.975]
+    loc_colours = ['red', 'blue', 'green']
+    # 3x2 plot showing 3 locations and 2 variables
+    for l in range(num_loc):
+        for v in range(num_vars):
+            ax = plt.subplot(gs[l,v])
+            # Plot each model year in a different colour
+            for t in range(num_years):
+                ax.plot(model_data[v][t,l,:], grid.z, alpha=0.5)
+            # Plot observations in thick black
+            ax.plot(obs_data[v][l,:], obs_depth, color='black', linewidth=3)
+            ax.set_xlim([vmin[v], vmax[v]])
+            ax.grid(True)
+            plt.title(titles[v], fontsize=16)
+            if l == num_loc-1:
+                plt.xlabel(units[v])
+            if v == 0:
+                depth_axis(ax)
+                plt.ylabel('depth (m)')
+            else:
+                ax.set_yticklabels([])
+        plt.text(0.5, ytitle[l], loc_titles[l], fontsize=20, transform=fig.transFigure, ha='center', va='center')
+    # Main title
+    plt.text(0.6, 0.95, u'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
+    # Add map in top corner showing where casts are
+    ax = fig.add_axes([0.01, 0.88, 0.2, 0.11])
+    empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
+    latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
+    obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
+    for l in range(num_loc):
+        for n in range(num_casts):
+            if mask_flag[l,n] == 1:
+                ax.plot(obs_x[n], obs_y[n], '.', color=loc_colours[l], markersize=5)
+        plt.text(loc_labels_x[l], loc_labels_y[l], loc_labels[l], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=loc_colours[l])
+    finished_plot(fig, fig_name=fig_dir+'ps111_casts.png')
         
