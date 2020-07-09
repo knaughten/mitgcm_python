@@ -66,6 +66,8 @@ def set_panels (key, figsize=None):
             figsize = (6, 8)
         elif key == 'PS111_2x2C2':
             figsize = (8, 8)
+        elif key == 'PS111_3x2C0':
+            figsize = (8, 12)
 
     fig = plt.figure(figsize=figsize)
     
@@ -215,6 +217,10 @@ def set_panels (key, figsize=None):
         gs.update(left=0.09, right=0.9, bottom=0.02, top=0.85, wspace=0.03, hspace=0.35)
         cax1 = fig.add_axes([0.915, 0.53, 0.025, 0.3])
         cax2 = fig.add_axes([0.915, 0.04, 0.025, 0.3])
+    elif key == 'PS111_3x2C0':
+        # 3 rows and 2 columns, space for map inset at top left
+        gs = plt.GridSpec(3,2)
+        gs.update(left=0.1, right=0.99, bottom=0.04, top=0.85, wspace=0.02, hspace=0.35)
         
     if key == 'CTD':
         return fig, gs_1, gs_2

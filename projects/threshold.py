@@ -21,7 +21,7 @@ from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binar
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
-from ..plot_utils.labels import latlon_axes, parse_date, slice_axes
+from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
@@ -2194,9 +2194,13 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     ps111_file = base_dir + 'PS111_phys_oce.tab'
     loc = ['ronne_depression', 'berkner_bank', 'filchner_trough']
     num_loc = 3
+    zmin = -1200
+    zmax = -5
+    dz = -1
+    ymax = [-74, -76, -77]
 
     grid = Grid(base_dir+grid_path)  # Original grid is fine because no obs in cavity
-    loc_masks = [grid.get_region_mask(l).astype(float) for l in loc]
+    loc_masks = [(grid.get_region_mask(loc[l])*grid.lat_2d<=ymax[l]).astype(float) for l in range(num_loc)]
 
     # Read the observations as individual points
     obs = np.loadtxt(ps111_file, dtype=np.str, delimiter='\t')
@@ -2204,45 +2208,116 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     obs_lon_pts = obs[:,3].astype(float)
     obs_depth_pts = -1*obs[:,5].astype(float)
     obs_salt_pts = obs[:,9].astype(float)
-    obs_temp_pts = obs[:,10].astype(float)    
-    # Restructure as casts instead of points, interpolated to the MITgcm depth levels
-    obs_lonlat = np.unique(np.stack((obs_lon_pts, obs_lat_pts)), axis=1)
-    num_casts = obs_lonlat.shape[1]
-    obs_salt = np.ma.empty([num_casts, grid.nz])
-    obs_temp = np.ma.empty([num_casts, grid.nz])
+    obs_temp_pts = obs[:,10].astype(float)
+    # Restructure as casts instead of points, interpolated to the common depth levels
+    obs_depth = np.arange(zmax, zmin, dz)
+    nz = obs_depth.size
+    obs_lon, index = np.unique(obs_lon_pts, return_index=True)
+    obs_lat = obs_lat_pts[index]
+    num_casts = obs_lon.size
+    obs_salt = np.ma.empty([num_casts, nz])
+    obs_temp = np.ma.empty([num_casts, nz])    
     # Also flag whether each point is in any of the three regions
     mask_flag = np.zeros((num_loc, num_casts))
     for n in range(num_casts):
         # Find all the depth-varying points within this lat-lon point
-        [lon0, lat0] = obs_lonlat[:,n]
-        index = (obs_lon_pts==lon0)*(obs_lat_pts==lat0)
+        index = (obs_lon_pts==obs_lon[n])*(obs_lat_pts==obs_lat[n])
         depth_cast = obs_depth_pts[index]
-        # Interpolate temperature and salinity to the MITgcm depth levels
+        # Interpolate temperature and salinity to the common depth levels
         def interp_cast (data_cast):
             interpolant = interp1d(depth_cast, data_cast, bounds_error=False)
-            data_interp = interpolant(grid.z)
+            data_interp = interpolant(obs_depth)
             return np.ma.masked_where(np.isnan(data_interp), data_interp)
         obs_salt[n,:] = interp_cast(obs_salt_pts[index])
         obs_temp[n,:] = interp_cast(obs_temp_pts[index])
         # Interpolate each mask to this point to see which region we're in
         for l in range(num_loc):
-            mask0 = interp_bilinear(loc_masks[l], lon0, lat0, grid)
+            mask0 = interp_bilinear(loc_masks[l], obs_lon[n], obs_lat[n], grid)
             if mask0 == 1:
                 mask_flag[l,n] = 1
+    # Now average over each region
+    obs_salt_regions = np.ma.empty([num_loc, nz])
+    obs_temp_regions = np.ma.empty([num_loc, nz])
+    for l in range(num_loc):
+        index = mask_flag[l,:] == 1
+        print str(np.count_nonzero(index)) + ' points in ' + loc[l]
+        obs_salt_regions[l,:] = np.mean(obs_salt[index,:], axis=0)
+        obs_temp_regions[l,:] = np.mean(obs_temp[index,:], axis=0)
 
-    # Read each year of model output, average over correct season, and interpolate to each point
-    model_salt = np.ma.empty([num_years, num_casts, grid.nz])
-    model_temp = np.ma.empty([num_years, num_casts, grid.nz])
+    # Read each year of model output, average over correct season, interpolate to each point, and average over each region
+    model_salt_regions = np.ma.empty([num_years, num_loc, grid.nz])
+    model_temp_regions = np.ma.empty([num_years, num_loc, grid.nz])
     for year in range(start_year, end_year+1):
+        print 'Processing ' + str(year)
         file_path = mit_dir + str(year) + file_tail
         def read_interp (var_name):
             data_3d = mask_3d(read_netcdf(file_path, var_name, t_end=num_months, time_average=True), grid)
-            data_interp = np.empty([num_casts, grid.nz])
+            data_interp = np.ma.empty([num_casts, grid.nz])
             for n in range(num_casts):
-                [lon0, lat0] = obs_lonlat[:,n]
-                data_interp[n,:] = interp_bilinear(data_3d, lon0, lat0, grid)
-            return data_interp
-        model_salt[year-start_year,:] = read_interp('SALT')
-        model_temp[year-start_year,:] = read_interp('THETA')
-    
+                data_interp[n,:] = interp_bilinear(data_3d, obs_lon[n], obs_lat[n], grid)
+            data_interp_regions = np.ma.empty([num_loc, grid.nz])
+            for l in range(num_loc):
+                index = mask_flag[l,:] == 1
+                data_interp_regions[l,:] = np.mean(data_interp[index,:], axis=0)
+            return data_interp_regions
+        model_salt_regions[year-start_year,:] = read_interp('SALT')
+        model_temp_regions[year-start_year,:] = read_interp('THETA')
 
+    # Get bounds
+    def get_bounds (model_casts, obs_casts):
+        return min(np.amin(model_casts), np.amin(obs_casts)), max(np.amax(model_casts), np.amax(obs_casts))
+    smin, smax = get_bounds(model_salt_regions, obs_salt_regions)
+    tmin, tmax = get_bounds(model_temp_regions, obs_temp_regions)
+    # Pad tmin and smax for better visibility
+    tmin -= 0.1
+    smax += 0.05
+
+    # Plot
+vmin = [tmin, smin]
+vmax = [tmax, smax]
+model_data = [model_temp_regions, model_salt_regions]
+obs_data = [obs_temp_regions, obs_salt_regions]
+titles = ['Temperature', 'Salinity']
+units = [deg_string+'C', 'psu']
+num_vars = len(units)
+fig, gs = set_panels('PS111_3x2C0')
+loc_titles = ['a) Ronne Depression', 'b) Berkner Bank', 'c) Filchner Trough']
+ytitle = [0.89, 0.59, 0.295]
+loc_labels = ['a', 'b', 'c']
+loc_labels_x = [0.04, 0.09, 0.13]
+loc_labels_y = [0.955, 0.96, 0.975]
+loc_colours = ['red', 'blue', 'green']
+# 3x2 plot showing 3 locations and 2 variables
+for l in range(num_loc):
+    for v in range(num_vars):
+        ax = plt.subplot(gs[l,v])
+        # Plot each model year in a different colour
+        for t in range(num_years):
+            ax.plot(model_data[v][t,l,:], grid.z, alpha=0.5)
+        # Plot observations in thick black
+        ax.plot(obs_data[v][l,:], obs_depth, color='black', linewidth=3)
+        ax.set_xlim([vmin[v], vmax[v]])
+        ax.grid(True)
+        plt.title(titles[v], fontsize=16)
+        if l == num_loc-1:
+            plt.xlabel(units[v])
+        if v == 0:
+            depth_axis(ax)
+            plt.ylabel('depth (m)')
+        else:
+            ax.set_yticklabels([])
+    plt.text(0.5, ytitle[l], loc_titles[l], fontsize=20, transform=fig.transFigure, ha='center', va='center')
+# Main title
+plt.text(0.6, 0.95, u'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
+# Add map in top corner showing where casts are
+ax = fig.add_axes([0.01, 0.88, 0.2, 0.11])
+empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
+latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4e5, ymin=1e5, ymax=1.3e6, ctype='plusminus', vmin=-300)
+obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
+for l in range(num_loc):
+    for n in range(num_casts):
+        if mask_flag[l,n] == 1:
+            ax.plot(obs_x[n], obs_y[n], '.', color=loc_colours[l], markersize=5)
+    plt.text(loc_labels_x[l], loc_labels_y[l], loc_labels[l], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=loc_colours[l])
+finished_plot(fig, fig_name=fig_dir+'ps111_casts.png')
+        
