@@ -1629,7 +1629,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
             # Remove lat/lon labels
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-    finished_plot(fig, fig_name=fig_dir+'katabatic_correction.png')
+    finished_plot(fig, fig_name=fig_dir+'katabatic_correction.png', dpi=300)
 
 
 # Ice sheet changes plot
@@ -1789,7 +1789,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
             plt.text(threshold_year[2]+7, -0.26, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
     plt.suptitle('Difference in potential density', fontsize=22)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.4), ncol=num_sims+1, fontsize=14, columnspacing=1)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_density.png')
+    finished_plot(fig, fig_name=fig_dir+'timeseries_density.png', dpi=300)
 
 
 # Plot a map of all the regions used in other figures.
@@ -1969,7 +1969,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
-    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png')
+    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png', dpi=300)
         
     
 # Plot time-averaged historical melt rates versus Moholdt observations.
@@ -2009,7 +2009,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
         img = latlon_plot(data[n], grid, ax=ax, ctype='ismr', make_cbar=False, vmin=vmin, vmax=vmax, change_points=change_points, title=title[n], pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Ice shelf melt rates (m/y)', fontsize=20)
-    finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png')
+    finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png', dpi=300)
 
 
 # Temperature and salinity transects at the ice shelf front, comparing model and PS111
@@ -2319,5 +2319,5 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
             if mask_flag[l,n] == 1:
                 ax.plot(obs_x[n], obs_y[n], '.', color=loc_colours[l], markersize=5)
         plt.text(loc_labels_x[l], loc_labels_y[l], loc_labels[l], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=loc_colours[l])
-    finished_plot(fig, fig_name=fig_dir+'ps111_casts.png')
+    finished_plot(fig, fig_name=fig_dir+'ps111_casts.png', dpi=300)
         
