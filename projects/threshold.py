@@ -1821,7 +1821,7 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
         plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=colours[n])
     plt.title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
-    finished_plot(fig, fig_name=fig_dir+'region_map.png')
+    finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
 
 
 # Plot a timeseries of the salt budget anomalies.
