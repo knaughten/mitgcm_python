@@ -1958,7 +1958,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
             ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
-            ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=15, markeredgecolor='black')
+            ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
     plt.title('Global mean surface air temperature anomaly', fontsize=18)
     plt.ylabel(deg_string+'C', fontsize=14)
