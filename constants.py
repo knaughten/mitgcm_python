@@ -114,7 +114,8 @@ region_names = {
     'deep_ronne_cavity': 'Deep Ronne Ice Shelf cavity',
     'offshore_filchner': 'Offshore of Filchner Trough sill',
     'filchner_front': 'Filchner Ice Shelf front',
-    'ronne_depression_front': 'Ronne Ice Shelf front at Ronne Depression'
+    'filchner_trough_icefront': 'Ice shelf front at Filchner Trough',
+    'ronne_depression_icefront': 'Ice shelf front at Ronne Depression'
 }
 
 # Resolution of SOSE grid in degrees

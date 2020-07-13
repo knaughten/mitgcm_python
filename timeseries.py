@@ -550,10 +550,6 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = None
         elif region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
-        elif region.endswith('_front'):
-            # Intersection of ice shelf front and the given region
-            region_base = region[:region.index('_front')]
-            mask = grid.get_region_mask(region_base)*grid.get_icefront_mask()
         elif region.endswith('icefront'):
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
         elif region.endswith('openocean'):
