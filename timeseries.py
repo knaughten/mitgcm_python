@@ -480,7 +480,7 @@ def timeseries_icefront_mean (file_path, var_name, grid, shelf, time_index=None,
         data = np.expand_dims(data,0)
     timeseries = []
     for t in range(data.shape[0]):
-        data_tmp = np.ma.masked_where(mask, data[t,:])
+        data_tmp = np.ma.masked_where(np.invert(mask), data[t,:])
         if is_3d:
             timeseries.append(volume_average(data_tmp, grid))
         else:
