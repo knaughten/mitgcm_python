@@ -1182,5 +1182,43 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         read_plot_hovmoller_ts_diff(dir_1+hovmoller_file, dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', smooth=6)
     if key == 'PAS':
         amundsen_rignot_comparison(dir_1+timeseries_file, file_path_2=dir_2+timeseries_file, precomputed=True, sim_names=[name_1, name_2], fig_name=fig_dir+'rignot.png')
+
+
+# TODO
+def long_term_mean (output_dir, year_start, year_end, leap_years=True):
+    pass
+
+
+# TODO
+def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2014):
+
+    # Extract PACE ensemble member directories and print how many there are
+    
+    # Call long_term_mean for each simulation
+
+    # Calculate timeseries we care about:
+    # melt rates for different ice shelves
+    # eta_avg
+    # TODO bottom temperature and salinity for different regions, or average below certain depth, or mixed layer depth (how is it calculated? do we need to save as a new diag?), or depth of isotherm (check Hovmollers)
+    # TODO thickest ice in domain
+    # TODO area-averaged ice thickness over problematic region
+    # anything else - can keep adding!
+
+    # Make timeseries plots
+
+    # Make lat-lon plots showing how far outside ensemble range ERA5 is (edit read_plot_latlon_comparison):
+    # bottom temperature and salinity
+    # surface temperature and salinity
+    # mixed layer depth
+    # ismr
+    # sea ice thickness and concentration
+    # anything else - can keep adding!
+
+    # Make ismr plots vs Rignot to show range of ensemble (edit function)
+
+    # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
+
+    pass
+    
     
 
