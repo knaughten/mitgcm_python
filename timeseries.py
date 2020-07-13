@@ -467,27 +467,6 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
     return np.array(timeseries)
 
 
-# Calculate the mean value of the given variable along the given ice shelf front. It will be area-averaged (for 2D vars) or volume-averaged (for 3D vars).
-def timeseries_icefront_mean (file_path, var_name, grid, shelf, time_index=None, t_start=None, t_end=None, time_average=False):
-
-    mask = grid.get_icefront_mask(shelf=shelf)
-    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    is_3d = var_name in ['THETA', 'SALT']  # Update this as needed when more variables are used
-    if is_3d:
-        mask = xy_to_xyz(mask, grid)*(grid.hfac!=0)
-    if (is_3d and len(data.shape)==3) or len(data.shape)==2:
-        # Just one timestep
-        data = np.expand_dims(data,0)
-    timeseries = []
-    for t in range(data.shape[0]):
-        data_tmp = np.ma.masked_where(np.invert(mask), data[t,:])
-        if is_3d:
-            timeseries.append(volume_average(data_tmp, grid))
-        else:
-            timeseries.append(area_average(data_tmp, grid))
-    return np.array(timeseries)
-
-
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -509,7 +488,6 @@ def timeseries_icefront_mean (file_path, var_name, grid, shelf, time_index=None,
 #          'pmepr': calculates total precipitation minus evaporation plus runoff over the given region
 #          'res_time': calculates mean cavity residence time over the given ice shelf cavity
 #          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
-#          'icefront_mean': calculates mean value over the given ice shelf front
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -572,6 +550,10 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = None
         elif region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
+        elif region.endswith('_front'):
+            # Intersection of ice shelf front and the given region
+            region_base = region[:region.index('_front')]
+            mask = grid.get_region_mask(region_base)*grid.get_icefront_mask()
         elif region.endswith('icefront'):
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
         elif region.endswith('openocean'):
@@ -633,8 +615,6 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_delta_rho(fname, grid, point0, point1, z0, time_average=time_average)
         elif option == 'icefront_max':
             values_tmp = timeseries_icefront_max(fname, var_name, grid, region, time_average=time_average)
-        elif option == 'icefront_mean':
-            values_tmp = timeseries_icefront_mean(fname, var_name, grid, region, time_average=time_average)
         elif option == 'avg_bottom':
             values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_z0':
@@ -746,7 +726,6 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_thermal_driving': area-averaged ice-ocean boundary temperature minus in-situ freezing point under the given ice shelf (C)
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 #      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
-#      '*_front_tmean': vertical mean temperature at the ice shelf front of the given ice shelf
 def set_parameters (var):
 
     var_name = None
@@ -1067,12 +1046,6 @@ def set_parameters (var):
         var_name = 'THETA'
         region = var[:var.index('_front_tmax')]
         title = 'Maximum temperature at the ' + region_names[region] + ' front'
-        units = deg_string+'C'
-    elif var.endswith('front_tmean'):
-        option = 'icefront_mean'
-        var_name = 'THETA'
-        region = var[:var.index('_front_tmean')]
-        title = 'Mean temperature at the ' + region_names[region] + ' front'
         units = deg_string+'C'
     else:
         print 'Error (set_parameters): invalid variable ' + var
