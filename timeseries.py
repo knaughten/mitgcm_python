@@ -684,6 +684,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_melting': average melt rate beneath the given ice shelf
 #      '*_temp', '*_salt', '*_age', '*_density':
 #                volume-averaged temperature, salinity, age tracer, or potential density in the given region (defined in constants.py)
+#      '*_temp_bottom': area-averaged bottom temperature over the given region
 #      '*_salt_bottom': area-averaged bottom salinity over the given region
 #      '*_density_bottom': area-averaged bottom density over the given region
 #      '*_density_*m': area-averaged density at the given depth (positive, in metres) over the given region - eg offshore_filchner_density_600m
@@ -802,6 +803,12 @@ def set_parameters (var):
             title += 'in '+region_names[region[:region.index('_downstream')]]+'\n'+region_names['downstream']
         else:
             title += 'in '+region_names[region]
+    elif var.endswith('_temp_bottom'):
+        option = 'avg_bottom'
+        region = var[:var.index('_temp_bottom')]
+        var_name = 'THETA'
+        title = 'Bottom temperature in '+region_names[region]
+        units = deg_string+'C'
     elif var.endswith('_salt_bottom'):
         option = 'avg_bottom'
         region = var[:var.index('_salt_bottom')]
