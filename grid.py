@@ -408,6 +408,9 @@ class Grid:
         if shelf == 'filchner':
             shelf_use = 'fris'
             [xmin, xmax, ymin, ymax] = region_bounds['filchner_front']
+        elif shelf == 'ronne_depression':
+            shelf_use = 'fris'
+            [xmin, xmax, ymin, ymax] = region_bounds[shelf]
         else:
             shelf_use = shelf
             [xmin, xmax, ymin, ymax] = [None, None, None, None]

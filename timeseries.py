@@ -550,7 +550,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = None
         elif region == 'fris':
             mask = grid.get_ice_mask(shelf=region)
-        elif region.endswith('icefront'):
+        elif region.endswith('_front'):
+            mask = grid.get_icefront_mask(shelf=region[:region.index('_front')])
+        elif region.endswith('icefront'):  # I realise this is confusing
             mask = grid.get_region_bdry_mask(region[:region.index('_icefront')], 'icefront')
         elif region.endswith('openocean'):
             mask = grid.get_region_bdry_mask(region[:region.index('_openocean')], 'openocean')
