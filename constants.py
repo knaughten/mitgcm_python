@@ -114,6 +114,7 @@ region_names = {
     'deep_ronne_cavity': 'Deep Ronne Ice Shelf cavity',
     'offshore_filchner': 'Offshore of Filchner Trough sill',
     'filchner_front': 'Filchner Ice Shelf front',
+    'filchner_trough_front': 'Ice shelf front at Filchner Trough',
     'ronne_depression_front': 'Ice shelf front at Ronne Depression'
 }
 
