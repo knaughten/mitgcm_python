@@ -73,7 +73,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, return_fig=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -145,7 +145,10 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
             ax.legend(loc='center')
         else:
             ax.legend(loc='best')
-    finished_plot(fig, fig_name=fig_name, dpi=dpi)
+    if return_fig:
+        return fig, ax
+    else:
+        finished_plot(fig, fig_name=fig_name, dpi=dpi)
     
 
 # User interface for timeseries plots. Call this function with a specific variable key and a list of NetCDF files to get a nice timeseries plot. Can also do difference plots (2 minus 1).

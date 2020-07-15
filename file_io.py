@@ -108,7 +108,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     if return_info and return_minmax:
         return data, description, units, vmin, vmax
     elif return_info:
-        return data, description
+        return data, description, units
     elif return_minmax:
         return data, vmin, vmax
     else:

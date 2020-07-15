@@ -48,6 +48,7 @@ timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
 timeseries_file_density = 'timeseries_density.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
+timeseries_file_threshold = 'timeseries_thresholds.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -2321,3 +2322,41 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
         plt.text(loc_labels_x[l], loc_labels_y[l], loc_labels[l], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=loc_colours[l])
     finished_plot(fig, fig_name=fig_dir+'ps111_casts.png', dpi=300)
         
+
+def calc_thresholds (base_dir='./'):
+    
+    sim_numbers = [1, 5, 3]
+    sim_files = [sim_dirs[n] + timeseries_file_threshold for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['black', 'blue', 'red']
+    num_sims = len(sim_numbers)
+    num_years = 150
+    var_names = ['ronne_depression_front_salt_bottom', 'filchner_trough_front_temp']
+    temp_threshold = -1.9
+
+    time = netcdf_time(sim_files[1], monthly=False)[:num_years]
+    years = np.array([t.year - time[0].year for t in time])    
+
+    # Stage 1
+    data1 = []
+    for file_path in sim_files:
+        data_tmp, title, units = read_netcdf(file_path, var_names[0], return_info=True)[:num_years]
+        data1.append(data_tmp)
+
+    timeseries_multi_plot(years, data1, sim_names_plot, sim_colours, title=title, units=units, dates=False)
+
+    # Stage 2
+    data2 = []
+    for file_path in sim_files:
+        data_tmp, title, units = read_netcdf(file_path, var_names[1], return_info=True)[:num_years]
+        data2.append(data_tmp)
+    for n in range(1, num_sims):
+        i = np.where(data2[n] > temp_threshold)[0][0]
+        print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])
+
+    fig, ax = timeseries_multi_plot(years, data2, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
+    ax.axhline(temp_threshold, color='black', linestyle='dashed')
+    finished_plot(fig)
+    
+        
+    
