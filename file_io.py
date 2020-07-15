@@ -21,7 +21,7 @@ from utils import days_per_month, real_dir, is_depth_dependent
 # t_start: integer (0-based) containing the time index to start reading at. Default is 0 (beginning of the record).
 # t_end: integer (0-based) containing the time index to stop reading before (i.e. the first index not read, following python conventions). Default is the length of the record.
 # time_average: boolean indicating to time-average the record before returning (will honour t_start and t_end if set, otherwise will average over the entire record). Default False.
-# return_info: boolean indicating to return the 'description' and 'units' variables. Default False.
+# return_info: boolean indicating to return the 'description'/'long_name' and 'units' variables. Default False.
 # return_minmax: boolean indicating to return the 'vmin' and 'vmax' attributes. Default False.
 
 # Output: numpy array containing the variable
@@ -98,7 +98,10 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
     data = np.squeeze(data)
 
     if return_info:
-        description = id.variables[var_name].description
+        try:
+            description = id.variables[var_name].description
+        except(AttributeError):
+            description = id.variables[var_name].long_name
         units = id.variables[var_name].units
     if return_minmax:
         vmin = id.variables[var_name].vmin
