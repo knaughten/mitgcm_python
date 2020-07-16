@@ -1376,7 +1376,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     vmin = [0.015, -2.28, 0]
     vmax = [0.066, -1.45, 250]
     ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(0, 300, 50)]
-    threshold_year = [147, 79]
+    threshold_year = [None, 147, 79]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)    
