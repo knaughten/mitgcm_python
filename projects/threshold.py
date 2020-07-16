@@ -2386,7 +2386,7 @@ def calc_threshold_stage2 (base_dir='./'):
         print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])
 
     fig, ax = timeseries_multi_plot(years, data, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
-    ax.axhline(temp_threshold, color='black', linestyle='dashed')
+    ax.axhline(0, color='black', linestyle='dashed')
     finished_plot(fig)
         
     
