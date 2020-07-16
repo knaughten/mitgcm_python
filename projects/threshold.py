@@ -1817,18 +1817,18 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     spinup_dir = base_dir + 'WSFRIS_Dsp/output/'
     sim_dir = base_dir + 'WSFRIS_Dab/output/'
-    var_names = [['adv_plus_corr', 'diffusion', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
+    var_names = [['adv_plus_corr', 'sws_shelf_salt_dif', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
     var_titles = [['Advection', 'Diffusion', 'Surface flux', 'Total'], ['Sea ice\nmelting', 'Sea ice\nfreezing', 'Precipitation\n- evaporation\n+ runoff', 'Total']]
     colours = [['red', 'blue', 'magenta', 'black'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
     plot_titles = ['a) Salt fluxes (all depths)', 'b) Surface freshwater fluxes']
     units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
     num_plots = len(var_names)
-    smooth = 1
+    smooth = 5
     num_years_spinup = 20
     num_years = 150
 
     # Make a time axis manually
-    time = np.arange(-num_years_spinup, num_years)
+    time = np.arange(num_years) #-num_years_spinup, num_years)
 
     fig, gs = set_panels('2x1C0', figsize=(8,7.5))
     gs.update(left=0.1, right=0.75, bottom=0.08, top=0.85, hspace=0.2)
@@ -1845,9 +1845,6 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
                 if var == 'adv_plus_corr':
                     # Special case
                     data = read_netcdf(file_path, 'sws_shelf_salt_adv') + read_netcdf(file_path, 'sws_shelf_salt_sfc_corr')
-                elif var == 'diffusion':
-                    print 'Remember to update diffusion with new simulations'
-                    data = read_netcdf(file_path, 'sws_shelf_salt_tend') - read_netcdf(file_path, 'sws_shelf_salt_adv') - read_netcdf(file_path, 'sws_shelf_salt_sfc_corr') - read_netcdf(file_path, 'sws_shelf_salt_sfc')
                 elif var == 'total_fw':
                     data = read_netcdf(file_path, 'sws_shelf_seaice_melt') + read_netcdf(file_path, 'sws_shelf_seaice_freeze') + read_netcdf(file_path, 'sws_shelf_pmepr')
                 else:
@@ -1861,12 +1858,13 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
                     # Calculate mean value
                     sp_mean = np.mean(data)
                 # Subtract the mean of the spinup
-                data -= sp_mean             
+                data -= sp_mean
                 # Concatenate the two simulations
-                if data_concat is None:
-                    data_concat = data
-                else:
-                    data_concat = np.concatenate((data_concat, data))
+                data_concat = data
+                #if data_concat is None:
+                    #data_concat = data
+                #else:
+                    #data_concat = np.concatenate((data_concat, data))
             # Smooth
             data_plot, time_plot = moving_average(data_concat, smooth, time=time)
             # Add to plot
@@ -1874,6 +1872,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
         ax.grid(True)
         ax.set_title(plot_titles[n], fontsize=18)
         ax.set_ylabel(units[n], fontsize=13)
+        #ax.axvline(0, color='black', linestyle='dashed')
         ax.set_xlim([0, 149])
         if n==1:
             ax.set_xlabel('Year', fontsize=13)
@@ -1881,7 +1880,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
-    finished_plot(fig) #, fig_name=fig_dir+'timeseries_salt_budget.png')
+    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png')
 
 
 # Plot global mean temperature anomaly in all the different UKESM scenarios and with observations on top.
