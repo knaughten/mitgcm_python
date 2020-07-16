@@ -49,6 +49,7 @@ timeseries_file_tmax = 'timeseries_tmax.nc'
 timeseries_file_density = 'timeseries_density.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 timeseries_file_threshold = 'timeseries_thresholds.nc'
+timeseries_file_ft = 'timeseries_ft.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -2360,6 +2361,32 @@ def calc_thresholds (base_dir='./'):
     fig, ax = timeseries_multi_plot(years, data2, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
     ax.axhline(temp_threshold, color='black', linestyle='dashed')
     finished_plot(fig)
-    
+
+
+def calc_threshold_stage2 (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+
+    sim_numbers = [1, 5, 3]
+    sim_files = [base_dir + sim_dirs[n] + timeseries_file_ft for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['black', 'blue', 'red']
+    num_sims = len(sim_numbers)
+    num_years = 150
+
+    time = netcdf_time(sim_files[1], monthly=False)[:num_years]
+    years = np.array([t.year - time[0].year for t in time])
+
+    data = []
+    for file_path in sim_files:
+        data_tmp, title, units = read_netcdf(file_path, 'filchner_front_tminustf', return_info=True)
+        data.append(data_tmp[:num_years])
+    for n in range(1, num_sims):
+        i = np.where(data[n] > 0)[0][0]
+        print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])
+
+    fig, ax = timeseries_multi_plot(years, data, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
+    ax.axhline(temp_threshold, color='black', linestyle='dashed')
+    finished_plot(fig)
         
     
