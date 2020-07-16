@@ -1811,19 +1811,24 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
 
 
 # Plot a timeseries of the salt budget anomalies.
-# This is just a placeholder for now.
 def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    sim_dir = [base_dir+'WSFRIS_'+key+'/output/' for key in ['cD1', 'aD1', 'aD2', 'aD3']]
+    spinup_dir = base_dir + 'WSFRIS_Dsp/output/'
+    sim_dir = base_dir + 'WSFRIS_Dab/output/'
     var_names = [['adv_plus_corr', 'diffusion', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
     var_titles = [['Advection', 'Diffusion', 'Surface flux', 'Total'], ['Sea ice\nmelting', 'Sea ice\nfreezing', 'Precipitation\n- evaporation\n+ runoff', 'Total']]
     colours = [['red', 'blue', 'magenta', 'black'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
-    plot_titles = ['Salt fluxes', 'Surface freshwater fluxes']
+    plot_titles = ['a) Salt fluxes (all depths)', 'b) Surface freshwater fluxes']
     units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
     num_plots = len(var_names)
     smooth = 1
+    num_years_spinup = 20
+    num_years = 150
+
+    # Make a time axis manually
+    time = np.arange(-num_years_spinup, num_years)
 
     fig, gs = set_panels('2x1C0', figsize=(8,7.5))
     gs.update(left=0.1, right=0.75, bottom=0.08, top=0.85, hspace=0.2)
@@ -1832,7 +1837,9 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
         ax.axhline(color='black', linewidth=1)
         for v in range(len(var_names[n])):
             var = var_names[n][v]
-            for directory in sim_dir:
+            sp_mean = None
+            data_concat = None
+            for directory in [spinup_dir, sim_dir]:
                 file_path = directory + timeseries_file_salt_budget
                 # Read the data
                 if var == 'adv_plus_corr':
@@ -1846,26 +1853,24 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
                 else:
                     data = read_netcdf(file_path, var)
                 if n==0:
-                    # Divide by 10^5
+                    # Divide by 10^5 for the first plot
                     data *= 1e-5
-                if directory == sim_dir[0]:
-                    # Get the piControl mean for anomalies
-                    pi_mean = np.mean(data)
+                if directory == spinup_dir:
+                    # Only want last 20 years of spinup
+                    data = data[-num_years_spinup:]
+                    # Calculate mean value
+                    sp_mean = np.mean(data)
+                # Subtract the mean of the spinup
+                data -= sp_mean             
+                # Concatenate the two simulations
+                if data_concat is None:
+                    data_concat = data
                 else:
-                    # Calculate anomaly
-                    data -= pi_mean
-                    # Read the time axis
-                    time = netcdf_time(file_path, monthly=False)
-                    # Convert to years since beginning
-                    time = np.array([t.year-1850 for t in time])
-                    time, data = calc_annual_averages(time, data)
-                    data, time = moving_average(data, smooth, time=time)
-                    # Add to plot
-                    if directory == sim_dir[-1]:
-                        label = var_titles[n][v]
-                    else:
-                        label = None
-                    ax.plot(time, data, color=colours[n][v], linewidth=1.75, label=label)
+                    data_concat = np.concatenate((data_concat, data))
+            # Smooth
+            data_plot, time_plot = moving_average(data_concat, smooth, time=time)
+            # Add to plot
+            ax.plot(time_plot, data_plot, color=colours[n][v], linewidth=1.75, label=var_titles[n][v])
         ax.grid(True)
         ax.set_title(plot_titles[n], fontsize=18)
         ax.set_ylabel(units[n], fontsize=13)
@@ -1876,7 +1881,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xticklabels([])
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png')
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries_salt_budget.png')
 
 
 # Plot global mean temperature anomaly in all the different UKESM scenarios and with observations on top.
