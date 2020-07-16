@@ -1359,9 +1359,6 @@ def timeseries_contenders (base_dir='./', fig_dir='./'):
 # Make a fancy 3-part timeseries
 def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
-    # Temperature threshold at Filchner Ice Shelf front
-    temp_threshold = -1
-
     #sim_number_base = 1
     sim_numbers = [1,5,3]
     #sim_dir_base = sim_dirs[sim_number_base]
@@ -1378,23 +1375,10 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     vmin = [0.015, -2.28, 0]
     vmax = [0.066, -1.45, 250]
     ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(0, 300, 50)]
+    threshold_year = [147, 79]
 
     base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-
-    # Get year that Stage 2 begins for each transient simulation
-    threshold_year = [None]
-    threshold_index = [None]
-    for n in range(1,num_sims):
-        file_path = base_dir + sim_dirs_plot[n] + timeseries_file_tmax
-        time = netcdf_time(file_path, monthly=False)
-        tmax = read_netcdf(file_path, 'filchner_front_tmax')
-        time, tmax = calc_annual_averages(time, tmax)
-        i = np.where(tmax > temp_threshold)[0][0]
-        year_cross = time[i].year-time[0].year
-        threshold_year.append(year_cross)
-        threshold_index.append(i)
-        print sim_names_plot[n] + ' crosses threshold in year ' + str(year_cross)
+    fig_dir = real_dir(fig_dir)    
 
     # Read the data, looping over variables
     data = []
@@ -1493,7 +1477,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         threshold_year = 79
         title += ' (abrupt-4xCO2)'
     elif sim_key == '1pIO':
-        threshold_year = 146
+        threshold_year = 147
         title += ' (1pctCO2)'
     spinup_time = 20*12
 
@@ -1733,7 +1717,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
-    threshold_year = [None, 146, 79]
+    threshold_year = [None, 147, 79]
     var_names_1 = ['ronne_depression_density_bottom', 'filchner_trough_density_bottom']
     var_names_2 = ['deep_ronne_cavity_density_bottom', 'offshore_filchner_density_600m']
     titles = ['a) Ronne Depression minus deep\nRonne Ice Shelf cavity (bottom layers)', 'b) Filchner Trough (bottom layer)\nminus offshore WDW (600m)']
@@ -1908,7 +1892,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
     colours = ['blue', 'red', 'Grey', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'black']
     var_name = 'tas_mean'
-    threshold_year = [146, 79]
+    threshold_year = [147, 79]
     num_ens = 4
 
     # First read the piControl mean
@@ -2324,32 +2308,51 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
         
 
 def calc_thresholds (base_dir='./'):
-    
+
+    from scipy.stats import linregress
+
+    base_dir = real_dir(base_dir)
+
     sim_numbers = [1, 5, 3]
-    sim_files = [sim_dirs[n] + timeseries_file_threshold for n in sim_numbers]
+    sim_files = [base_dir + sim_dirs[n] + timeseries_file_threshold for n in sim_numbers]
+    spinup_file = base_dir + 'WSFRIS_SpIO/output/' + timeseries_file_threshold
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     num_sims = len(sim_numbers)
     num_years = 150
     var_names = ['ronne_depression_front_salt_bottom', 'filchner_trough_front_temp']
-    temp_threshold = -1.9
+    salt0 = 34.25
+    temp_threshold = tfreeze(salt0, 0)
 
     time = netcdf_time(sim_files[1], monthly=False)[:num_years]
     years = np.array([t.year - time[0].year for t in time])    
 
     # Stage 1
+    data_spinup = read_netcdf(spinup_file, var_names[0])
+    num_years_spinup = data_spinup.size
     data1 = []
     for file_path in sim_files:
-        data_tmp, title, units = read_netcdf(file_path, var_names[0], return_info=True)[:num_years]
-        data1.append(data_tmp)
+        data_tmp, title, units = read_netcdf(file_path, var_names[0], return_info=True)
+        data1.append(data_tmp[:num_years])
+    for n in range(1, num_sims):
+        # Concatenate with spinup
+        data_tmp = np.concatenate((data_spinup, data1[n]))
+        # Calculate 20-year trends finishing at each year, and stop as soon as there is a significant negative trend
+        dummy_time = np.arange(20)
+        for t in range(num_years_spinup+1, num_years_spinup+num_years):
+            data_slice = data_tmp[t-num_years_spinup:t]
+            slope, intercept, r_value, p_value, std_err = linregress(dummy_time, data_slice)
+            if slope < 0 and p_value <= 0.05:
+                print sim_names_plot[n] + ' begins Stage 1 in year ' + str(years[t-num_years_spinup-1])
+                break
 
     timeseries_multi_plot(years, data1, sim_names_plot, sim_colours, title=title, units=units, dates=False)
 
     # Stage 2
     data2 = []
     for file_path in sim_files:
-        data_tmp, title, units = read_netcdf(file_path, var_names[1], return_info=True)[:num_years]
-        data2.append(data_tmp)
+        data_tmp, title, units = read_netcdf(file_path, var_names[1], return_info=True)
+        data2.append(data_tmp[:num_years])
     for n in range(1, num_sims):
         i = np.where(data2[n] > temp_threshold)[0][0]
         print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])

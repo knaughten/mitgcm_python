@@ -176,6 +176,11 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
             print 'Error (timeseries_avg_3d): must precompute density'
             sys.exit()
         data = rho
+    elif var_name == 'TMINUSTF':
+        # For now, use surface freezing point
+        temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        data = temp - tfreeze(salt, 0)
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if len(data.shape)==3:
@@ -768,7 +773,7 @@ def set_parameters (var):
             region = var[:var.index('_melting')]
             title = 'Mean melt rate of '
         title += region_names[region]
-    elif var.endswith('_temp') or var.endswith('_salt') or var.endswith('_density') or var.endswith('_age'):
+    elif var.endswith('_temp') or var.endswith('_salt') or var.endswith('_density') or var.endswith('_age') or var.endswith('_tminustf'):
         option = 'avg_3d'
         title = 'Volume-averaged '
         if var.endswith('_temp'):
@@ -791,6 +796,11 @@ def set_parameters (var):
             var_name = 'TRAC01'
             title += 'age tracer'
             units = 'years'
+        elif var.endswith('_tminustf'):
+            region = var[:var.index('_tminustf')]
+            var_name = 'TMINUSTF'  # Special case in timeseries_vol_3d
+            title += 'depression from surface freezing point'
+            units = deg_string+'C'
         if region == 'avg':
             region = 'all'
         elif region == 'fris':
