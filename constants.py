@@ -116,7 +116,7 @@ region_names = {
     'filchner_front': 'Filchner Ice Shelf front',
     'filchner_trough_front': 'Ice shelf front at Filchner Trough',
     'ronne_depression_front': 'Ice shelf front at Ronne Depression'
-}
+}    
 
 # Resolution of SOSE grid in degrees
 sose_res = 1/6.

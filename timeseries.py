@@ -727,6 +727,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_mean_psi': mean absolute value of the barotropic streamfunction for the given region (Sv)
 #      '*_ustar': area-averaged friction velocity under the given ice shelf (m/s)
 #      '*_thermal_driving': area-averaged ice-ocean boundary temperature minus in-situ freezing point under the given ice shelf (C)
+#      'ronne_delta_rho': difference in density between Ronne Depression and Ronne cavity
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 #      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
 def set_parameters (var):
@@ -839,7 +840,7 @@ def set_parameters (var):
         z0 = -1*int(var[len(region+'_density_'):-1])
         var_name = 'RHO'
         title = str(abs(z0))+'m density in '+region_names[region]
-        units = r'kg/m^$3$'        
+        units = r'kg/m^$3$'
     elif var in ['hice_corner', 'mld_ewed']:
         # Maximum between spatial bounds
         option = 'max'
@@ -1044,10 +1045,17 @@ def set_parameters (var):
         units = deg_string+'C'
     elif var == 'ft_sill_delta_rho':
         option = 'delta_rho'
-        point0 = (-32, -75.5)
-        point1 = (-29.5, -74.25)
+        point0 = (-32, -75)
+        point1 = (-32, -74)
         z0 = -600
         title = 'Difference in density at 600 m across the Filchner Trough sill'
+        units = r'kg/m$^3$'
+    elif var == 'ronne_delta_rho':
+        option = 'delta_rho'
+        point0 = (-60, -74.75)
+        point1 = (-70, -78)
+        z0 = -600
+        title = 'Difference in density at 600 m across Ronne Depression'
         units = r'kg/m$^3$'
     elif var.endswith('front_tmax'):
         option = 'icefront_max'
