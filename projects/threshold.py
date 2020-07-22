@@ -1802,11 +1802,17 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
 # Plot a map of all the regions used in other figures.
 def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
 
-    regions = ['sws_shelf', 'ronne_depression', 'deep_ronne_cavity', 'filchner_trough', 'offshore_filchner']
-    colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
-    region_titles = ['Southern\nWeddell Sea\ncontinental shelf', 'Ronne\nDepression', 'Deep Ronne\nIce Shelf cavity', 'Filchner\nTrough', 'Offshore\nWDW']
-    region_title_loc = [[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
+    regions = ['sws_shelf', 'filchner_trough'] #['sws_shelf', 'ronne_depression', 'deep_ronne_cavity', 'filchner_trough', 'offshore_filchner']
+    points = [[[-60, -74.45],[-70,-78]], [[-32,-75],[-32,-74]]]
+    point_titles = ['Ronne Depression', 'Filchner Trough Sill']
+    region_colours = ['magenta', 'green']
+    point_colours = ['blue', 'red']
+    #colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
+    region_titles = ['Southern\nWeddell Sea\ncontinental shelf', 'Filchner\nTrough'] #['Southern\nWeddell Sea\ncontinental shelf', 'Ronne\nDepression', 'Deep Ronne\nIce Shelf cavity', 'Filchner\nTrough', 'Offshore\nWDW']
+    region_title_loc = [[0.365, 0.58], [0.61, 0.52]]#[[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
+    point_title_loc = [[0.365, 0.58], [0.62, 0.79]]
     num_regions = len(regions)
+    num_points = len(points)
     [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.85e6]
 
     base_dir = real_dir(base_dir)
@@ -1824,8 +1830,17 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
         if plot_regions is not None and regions[n] not in plot_regions:
             continue
         mask = grid.get_region_mask(regions[n], include_iceberg=True).astype(float)
-        ax.contour(x, y, mask, levels=[0.5], colors=(colours[n]), linewidths=1)
-        plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=colours[n])
+        ax.contour(x, y, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
+        plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=region_colours[n])
+    # Plot and label the points
+    for n in range(num_points):
+        # Two points in each set
+        for point, num in zip(points[n], [1,2]):
+            x0, y0 = polar_stereo(point[0], point[1])
+            x0_label, y0_label = polar_stereo(point[0]+0.1, point[1])
+            ax.plot(x0, y0, '*', color=point_colours[n], markersize=20, markeredgecolor='black')
+            plt.text(x0_label, y0_label, str(num), color=point_colours[n], fontsize=12, ha='center', va='center')
+        plt.text(point_title_loc[n][0], point_title_loc[n][1], point_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=point_colours[n])
     plt.title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
