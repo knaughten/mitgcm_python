@@ -1411,6 +1411,27 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         data.append(data_sim)
         data_smoothed.append(data_sim_smooth)
 
+    # Calculate Stage 1 threshold
+    '''pi_mean = [np.mean(data[v][0]) for v in range(num_vars)]
+    pi_std = [np.std(data[v][0]) for v in range(num_vars)]
+    for n in range(1, num_sims):
+        flag = None
+        for v in range(num_vars):
+            flag_tmp = data[v][n] < pi_mean[v] - pi_std[v]
+            if flag is None:
+                flag = flag_tmp
+            else:
+                flag *= flag_tmp
+        i_all = np.where(flag)[0]
+        for i in i_all:
+            count = 0
+            for ii in range(i, min(i+10, 149)):
+                if ii in i_all:
+                    count += 1
+            if count >= 5:
+                print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[0][i])    
+                break'''
+
     # Calculate % decrease in mass loss over Stage 1.
     #for n in range(1,num_sims):
         #stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
@@ -1819,7 +1840,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
     sim_dir = base_dir + 'WSFRIS_Dab/output/'
     var_names = [['adv_plus_corr', 'sws_shelf_salt_dif', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
     var_titles = [['Advection', 'Diffusion', 'Surface flux', 'Total'], ['Sea ice\nmelting', 'Sea ice\nfreezing', 'Precipitation\n- evaporation\n+ runoff', 'Total']]
-    colours = [['red', 'blue', 'magenta', 'black'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
+    colours = [['red', 'blue', 'DarkViolet', 'DimGrey'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
     plot_titles = ['a) Salt fluxes (all depths)', 'b) Surface freshwater fluxes']
     units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
     num_plots = len(var_names)
@@ -1828,13 +1849,14 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
     num_years = 150
 
     # Make a time axis manually
-    time = np.arange(num_years) #-num_years_spinup, num_years)
+    time = np.arange(-num_years_spinup, num_years)
 
     fig, gs = set_panels('2x1C0', figsize=(8,7.5))
     gs.update(left=0.1, right=0.75, bottom=0.08, top=0.85, hspace=0.2)
     for n in range(num_plots):
         ax = plt.subplot(gs[n,0])
         ax.axhline(color='black', linewidth=1)
+        ax.axvline(color='black', linewidth=1, linestyle='dashed')
         for v in range(len(var_names[n])):
             var = var_names[n][v]
             sp_mean = None
@@ -1860,27 +1882,29 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
                 # Subtract the mean of the spinup
                 data -= sp_mean
                 # Concatenate the two simulations
-                data_concat = data
-                #if data_concat is None:
-                    #data_concat = data
-                #else:
-                    #data_concat = np.concatenate((data_concat, data))
+                #data_concat = data
+                if data_concat is None:
+                    data_concat = data
+                else:
+                    data_concat = np.concatenate((data_concat, data))
             # Smooth
-            data_plot, time_plot = moving_average(data_concat, smooth, time=time)
+            data_smoothed, time_smoothed = moving_average(data_concat[num_years_spinup:], smooth, time=time[num_years_spinup:])
+            data_spinup_smoothed, time_spinup_smoothed = moving_average(data_concat[:num_years_spinup], smooth, time=time[:num_years_spinup])
             # Add to plot
-            ax.plot(time_plot, data_plot, color=colours[n][v], linewidth=1.75, label=var_titles[n][v])
-        ax.grid(True)
+            ax.plot(time, data_concat, color=colours[n][v], linewidth=1, alpha=0.5)
+            ax.plot(time_smoothed, data_smoothed, color=colours[n][v], linewidth=1.75, label=var_titles[n][v])
+            ax.plot(time_spinup_smoothed, data_spinup_smoothed, color=colours[n][v], linewidth=1.75)
+        #ax.grid(True)
         ax.set_title(plot_titles[n], fontsize=18)
         ax.set_ylabel(units[n], fontsize=13)
-        #ax.axvline(0, color='black', linestyle='dashed')
-        ax.set_xlim([0, 149])
+        ax.set_xlim([time[0], time[-1]])
         if n==1:
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     plt.suptitle('abrupt-4xCO2 anomalies on\nSouthern Weddell Sea continental shelf', fontsize=20)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png')
+    finished_plot(fig, fig_name=fig_dir+'timeseries_salt_budget.png', dpi=300)
 
 
 # Plot global mean temperature anomaly in all the different UKESM scenarios and with observations on top.
@@ -1897,6 +1921,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
     colours = ['blue', 'red', 'Grey', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'black']
     var_name = 'tas_mean'
+    stage1_year = [75, 10]
     threshold_year = [147, 79]
     num_ens = 4
 
@@ -1949,7 +1974,9 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
+            ax.plot(stage1_year[n]+1850, data[n][stage1_year[n]], '^', color=colours[n], markersize=20, markeredgecolor='black')
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
+            print titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'
     plt.title('Global mean surface air temperature anomaly', fontsize=18)
     plt.ylabel(deg_string+'C', fontsize=14)
     plt.xlabel('Year', fontsize=14)
@@ -2392,5 +2419,72 @@ def calc_threshold_stage2 (base_dir='./'):
     fig, ax = timeseries_multi_plot(years, data, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
     ax.axhline(0, color='black', linestyle='dashed')
     finished_plot(fig)
+
+
+def calc_threshold_stage1 (base_dir='./'):
+
+    sim_numbers = [1,5,3]
+    sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['black', 'blue', 'red']
+    var_names = ['fris_mean_psi', 'fris_temp', 'fris_massloss']
+    fnames = [timeseries_file_psi, timeseries_file, timeseries_file]
+    smooth = 5
+    titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
+    units = ['Sv', deg_string+'C', 'Gt/y']
+    num_sims = len(sim_numbers)
+    num_vars = len(var_names)
+
+    base_dir = real_dir(base_dir)
+
+    # Read the data, looping over variables
+    data_mean = []
+    data_std = []
+    pi_mean = []
+    pi_std = []
+    time = None
+    for v in range(num_vars):
+        # Now loop over simulations
+        data_mean_sim = []
+        data_std_sim = []
+        for n in range(num_sims):
+            file_path = sim_dirs_plot[n] + fnames[v]
+            time_tmp = netcdf_time(file_path, monthly=False)
+            data_tmp = read_netcdf(file_path, var_names[v])
+            # Calculate annual averages
+            time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+            # Now get mean and std of 11-year chunks
+            data_mean_tmp = []
+            data_std_tmp = []
+            for t in range(smooth, data_tmp.size-smooth):
+                data_slice = data_tmp[t-smooth:t+smooth+1]
+                data_mean_tmp.append(np.mean(data_slice))
+                data_std_tmp.append(np.std(data_slice))
+            data_mean_sim.append(np.array(data_mean_tmp))
+            data_std_sim.append(np.array(data_std_tmp))
+            if time is None:
+                time = np.array([t.year-time_tmp[0].year for t in time_tmp[smooth:-smooth]])
+        data_mean.append(data_mean_sim)
+        data_std.append(data_std_sim)
+        fig, ax = plt.subplots()
+        for n in range(num_sims):
+            ax.fill_between(time, data_mean[v][n]-data_std[v][n], data_mean[v][n]+data_std[v][n], color=sim_colours[n], alpha=0.5)
+        ax.set_title(titles[v], fontsize=18)
+        ax.grid(True)
+        fig.show()
+
+    for n in range(1, num_sims):
+        flag = None
+        for v in range(num_vars):
+            flag_tmp = data_mean[v][n] + data_std[v][n] < data_mean[v][0] - data_std[v][0]
+            if flag is None:
+                flag = flag_tmp
+            else:
+                flag *= flag_tmp
+        i = np.where(flag)[0][0]
+        print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[i])
+        
+
+    
         
     
