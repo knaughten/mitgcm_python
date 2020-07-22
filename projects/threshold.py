@@ -46,7 +46,7 @@ timeseries_file_2 = 'timeseries2_annual.nc'
 timeseries_file_psi = 'timeseries_psi.nc'
 timeseries_file_drho = 'timeseries_drho.nc'
 timeseries_file_tmax = 'timeseries_tmax.nc'
-timeseries_file_density = 'timeseries_density.nc'
+timeseries_file_density = 'timeseries_delta_rho.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 timeseries_file_threshold = 'timeseries_thresholds.nc'
 timeseries_file_ft = 'timeseries_ft.nc'
@@ -1733,15 +1733,13 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
 # Plot density timeseries for supplementary.
 def plot_density_timeseries (base_dir='./', fig_dir='./'):
 
-    #sim_number_base = 1
     sim_numbers = [1,5,3]
-    #sim_dir_base = sim_dirs[sim_number_base]
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     threshold_year = [None, 147, 79]
-    var_names_1 = ['ronne_depression_density_bottom', 'filchner_trough_density_bottom']
-    var_names_2 = ['deep_ronne_cavity_density_bottom', 'offshore_filchner_density_600m']
+    var_names = ['ronne_delta_rho', 'ft_sill_delta_rho']
+    titles = ['a) across Ronne Depression\n(shelf minus cavity)', 'b) across Filchner Trough Sill\n(onshore minus offshore)']
     titles = ['a) Ronne Depression minus deep\nRonne Ice Shelf cavity (bottom layers)', 'b) Filchner Trough (bottom layer)\nminus offshore WDW (600m)']
     units = r'kg/m$^3$'
     num_sims = len(sim_numbers)
@@ -1794,7 +1792,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
             plt.text(2, -0.26, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
             plt.text(threshold_year[1]+4, -0.18, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
             plt.text(threshold_year[2]+7, -0.26, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
-    plt.suptitle('Difference in potential density', fontsize=22)
+    plt.suptitle('Difference in density at 600 m', fontsize=22)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.4), ncol=num_sims+1, fontsize=14, columnspacing=1)
     finished_plot(fig, fig_name=fig_dir+'timeseries_density.png', dpi=300)
 
@@ -1804,13 +1802,13 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
 
     regions = ['sws_shelf', 'filchner_trough'] #['sws_shelf', 'ronne_depression', 'deep_ronne_cavity', 'filchner_trough', 'offshore_filchner']
     points = [[[-60, -74.45],[-70,-78]], [[-32,-75],[-32,-74]]]
-    point_titles = ['Ronne Depression', 'Filchner Trough Sill']
+    point_titles = ['Ronne\nDepression', 'Filchner\nTrough Sill']
     region_colours = ['magenta', 'green']
     point_colours = ['blue', 'red']
     #colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
     region_titles = ['Southern\nWeddell Sea\ncontinental shelf', 'Filchner\nTrough'] #['Southern\nWeddell Sea\ncontinental shelf', 'Ronne\nDepression', 'Deep Ronne\nIce Shelf cavity', 'Filchner\nTrough', 'Offshore\nWDW']
     region_title_loc = [[0.365, 0.58], [0.61, 0.52]]#[[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
-    point_title_loc = [[0.365, 0.58], [0.62, 0.79]]
+    point_title_loc = [[0.44, 0.32], [0.6, 0.82]]
     num_regions = len(regions)
     num_points = len(points)
     [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.85e6]
@@ -1837,8 +1835,8 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
         # Two points in each set
         for point, num in zip(points[n], [1,2]):
             x0, y0 = polar_stereo(point[0], point[1])
-            x0_label, y0_label = polar_stereo(point[0]+0.1, point[1])
-            ax.plot(x0, y0, '*', color=point_colours[n], markersize=20, markeredgecolor='black')
+            x0_label, y0_label = polar_stereo(point[0]+1, point[1]+0.4)
+            ax.plot(x0, y0, '*', color=point_colours[n], markersize=13, markeredgecolor='black')
             plt.text(x0_label, y0_label, str(num), color=point_colours[n], fontsize=12, ha='center', va='center')
         plt.text(point_title_loc[n][0], point_title_loc[n][1], point_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=point_colours[n])
     plt.title('Regions used in analysis', fontsize=18)
