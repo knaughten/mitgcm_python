@@ -901,8 +901,41 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None, leap
 
     id_out.close()
 
-    
 
+# Do a basic average with no weighting of months.
+def simple_average_files (input_files, output_file, t_start=0, t_end=None):
+
+    from nco import Nco
+    from nco.custom import Limit
+    nco = Nco()
+
+    if isinstance(input_files, str):
+        input_files = [input_files]
+
+    # Extract partial first and last files, if needed
+    num_time_start = netcdf_time(input_files[0]).size
+    num_time_end = netcdf_time(input_files[-1]).size
+    if t_end is None:
+        t_end = num_time_end
+    tmp_file_start = None
+    tmp_file_end = None
+    if t_start > 0:
+        tmp_file_start = input_files[0][:-3] + '_tmp.nc'
+        nco.ncks(input=input_files[0], output=tmp_file_start, options=[Limit('time', t_start, num_time_start-1)])
+        input_files[0] = tmp_file_start
+    if t_end < num_time_end:
+        tmp_file_end = input_files[-1][:-3] + '_tmp.nc'
+        nco.ncks(input=input_files[-1], output=tmp_file_end, options=[Limit('time', 0, t_end-1)])
+
+    # Now average
+    nco.ncra(input=input_files, output=output_file)
+    # Remove temporary files
+    if tmp_file_start is not None:
+        os.remove(tmp_file_start)
+    if tmp_file_end is not None:
+        os.remove(tmp_file_end)
+
+    
 # Call average_monthly_files for each year in the simulation. Make sure you load NCO before calling this function.
 
 # Optional keyword arguments:
@@ -1189,7 +1222,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
 
 # Calculate the long-term mean of a simulation between the given years (inclusive). Return the name of the generated file. Load NCO before you run this.
-def long_term_mean (output_dir, year_start, year_end, leap_years=True):
+def long_term_mean (output_dir, year_start, year_end, proper_weighting=False, leap_years=True):
 
     # Read all the output files, and sort them by number
     output_dir = real_dir(output_dir)
@@ -1238,8 +1271,12 @@ def long_term_mean (output_dir, year_start, year_end, leap_years=True):
         sys.exit()
 
     # Now average them
+    print 'Averaging from index ' + str(t_start) + ' of ' + start_file + ' to index ' + str(t_end) + ' of ' + end_file
     out_file = output_dir + str(year_start) + '_' + str(year_end) + '_avg.nc'
-    average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
+    if proper_weighting:
+        average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
+    else:
+        simple_average_files(files_to_avg, out_file, t_start=t_start, t_end=t_end)        
     return out_file
     
 
