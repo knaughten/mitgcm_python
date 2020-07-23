@@ -1222,7 +1222,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
 
 
 # Calculate the long-term mean of a simulation between the given years (inclusive). Return the name of the generated file. Load NCO before you run this.
-def long_term_mean (output_dir, year_start, year_end, proper_weighting=False, leap_years=True):
+def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, leap_years=True):
 
     # Read all the output files, and sort them by number
     output_dir = real_dir(output_dir)
@@ -1282,7 +1282,7 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=False, le
 
 # TODO
 # Load NCO before you run this.
-def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2014):
+def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max']
 
@@ -1302,7 +1302,6 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Calculate timeseries we care about:
     # TODO bottom temperature and salinity for different regions, or average below certain depth, or mixed layer depth (how is it calculated? do we need to save as a new diag?), or depth of isotherm (check Hovmollers)
-    # TODO thickest ice in domain
     # TODO area-averaged ice thickness over problematic region
     # anything else - can keep adding!
 
