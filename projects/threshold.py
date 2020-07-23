@@ -1740,10 +1740,9 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
     threshold_year = [None, 147, 79]
     var_names = ['ronne_delta_rho', 'ft_sill_delta_rho']
     titles = ['a) across Ronne Depression\n(shelf minus cavity)', 'b) across Filchner Trough Sill\n(onshore minus offshore)']
-    titles = ['a) Ronne Depression minus deep\nRonne Ice Shelf cavity (bottom layers)', 'b) Filchner Trough (bottom layer)\nminus offshore WDW (600m)']
     units = r'kg/m$^3$'
     num_sims = len(sim_numbers)
-    num_vars = len(var_names_1)
+    num_vars = len(var_names)
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1751,18 +1750,13 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
     # Read the data, looping over variables
     data = []
     time = []
-    #pi_mean = []
     for v in range(num_vars):
-        # Calculate the piControl mean
-        #pi_file = sim_dir_base + timeseries_file_density
-        #pi_mean.append(np.mean(read_netcdf(pi_file, var_names_1[v]) - read_netcdf(pi_file, var_names_2[v])))
         # Now loop over simulations
         data_sim = []
         for n in range(num_sims):
             file_path = sim_dirs_plot[n] + timeseries_file_density
             time_tmp = netcdf_time(file_path, monthly=False)
-            data_tmp = read_netcdf(file_path, var_names_1[v]) - read_netcdf(file_path, var_names_2[v])
-            data_sim.append(data_tmp)
+            data_sim.append(read_netcdf(file_path, var_names[v]))
             if n == 0:
                 time.append([t.year-time_tmp[0].year for t in time_tmp])
         data.append(data_sim)

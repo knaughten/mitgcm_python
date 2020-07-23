@@ -816,10 +816,11 @@ def time_dependent_variables (file_name):
 # Optional keyword arguments:
 # t_start: index (0-based) of the time record to start the average in input_files[0].
 # t_end: index (0-based) of the time record to end the average in input_files[-1]. In python convention, this is the first index to ignore.
+# leap_years: boolean (default true) for whether to consider leap years
 # For example, to average from month 7 (index 6) of the first file to month 10 (index 9)  of the last file, do
 # average_monthly_files(input_files, output_file, t_start=6, t_end=10)
 
-def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
+def average_monthly_files (input_files, output_file, t_start=0, t_end=None, leap_years=True):
 
     from nco import Nco
     from nco.custom import Limit
@@ -880,6 +881,9 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None):
             for t in range(t_start_curr, t_end_curr):
                 # Integrate
                 ndays = days_per_month(month, year)
+                if month==2 and not leap_years:
+                    # Remove any leap day in February
+                    ndays = 28
                 data += id_in.variables[var][t,:]*ndays
                 total_days += ndays
                 # Increment month (and year if needed)
@@ -1184,12 +1188,63 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         amundsen_rignot_comparison(dir_1+timeseries_file, file_path_2=dir_2+timeseries_file, precomputed=True, sim_names=[name_1, name_2], fig_name=fig_dir+'rignot.png')
 
 
-# TODO
+# Calculate the long-term mean of a simulation between the given years (inclusive). Return the name of the generated file. Load NCO before you run this.
 def long_term_mean (output_dir, year_start, year_end, leap_years=True):
-    pass
 
+    # Read all the output files, and sort them by number
+    output_dir = real_dir(output_dir)
+    fnames = os.listdir(output_dir)
+    fnames = [f for f in fnames if f.startswith('output_') and f.endswith('.nc')]
+    fnames.sort()
+
+    # Loop through to find filenames and indices to start and end
+    start_file = None
+    end_file = None
+    files_to_avg = []
+    for f in fnames:
+        file_path = output_dir + f
+        time = netcdf_time(file_path)
+        if start_file is None:
+            # Look for start file
+            if ((time[0].year < year_start) or (time[0].year == year_start and time[0].month == 1)) and (time[-1].year >= year_start):
+                # This is the right file
+                start_file = file_path
+                files_to_avg.append(file_path)
+                # Now find the index of Jan year_start
+                for t in range(time.size):
+                    if time[t].year == year_start and time[t].month == 1:
+                        t_start = t
+                        break
+        else:
+            # Have already found start_file, so we know we need this file
+            files_to_avg.append(file_path)
+            # Now look for end file
+            if (time[-1].year > year_end) or (time[-1].year == year_end and time[-1].month == 12):
+                # This is the right file
+                end_file = file_path
+                # Now find the index of Dec year_end and add one (as per python convention for first index to ignore)
+                for t in range(time.size):
+                    if time[t].year == year_end and time[t].month == 12:
+                        t_end = t+1
+                        break
+                break
+
+    # Make sure we found them
+    if start_file is None:
+        print 'Error (long_term_mean): simulation finishes before ' + str(year_start)
+        sys.exit()
+    if end_file is None:
+        print 'Error (long_term_mean): simulation ends before the end of ' + str(year_end)
+        sys.exit()
+
+    # Now average them
+    out_file = output_dir + str(year_start) + '_' + str(year_end) + '_avg.nc'
+    average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
+    return out_file
+    
 
 # TODO
+# Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2014):
 
     # Extract PACE ensemble member directories and print how many there are
