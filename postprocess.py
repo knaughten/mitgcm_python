@@ -1284,9 +1284,19 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=False, le
 # Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2014):
 
-    # Extract PACE ensemble member directories and print how many there are
-    
-    # Call long_term_mean for each simulation
+    if isinstance(pace_dir, str):
+        # Case for a single ensemble member
+        pace_dir = [pace_dir]
+
+    num_ens = len(pace_dir)
+    print 'PACE ensemble has ' + str(num_ens) + ' members'
+
+    out_files = []
+    for directory in [era5_dir] + pace_dir:
+        print 'Calculating long term mean of ' + directory
+        file_path = long_term_mean(directory+'/output/', year_start, year_end)
+        out_files.append(file_path)
+        
 
     # Calculate timeseries we care about:
     # melt rates for different ice shelves
@@ -1309,8 +1319,6 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # Make ismr plots vs Rignot to show range of ensemble (edit function)
 
     # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
-
-    pass
     
     
 
