@@ -696,6 +696,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_density_bottom': area-averaged bottom density over the given region
 #      '*_density_*m': area-averaged density at the given depth (positive, in metres) over the given region - eg offshore_filchner_density_600m
 #      'hice_corner': maximum sea ice thickness in the southwest corner of the Weddell Sea, between the Ronne and the peninsula
+#      'hice_max': maximum sea ice thickness in whole domain
 #      'mld_ewed': maximum mixed layer depth in the open Eastern Weddell Sea
 #      'eta_avg': area-averaged sea surface height
 #      'seaice_area': total sea ice area
@@ -841,7 +842,7 @@ def set_parameters (var):
         var_name = 'RHO'
         title = str(abs(z0))+'m density in '+region_names[region]
         units = r'kg/m^$3$'
-    elif var in ['hice_corner', 'mld_ewed']:
+    elif var in ['hice_corner', 'mld_ewed', 'hice_max']:
         # Maximum between spatial bounds
         option = 'max'
         if var == 'hice_corner':
@@ -851,6 +852,14 @@ def set_parameters (var):
             ymin = -75.5
             ymax = -74
             title = 'Maximum sea ice thickness in problematic corner'
+            units = 'm'
+        elif var == 'hice_max':
+            var_name = 'SIheff'
+            xmin = None
+            xmax = None
+            ymin = None
+            ymax = None
+            title = 'Maximum sea ice thickness in domain'
             units = 'm'
         elif var == 'mld_ewed':
             var_name = 'MXLDEPTH'

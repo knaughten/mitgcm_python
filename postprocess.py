@@ -1284,6 +1284,8 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=False, le
 # Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2014):
 
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max']
+
     if isinstance(pace_dir, str):
         # Case for a single ensemble member
         pace_dir = [pace_dir]
@@ -1299,8 +1301,6 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         
 
     # Calculate timeseries we care about:
-    # melt rates for different ice shelves
-    # eta_avg
     # TODO bottom temperature and salinity for different regions, or average below certain depth, or mixed layer depth (how is it calculated? do we need to save as a new diag?), or depth of isotherm (check Hovmollers)
     # TODO thickest ice in domain
     # TODO area-averaged ice thickness over problematic region
