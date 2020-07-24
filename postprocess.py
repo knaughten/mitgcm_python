@@ -1314,8 +1314,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     fig_dir = real_dir(fig_dir)
     directories = [era5_dir] + pace_dir
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
-
-    avg_file = '1979_2013_avg.nc'
+    
     # Calculate long-term means
     '''for d in directories:
         print 'Calculating long term mean of ' + d
@@ -1337,6 +1336,10 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')'''
+
+    # Temporary
+    avg_file = '1979_2013_avg.nc'
+    grid = Grid(era5_dir+'output_001.nc')
 
     # Plot lat-lon comparison with ERA5
     for var_name in latlon_types:
