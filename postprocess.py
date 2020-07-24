@@ -1315,8 +1315,8 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     directories = [era5_dir] + pace_dir
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
     
-    # Calculate long-term means
-    '''for d in directories:
+    '''# Calculate long-term means
+    for d in directories:
         print 'Calculating long term mean of ' + d
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
         avg_file = file_path[file_path.rfind('/')+1:]
@@ -1337,13 +1337,23 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')'''
 
+    # Plot lat-lon comparison with ERA5
     # Temporary
     avg_file = '1979_2013_avg.nc'
     grid = Grid(era5_dir+'output_001.nc')
-
-    # Plot lat-lon comparison with ERA5
     for var_name in latlon_types:
-        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, fig_name=fig_dir+'latlon_'+var_name+'.png')
+        vmin = None
+        vmax = None
+        vmin_diff = None
+        vmax_diff = None
+        if var_name == 'bwsalt':
+            vmin = 34
+        if var_name == 'hice':
+            vmax = 3
+            vmin_diff = -1.5
+        if var_name == 'ismr':
+            vmin_diff = -6
+        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')
         
     # Make ismr plots vs Rignot to show range of ensemble (edit function)
 
