@@ -73,7 +73,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, return_fig=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, first_on_top=False, return_fig=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -102,6 +102,8 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
             
     if linestyles is None:
         linestyles = ['solid' for n in range(len(labels))]
+    if alphas is None:
+        alphas = [1 for n in range(len(labels))]
 
     if legend_outside:
         figsize=(11,6)
@@ -118,11 +120,18 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, title
             linewidth=3
         else:
             linewidth=1.5
-        if dates:
-            ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i])
-        else:
-            ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i])
-            ax.set_xlim(start_time, end_time)
+        if first_on_top and i==0:
+            if dates:
+                ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=1)
+            else:
+                ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=1)
+                ax.set_xlim(start_time, end_time)
+        else:            
+            if dates:
+                ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i])
+            else:
+                ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i])
+                ax.set_xlim(start_time, end_time)
 
     ax.grid(True)
     if crosses_zero:
@@ -388,6 +397,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         sys.exit()
     if colours is None:
         colours = default_colours(len(file_paths))
+    alphas = [1] + [0.5 for n in range(len(file_paths)-1)]
 
     if plot_mean:
         if first_in_mean:
@@ -404,6 +414,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         if 'black' in colours:
             colours[colours.index('black')] = (0.6, 0.6, 0.6)
         colours.append('black')
+        alphas.append(1)
         if sim_names is not None:
             sim_names.append('Mean')
 
@@ -412,4 +423,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         for data, sim in zip(all_datas, sim_names):
             print sim + ': ' + str(np.mean(data)) + ' ' + units
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles, alphas=alphas, first_on_top=True)

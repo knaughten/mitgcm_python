@@ -1318,14 +1318,14 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
     
     # Calculate long-term means
-    '''for d in directories:
+    for d in directories:
         print 'Calculating long term mean of ' + d
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
-        avg_file = file_path[file_path.rfind('/')+1:]'''
+        avg_file = file_path[file_path.rfind('/')+1:]
 
     # Calculate timeseries and Hovmollers
     timeseries_paths = [d + timeseries_file for d in directories]
-    '''hovmoller_paths = [d + hovmoller_file for d in directories]
+    hovmoller_paths = [d + hovmoller_file for d in directories]
     grid = None
     for d, tf, hf in zip(directories, timeseries_paths, hovmoller_paths):
         fnames = get_output_files(d)
@@ -1335,13 +1335,14 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
                 grid = Grid(file_path)
             print 'Calculating timeseries for ' + file_path
             precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
-            precompute_hovmoller(file_path, hf, loc=hovmoller_loc)'''
+            precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
 
     # Plot ensemble for all timeseries
+    # TODO: make ensemble members lighter, ERA5 on top
     for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
-    '''# Plot lat-lon comparison with ERA5
+    # Plot lat-lon comparison with ERA5
     for var_name in latlon_types:
         vmin = None
         vmax = None
@@ -1360,9 +1361,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
 
     # Make casts plot showing full ensemble, ERA5, and obs
-    # Need to test this!
+    # TODO: Need to test this!
     for loc in hovmoller_loc:
-        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_dir+'casts_'+loc+'.png')'''
+        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_dir+'casts_'+loc+'.png')
     
     
 
