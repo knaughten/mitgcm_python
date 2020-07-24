@@ -1317,14 +1317,14 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
     
     # Calculate long-term means
-    for d in directories:
+    '''for d in directories:
         print 'Calculating long term mean of ' + d
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
-        avg_file = file_path[file_path.rfind('/')+1:]
+        avg_file = file_path[file_path.rfind('/')+1:]'''
 
     # Calculate timeseries
     timeseries_paths = [d + timeseries_file for d in directories]
-    grid = None
+    '''grid = None
     for d, tf in zip(directories, timeseries_paths):
         fnames = get_output_files(d)
         for f in fnames:
@@ -1351,9 +1351,10 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             vmin_diff = -1.5
         if var_name == 'ismr':
             vmin_diff = -6
-        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')
+        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')'''
         
-    # Make ismr plots vs Rignot to show range of ensemble (edit function)
+    # Make ismr plots vs Rignot to show range of ensemble
+    amundsen_rignot_ensemble(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
 
     # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
     
