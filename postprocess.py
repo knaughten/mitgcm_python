@@ -1315,6 +1315,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     directories = [era5_dir] + pace_dir
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
 
+    avg_file = '1979_2013_avg.nc'
     # Calculate long-term means
     '''for d in directories:
         print 'Calculating long term mean of ' + d
