@@ -126,7 +126,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
 
     # Hovmoller plots, CTD casts, and melt rate comparisons
     if key == 'PAS':
-        for loc in ['pine_island_bay', 'dotson_front']:
+        for loc in ['pine_island_bay', 'dotson_bay']:
             read_plot_hovmoller_ts(hovmoller_file, loc, grid, tmax=1.5, smin=34, t_contours=[0,1], s_contours=[34.5, 34.7], fig_name=fig_dir+'hovmoller_ts_'+loc+'.png', monthly=monthly, smooth=6)
             ctd_cast_compare(loc, hovmoller_file, ctd_file, grid, fig_name=fig_dir+'casts_'+loc+'.png')
         amundsen_rignot_comparison(output_dir+timeseries_file, precomputed=True, fig_name=fig_dir+'rignot.png') 
@@ -351,7 +351,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 
     # Hovmoller plots
     if key == 'PAS':
-        for loc in ['pine_island_bay', 'dotson_front']:
+        for loc in ['pine_island_bay', 'dotson_bay']:
             read_plot_hovmoller_ts_diff(output_dir_1+hovmoller_file, output_dir_2+hovmoller_file, loc, grid, fig_name=fig_dir+'hovmoller_ts_'+loc+'_diff.png', monthly=monthly, smooth=6)
 
     # Now make lat-lon plots
@@ -1094,7 +1094,7 @@ def calc_ice_prod (file_path, out_file, monthly=True):
 
 
 # Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_front'], var=['temp', 'salt'], monthly=True):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_bay'], var=['temp', 'salt'], monthly=True):
 
     if isinstance(loc, str):
         # Make it a list
@@ -1184,7 +1184,7 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         change_points = [None, None, [5,10,30], None, None]
         ymax = -70
         melt_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
-        hovmoller_loc = ['pine_island_bay', 'dotson_front']
+        hovmoller_loc = ['pine_island_bay', 'dotson_bay']
         hovmoller_bounds = [-1.8, 1.2, 34, 34.725]
         hovmoller_t_contours = [0, 1]
         hovmoller_s_contours = [34.5, 34.6, 34.7]
@@ -1289,8 +1289,7 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
     return out_file
     
 
-# TODO
-# Load NCO before you run this.
+# All the steps to analyse a newly finished ERA5 run and matching PACE ensemble!
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
     from plot_1d import read_plot_timeseries_ensemble
@@ -1299,7 +1298,8 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
-    
+    hovmoller_loc = ['pine_island_bay', 'dotson_bay']
+    hovmoller_file = 'hovmoller.nc'
     latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice']
     ymax = -70
     change_points = [5, 10, 30]
@@ -1322,20 +1322,22 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
         avg_file = file_path[file_path.rfind('/')+1:]'''
 
-    # Calculate timeseries
+    # Calculate timeseries and Hovmollers
     timeseries_paths = [d + timeseries_file for d in directories]
-    '''grid = None
-    for d, tf in zip(directories, timeseries_paths):
+    hovmoller_paths = [d + hovmoller_file for d in directories]
+    grid = None
+    for d, tf, hf in zip(directories, timeseries_paths, hovmoller_paths):
         fnames = get_output_files(d)
         for f in fnames:
             file_path = d + f
             if grid is None:
                 grid = Grid(file_path)
             print 'Calculating timeseries for ' + file_path
-            precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
+            #precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
+            precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
 
     # Plot ensemble for all timeseries
-    for var_name in timeseries_types:
+    '''for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Plot lat-lon comparison with ERA5
@@ -1351,10 +1353,10 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             vmin_diff = -1.5
         if var_name == 'ismr':
             vmin_diff = -6
-        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')'''
+        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')
         
     # Make ismr plots vs Rignot to show range of ensemble
-    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
+    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')'''
 
     # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
     

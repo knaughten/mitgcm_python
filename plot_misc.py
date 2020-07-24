@@ -477,7 +477,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
     finished_plot(fig, fig_name=fig_name)
             
 
-# Plot temperature and salinity casts from the given region against each year of the model output averaged over the same region. Also plot the mean CTD cast and the mean model cast.
+# Plot temperature and salinity casts from the given region against each year of the model output averaged over the same region. Also plot the mean CTD cast and the mean model cast. You can also plot obs versus 1 model versus ensemble (eg ERA5 and PACE ensemble), in which case you will see overlapping ranges rather than individual years.
 
 # Arguments:
 # loc: region name (anything in the "region_bounds" dictionary in constants.py)
@@ -486,10 +486,11 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 # grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables
 
 # Optional keyword arguments:
-# month: month of model output to plot (1-12). Default is to plot each modelled January. To plot all months, set month=None.
+# ens_hovmoller_files: list of paths to precomputed Hovmoller files for each member of a model ensemble
+# month: month of model output to plot (1-12). Default is to plot each modelled February. To plot all months, set month=None.
 # fig_name: as in finished_plot.
 
-def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=1, fig_name=None):
+def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=2, fig_name=None):
 
     from scipy.io import loadmat
 
