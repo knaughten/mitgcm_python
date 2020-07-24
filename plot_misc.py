@@ -370,7 +370,7 @@ def read_plot_hovmoller_ts_diff (hovmoller_file_1, hovmoller_file_2, loc, grid, 
 # Optional keyword arguments:
 # precomputed: set to True if file_path is a precomputed timeseries file with the melt rates for each ice shelf already there
 # option: 'melting' (plot melt rates in m/y) or 'massloss' (plot basal mass loss)
-# file_path_2: file_path for a second simulation, to plot on same axes.
+# file_path_2: file_path for a second simulation, to plot on same axes. Or can be a list of file paths to do an ensemble.
 # sim_names: list of length 2 containing simulation names for file_path and file_path_2.
 # fig_name: as in function finished_plot
 def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', file_path_2=None, sim_names=None, fig_name=None):
@@ -383,6 +383,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
         grid = Grid(file_path)
         
     second = file_path_2 is not None
+    ensemble = second and isinstance(file_path_2, list)
     if second and (sim_names is None or not isinstance(sim_names, list) or len(sim_names) != 2):
         print 'Error (amundsen_rignot_comparison): must set sim_names as list of 2 simulation names if file_path_2 is set.'
         sys.exit()
@@ -397,6 +398,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
         if precomputed:
             model_melt.append(read_netcdf(file_path, var_name, time_average=True))
             if second:
+                # TODO from here ensemble
                 model2_melt.append(read_netcdf(file_path_2, var_name, time_average=True))
         else:
             model_melt.append(timeseries_ismr(file_path, grid, shelf=shelf, result=option, time_average=True))

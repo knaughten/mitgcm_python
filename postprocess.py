@@ -496,7 +496,7 @@ def set_update_var (id, num_time, data, dimensions, var_name, title, units):
 # timeseries_types: list of timeseries types to compute (subset of the options from set_parameters). If None, a default set will be used.
 # lon0, lat0: if timeseries_types includes 'temp_polynya' and/or 'salt_polynya', use these points as the centre.
 
-def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS', eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, time_average=False):
+def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, monthly=True, lon0=None, lat0=None, key='PAS', eosType='MDJWF', rhoConst=None, Tref=None, Sref=None, tAlpha=None, sBeta=None, time_average=False, grid=None):
 
     # Timeseries to compute
     if timeseries_types is None:
@@ -508,7 +508,8 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
             timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'seaice_area']
 
     # Build the grid
-    grid = Grid(mit_file)
+    if grid is None:
+        grid = Grid(mit_file)
     if any (['density' in s for s in timeseries_types]):
         # Precompute density so we don't have to re-calculate it for each density variable. If there's only one density variable, this won't make a difference.
         temp = read_netcdf(mit_file, 'THETA', time_average=time_average)
@@ -1294,46 +1295,49 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
+    
+    latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice']
+    ymax = -70
+    change_points = [5, 10, 30]
 
     if isinstance(pace_dir, str):
         # Case for a single ensemble member
         pace_dir = [pace_dir]
     num_ens = len(pace_dir)
     print 'PACE ensemble has ' + str(num_ens) + ' members'
-    era5_dir = real_dir(era5_dir)
+    era5_dir = real_dir(era5_dir) + 'output/'
     for n in range(num_ens):
-        pace_dir[n] = real_dir(pace_dir[n])
+        pace_dir[n] = real_dir(pace_dir[n]) + 'output/'
     fig_dir = real_dir(fig_dir)
     directories = [era5_dir] + pace_dir
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
 
     # Calculate long-term means
-    out_files = []
-    for d in directories:
+    '''for d in directories:
         print 'Calculating long term mean of ' + d
-        file_path = long_term_mean(d+'output/', year_start, year_end, leap_years=(d==era5_dir))
-        out_files.append(file_path)
+        file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
+        avg_file = file_path[file_path.rfind('/')+1:]
 
     # Calculate timeseries
-    timeseries_paths = [d + 'output/' + timeseries_file for d in directories]
+    timeseries_paths = [d + timeseries_file for d in directories]
+    grid = None
     for d, tf in zip(directories, timeseries_paths):
-        fnames = get_output_files(directory+'output/')
+        fnames = get_output_files(d)
         for f in fnames:
-            file_path = directory + 'output/' + f
+            file_path = d + f
+            if grid is None:
+                grid = Grid(file_path)
             print 'Calculating timeseries for ' + file_path
-            precompute_timeseries(file_path, tf, timeseries_types=timeseries_types)
+            precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
 
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')'''
 
-    # Make lat-lon plots showing how far outside ensemble range ERA5 is (edit read_plot_latlon_comparison):
-    # bottom temperature and salinity
-    # surface temperature and salinity
-    # ismr
-    # sea ice thickness and concentration
-    # anything else - can keep adding!
-
+    # Plot lat-lon comparison with ERA5
+    for var_name in latlon_types:
+        read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, fig_name=fig_dir+'latlon_'+var_name+'.png')
+        
     # Make ismr plots vs Rignot to show range of ensemble (edit function)
 
     # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
