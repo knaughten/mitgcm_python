@@ -490,9 +490,11 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 # month: month of model output to plot (1-12). Default is to plot each modelled February. To plot all months, set month=None.
 # fig_name: as in finished_plot.
 
-def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=2, fig_name=None):
+def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=None, month=2, fig_name=None):
 
     from scipy.io import loadmat
+
+    ensemble = ens_hovmoller_files is not None
 
     grid = choose_grid(grid, None)
 
@@ -525,27 +527,62 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=2, fig_name=Non
         model_salt = model_salt[index,:]
     num_model = model_temp.shape[0]
 
+    if ensemble:
+        # Read model ensemble output, all in one
+        ens_temp = None
+        ens_salt = None
+        ens_time = None
+        for file_path in ens_hovmoller_files:
+            temp_tmp = read_netcdf(file_path, loc+'_temp')
+            salt_tmp = read_netcdf(file_path, loc+'_salt')
+            time_tmp = netcdf_time(file_path, monthly=False)
+            if ens_temp is None:
+                ens_temp = temp_tmp
+                ens_salt = salt_tmp
+                ens_time = time_tmp
+            else:
+                ens_temp = np.concatenate((ens_temp, temp_tmp))
+                ens_salt = np.concatenate((ens_salt, salt_tmp))
+                ens_time = np.concatenate((ens_time, time_tmp))
+        if month != 0:
+            index = [t.month==month for t in ens_time]
+            ens_temp = ens_temp[index,:]
+            ens_salt = ens_salt[index,:]
+
     # Set panels
     fig, gs = set_panels('1x2C0')
     # Wrap things up in lists for easier iteration
     obs_data = [obs_temp, obs_salt]
     model_data = [model_temp, model_salt]
+    if ensemble:
+        ens_data = [ens_temp, ens_salt]
+        all_data = [obs_data, model_data, ens_data]
+        depths = [obs_depth, grid.z, grid.z]
+        colours = ['black', 'red', 'blue']
+        num_ranges = len(colours)
     titles = ['Temperature', 'Salinity']
     units = [deg_string+'C', 'psu']
     vmin = [-2, 33.5]
     vmax = [2, 34.75]
     for i in range(2):
         ax = plt.subplot(gs[0,i])
-        # Plot obs, all in grey
-        for n in range(num_obs):
-            ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6), linewidth=1)
-        # Plot obs mean in thicker dashedblack
-        ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2, linestyle='dashed')
-        # Plot model years, in different colours
-        for n in range(num_model):
-            ax.plot(model_data[i][n,:], grid.z, linewidth=1)
-        # Plot model mean in thicker black
-        ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
+        if ensemble:
+            # Plot transparent ranges, with means on top
+            for n in range(num_ranges):
+                ax.fill_betweenx(depths[n], np.amin(all_data[n][i], axis=0), x2=np.amax(all_data[n][i], axis=0), color=colours[n], alpha=0.5)
+                ax.plot(np.mean(all_data[n][i], axis=0), depths[n], color=colours[n], linewidth=2)
+        else:
+            # Plot individual lines
+            # Plot obs, all in grey
+            for n in range(num_obs):
+                ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6), linewidth=1)
+            # Plot obs mean in thicker dashedblack
+            ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2, linestyle='dashed')
+            # Plot model years, in different colours
+            for n in range(num_model):
+                ax.plot(model_data[i][n,:], grid.z, linewidth=1)
+            # Plot model mean in thicker black
+            ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
         ax.set_xlim([vmin[i], vmax[i]])
         ax.grid(True)
         plt.title(titles[i], fontsize=16)
@@ -554,7 +591,10 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, month=2, fig_name=Non
             plt.ylabel('Depth (m)', fontsize=14)
         else:
             ax.set_yticklabels([])
-    plt.suptitle(loc + ': model (colours) vs CTDs (grey)', fontsize=20)
+    if ensemble:
+        plt.suptitle(loc + ': CTDs (grey), ERA5 (red), PACE ensemble (blue)', fontsize=20)
+    else:
+        plt.suptitle(loc + ': model (colours) vs CTDs (grey)', fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
 
