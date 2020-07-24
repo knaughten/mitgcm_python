@@ -1354,7 +1354,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')'''
         
     # Make ismr plots vs Rignot to show range of ensemble
-    amundsen_rignot_ensemble(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
+    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
 
     # Make casts plot showing full ensemble, ERA5, and obs somehow (edit function)
     
