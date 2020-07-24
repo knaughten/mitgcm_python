@@ -1292,9 +1292,8 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 # Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5']
     timeseries_file = 'timeseries.nc'
-    # To do: depth of 0.5C isotherm (the deepest one)
 
     if isinstance(pace_dir, str):
         # Case for a single ensemble member
@@ -1306,11 +1305,11 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         pace_dir[n] = real_dir(pace_dir[n])
 
     # Calculate long-term means
-    '''out_files = []
+    out_files = []
     for directory in [era5_dir] + pace_dir:
         print 'Calculating long term mean of ' + directory
         file_path = long_term_mean(directory+'output/', year_start, year_end, leap_years=(directory==era5_dir))
-        out_files.append(file_path)'''
+        out_files.append(file_path)
 
     # Calculate timeseries
     for directory in [era5_dir] + pace_dir:
@@ -1319,6 +1318,8 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             file_path = directory + 'output/' + f
             print 'Calculating timeseries for ' + file_path
             precompute_timeseries(file_path, directory+'output/'+timeseries_file, timeseries_types=timeseries_types)
+
+    # Plot ensemble for all timeseries
 
     # Make lat-lon plots showing how far outside ensemble range ERA5 is (edit read_plot_latlon_comparison):
     # bottom temperature and salinity
