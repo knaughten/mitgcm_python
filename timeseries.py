@@ -1107,7 +1107,7 @@ def set_parameters (var):
         units = deg_string+'C'
     elif var.endswith('temp_min_depth'):
         option = 'min_depth'
-        var_min = 'THETA'
+        var_name = 'THETA'
         region = var[:var.index('_temp_min_depth')]
         title = 'Depth of temperature minimum over ' + region_names[region]
         units = deg_string+'C'
