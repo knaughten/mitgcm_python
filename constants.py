@@ -69,7 +69,10 @@ region_bounds = {
     'wdw_core': [-60, -20, -75, -65],
     'filchner_front': [-45, -36, -79, -77],
     'deep_ronne_cavity': [-85, -55, -85, -75.5],
-    'offshore_filchner': [-40, -25, -75, -72]
+    'offshore_filchner': [-40, -25, -75, -72],
+    'crosson_thwaites': [-110, -106.7, -75.5, -74.75],
+    'thwaites_pig': [-106, -100, -75.5, -74.75],
+    'inner_amundsen_shelf': [-112, -100, -75.5, -74.25]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -115,7 +118,10 @@ region_names = {
     'offshore_filchner': 'Offshore of Filchner Trough sill',
     'filchner_front': 'Filchner Ice Shelf front',
     'filchner_trough_front': 'Ice shelf front at Filchner Trough',
-    'ronne_depression_front': 'Ice shelf front at Ronne Depression'
+    'ronne_depression_front': 'Ice shelf front at Ronne Depression',
+    'crosson_thwaites': 'Continental shelf between Crosson and Thwaites',
+    'thwaites_pig': 'Continental shelf between Thwaites and PIG',
+    'inner_amundsen_shelf': 'Inner Amundsen Sea continental shelf'
 }    
 
 # Resolution of SOSE grid in degrees

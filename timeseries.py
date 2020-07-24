@@ -959,6 +959,12 @@ def set_parameters (var):
         units = 'psu'
         region = var[:var.index('_sss_avg')]
         title = 'Sea surface salinity over ' + region_names[region]
+    elif var.endswith('hice_avg'):
+        option = 'avg_sfc'
+        var_name = 'SIheff'
+        units = 'm'
+        region = var[:var.index('_hice_avg')]
+        title = 'Average sea ice thickness over ' + region_names[region]
     elif var.endswith('iceprod'):
         option = 'iceprod'
         region = var[:var.index('_iceprod')]
