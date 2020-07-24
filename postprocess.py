@@ -1314,11 +1314,11 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Calculate timeseries
     for directory in [era5_dir] + pace_dir:
-        print 'Calculating timeseries for ' + directory
         fnames = get_output_files(directory+'output/')
         for f in fnames:
             file_path = directory + 'output/' + f
-            precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types)
+            print 'Calculating timeseries for ' + file_path
+            precompute_timeseries(file_path, directory+'output/'+timeseries_file, timeseries_types=timeseries_types)
 
     # Make lat-lon plots showing how far outside ensemble range ERA5 is (edit read_plot_latlon_comparison):
     # bottom temperature and salinity
