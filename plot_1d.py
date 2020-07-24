@@ -236,7 +236,7 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
 # Helper function to set up to 7 colours automatically.
 def default_colours (n):
 
-    colours = ['blue', 'red', 'black', 'green', 'cyan', 'magenta', 'yellow']
+    colours = ['black', 'red', 'blue', 'green', 'cyan', 'magenta', 'yellow']
     if n > len(colours):
         print 'Error (default_colours): need to specify colours if you need more than ' + str(len(colours))
         sys.exit()

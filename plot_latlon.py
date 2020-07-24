@@ -782,7 +782,23 @@ def plot_resolution (grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xma
 
 
 # Make a 3x1 plot that compares a lat-lon variable from two different simulations: absolute for each simulation, and their anomaly.
+# You can also plot a single simulation (data1) versus an ensemble (data2) where data2 is a 3D array where the first dimension is the ensemble member. In this case, the anomaly will be the unexplained anomaly, i.e. (nearest ensemble member to data1) minus (data1), or zero if data1 falls within the ensemble.
 def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, ctype='basic', vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, title1=None, title2=None, suptitle=None, fig_name=None, change_points=None, extend=None, extend_diff=None, u_1=None, v_1=None, u_2=None, v_2=None, chunk=None, scale=0.8, percent_anomaly=False, angle_anomaly=False, pster=False, fill_gap=True, lon_lines=None, lat_lines=None, figsize=(17,5)):
+
+    ensemble = len(data2.shape) == 3
+    if ensemble:
+        data2_mean = np.mean(data2, axis=0)
+        data2_min = np.amin(data2, axis=0)
+        data2_max = np.amax(data2, axis=0)
+        data_diff = np.minimum(data2_max - data1, 0) + np.maximum(data2_min - data1, 0)
+        if u_2 is not None:
+            u_2 = np.mean(u_2, axis=0)
+        if v_2 is not None:
+            v_2 = np.mean(v_2, axis=0)
+    else:
+        # For convenience
+        data2_mean = data2
+        data_diff = data2 - data1
 
     if extend is None:
         extend = get_extend(vmin=vmin, vmax=vmax)
@@ -796,7 +812,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
 
     # Get the bounds
     vmin_1, vmax_1 = var_min_max(data1, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype, pster=pster)
-    vmin_2, vmax_2 = var_min_max(data2, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype, pster=pster)
+    vmin_2, vmax_2 = var_min_max(data2_mean, grid, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, gtype=gtype, pster=pster)
     if vmin is None:
         vmin = min(vmin_1, vmin_2)
     if vmax is None:
@@ -805,9 +821,9 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     # Set up the plot
     fig, gs, cax1, cax2 = set_panels('1x3C2', figsize=figsize)
     # Wrap things up in lists for easier iteration
-    data = [data1, data2, data2-data1]
+    data = [data1, data2_mean, data_diff]
     if percent_anomaly:
-        data[-1] = (data2-data1)/data1*1e2
+        data[-1] = (data2_diff)/data1*1e2
     if angle_anomaly:
         # Take mod 2pi when necessary
         index = data[-1] < -np.pi
@@ -820,8 +836,11 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
     vmax0 = [vmax, vmax, vmax_diff]
     ctype0 = [ctype, ctype, 'plusminus']
     title = [title1, title2, 'Anomaly']
+    if ensemble:
+        title[1] += ' mean'
+        title[2] = 'Unexplained anomaly'
     if percent_anomaly:
-        title[-1] = '% Anomaly'
+        title[-1] = '%' + title[-1]
     cax = [cax1, None, cax2]
     extend0 = [extend, None, extend_diff]
     label_latlon = [True, False, False]
@@ -842,14 +861,21 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
 
 # NetCDF interface to latlon_comparison_plot.
 # Assumes the two simulations have the same output filename with a single time record, or to be time-averaged.
+# directory2 can be a list if you want to plot an ensemble.
 def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None, time_index=None, time_average=False, percent_anomaly=False, pster=False, fill_gap=True, lon_lines=None, lat_lines=None):
 
     if time_index is None and not time_average:
         print 'Error (read_plot_latlon_comparison): either select a time_index or set time_average=True.'
         sys.exit()
 
+    ensemble = isinstance(directory2, list)
+    if ensemble:
+        num_ens = len(directory2)
+        for n in range(len(directory2)):
+            directory2[n] = real_dir(directory2[n])
+    else:
+        directory2 = real_dir(directory2)    
     directory1 = real_dir(directory1)
-    directory2 = real_dir(directory2)
 
     # Build the grid if needed
     grid = choose_grid(grid, directory1+fname)
@@ -926,10 +952,27 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
     # Call this for each simulation
     if var == 'vel':
         data_1, u_1, v_1, title = read_and_process(directory1+fname)
-        data_2, u_2, v_2 = read_and_process(directory2+fname)[:3]
+        new_shape = tuple([num_ens] + list(data_1.shape))
+        if ensemble:
+            data_2 = np.ma.empty(new_shape)
+            u_2 = np.ma.empty(new_shape)
+            v_2 = np.ma.empty(new_shape)
+            for n in range(num_ens):
+                data_2_tmp, u_2_tmp, v_2_tmp = read_and_process(directory2[n]+fname)[:3]
+                data_2[n,:] = data_2_tmp
+                u_2[n,:] = u_2_tmp
+                v_2[n,:] = v_2_tmp
+        else:
+            data_2, u_2, v_2 = read_and_process(directory2+fname)[:3]           
     else:
         data_1, title = read_and_process(directory1+fname)
-        data_2 = read_and_process(directory2+fname)[0]
+        if ensemble:
+            data_2 = np.ma.empty(tuple([num_ens]+list(data_1.shape)))
+            for n in range(num_ens):
+                data_2_tmp = read_and_process(directory2[n]+fname)[0]
+                data_2[n,:] = data_2_tmp
+        else:
+            data_2 = read_and_process(directory2+fname)[0]
         u_1 = None
         v_1 = None
         u_2 = None

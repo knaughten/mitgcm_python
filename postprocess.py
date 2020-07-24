@@ -1294,8 +1294,6 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
-    timeseries_types = ['pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
-    timeseries_file = 'timeseries_isotherms.nc'
 
     if isinstance(pace_dir, str):
         # Case for a single ensemble member
@@ -1305,28 +1303,33 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     era5_dir = real_dir(era5_dir)
     for n in range(num_ens):
         pace_dir[n] = real_dir(pace_dir[n])
+    fig_dir = real_dir(fig_dir)
+    directories = [era5_dir] + pace_dir
+    sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
 
-    '''# Calculate long-term means
+    # Calculate long-term means
     out_files = []
-    for directory in [era5_dir] + pace_dir:
-        print 'Calculating long term mean of ' + directory
-        file_path = long_term_mean(directory+'output/', year_start, year_end, leap_years=(directory==era5_dir))
-        out_files.append(file_path)'''
+    for d in directories:
+        print 'Calculating long term mean of ' + d
+        file_path = long_term_mean(d+'output/', year_start, year_end, leap_years=(d==era5_dir))
+        out_files.append(file_path)
 
     # Calculate timeseries
-    for directory in [era5_dir] + pace_dir:
+    timeseries_paths = [d + 'output/' + timeseries_file for d in directories]
+    for d, tf in zip(directories, timeseries_paths):
         fnames = get_output_files(directory+'output/')
         for f in fnames:
             file_path = directory + 'output/' + f
             print 'Calculating timeseries for ' + file_path
-            precompute_timeseries(file_path, directory+'output/'+timeseries_file, timeseries_types=timeseries_types)
+            precompute_timeseries(file_path, tf, timeseries_types=timeseries_types)
 
     # Plot ensemble for all timeseries
+    for var_name in timeseries_types:
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Make lat-lon plots showing how far outside ensemble range ERA5 is (edit read_plot_latlon_comparison):
     # bottom temperature and salinity
     # surface temperature and salinity
-    # mixed layer depth
     # ismr
     # sea ice thickness and concentration
     # anything else - can keep adding!
