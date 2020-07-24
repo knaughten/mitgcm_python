@@ -384,6 +384,8 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
         
     second = file_path_2 is not None
     ensemble = second and isinstance(file_path_2, list)
+    if ensemble:
+        num_ens = len(file_path_2)
     if second and (sim_names is None or not isinstance(sim_names, list) or len(sim_names) != 2):
         print 'Error (amundsen_rignot_comparison): must set sim_names as list of 2 simulation names if file_path_2 is set.'
         sys.exit()
@@ -398,12 +400,33 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
         if precomputed:
             model_melt.append(read_netcdf(file_path, var_name, time_average=True))
             if second:
-                # TODO from here ensemble
-                model2_melt.append(read_netcdf(file_path_2, var_name, time_average=True))
+                if ensemble:
+                    for n in range(num_ens):
+                        melt_tmp = read_netcdf(file_path_2[n], var_name, time_average=True)
+                        if n == 0:
+                            min_melt = melt_tmp
+                            max_melt = melt_tmp
+                        else:
+                            min_melt = min(min_melt, melt_tmp)
+                            max_melt = max(max_melt, melt_tmp)
+                    model2_melt.append([min_melt, max_melt])
+                else:
+                    model2_melt.append(read_netcdf(file_path_2, var_name, time_average=True))
         else:
             model_melt.append(timeseries_ismr(file_path, grid, shelf=shelf, result=option, time_average=True))
             if second:
-                model2_melt.append(timeseries_ismr(file_path_2, grid, shelf=shelf, result=option, time_average=True))
+                if ensemble:
+                    for n in range(num_ens):
+                        melt_tmp = timeseries_ismr(file_path_2[n], grid, shelf=shelf, result=option, time_average=True)
+                        if n == 0:
+                            min_melt = melt_tmp
+                            max_melt = melt_tmp
+                        else:
+                            min_melt = min(min_melt, melt_tmp)
+                            max_melt = max(max_melt, melt_tmp)
+                    model2_melt.append([min_melt, max_melt])
+                else:
+                    model2_melt.append(timeseries_ismr(file_path_2, grid, shelf=shelf, result=option, time_average=True))
         obs = rignot_melt[shelf]
         if option == 'massloss':
             obs_melt.append(obs[0])
@@ -415,10 +438,21 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
             print 'Error (amundsen_rignot_comparison): invalid option ' + option
             sys.exit()
 
+    if second and ensemble:
+        # Convert from min/max to central value and difference, for plotting
+        model2_melt0 = []
+        model2_melt_diff = []
+        for n in range(num_shelves):
+            model2_melt0.append(0.5*(model2_melt[n][0] + model2_melt[n][1]))
+            model2_melt_diff.append(model2_melt0[n] - model2_melt[n][0])        
+
     fig, ax = plt.subplots()
     if second:
         ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=sim_names[0])
-        ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
+        if ensemble:
+            ax.errorbar(range(num_shelves), model2_melt0, yerr=model2_melt_diff, fmt='none', color='green', capsize=4, label=sim_names[1])
+        else:
+            ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
     else:
         if isinstance(sim_names, list):
             label = sim_names[0]

@@ -1295,6 +1295,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     from plot_1d import read_plot_timeseries_ensemble
     from plot_latlon import read_plot_latlon_comparison
+    from plot_misc import amundsen_rignot_comparison
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
@@ -1315,7 +1316,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     directories = [era5_dir] + pace_dir
     sim_names = ['ERA5'] + ['PACE '+str(n+1) for n in range(num_ens)]
     
-    '''# Calculate long-term means
+    # Calculate long-term means
     for d in directories:
         print 'Calculating long term mean of ' + d
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
@@ -1335,12 +1336,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')'''
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Plot lat-lon comparison with ERA5
-    # Temporary
-    avg_file = '1979_2013_avg.nc'
-    grid = Grid(era5_dir+'output_001.nc')
     for var_name in latlon_types:
         vmin = None
         vmax = None
