@@ -504,7 +504,7 @@ def timeseries_select_depth (option, file_path, var_name, grid, val0=None, mask=
             else:
                 # Loop from bottom to top
                 for k in range(grid.nz-1, 0, -1):
-                    if (data_tmp[k] <= val0 and data_tmp[k-1] >= val0) or (data_tmp[k] >= val0 and data_tmp[k] <= val0):
+                    if (data_tmp[k] <= val0 and data_tmp[k-1] >= val0) or (data_tmp[k] >= val0 and data_tmp[k-1] <= val0):
                         # Crosses val0 somewhere between these depth levels
                         # Interpolate to the intersection                        
                         timeseries.append((val0-data_tmp[k])*(grid.z[k-1]-grid.z[k])/(data_tmp[k-1]-data_tmp[k]) + grid.z[k])
