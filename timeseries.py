@@ -473,7 +473,7 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
 
 
 # Calculate the depth of the minimum of the given variable
-def timeseries_min_depth (file_path, var_name, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+def timeseries_min_depth (file_path, var_name, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if len(data.shape)==3:

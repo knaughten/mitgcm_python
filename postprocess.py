@@ -1292,7 +1292,7 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 # Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_front_temp_bottom', 'dotson_front_salt_bottom']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_front_temp_bottom', 'dotson_front_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_front_temp_min_depth']
     timeseries_file = 'timeseries.nc'
 
     if isinstance(pace_dir, str):
