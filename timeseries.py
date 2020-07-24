@@ -472,6 +472,29 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
     return np.array(timeseries)
 
 
+# Calculate the depth of the minimum of the given variable
+def timeseries_min_depth (file_path, var_name, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        # Just one timestep; add a dummy time dimension
+        data = np.expand_dims(data,0)
+    # Process one time index at a time to save memory
+    timeseries = []
+    for t in range(data.shape[0]):
+        # First mask the land and ice shelves
+        data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
+        if mask is not None:
+            # Also mask outside the given region
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+        # Area-average
+        data_tmp = area_average(data_tmp, grid)
+        # Find depth index of minimum
+        k = np.argmin(data_tmp)
+        timeseries.append(grid.z[k])
+    return np.array(timeseries)    
+
+
 # Calculate timeseries from one or more files.
 
 # Arguments:
@@ -493,6 +516,7 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
 #          'pmepr': calculates total precipitation minus evaporation plus runoff over the given region
 #          'res_time': calculates mean cavity residence time over the given ice shelf cavity
 #          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
+#          'min_depth': calculates the depth of the minimum value area-averaged over the given region
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -550,7 +574,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'min_depth']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -622,6 +646,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_z0':
             values_tmp = timeseries_avg_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'min_depth':
+            values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         if not (option == 'ismr' and mass_balance):
             values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
@@ -731,6 +757,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      'ronne_delta_rho': difference in density between Ronne Depression and Ronne cavity
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 #      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
+#      '*_temp_min_depth': depth of temperature minimum averaged over the given region
 def set_parameters (var):
 
     var_name = None
@@ -1077,6 +1104,12 @@ def set_parameters (var):
         var_name = 'THETA'
         region = var[:var.index('_front_tmax')]
         title = 'Maximum temperature at the ' + region_names[region] + ' front'
+        units = deg_string+'C'
+    elif var.endswith('temp_min_depth'):
+        option = 'min_depth'
+        var_min = 'THETA'
+        region = var[:var.index('_temp_min_depth')]
+        title = 'Depth of temperature minimum over ' + region_names[region]
         units = deg_string+'C'
     else:
         print 'Error (set_parameters): invalid variable ' + var

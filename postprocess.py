@@ -1221,14 +1221,22 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         amundsen_rignot_comparison(dir_1+timeseries_file, file_path_2=dir_2+timeseries_file, precomputed=True, sim_names=[name_1, name_2], fig_name=fig_dir+'rignot.png')
 
 
+# Read all the output files, and sort them by number
+def get_output_files (output_dir):
+
+    output_dir = real_dir(output_dir)
+    fnames = os.listdir(output_dir)
+    fnames = [f for f in fnames if f.startswith('output_') and f.endswith('.nc')]
+    fnames.sort()
+    return fnames
+
+
 # Calculate the long-term mean of a simulation between the given years (inclusive). Return the name of the generated file. Load NCO before you run this.
 def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, leap_years=True):
 
     # Read all the output files, and sort them by number
     output_dir = real_dir(output_dir)
-    fnames = os.listdir(output_dir)
-    fnames = [f for f in fnames if f.startswith('output_') and f.endswith('.nc')]
-    fnames.sort()
+    fnames = get_output_files(output_dir)
 
     # Loop through to find filenames and indices to start and end
     start_file = None
@@ -1284,7 +1292,8 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 # Load NCO before you run this.
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_front_temp_bottom', 'dotson_front_salt_bottom']
+    timeseries_file = 'timeseries.nc'
 
     if isinstance(pace_dir, str):
         # Case for a single ensemble member
@@ -1295,16 +1304,24 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     for n in range(num_ens):
         pace_dir[n] = real_dir(pace_dir[n])
 
+    # Calculate long-term means
     out_files = []
     for directory in [era5_dir] + pace_dir:
         print 'Calculating long term mean of ' + directory
         file_path = long_term_mean(directory+'output/', year_start, year_end, leap_years=(directory==era5_dir))
         out_files.append(file_path)
+
+    # Calculate timeseries
+    for directory in [era5_dir] + pace_dir:
+        print 'Calculating timeseries for ' + directory
+        fnames = get_output_files(directory)
+        for f in fnames:
+            file_path = directory + f
+            precompute_timeseries(file_path, 'timeseries.nc', timeseries_types=timeseries_types)
         
 
     # Calculate timeseries we care about:
-    # TODO bottom temperature and salinity for different regions, or average below certain depth, or mixed layer depth (how is it calculated? do we need to save as a new diag?), or depth of isotherm (check Hovmollers)
-    # TODO area-averaged ice thickness over problematic region
+    # TODO mixed layer depth (how is it calculated? do we need to save as a new diag?), or depth of isotherm (check Hovmollers)
     # anything else - can keep adding!
 
     # Make timeseries plots
