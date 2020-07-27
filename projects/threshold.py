@@ -156,13 +156,16 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 
 
 # Calculate the fields used for animate_cavity and save to a NetCDF file.
-def precompute_animation_fields (output_dir='./', out_file='animation_fields.nc'):
+def precompute_animation_fields (output_dir='./', out_file='animation_fields_part2.nc'):
 
     var_names = ['bwtemp', 'bwsalt'] #, 'ismr', 'vel']
     num_vars = len(var_names)
 
     # Get all the model output files
-    file_paths = segment_file_paths(real_dir(output_dir))
+    output_dir = real_dir(output_dir)
+    segment_dir = [str(year)+'01/' for year in range(2000,2050)]
+    file_paths = [output_dir + s + 'MITgcm/output.nc' for s in segment_dir]
+    #file_paths = segment_file_paths(real_dir(output_dir))
 
     time = None
     land_mask = None
