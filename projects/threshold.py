@@ -1515,9 +1515,10 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
 
     fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in axs:
-        for year in [0, threshold_year]:
+        for year in [0, threshold_year, 150]:
             ax.axvline(year, linestyle='dashed', color='black', linewidth=1)
     axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
+    axs[0].text(152, -50, 'Extension', color='black', ha='left', va='top', fontsize=14)
     if sim_key == 'abIO':
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
