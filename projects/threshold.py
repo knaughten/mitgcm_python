@@ -50,6 +50,7 @@ timeseries_file_density = 'timeseries_delta_rho.nc'
 timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 timeseries_file_threshold = 'timeseries_thresholds.nc'
 timeseries_file_ft = 'timeseries_ft.nc'
+timeseries_file_final = 'timeseries_final.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_postprocessed.nc'
 end_file = 'last_10y.nc'
@@ -1370,7 +1371,6 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_mean_psi', 'fris_temp', 'fris_massloss']
-    fnames = [timeseries_file_psi, timeseries_file, timeseries_file]
     smooth = [5, 0, 2]
     titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
     units = ['Sv', deg_string+'C', 'Gt/y']
@@ -1397,11 +1397,11 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         data_sim = []
         data_sim_smooth = []
         for n in range(num_sims):
-            file_path = sim_dirs_plot[n] + fnames[v]
+            file_path = sim_dirs_plot[n] + timeseries_file_final
             time_tmp = netcdf_time(file_path, monthly=False)
             data_tmp = read_netcdf(file_path, var_names[v])
             # Calculate annual averages
-            time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+            #time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
             # Smooth if needed (smooth=0 will do nothing)
             data_smooth_tmp, time_smooth_tmp = moving_average(data_tmp, smooth[v], time=time_tmp)
             # Save the results
@@ -1433,21 +1433,21 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                     count += 1
             if count >= 5:
                 print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[0][i])    
-                break'''
+                break
 
     # Calculate % decrease in mass loss over Stage 1.
-    #for n in range(1,num_sims):
-        #stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
-        #percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
-        #print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
+    for n in range(1,num_sims):
+        stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
+        percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
+        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
     # Calculate final factor of increase in mass loss in abrupt-4xCO2.
-    #final_melt = data[-1][-1][-1]
-    #factor_inc = final_melt/pi_mean[-1]
-    #print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
+    final_melt = data[-1][-1][-1]
+    factor_inc = final_melt/pi_mean[-1]
+    print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
     # Calculate final increase in temperature in abrupt-4xCO2.
-    #final_temp = data[1][-1][-1]
-    #temp_inc = final_temp - pi_mean[1]
-    #print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year'
+    final_temp = data[1][-1][-1]
+    temp_inc = final_temp - pi_mean[1]
+    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year' '''
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
@@ -1462,8 +1462,6 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             # Dashed vertical line at threshold year
             if n > 0:
                 ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
-        # Black line for piControl mean
-        #ax.axhline(pi_mean[v], color='black', linewidth=1, label='piControl mean')
         ax.grid(True)
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
@@ -1478,7 +1476,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             # Add Stage 1 and Stage 2 text
             plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
             plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
+            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+            #plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
             plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
     #plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
@@ -1758,7 +1757,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
         # Now loop over simulations
         data_sim = []
         for n in range(num_sims):
-            file_path = sim_dirs_plot[n] + timeseries_file_density
+            file_path = sim_dirs_plot[n] + timeseries_file_final
             time_tmp = netcdf_time(file_path, monthly=False)
             data_sim.append(read_netcdf(file_path, var_names[v]))
             if n == 0:
@@ -1784,12 +1783,6 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
             ax.set_xlabel('Year', fontsize=13)
         else:
             ax.set_xticklabels([])
-        if v==0:
-            # Add Stage 1 and Stage 2 text
-            plt.text(2, -0.21, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            plt.text(2, -0.26, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[1]+4, -0.18, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[2]+7, -0.26, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
     plt.suptitle('Difference in density at 600 m', fontsize=22)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.4), ncol=num_sims+1, fontsize=14, columnspacing=1)
     finished_plot(fig, fig_name=fig_dir+'timeseries_density.png', dpi=300)
