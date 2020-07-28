@@ -61,7 +61,7 @@ def set_panels (key, figsize=None):
         elif key == '2x3C2':
             figsize = (12, 7)
         elif key == '3x1C0':
-            figsize = (6, 10)
+            figsize = (8, 9)
         elif key == '2x1C0':
             figsize = (6, 8)
         elif key == 'PS111_2x2C2':
@@ -206,7 +206,7 @@ def set_panels (key, figsize=None):
     elif key == '3x1C0':
         # 3 plots arranged vertically, with space for a legend at the bottom but no colourbar
         gs = plt.GridSpec(3,1)
-        gs.update(left=0.1, right=0.97, bottom=0.12, top=0.95, hspace=0.2)
+        gs.update(left=0.1, right=0.93, bottom=0.12, top=0.95, hspace=0.2)
     elif key == '2x1C0':
         # 2 plots arranged vertically, with space for a legend at the bottom but no colourbar
         gs = plt.GridSpec(2,1)

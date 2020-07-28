@@ -1376,9 +1376,9 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
-    vmin = [[0.015, None], [-2.28, None], [0, None]]
-    vmax = [[0.066, None], [-1.45, None], [250, None]]
-    ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(0, 300, 50)]
+    vmin = [[0.012, 0.012], [-2.28, -2.28], [0, 0]]
+    vmax = [[0.066, 0.18], [-1.45, 0.6], [250, 1800]]
+    ticks = [[np.arange(0.02, 0.07, 0.01), np.arange(0.02, 0.2, 0.04)], [np.arange(-2.2, -1.5, 0.2), np.arange(-2.2, 0.5, 0.6)], [np.arange(0, 300, 50), np.arange(200, 1800, 400)]]
     threshold_year = [None, 147, 79]
     split_year = 150
     num_years = 200
@@ -1416,29 +1416,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         data.append(data_sim)
         data_smoothed.append(data_sim_smooth)
 
-    # Calculate Stage 1 threshold
-    '''pi_mean = [np.mean(data[v][0]) for v in range(num_vars)]
-    pi_std = [np.std(data[v][0]) for v in range(num_vars)]
-    for n in range(1, num_sims):
-        flag = None
-        for v in range(num_vars):
-            flag_tmp = data[v][n] < pi_mean[v] - pi_std[v]
-            if flag is None:
-                flag = flag_tmp
-            else:
-                flag *= flag_tmp
-        i_all = np.where(flag)[0]
-        for i in i_all:
-            count = 0
-            for ii in range(i, min(i+10, 149)):
-                if ii in i_all:
-                    count += 1
-            if count >= 5:
-                print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[0][i])    
-                break
-
     # Calculate % decrease in mass loss over Stage 1.
-    for n in range(1,num_sims):
+    '''for n in range(1,num_sims):
         stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
         percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
         print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
@@ -1456,8 +1435,9 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     width1 = split_year
     width2 = num_years-split_year
     gs = plt.GridSpec(3, 2, width_ratios=[width1, width2])
-    gs.update(left=0.1, right=0.97, bottom=0.12, top=0.95, hspace=0.2, wspace=0.01)
+    gs.update(left=0.1, right=0.93, bottom=0.12, top=0.95, hspace=0.2, wspace=0.1)
     for v in range(num_vars):
+        ax_split = []
         for m in range(2):
             ax = plt.subplot(gs[v,m])
             for n in range(num_sims):
@@ -1472,30 +1452,38 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                 else:
                     ax.axvline(150, color='black', linestyle='dashed', linewidth=1)
             ax.grid(True)
-            ax.set_title(titles[v], fontsize=18)
-            ax.set_ylabel(units[v], fontsize=13)
+            ax.set_yticks(ticks[v][m])
             if m==0:
+                ax.set_title(titles[v], fontsize=18)
+                ax.set_ylabel(units[v], fontsize=13)
                 ax.set_xlim([time[0][0], split_year])
             else:
                 ax.set_xlim([split_year, time[0][-1]])
             ax.set_ylim([vmin[v][m], vmax[v][m]])
-            if v==num_vars-1 and m==0:
-                ax.set_xlabel('Year', fontsize=13)
+            if v==num_vars-1:
+                if m==0:
+                    ax.set_xlabel('Year', fontsize=13)
             else:
                 ax.set_xticklabels([])
-            ax.set_yticks(ticks[v])
             if m==1:
+                ax.set_xticks([160, 180])
                 ax.yaxis.tick_right()
                 if v==0:
-                    plt.text(152, 0.06, 'Extension', color='black', ha='left', va='top', fontsize=13)
+                    ax.set_title('Extension', fontsize=14)
             if m==0 and v==1:
                 # Add Stage 1 and Stage 2 text
                 plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
                 plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-                #plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
-                plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
+                plt.text(threshold_year[1]-2, -1.49, 'Stage 2', color=sim_colours[1], rotation=-90, ha='right', va='top', fontsize=13)
                 plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
+            if m==0 and v==2:
+                ax.legend(loc='lower center', bbox_to_anchor=(0.7,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
+            ax_split.append(ax)
+        # Now draw lines from one axes to another to show how the scale changed
+        for y0 in ticks[v][0]:
+            if v==2 and y0 in [ticks[v][0][0], ticks[v][0][-1]]:
+                continue
+            ax_split[0].annotate('', xy=(split_year, y0), xytext=(split_year, y0), xycoords=ax_split[1].transData, textcoords=ax_split[0].transData, arrowprops=dict(color='black', arrowstyle='-', linestyle='dotted'))
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
 
