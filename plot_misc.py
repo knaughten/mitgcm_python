@@ -177,7 +177,7 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, start=0, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None):
+def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, start=0, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None, start_t=None, end_t=None):
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -218,6 +218,11 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
     # Get colourmap
     cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax, val0=val0)
 
+    if start_t is None:
+        start_t = time_edges[0]
+    if end_t is None:
+        end_t = time_edges[-1]
+
     # Make the figure and axes, if needed
     existing_ax = ax is not None
     if not existing_ax:
@@ -245,7 +250,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         k_top = np.argwhere(np.invert(data[0,:].mask))[0][0]
         zmax = grid.z_edges[k_top]    
     ax.set_ylim([zmin, zmax])
-    ax.set_xlim([time_edges[0], time_edges[-1]])
+    ax.set_xlim([start_t, end_t])
     # Make nice axes labels
     depth_axis(ax)
     if make_cbar:
@@ -264,15 +269,21 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_t=None, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_year=None, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2', figsize=figsize)
-    if split_t is not None:
-        width1 = split_t
-        width2 = time.size-split_t
+    if split_year is not None:
+        if date_since_start:
+            first_year = time[0].year-time[start].year
+            last_year = time[-1].year-time[start].year
+        else:
+            first_year = time[0].year
+            last_year = time[-1].year
+        width1 = (split_year-first_year)
+        width2 = (last_year+1-split_year)
         gs = plt.GridSpec(2, 2, width_ratios=[width1, width2])
-        gs.update(left=0.08, right=0.9, bottom=0.1, top=0.88, hspace=0.2)
+        gs.update(left=0.08, right=0.9, bottom=0.1, top=0.88, hspace=0.2, wspace=0.01)
         # Need to choose the correct colour bounds
         if any([zmin, zmax]):
             tmin_tmp, tmax_tmp = var_min_max_zt(temp, grid, zmin=zmin, zmax=zmax)
@@ -298,34 +309,26 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_t=None, tmin=None
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i])
-        if split_t is not None:
-            # Truncate the limits
-            ax.set_xlim([time[0], time[split_t-1]])
-            # Make another plot beside it
-            ax2 = plt.subplot(gs[i,1])
-            if i==0:
-                ext_title = 'Extension'
-            else:
-                ext_title = ''
-            img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=ext_title, date_since_start=date_since_start, start=start, val0=val0[i])
-            ax2.set_xlim([time[split_t], time[-1]])
-            ax2.set_yticklabels([])
-            ax2.set_ylabel('')
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i], end_t=split_year)
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         cbar = plt.colorbar(img, cax=cax[i], extend=extend)
         reduce_cbar_labels(cbar)
         if i == 0:
             # Remove x-tick labels from top plot
-            ax.set_xticklabels([])
-            if split_t is not None:
-                ax2.set_xticklabels([])
+            ax.set_xticklabels([])                
         else:
             ax.set_xlabel('Year', fontsize=14)
             ax.set_ylabel('')
         axs.append(ax)
-        if split_t is not None:
+        if split_year is not None:
+            # Now make another plot beside
+            ax2 = plt.subplot(gs[i,1])
+            img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax2, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title='', date_since_start=date_since_start, start=start, val0=val0[i], start_t=split_year)
+            ax2.set_yticklabels([])
+            ax2.set_ylabel('')
+            if i==0:
+                ax2.set_xticklabels([])
             axs.append(ax2)
     if title is None:
         title = loc_string

@@ -1507,7 +1507,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         threshold_year = 147
         title += ' (1pctCO2)'
     spinup_time = 20*12
-    split_t = spinup_time + 150*12
+    split_year = 150
 
     grid = Grid(base_dir+grid_path)
     temp = np.ma.concatenate((read_netcdf(file_path_base, 'filchner_trough_temp'), read_netcdf(file_path, 'filchner_trough_temp')), axis=0)
@@ -1516,17 +1516,19 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     for t in range(spinup_time):
         time[t] = datetime.datetime(time[t].year-2910+1850,time[t].month,1)
 
-    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_t=split_t, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_year=split_year, smooth=6, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in [axs[0], axs[2]]:
         for year in [0, threshold_year]: #, 150]:
             ax.axvline(year, linestyle='dashed', color='black', linewidth=1)
+    for ax in [axs[1], axs[3]]:
+        ax.set_xticks([160, 180])
     axs[0].text(2, -50, 'Stage 1', color='black', ha='left', va='top', fontsize=14)
-    #axs[1].text(152, -50, 'Extension', color='black', ha='left', va='top', fontsize=14)
+    axs[1].text(152, -50, 'Extension', color='black', ha='left', va='top', fontsize=14)
     if sim_key == 'abIO':
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
 # Plot the basic parts of the schematic.
