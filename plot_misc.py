@@ -264,10 +264,28 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_t=None, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2', figsize=figsize)
+    if split_t is not None:
+        width1 = split_t
+        width2 = time.size-split_t
+        gs = plt.GridSpec(2, 2, width_ratios=[width1, width2])
+        gs.update(left=0.08, right=0.9, bottom=0.1, top=0.88, hspace=0.2)
+        # Need to choose the correct colour bounds
+        if any([zmin, zmax]):
+            tmin_tmp, tmax_tmp = var_min_max_zt(temp, grid, zmin=zmin, zmax=zmax)
+            smin_tmp, smax_tmp = var_min_max_zt(salt, grid, zmin=zmin, zmax=zmax)
+            if tmin is None:
+                tmin = tmin_tmp
+            if tmax is None:
+                tmax = tmax_tmp
+            if smin is None:
+                smin = smin_tmp
+            if smax is None:
+                smax = smax_tmp
+        
     # Wrap things up in lists for easier iteration
     data = [temp, salt]
     vmin = [tmin, smin]
@@ -281,6 +299,19 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
         ax = plt.subplot(gs[i,0])
         # Make the plot
         img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i])
+        if split_t is not None:
+            # Truncate the limits
+            ax.set_xlim([time[0], time[split_t-1]])
+            # Make another plot beside it
+            ax2 = plt.subplot(gs[i,1])
+            if i==0:
+                ext_title = 'Extension'
+            else:
+                ext_title = ''
+            img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=ext_title, date_since_start=date_since_start, start=start, val0=val0[i])
+            ax2.set_xlim([time[split_t], time[-1]])
+            ax2.set_yticklabels([])
+            ax2.set_ylabel('')
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         cbar = plt.colorbar(img, cax=cax[i], extend=extend)
@@ -288,10 +319,14 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, tmin=None, tmax=None, s
         if i == 0:
             # Remove x-tick labels from top plot
             ax.set_xticklabels([])
+            if split_t is not None:
+                ax2.set_xticklabels([])
         else:
             ax.set_xlabel('Year', fontsize=14)
             ax.set_ylabel('')
         axs.append(ax)
+        if split_t is not None:
+            axs.append(ax2)
     if title is None:
         title = loc_string
     plt.suptitle(title, fontsize=22)
