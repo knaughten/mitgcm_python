@@ -1526,7 +1526,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
-    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
 # Plot the basic parts of the schematic.
@@ -1745,7 +1745,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             cbar = plt.colorbar(img, cax=cax[2*v+t], extend='both')
         plt.text(0.5, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
-finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
 
 
 # Plot density timeseries for supplementary.
