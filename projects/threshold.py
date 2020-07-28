@@ -1376,10 +1376,12 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
-    vmin = [0.015, -2.28, 0]
-    vmax = [0.066, -1.45, 250]
+    vmin = [[0.015, None], [-2.28, None], [0, None]]
+    vmax = [[0.066, None], [-1.45, None], [250, None]]
     ticks = [np.arange(0.02, 0.07, 0.01), np.arange(-2.2, -1.5, 0.2), np.arange(0, 300, 50)]
     threshold_year = [None, 147, 79]
+    split_year = 150
+    num_years = 200
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)    
@@ -1451,38 +1453,48 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
+    width1 = split_year
+    width2 = num_years-split_year
+    gs = plt.GridSpec(3, 2, width_ratios=[width1, width2])
+    gs.update(left=0.1, right=0.97, bottom=0.12, top=0.95, hspace=0.2, wspace=0.01)
     for v in range(num_vars):
-        ax = plt.subplot(gs[v,0])
-        for n in range(num_sims):
-            if smooth[v] != 0:
-                # Plot unsmoothed versions in a lighter colour and thinner weight
-                ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
-            # Plot smoothed versions on top
-            ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
-            # Dashed vertical line at threshold year
-            if n > 0:
-                ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+        for m in range(2):
+            ax = plt.subplot(gs[v,m])
+            for n in range(num_sims):
+                if smooth[v] != 0:
+                    # Plot unsmoothed versions in a lighter colour and thinner weight
+                    ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
+                # Plot smoothed versions on top
+                ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
+                # Dashed vertical line at threshold year
+                if n > 0:
+                    ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+                else:
+                    ax.axvline(150, color='black', linestyle='dashed', linewidth=1)
+            ax.grid(True)
+            ax.set_title(titles[v], fontsize=18)
+            ax.set_ylabel(units[v], fontsize=13)
+            if m==0:
+                ax.set_xlim([time[0][0], split_year])
             else:
-                ax.axvline(150, color='black', linestyle='dashed', linewidth=1)
-        ax.grid(True)
-        ax.set_title(titles[v], fontsize=18)
-        ax.set_ylabel(units[v], fontsize=13)
-        ax.set_xlim([time[0][0], time[0][-1]])
-        ax.set_ylim([vmin[v], vmax[v]])
-        if v==num_vars-1:
-            ax.set_xlabel('Year', fontsize=13)
-        else:
-            ax.set_xticklabels([])
-        ax.set_yticks(ticks[v])
-        if v==0:
-            plt.text(152, 0.06, 'Extension', color='black', ha='left', va='top', fontsize=13)
-        if v==1:
-            # Add Stage 1 and Stage 2 text
-            plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
-            #plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
-            plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
+                ax.set_xlim([split_year, time[0][-1]])
+            ax.set_ylim([vmin[v][m], vmax[v][m]])
+            if v==num_vars-1 and m==0:
+                ax.set_xlabel('Year', fontsize=13)
+            else:
+                ax.set_xticklabels([])
+            ax.set_yticks(ticks[v])
+            if m==1:
+                ax.yaxis.tick_right()
+                if v==0:
+                    plt.text(152, 0.06, 'Extension', color='black', ha='left', va='top', fontsize=13)
+            if m==0 and v==1:
+                # Add Stage 1 and Stage 2 text
+                plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+                plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
+                #plt.text(threshold_year[1]+2, -1.49, 'Stage 2', color=sim_colours[1], ha='left', va='top', fontsize=13)
+                plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
+                plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
@@ -1527,7 +1539,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     if sim_key == 'abIO':
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
-        axs[0].text(threshold_year-0.3, -50, 'Stage 2', color='black', rotation=-90, ha='left', va='top', fontsize=14)
+        axs[0].text(threshold_year-1, -50, 'Stage 2', color='black', rotation=-90, ha='right', va='top', fontsize=14)
     finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
 
 
