@@ -243,7 +243,7 @@ def gl_final (file_path, fig_name=None, dpi=None):
 
 
 # Read the difference between two Ua output steps for the given variable, interpolated to a common grid.
-def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=None, percent=False):
+def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=None, mask_sim=0, percent=False):
 
     # Read the data for each output step
     def read_data (file_path):
@@ -264,15 +264,28 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
             flt_mask = interp_nonreg_xy(x, y, (ice_base>bedrock).astype(float), x_reg, y_reg)
             flt_mask[flt_mask<0.5] = 0
             flt_mask[flt_mask>=0.5] = 1
-            if mask == 'floating':
-                # Mask out the floating ice
-                data_reg = np.ma.masked_where(flt_mask==1, data_reg)
-            elif mask == 'grounded':
-                # Mask out the grounded ice
-                data_reg = np.ma.masked_where(flt_mask==0, data_reg)
-        return x_reg, y_reg, data_reg
-    x_reg_1, y_reg_1, data_1 = read_data(file_path_1)
-    x_reg_2, y_reg_2, data_2 = read_data(file_path_2)
+        else:
+            flt_mask = None
+        return x_reg, y_reg, data_reg, flt_mask
+    x_reg_1, y_reg_1, data_1, flt_mask_1 = read_data(file_path_1)
+    x_reg_2, y_reg_2, data_2, flt_mask_2 = read_data(file_path_2)
+    if mask_sim == 0:
+        # Mask each dataset with its own floating mask
+        pass
+    elif mask_sim == 1:
+        # Mask each dataset with floating mask from the first simulation
+        flt_mask_2 = flt_mask_1
+    elif mask_sim == 2:
+        # with the second
+        flt_mask_1 = flt_mask_2
+    if mask == 'floating':
+        # Mask out the floating ice
+        data_1 = np.ma.masked_where(flt_mask_1==1, data_1)
+        data_2 = np.ma.masked_where(flt_mask_2==1, data_2)
+    elif mask == 'grounded':
+        # Mask out the grounded ice
+        data_1 = np.ma.masked_where(flt_mask_1==0, data_1)
+        data_2 = np.ma.masked_where(flt_mask_2==0, data_2)
     if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
         print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
         sys.exit()

@@ -1656,8 +1656,8 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     years = [75, 200]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 200)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
-    vmin = [-80, -500, -20, -200]
-    vmax = [80, 500, 20, 200]
+    vmin = [-80, -500, -10, -200]
+    vmax = [80, 500, 10, 200]
     start_year_base = 2910
     start_year = 1850
     base_key = 'ctIO'
@@ -1684,7 +1684,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     for v in range(num_vars):
         data_var = []
         for t in range(num_years):
-            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v])
+            x, y, data_diff = read_ua_difference(var_names[v], base_files[t], sim_files[t], mask=mask[v], mask_sim=2)
             data_var.append(data_diff)
         data.append(data_var)
 
@@ -1744,7 +1744,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             cbar = plt.colorbar(img, cax=cax[2*v+t], extend='both')
         plt.text(0.5, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
+finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
 
 
 # Plot density timeseries for supplementary.
