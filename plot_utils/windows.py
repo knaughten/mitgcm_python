@@ -29,7 +29,7 @@ def set_panels (key, figsize=None):
         elif key == '2x2C0':
             figsize = (10, 6.5)
         elif key == '2x2C4':
-            figsize = (10, 8)
+            figsize = (9, 8)
         elif key == '2x2C2':
             figsize = (8, 8)
         elif key in ['1x3C1', '1x3C3', '1x3C0']:
@@ -102,13 +102,13 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(2,2)
         gs.update(left=0.05, right=0.97, bottom=0.05, top=0.88, wspace=0.05, hspace=0.15)
     elif key == '2x2C4':
-        # Like 2x2C1 but one colourbar for each plot
+        # Like 2x2C1 but one colourbar for each plot, and space for titles between rows
         gs = plt.GridSpec(2,2)
-        gs.update(left=0.15, right=0.85, bottom=0.05, top=0.85, wspace=0.1, hspace=0.15)
-        cax1 = fig.add_axes([0.03, 0.55, 0.025, 0.3])
-        cax2 = fig.add_axes([0.9, 0.55, 0.025, 0.3])
-        cax3 = fig.add_axes([0.03, 0.075, 0.025, 0.3])
-        cax4 = fig.add_axes([0.9, 0.075, 0.025, 0.3])
+        gs.update(left=0.12, right=0.88, bottom=0.01, top=0.85, wspace=0.05, hspace=0.25)
+        cax1 = fig.add_axes([0.02, 0.52, 0.025, 0.3])
+        cax2 = fig.add_axes([0.91, 0.52, 0.025, 0.3])
+        cax3 = fig.add_axes([0.02, 0.05, 0.025, 0.3])
+        cax4 = fig.add_axes([0.91, 0.05, 0.025, 0.3])
     elif key == '2x2C2':
         # Like 2x2C1 but one colourbar for each row, and space for titles between rows
         gs = plt.GridSpec(2,2)

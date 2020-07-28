@@ -52,7 +52,7 @@ timeseries_file_threshold = 'timeseries_thresholds.nc'
 timeseries_file_ft = 'timeseries_ft.nc'
 timeseries_file_final = 'timeseries_final.nc'
 hovmoller_file = 'hovmoller.nc'
-ua_post_file = 'ua_postprocessed.nc'
+ua_post_file = 'ua_grounding_line.nc'
 end_file = 'last_10y.nc'
 mid_file = 'years_26_35.nc'
 num_sim = len(sim_keys)
@@ -1462,6 +1462,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             # Dashed vertical line at threshold year
             if n > 0:
                 ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
+            else:
+                ax.axvline(150, color='black', linestyle='dashed', linewidth=1)
         ax.grid(True)
         ax.set_title(titles[v], fontsize=18)
         ax.set_ylabel(units[v], fontsize=13)
@@ -1472,6 +1474,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         else:
             ax.set_xticklabels([])
         ax.set_yticks(ticks[v])
+        if v==0:
+            plt.text(152, 0.06, 'Extension', color='black', ha='left', va='top', fontsize=13)
         if v==1:
             # Add Stage 1 and Stage 2 text
             plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
@@ -1480,7 +1484,6 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             #plt.text(threshold_year[1]+4, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='left', va='top', fontsize=13)
             plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
-    #plt.suptitle('Filchner-Ronne Ice Shelf', fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
 
 
@@ -1650,11 +1653,11 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     var_names = ['h', 'velb']
     var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (m/y)']
     mask = ['grounded', 'floating']
-    years = [74, 149]
-    sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 150)']
+    years = [75, 200]
+    sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 200)']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
-    vmin = [-75, -10]
-    vmax = [75, 10]
+    vmin = [-80, -500, -20, -200]
+    vmax = [80, 500, 20, 200]
     start_year_base = 2910
     start_year = 1850
     base_key = 'ctIO'
@@ -1664,16 +1667,17 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     labels = ['Bailey', 'Slessor', 'Reco-\nvery', 'Support\nForce', 'Foundation', 'Institute', 'Rutford', 'Evans']
     labels_x = [0.81, 0.9235, 0.9, 0.9, 0.86, 0.6, 0.27, 0.07]
     labels_y = [0.86, 0.82, 0.6, 0.37, 0.19, 0.11, 0.02, 0.25]
-    final_ocean_file = base_dir + sim_dirs[sim_keys.index(sim_key)] + '199901/MITgcm/output.nc'
-    wdw_temp = 0
+    #final_ocean_file = base_dir + sim_dirs[sim_keys.index(sim_key)] + '204901/MITgcm/output.nc'
+    #wdw_temp = 0
+    gl_colours = ['green', 'black']
 
     # Construct file paths
     def get_file_path (sim, start_year, year, post=False):
-        return base_dir + 'WSFRIS_' + sim + '/output/' + str(start_year+year) + '01/Ua/WSFRIS_' + sim + '_' + str(start_year+year) + '01_0360.mat'
+        return base_dir + 'WSFRIS_' + sim + '/output/' + str(start_year+year-1) + '01/Ua/WSFRIS_' + sim + '_' + str(start_year+year-1) + '01_0360.mat'
 
     base_files = [get_file_path(base_key, start_year_base, year) for year in years]
     sim_files = [get_file_path(sim_key, start_year, year) for year in years]
-    gl_file = base_dir + 'WSFRIS_' + sim_key + '/output/' + ua_post_file
+    gl_files = [base_dir + 'WSFRIS_' + sim + '/output/' + ua_post_file for sim in [base_key, sim_key]]
 
     # Read the data for each variable
     data = []
@@ -1688,13 +1692,18 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     xGL = []
     yGL = []
     for year in years:
-        xGL_tmp, yGL_tmp = check_read_gl(gl_file, year*12)
-        xGL.append(xGL_tmp)
-        yGL.append(yGL_tmp)
+        xGL_year = []
+        yGL_year = []
+        for fname in gl_files:
+            xGL_tmp, yGL_tmp = check_read_gl(fname, year*12-1)
+            xGL_year.append(xGL_tmp)
+            yGL_year.append(yGL_tmp)
+        xGL.append(xGL_year)
+        yGL.append(yGL_year)
     # Read boundary nodes
     x_bdry, y_bdry = read_ua_bdry(base_files[0])
 
-    # Read ocean temperature averaged over the last year
+    '''# Read ocean temperature averaged over the last year
     grid = Grid(final_ocean_file)
     x_ocean, y_ocean = polar_stereo(grid.lon_2d, grid.lat_2d)
     ocean_temp = mask_3d(read_netcdf(final_ocean_file, 'THETA', time_average=True), grid)
@@ -1705,30 +1714,35 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     # Remove grounded iceberg A23a
     [xmin, xmax, ymin, ymax] = region_bounds['a23a']
     index = (grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax)*(grid.land_mask)
-    ocean_mask[index] = 1
+    ocean_mask[index] = 1'''
 
     # Set up plot
-    fig, gs, cax1, cax2 = set_panels('2x2C2')
-    cax = [cax1, cax2]
+    fig, gs, cax1, cax2, cax3, cax4 = set_panels('2x2C4')
+    cax = [cax1, cax2, cax3, cax4]
     ctype = ['plusminus_r', 'plusminus']
     for v in range(num_vars):
         for t in range(num_years):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
-            img = ua_plot('reg', data[v][t], x, y, xGL=xGL[t], yGL=yGL[t], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[v], vmax=vmax[v], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            img = ua_plot('reg', data[v][t], x, y, x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[2*v+t], vmax=vmax[2*v+t], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            # Contour grounding lines
+            for n in range(2):
+                if v==0 and n==0:
+                    continue
+                ax.plot(xGL[t][n], yGL[t][n], color=gl_colours[n])
             # Contour coastline from MITgcm
             ax.contour(x_ocean, y_ocean, ocean_mask, levels=[0.5], colors=('black'))
             if v==0 and t==0:
                 # Add ice stream labels
                 for l in range(len(labels)):
                     ax.text(labels_x[l], labels_y[l], labels[l], fontsize=10, transform=ax.transAxes, ha='center', va='center')
-            if v==0 and t==1:
+            '''if v==0 and t==1:
                 # Contour WDW intrusion in cavity
                 CS = ax.contour(x_ocean, y_ocean, ocean_tmax, levels=[wdw_temp], colors=('magenta'))
                 for line in CS.collections:
-                    line.set_linestyle((0, (5,3)))
-        cbar = plt.colorbar(img, cax=cax[v], extend='both')
-        plt.text(0.45, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
+                    line.set_linestyle((0, (5,3)))'''
+            cbar = plt.colorbar(img, cax=cax[2*v+t], extend='both')
+        plt.text(0.5, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
     finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
 
@@ -1757,7 +1771,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
         # Now loop over simulations
         data_sim = []
         for n in range(num_sims):
-            file_path = sim_dirs_plot[n] + timeseries_file_final
+            file_path = sim_dirs_plot[n] + timeseries_file_density
             time_tmp = netcdf_time(file_path, monthly=False)
             data_sim.append(read_netcdf(file_path, var_names[v]))
             if n == 0:
