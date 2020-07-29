@@ -1418,18 +1418,18 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
         data_smoothed.append(data_sim_smooth)
 
     # Calculate % decrease in mass loss over Stage 1.
-    '''for n in range(1,num_sims):
-        stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
-        percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
-        print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
+    #for n in range(1,num_sims):
+        #stage1_mean = np.mean(data[-1][n][:threshold_index[n]])
+        #percent_dec = (stage1_mean - pi_mean[-1])/pi_mean[-1]*100
+        #print sim_names_plot[n] + ' mass loss changes by ' + str(percent_dec) + '% over Stage 1'
     # Calculate final factor of increase in mass loss in abrupt-4xCO2.
     final_melt = data[-1][-1][-1]
-    factor_inc = final_melt/pi_mean[-1]
+    factor_inc = final_melt/np.mean(data[-1][0])
     print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
     # Calculate final increase in temperature in abrupt-4xCO2.
     final_temp = data[1][-1][-1]
-    temp_inc = final_temp - pi_mean[1]
-    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year' '''
+    temp_inc = final_temp - np.mean(data[1][0])
+    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year' 
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
@@ -2519,7 +2519,7 @@ def calc_slr_contribution (base_dir='./'):
     slr = []
     for n in range(2):
         slr.append((vaf[n]-vaf[0][0])*vaf_to_gmslr)
-    slr_diff = slr[1]-slf[0]
+    slr_diff = slr[1]-slr[0]
     time = np.arange(0, 200+1/12., 1/12.) + 1/24.
 
     print 'Final sea level rise contribution from abrupt-4xCO2 (drift subtracted): ' + str(slr_diff[-1]) + ' m'
