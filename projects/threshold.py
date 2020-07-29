@@ -51,6 +51,7 @@ timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 timeseries_file_threshold = 'timeseries_thresholds.nc'
 timeseries_file_ft = 'timeseries_ft.nc'
 timeseries_file_final = 'timeseries_final.nc'
+timeseries_file_ua = 'ua_timeseries.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_grounding_line.nc'
 end_file = 'last_10y.nc'
@@ -2503,6 +2504,28 @@ def calc_threshold_stage1 (base_dir='./'):
                 flag *= flag_tmp
         i = np.where(flag)[0][0]
         print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[i])
+
+
+def calc_slr_contribution (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    file_paths = [base_dir + sim_dirs[key] + timeseries_file_ua for key in [1,3]]
+    sim_names_plot = ['piControl', 'abrupt-4xCO2']
+    colours = ['black', 'red']
+
+    vaf = []
+    for f in file_paths:
+        vaf.append(read_netcdf(f, 'iceVAF'))
+    slr = []
+    for n in range(2):
+        slr.append((vaf[n]-vaf[0][0])*vaf_to_gmslr)
+    slr_diff = slr[1]-slf[0]
+    time = np.arange(0, 200+1/12., 1/12.) + 1/24.
+
+    print 'Final sea level rise contribution from abrupt-4xCO2 (drift subtracted): ' + str(slr_diff[-1]) + ' m'
+    
+    timeseries_multi_plot(time, slr, sim_names_plot, colours, title='Sea level rise contribution', units='m', dates=False)
+    timeseries_multi_plot(time, slr_diff, sim_names_plot[1], colours[1], title='Sea level rise contribution, drift subtracted', units='m', dates=False)
         
 
     
