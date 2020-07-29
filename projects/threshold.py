@@ -2520,12 +2520,12 @@ def calc_slr_contribution (base_dir='./'):
     for n in range(2):
         slr.append((vaf[n]-vaf[0][0])*vaf_to_gmslr)
     slr_diff = slr[1]-slr[0]
-    time = np.arange(0, 200+1/12., 1/12.) + 1/24.
+    time = np.arange(0, 200, 1/12.) + 1/24.
 
     print 'Final sea level rise contribution from abrupt-4xCO2 (drift subtracted): ' + str(slr_diff[-1]) + ' m'
     
     timeseries_multi_plot(time, slr, sim_names_plot, colours, title='Sea level rise contribution', units='m', dates=False)
-    timeseries_multi_plot(time, slr_diff, sim_names_plot[1], colours[1], title='Sea level rise contribution, drift subtracted', units='m', dates=False)
+    timeseries_multi_plot(time, [slr_diff], [sim_names_plot[1]], [colours[1]], title='Sea level rise contribution, drift subtracted', units='m', dates=False)
         
 
     
