@@ -475,13 +475,13 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
     if gtype == 'w':
         print 'Error (interp_to_depth): w-grids not supported yet'
         sys.exit()
-    if z0 > grid.z[0]:
+    if z0 > z[0]:
         # Return surface layer
         k1 = 0
         k2 = 0
         c1 = 1
         c2 = 0
-    elif z0 < grid.z[-1]:
+    elif z0 < z[-1]:
         # Return bottom layer
         k1 = -1
         k2 = -1

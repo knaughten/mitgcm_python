@@ -1,6 +1,8 @@
 # mitgcm_python
 Python tools I built for MITgcm pre- and post-processing. They are designed for my Weddell Sea configuration, but should be general enough that other people will hopefully find them useful.
 
+Please acknowledge the use of these scripts in any publications which make use of them, as "the mitgcm_python package by Kaitlin Naughten".
+
 You must have numpy installed to use any of these functions. Other packages are required for certain functions: netCDF4, matplotlib, scipy, and pynco.
 
 A few functions also use the python tools distributed with MITgcm. Make sure they are in your `PYTHONPATH`. At the bottom of your `~/.bashrc`, add:
