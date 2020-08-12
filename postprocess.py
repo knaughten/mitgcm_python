@@ -1282,10 +1282,13 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
     # Now average them
     print 'Averaging from index ' + str(t_start) + ' of ' + start_file + ' to index ' + str(t_end) + ' of ' + end_file
     out_file = output_dir + str(year_start) + '_' + str(year_end) + '_avg.nc'
-    if proper_weighting:
-        average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
+    if os.path.isfile(out_file):
+        print 'Already exists'
     else:
-        simple_average_files(files_to_avg, out_file, t_start=t_start, t_end=t_end)        
+        if proper_weighting:
+            average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
+        else:
+            simple_average_files(files_to_avg, out_file, t_start=t_start, t_end=t_end)        
     return out_file
     
 
