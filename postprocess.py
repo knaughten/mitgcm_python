@@ -1310,7 +1310,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     from plot_latlon import read_plot_latlon_comparison
     from plot_misc import amundsen_rignot_comparison, ctd_cast_compare
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
     hovmoller_loc = ['pine_island_bay', 'dotson_bay']
     hovmoller_file = 'hovmoller.nc'
@@ -1342,6 +1342,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     hovmoller_paths = [d + hovmoller_file for d in directories]
     grid = None
     for d, tf, hf in zip(directories, timeseries_paths, hovmoller_paths):
+        if os.path.isfile(tf):
+            print 'Timeseries file exists'
+            continue
         fnames = get_output_files(d)
         for f in fnames:
             file_path = d + f
