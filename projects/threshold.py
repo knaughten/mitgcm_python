@@ -1998,6 +1998,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
             print titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'
+    plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
     plt.title('Global mean surface air temperature anomaly', fontsize=18)
     plt.ylabel(deg_string+'C', fontsize=14)
     plt.xlabel('Year', fontsize=14)
@@ -2329,9 +2330,9 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     for l in range(num_loc):
         for v in range(num_vars):
             ax = plt.subplot(gs[l,v])
-            # Plot each model year in a different colour
+            # Plot each model year
             for t in range(num_years):
-                ax.plot(model_data[v][t,l,:], grid.z, alpha=0.5)
+                ax.plot(model_data[v][t,l,:], grid.z, alpha=0.5, color=loc_colours[l])
             # Plot observations in thick black
             ax.plot(obs_data[v][l,:], obs_depth, color='black', linewidth=3)
             ax.set_xlim([vmin[v], vmax[v]])
