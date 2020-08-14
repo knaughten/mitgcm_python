@@ -51,6 +51,7 @@ timeseries_file_salt_budget = 'timeseries_salt_budget.nc'
 timeseries_file_threshold = 'timeseries_thresholds.nc'
 timeseries_file_ft = 'timeseries_ft.nc'
 timeseries_file_final = 'timeseries_final.nc'
+timeseries_file_fresh = 'timeseries_freshening.nc'
 timeseries_file_ua = 'ua_timeseries.nc'
 hovmoller_file = 'hovmoller.nc'
 ua_post_file = 'ua_grounding_line.nc'
@@ -2527,6 +2528,29 @@ def calc_slr_contribution (base_dir='./'):
     
     timeseries_multi_plot(time, slr, sim_names_plot, colours, title='Sea level rise contribution', units='m', dates=False)
     timeseries_multi_plot(time, [slr_diff], [sim_names_plot[1]], [colours[1]], title='Sea level rise contribution, drift subtracted', units='m', dates=False)
+
+
+def plot_shelf_freshening (base_dir='./', fig_dir='./'):
+
+    sim_numbers = [1,5,3]
+    sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
+    sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
+    sim_colours = ['black', 'blue', 'red']
+    threshold_year = [None, 147, 79]
+    num_sims = len(sim_numbers)
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+
+    data = []
+    for n in range(num_sims):
+        file_path = sim_dirs_plot[n] + timeseries_file_fresh
+        time_tmp = netcdf_time(file_path, monthly=False)
+        data.append(read_netcdf(file_path, 'sws_shelf_salt'))
+        if n == 0:
+            time = np.array([t.year-time_tmp[0].year for t in time_tmp])
+
+    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the Southern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False) #, fig_name=fig_dir+'freshening.png')
         
 
     
