@@ -1761,7 +1761,7 @@ def plot_density_timeseries (base_dir='./', fig_dir='./'):
     sim_colours = ['black', 'blue', 'red']
     threshold_year = [None, 147, 79]
     var_names = ['ronne_delta_rho', 'ft_sill_delta_rho']
-    titles = ['a) across Ronne Depression\n(shelf minus cavity)', 'b) across Filchner Trough Sill\n(onshore minus offshore)']
+    titles = ['a) across Ronne Depression\n(continental shelf minus cavity)', 'b) across Filchner Trough Sill\n(onshore minus offshore)']
     units = r'kg/m$^3$'
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
@@ -2536,8 +2536,8 @@ def plot_shelf_freshening (base_dir='./', fig_dir='./'):
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
-    threshold_year = [None, 147, 79]
     num_sims = len(sim_numbers)
+    num_years = 150
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -2545,12 +2545,12 @@ def plot_shelf_freshening (base_dir='./', fig_dir='./'):
     data = []
     for n in range(num_sims):
         file_path = sim_dirs_plot[n] + timeseries_file_fresh
-        time_tmp = netcdf_time(file_path, monthly=False)
-        data.append(read_netcdf(file_path, 'sws_shelf_salt'))
+        time_tmp = netcdf_time(file_path, monthly=False)[:num_years]
+        data.append(read_netcdf(file_path, 'sws_shelf_salt')[:num_years])
         if n == 0:
             time = np.array([t.year-time_tmp[0].year for t in time_tmp])
 
-    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the Southern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False) #, fig_name=fig_dir+'freshening.png')
+    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the\nSouthern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False, fig_name=fig_dir+'freshening.png')
         
 
     
