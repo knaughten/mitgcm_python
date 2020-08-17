@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 from ..file_io import read_netcdf, netcdf_time
 from ..timeseries import calc_annual_averages
-from ..utils import moving_average
+from ..utils import moving_average, polar_stereo, select_bottom
 from ..constants import deg_string
-from ..plot_utils.windows import finished_plot
+from ..plot_utils.windows import finished_plot, set_panels
 
 def extract_geomip_westerlies ():
 
@@ -60,3 +60,49 @@ def extract_geomip_westerlies ():
     ax.set_xticks(np.arange(2030, 2100, 20))
     #ax.legend()
     finished_plot(fig, fig_name='geo_winds.png', dpi=300)
+
+
+# Plot Paul's SO bottom temps versus observations
+def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', obs_file='woa18_decav_t00_04.nc'):
+
+    # Set spatial bounds (60S at opposite corners)
+    corner_lon = np.array([-45, 135])
+    corner_lat = np.array([-60, -60])
+    corner_x, corner_y = polar_stereo(corner_lon, corner_lat)
+    [xmin, xmax, ymin, ymax] = [corner_x[0], corner_y[0], corner_x[1], corner_y[1]]
+    # Set colour bounds
+    vmin = -3
+    vmax = 3
+    lev = np.linspace(vmin, vmax, num=30)
+
+    # Read model data
+    model_lon = read_netcdf(model_file, 'LONGITUDE')
+    model_lat = read_netcdf(model_file, 'LATITUDE')
+    model_temp = read_netcdf(model_file, 'BTEMP')
+    # Apply land mask (filled with zeros)
+    model_temp = np.ma.masked_where(model_temp==0, model_temp)
+    # Convert coordinates to polar stereographic
+    model_lon, model_lat = np.meshgrid(model_lon, model_lat)
+    model_x, model_y = polar_stereo(model_lon, model_lat)
+
+    # Read WOA data
+    obs_lon = read_netcdf(obs_file, 'lon')
+    obs_lat = read_netcdf(obs_file, 'lat')
+    obs_temp_3d = np.squeeze(read_netcdf(obs_file, 't_an'))
+    # Extract bottom temperatures: deepest unmasked values
+    obs_temp = select_bottom(obs_temp_3d)
+    # Convert coordinates to polar stereographic
+    obs_lon, obs_lat = np.meshgrid(obs_lon, obs_lat)
+    obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
+
+    # Plot
+    fig, gs, cax = set_panels('1x2C1')
+    ax = plt.subplot(gs[0,0])
+    img = ax.contourf(model_x, model_y, model_temp, lev)
+    ax.set_title('Existing model', fontsize=18)
+    ax = plt.subplot(gs[0,1])
+    img = ax.contourf(obs_x, obs_y, obs_temp, lev)
+    ax.set_title('Observations', fontsize=18)
+    cbar = plt.colorbar(img, cax=cax, extend='both', orientation='horizontal')
+    plt.suptitle('Bottom temperatures ('+deg_string+'C)', fontsize=24)
+    fig.show()
