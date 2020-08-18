@@ -4,14 +4,15 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.colors as cl
 
 from ..file_io import read_netcdf, netcdf_time
 from ..timeseries import calc_annual_averages
-from ..utils import moving_average, polar_stereo, select_bottom, bdry_from_hfac
+from ..utils import moving_average, polar_stereo, select_bottom, bdry_from_hfac, z_to_xyz
 from ..constants import deg_string
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.colours import set_colours
-from ..interpolation import interp_reg_xy
+from ..interpolation import interp_nonreg_xy
 
 def extract_geomip_westerlies ():
 
@@ -65,55 +66,89 @@ def extract_geomip_westerlies ():
 
 
 # Plot Paul's SO bottom temps versus observations
-def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc', obs_file='schmidtko_data.txt'):
+def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc', obs_file='schmidtko_data.txt', woa_file='woa18_decav_t00_04.nc'):
 
     # TODO
-    # Continent shaded in grey
+    # Continent shaded in grey, with ice shelves in white in obs
+    # Contour ice shelf fronts in model
 
-    # Set spatial bounds (60S at opposite corners)
+    # Set spatial bounds
     corner_lon = np.array([-45, 135])
-    corner_lat = np.array([-60, -60])
+    corner_lat = np.array([-59, -59])
     corner_x, corner_y = polar_stereo(corner_lon, corner_lat)
     [xmin, xmax, ymin, ymax] = [corner_x[0], corner_x[1], corner_y[1], corner_y[0]]
     # Set colour bounds
     vmin = -2
-    vmax = 1.75
+    vmax = 1.5
     lev = np.linspace(vmin, vmax, num=30)
 
     # Read model data
     model_lon = read_netcdf(model_file, 'LONGITUDE')
     model_lat = read_netcdf(model_file, 'LATITUDE')
     model_temp = read_netcdf(model_file, 'BTEMP')
+    # Mask land (zeros)
+    model_temp = np.ma.masked_where(model_temp==0, model_temp)
     # Read other grid variables
     hfac = read_netcdf(model_grid, 'HFacC')
     z_edges = read_netcdf(model_grid, 'RF')
     bathy = bdry_from_hfac('bathy', hfac, z_edges)
     draft = bdry_from_hfac('draft', hfac, z_edges)
-    # Mask out land, ice shelves, deep ocean
-    mask = (bathy!=0)*(draft==0)*(bathy>-1500)
-    model_temp = np.ma.masked_where(np.invert(mask), model_temp)
+    land_mask = bathy==0
+    land_mask = np.ma.masked_where(np.invert(land_mask), land_mask)
+    draft = np.ma.masked_where(bathy==0, draft)
     # Convert coordinates to polar stereographic
     model_x, model_y = polar_stereo(model_lon, model_lat)
 
-    # Read obs data
+    # Read Schmidtko data on continental shelf
     obs = np.loadtxt(obs_file, dtype=np.str)
-    obs_lon = obs[:,0].astype(float)
-    obs_lat = obs[:,1].astype(float)
-    obs_depth = obs[:,2].astype(float)
-    obs_temp = obs[:,3].astype(float)
-    # Interpolate to model grid
-    obs_temp = interp_reg_xy(obs_lon, obs_lat, obs_temp, model_lon, model_lat)
-    # Mask as before
-    obs_temp = np.ma.masked_where(np.invert(mask), obs_temp)
+    obs_lon_vals = obs[:,0].astype(float)
+    obs_lat_vals = obs[:,1].astype(float)
+    obs_depth_vals = obs[:,2].astype(float)
+    obs_temp_vals = obs[:,3].astype(float)
+    num_obs = obs_temp_vals.size
+    # Grid it
+    obs_lon = np.unique(obs_lon_vals)
+    obs_lat = np.unique(obs_lat_vals)
+    obs_temp = np.zeros([obs_lat.size, obs_lon.size]) - 999
+    for n in range(num_obs):
+        j = np.argwhere(obs_lat==obs_lat_vals[n])[0][0]
+        i = np.argwhere(obs_lon==obs_lon_vals[n])[0][0]
+        obs_temp[j,i] = obs_temp_vals[n]
+    obs_temp = np.ma.masked_where(obs_temp==-999, obs_temp)
+    obs_lon, obs_lat = np.meshgrid(obs_lon, obs_lat)
+    obs_x, obs_y = polar_stereo(obs_lon, obs_lat)
+
+    # Read WOA data for deep ocean
+    woa_lon = read_netcdf(woa_file, 'lon')
+    woa_lat = read_netcdf(woa_file, 'lat')
+    woa_depth = read_netcdf(woa_file, 'depth')
+    woa_temp_3d = np.squeeze(read_netcdf(woa_file, 't_an'))
+    # Extract bottom values
+    woa_temp = select_bottom(woa_temp_3d)
+    # Extract bathymetry
+    woa_depth = z_to_xyz(woa_depth, [woa_lon.size, woa_lat.size])
+    woa_depth = np.ma.masked_where(np.ma.getmask(woa_temp_3d), woa_depth)
+    woa_bathy = -1*select_bottom(woa_depth)
+    # Now mask shallow regions in the Amundsen and Bellingshausen Sea where weird things happen
+    woa_temp = np.ma.masked_where((woa_lon>=-130)*(woa_lon<=-60)*(woa_bathy>=-500), woa_temp)
+    woa_lon, woa_lat = np.meshgrid(woa_lon, woa_lat)
+    woa_x, woa_y = polar_stereo(woa_lon, woa_lat)
 
     # Plot
     cmap = set_colours(model_temp, ctype='plusminus', vmin=vmin, vmax=vmax)[0]
-    data = [model_temp, obs_temp]
     titles = ['a) Existing model', 'b) Observations']
     fig, gs = set_panels('1x2C0', figsize=(8,4))
     for n in range(2):
         ax = plt.subplot(gs[0,n])
-        img = ax.contourf(model_x, model_y, data[n], lev, cmap=cmap, extend='both')
+        if n == 0:
+            img = ax.contourf(model_x, model_y, model_temp, lev, cmap=cmap, extend='both')
+            # Contour ice shelf fronts
+            ax.contour(model_x, model_y, draft, levels=[np.amax(draft[draft!=0])], colors=('black'), linestyles='solid')
+        elif n == 1:
+            img = ax.contourf(woa_x, woa_y, woa_temp, lev, cmap=cmap, extend='both')
+            img = ax.contourf(obs_x, obs_y, obs_temp, lev, cmap=cmap, extend='both')
+        # Shade land in grey
+        ax.contourf(model_x, model_y, land_mask, cmap=cl.ListedColormap([(0.6,0.6,0.6)]))
         ax.set_title(titles[n], fontsize=16)
         ax.axis('equal')
         ax.set_xlim([xmin, xmax])
