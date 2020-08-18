@@ -12,6 +12,7 @@ from ..utils import moving_average, polar_stereo, select_bottom, bdry_from_hfac,
 from ..constants import deg_string
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.colours import set_colours
+from ..plot_utils.latlon import shade_background
 from ..interpolation import interp_nonreg_xy
 
 def extract_geomip_westerlies ():
@@ -68,17 +69,13 @@ def extract_geomip_westerlies ():
 # Plot Paul's SO bottom temps versus observations
 def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc', obs_file='schmidtko_data.txt', woa_file='woa18_decav_t00_04.nc'):
 
-    # TODO
-    # Continent shaded in grey, with ice shelves in white in obs
-    # Contour ice shelf fronts in model
-
     # Set spatial bounds
     corner_lon = np.array([-45, 135])
     corner_lat = np.array([-59, -59])
     corner_x, corner_y = polar_stereo(corner_lon, corner_lat)
     [xmin, xmax, ymin, ymax] = [corner_x[0], corner_x[1], corner_y[1], corner_y[0]]
     # Set colour bounds
-    vmin = -2
+    vmin = -2.5
     vmax = 1.5
     lev = np.linspace(vmin, vmax, num=30)
 
@@ -93,8 +90,8 @@ def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc
     z_edges = read_netcdf(model_grid, 'RF')
     bathy = bdry_from_hfac('bathy', hfac, z_edges)
     draft = bdry_from_hfac('draft', hfac, z_edges)
-    land_mask = bathy==0
-    land_mask = np.ma.masked_where(np.invert(land_mask), land_mask)
+    ocean_mask = bathy!=0
+    ocean_mask = np.ma.masked_where(np.invert(ocean_mask), ocean_mask)
     draft = np.ma.masked_where(bathy==0, draft)
     # Convert coordinates to polar stereographic
     model_x, model_y = polar_stereo(model_lon, model_lat)
@@ -140,15 +137,16 @@ def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc
     fig, gs = set_panels('1x2C0', figsize=(8,4))
     for n in range(2):
         ax = plt.subplot(gs[0,n])
+        # Shade land in grey
+        shade_background(ax)
+        ax.contourf(model_x, model_y, ocean_mask, cmap=cl.ListedColormap([(1,1,1)]))
         if n == 0:
             img = ax.contourf(model_x, model_y, model_temp, lev, cmap=cmap, extend='both')
-            # Contour ice shelf fronts
-            ax.contour(model_x, model_y, draft, levels=[np.amax(draft[draft!=0])], colors=('black'), linestyles='solid')
         elif n == 1:
             img = ax.contourf(woa_x, woa_y, woa_temp, lev, cmap=cmap, extend='both')
             img = ax.contourf(obs_x, obs_y, obs_temp, lev, cmap=cmap, extend='both')
-        # Shade land in grey
-        ax.contourf(model_x, model_y, land_mask, cmap=cl.ListedColormap([(0.6,0.6,0.6)]))
+        # Contour ice shelf fronts
+        ax.contour(model_x, model_y, draft, levels=[np.amax(draft[draft!=0])], colors=('black'), linewidths=0.5, linestyles='solid')
         ax.set_title(titles[n], fontsize=16)
         ax.axis('equal')
         ax.set_xlim([xmin, xmax])
@@ -161,4 +159,4 @@ def bottom_temp_vs_obs (model_file='stateBtemp_avg.nc', model_grid='grid.glob.nc
     cbar = plt.colorbar(img, cax=cax,ticks=np.arange(-2, 2, 1))
     cax.tick_params(length=2)
     plt.suptitle('Bottom temperatures ('+deg_string+'C)', fontsize=18)
-    finished_plot(fig, fig_name='bwtemp_compare.png')
+    finished_plot(fig, fig_name='bwtemp_compare.png', dpi=300)
