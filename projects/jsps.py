@@ -248,6 +248,5 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
     write_binary(bathy, bathy_file_out, prec=64)
     write_binary(draft, draft_file_out, prec=64)
     write_binary(draft, pload_file_out, prec=64)
-    
 
     

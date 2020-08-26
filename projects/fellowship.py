@@ -49,7 +49,7 @@ def extract_geomip_westerlies ():
         jet_lat_max.append(np.amax(jet_lat_range, axis=0))
         jet_lat_mean.append(np.mean(jet_lat_range, axis=0))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10,6))
     for n in range(num_sim):
         ax.fill_between(times[n], jet_lat_min[n], jet_lat_max[n], color=colours[n], alpha=0.15)
         ax.plot(times[n], jet_lat_mean[n], color=colours[n], label=labels[n], linewidth=1.5)
