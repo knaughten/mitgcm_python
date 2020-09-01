@@ -7,6 +7,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+import datetime
 
 from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff, calc_annual_averages
 from plot_utils.labels import monthly_ticks, yearly_ticks
@@ -138,6 +139,8 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
         # Add a line at 0
         ax.axhline(color='black', linestyle='dashed')
     if vline is not None:
+        if dates:
+            vline = datetime.date(vline, 1, 1)
         ax.axvline(vline, color='black', linestyle='dashed')
     if not monthly:
         monthly_ticks(ax)
