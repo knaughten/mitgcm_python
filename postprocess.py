@@ -1310,8 +1310,8 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     from plot_latlon import read_plot_latlon_comparison
     from plot_misc import amundsen_rignot_comparison, ctd_cast_compare
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
-    timeseries_file = 'timeseries.nc'
+    timeseries_types = ['amundsen_shelf_break_uwind_avg'] #['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
+    timeseries_file = 'timeseries_wind.nc' #'timeseries.nc'
     hovmoller_loc = ['pine_island_bay', 'dotson_bay']
     hovmoller_file = 'hovmoller.nc'
     obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
@@ -1354,7 +1354,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
                 grid = Grid(file_path)
             print 'Calculating timeseries for ' + file_path
             precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
-            precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
+            '''precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
 
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
@@ -1384,7 +1384,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Make casts plot showing full ensemble, ERA5, and obs
     for loc in hovmoller_loc:
-        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_dir+'casts_'+loc+'.png')
+        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_dir+'casts_'+loc+'.png')'''
     
     
 
