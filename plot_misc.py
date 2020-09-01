@@ -607,7 +607,7 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=N
         if ensemble:
             # Plot transparent ranges, with means on top
             for n in range(num_ranges):
-                ax.fill_betweenx(depths[n], np.amin(all_data[n][i], axis=0), x2=np.amax(all_data[n][i], axis=0), color=colours[n], alpha=0.5)
+                ax.fill_betweenx(depths[n], np.amin(all_data[n][i], axis=0), x2=np.amax(all_data[n][i], axis=0), color=colours[n], alpha=0.3)
                 ax.plot(np.mean(all_data[n][i], axis=0), depths[n], color=colours[n], linewidth=2)
         else:
             # Plot individual lines
