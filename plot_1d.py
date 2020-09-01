@@ -407,7 +407,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         sys.exit()
     if colours is None:
         colours = default_colours(len(file_paths))
-    #alphas = [1] + [0.5 for n in range(len(file_paths)-1)]
+    alphas = None #[1] + [0.5 for n in range(len(file_paths)-1)]
 
     if plot_mean:
         if first_in_mean:
