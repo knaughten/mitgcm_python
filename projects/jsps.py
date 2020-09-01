@@ -249,4 +249,20 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
     write_binary(draft, draft_file_out, prec=64)
     write_binary(draft, pload_file_out, prec=64)
 
+
+# Plot timeseries of 2-year running means of a bunch of variables for the given list of simulations.
+def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
+
+    from plot_1d import read_plot_timeseries_ensemble
+
+    timeseries_types = ['thwaites_melting', 'pig_melting', 'pine_island_bay_temp_bottom', 'dotson_bay_temp_bottom', 'amundsen_shelf_break_uwind_avg']
+    timeseries_file = 'timeseries.nc'
+    timeseries_paths = [real_dir(dir) + 'output/' + timeseries_file for d in sim_dir]
+    smooth = 12
+    year_start = 1979
+
+    for var_name in timeseries_types:
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, vline=year_start, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+    
+
     
