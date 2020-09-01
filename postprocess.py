@@ -1298,9 +1298,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # TODO
     # Fix grid lines being on top of timeseries ensembles
     # Fix isotherm NaNs
-    # Add dashed line after spinup, or trim the spinup
     # Test casts plot
-    # Fix title for temperature minimum over in front of Dotson
     # Split into seasonal averages
     # Surface freshwater flux in lat-lon plot
     # Plot standard deviation as well as mean
@@ -1318,7 +1316,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     hovmoller_loc = ['pine_island_bay', 'dotson_bay']
     hovmoller_file = 'hovmoller.nc'
     obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
-    latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice']
+    latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice', 'fwflx']
     ymax = -70
     change_points = [5, 10, 30]
 

@@ -107,7 +107,7 @@ region_names = {
     'sws_shelf': 'Southern Weddell Sea shelf',
     'wdw_core': 'Warm Deep Water core',
     'pine_island_bay': 'Pine Island Bay',
-    'dotson_bay': 'in front of Dotson',
+    'dotson_bay': 'front of Dotson',
     'icefront': 'ice shelf fronts',
     'upstream': 'upstream continental shelf',
     'downstream': 'downstream continental shelf',

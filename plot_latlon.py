@@ -945,6 +945,8 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
             taux = read_netcdf(file_path, 'EXFtaux', time_index=time_index, time_average=time_average)
             tauy = read_netcdf(file_path, 'EXFtauy', time_index=time_index, time_average=time_average)
             return mask_land_ice(np.sqrt(taux**2 + tauy**2), grid), r'Wind stress (N/m$^2$)'
+        elif var == 'fwflx':
+            return mask_land_ice(read_netcdf(file_path, 'oceFWflx', time_index=time_index, time_average=time_average), grid), r'Surface freshwater flux (kg/m$^2$/s)'
         else:
             print 'Error (read_plot_latlon_comparison): no such variable ' + var
             sys.exit()
