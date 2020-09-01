@@ -262,7 +262,7 @@ def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
     year_start = 1979
 
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, vline=year_start, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, vline=year_start, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
     
 
     
