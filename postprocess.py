@@ -1300,7 +1300,6 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # Fix isotherm NaNs
     # Test casts plot
     # Split into seasonal averages
-    # Surface freshwater flux in lat-lon plot
     # Plot standard deviation as well as mean
     # Compare ismr estimates to what Paul uses in obs/
     # Spectrum of melt rate variability compared to wind variability
@@ -1343,10 +1342,12 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     hovmoller_paths = [d + hovmoller_file for d in directories]
     grid = None
     for d, tf, hf in zip(directories, timeseries_paths, hovmoller_paths):
+        fnames = get_output_files(d)
         if os.path.isfile(tf):
             print 'Timeseries file exists'
+            if grid is None:
+                grid = Grid(d+fnames[0])
             continue
-        fnames = get_output_files(d)
         for f in fnames:
             file_path = d + f
             if grid is None:
@@ -1356,7 +1357,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
 
     # Plot ensemble for all timeseries
-    for var_name in timeseries_types:
+    '''for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, vline=year_start, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Plot lat-lon comparison with ERA5
@@ -1372,10 +1373,14 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             vmin_diff = -1.5
         if var_name == 'ismr':
             vmin_diff = -6
+        if var_name == 'fwflx':
+            vmax = 600
+            vmin_diff = -50
+            vmax_diff = 50
         read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')
         
     # Make ismr plots vs Rignot to show range of ensemble
-    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
+    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')'''
 
     # Make casts plot showing full ensemble, ERA5, and obs
     for loc in hovmoller_loc:
