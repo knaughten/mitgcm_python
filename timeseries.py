@@ -1011,7 +1011,7 @@ def set_parameters (var):
             region = var[:var.index('_atemp_avg')]
             title += ' over ' + region_names[region]
         offset = -1*temp_C2K
-    elif var.endswith('wind_avg'):
+    elif var.endswith('_wind_avg'):
         option = 'avg_sfc'
         var_name = 'EXFwind'
         units = 'm/s'
