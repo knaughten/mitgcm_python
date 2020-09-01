@@ -257,7 +257,7 @@ def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
 
     timeseries_types = ['thwaites_melting', 'pig_melting', 'pine_island_bay_temp_bottom', 'dotson_bay_temp_bottom', 'amundsen_shelf_break_uwind_avg']
     timeseries_file = 'timeseries.nc'
-    timeseries_paths = [real_dir(dir) + 'output/' + timeseries_file for d in sim_dir]
+    timeseries_paths = [real_dir(d) + 'output/' + timeseries_file for d in sim_dir]
     smooth = 12
     year_start = 1979
 
