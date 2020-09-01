@@ -800,6 +800,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
 #      '*_temp_min_depth': depth of temperature minimum averaged over the given region
 #      '*_depth_isotherm_*': depth of the given isotherm (end of string, such as -0.5 or 1.5 or 2) averaged over the given region (beginning of string). If there are multiple such isotherms in the water column, it will choose the deepest one.
+#      '*_uwind_avg': zonal wind averaged over the given region
 def set_parameters (var):
 
     var_name = None
@@ -1016,6 +1017,12 @@ def set_parameters (var):
         units = 'm/s'
         region = var[:var.index('_wind_avg')]
         title = 'Wind speed over ' + region_names[region]
+    elif var.endswith('uwind_avg'):
+        option = 'avg_sfc'
+        var_name = 'EXFuwind'
+        units = 'm/s'
+        region = var[:var.index('_uwind_avg')]
+        title = 'Zonal wind averaged over ' + region_names[region]
     elif var.endswith('sst_avg'):
         option = 'avg_sfc'
         var_name = 'THETA'
