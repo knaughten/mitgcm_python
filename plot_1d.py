@@ -390,9 +390,14 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
 
     if smooth != 0:
         for n in range(len(all_datas)):
-            data_tmp, time_tmp = moving_average(all_datas[n], smooth, time=time)
+            if time_use is None:
+                data_tmp, time_tmp = moving_average(all_datas[n], smooth, time=time[n])
+                time[n] = time_tmp
+            else:
+                data_tmp, time_tmp = moving_average(all_datas[n], smooth, time=time)
             all_datas[n] = data_tmp
-        time = time_tmp
+        if time_use is not None:
+            time = time_tmp
 
     # Set other things for plot
     if len(var_name)==1:
