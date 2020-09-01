@@ -73,7 +73,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, first_on_top=False, return_fig=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, first_on_top=False, vline=None, return_fig=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -137,6 +137,8 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
     if crosses_zero:
         # Add a line at 0
         ax.axhline(color='black', linestyle='dashed')
+    if vline is not None:
+        ax.axvline(vline, color='black', linestyle='dashed')
     if not monthly:
         monthly_ticks(ax)
     plt.title(title, fontsize=18)
@@ -335,7 +337,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # print_mean: set to True if you want to print the mean value for each ensemble member
 # operator: 'add' or 'subtract' each additional variable name after the first one (if var_name is a list); default add
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add'):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None):
 
     if isinstance(var_name, str):
         var_name = [var_name]
@@ -423,4 +425,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         for data, sim in zip(all_datas, sim_names):
             print sim + ': ' + str(np.mean(data)) + ' ' + units
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles, alphas=alphas, first_on_top=True)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles, alphas=alphas, first_on_top=True, vline=vline)

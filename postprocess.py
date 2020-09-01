@@ -1305,6 +1305,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # Surface freshwater flux in lat-lon plot
     # Plot standard deviation as well as mean
     # Compare ismr estimates to what Paul uses in obs/
+    # Spectrum of melt rate variability compared to wind variability
+    # 2-year running mean of timeseries
+    # Timeseries of uwind in box
 
     from plot_1d import read_plot_timeseries_ensemble
     from plot_latlon import read_plot_latlon_comparison
@@ -1356,7 +1359,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, vline=year_start, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Plot lat-lon comparison with ERA5
     for var_name in latlon_types:
