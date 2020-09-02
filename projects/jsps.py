@@ -13,6 +13,7 @@ from ..file_io import read_binary, write_binary, read_netcdf
 from ..utils import real_dir, daily_to_monthly
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot
+from ..plot_1d import default_colours
 
 
 # Global variables
