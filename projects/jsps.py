@@ -289,8 +289,9 @@ def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
     for n in range(num_sims):
         ax.plot(freq[n], cxy[n], label=sim_names[n])
     ax.set_xlim([0,1])
-    xticks = np.arange(0.1, 1.1, 0.1)
-    xtick_labels = [str(1/tick) for tick in xticks]
+    ax.grid(True)
+    xtick_labels = [10, 5, 3, 2, 1]
+    xticks = [1./tick for tick in xtick_labels]
     ax.set_xticks(xticks)
     ax.set_xticklabels(xtick_labels)
     ax.set_xlabel('Period (years)', fontsize=14)
