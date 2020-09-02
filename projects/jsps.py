@@ -303,7 +303,7 @@ def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', fig_name=None):
+def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', colours=None, alpha=False, fig_name=None):
 
     from scipy.signal import welch
 
@@ -312,6 +312,12 @@ def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', fig_name=N
     if isinstance(sim_names, str):
         sim_names = [sim_names]
     num_sims = len(sim_dirs)
+    if colours is None:
+        colours = default_colours(num_sims)
+    if alpha:
+        alphas = [1] + [0.5 for n in range(num_sims-1)]
+    else:
+        alphas = [1 for n in range(num_sims)]
 
     freq = []
     pxx = []
@@ -323,7 +329,7 @@ def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', fig_name=N
         pxx.append(p)
     fig, ax = plt.subplots(figsize=(11,6))
     for n in range(num_sims):
-        ax.plot(freq[n], pxx[n], label=sim_names[n])
+        ax.plot(freq[n], pxx[n], label=sim_names[n], color=colours[n], alpha=alphas[n])
     ax.set_xlim([0,1])
     ax.grid(True)
     xtick_labels = [10, 5, 3, 2, 1]
