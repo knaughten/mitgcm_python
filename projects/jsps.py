@@ -280,8 +280,8 @@ def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
     cxy = []
     for n in range(num_sims):
         file_path = real_dir(sim_dirs[n]) + 'output/timeseries.nc'
-        wind = detrend(read_netcdf(file_path, 'amundsen_shelf_break_uwind_avg'))
-        data = detrend(read_netcdf(file_path, var))
+        wind = read_netcdf(file_path, 'amundsen_shelf_break_uwind_avg')
+        data = read_netcdf(file_path, var)
         f, c = coherence(wind, data, fs=12, detrend='linear')
         freq.append(f)
         cxy.append(c)
