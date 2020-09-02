@@ -340,7 +340,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # print_mean: set to True if you want to print the mean value for each ensemble member
 # operator: 'add' or 'subtract' each additional variable name after the first one (if var_name is a list); default add
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False):
 
     if isinstance(var_name, str):
         var_name = [var_name]
@@ -407,7 +407,10 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         sys.exit()
     if colours is None:
         colours = default_colours(len(file_paths))
-    alphas = None #[1] + [0.5 for n in range(len(file_paths)-1)]
+    if alpha:
+        alphas = [1] + [0.5 for n in range(len(file_paths)-1)]
+    else:
+        alphas = None
 
     if plot_mean:
         if first_in_mean:
