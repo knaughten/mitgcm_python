@@ -1357,7 +1357,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
 
     # Plot ensemble for all timeseries
-    for var_name in timeseries_types:
+    '''for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, time_use=None, vline=year_start, fig_name=fig_dir+'timeseries_'+var_name+'.png')
 
     # Plot lat-lon comparison with ERA5
@@ -1380,7 +1380,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         read_plot_latlon_comparison(var_name, 'ERA5', 'PACE ensemble', era5_dir, pace_dir, avg_file, time_index=0, grid=grid, ymax=ymax, change_points=change_points, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, fig_name=fig_dir+'latlon_'+var_name+'.png')
         
     # Make ismr plots vs Rignot to show range of ensemble
-    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')
+    amundsen_rignot_comparison(timeseries_paths[0], file_path_2=timeseries_paths[1:], precomputed=True, sim_names=['ERA5', 'PACE ensemble'], fig_name=fig_dir+'mean_ismr_rignot.png')'''
 
     # Make casts plot showing full ensemble, ERA5, and obs
     for loc in hovmoller_loc:
