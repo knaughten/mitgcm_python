@@ -600,7 +600,7 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=N
         num_ranges = len(colours)
     titles = ['Temperature', 'Salinity']
     units = [deg_string+'C', 'psu']
-    vmin = [-2, 33.5]
+    vmin = [-2, 33]
     vmax = [2, 34.75]
     for i in range(2):
         ax = plt.subplot(gs[0,i])
