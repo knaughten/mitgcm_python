@@ -266,22 +266,40 @@ def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
-def wind_melt_coherence (sim_dir, var='pig_melting'):
+def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
 
-    from scipy.signal import detrend
+    from scipy.signal import coherence
 
-    file_path = real_dir(sim_dir) + 'output/timeseries.nc'
+    if isinstance(sim_dirs, str):
+        sim_dirs = [sim_dirs]
+    if isinstance(sim_names, str):
+        sim_names = [sim_names]
+    num_sims = len(sim_dirs)
 
-    wind = detrend(read_netcdf(file_path, 'amundsen_shelf_break_uwind_avg'))
-    data = detrend(read_netcdf(file_path, var))
-
-    fig, ax = plt.subplots()
-    plt.cohere(wind, data, Fs=12)
+    freq = []
+    cxy = []
+    for n in range(num_sims):
+        file_path = real_dir(sim_dirs[n]) + 'output/timeseries.nc'
+        wind = detrend(read_netcdf(file_path, 'amundsen_shelf_break_uwind_avg'))
+        data = detrend(read_netcdf(file_path, var))
+        f, c = coherence(wind, data, fs=12, detrend='linear')
+        freq.append(f)
+        cxy.append(c)
+    fig, ax = plt.subplots(figsize=(11,6))
+    for n in range(num_sims):
+        ax.plot(freq[n], cxy[n], label=sim_names[n])
     ax.set_xlim([0,1])
-    plt.xlabel('Frequency (1/year)')
-    plt.ylabel('Correlation')
-    plt.title('Coherence between '+var+' and shelf break winds')
-    fig.show()
+    xticks = np.arange(0.1, 1.1, 0.1)
+    xtick_labels = [str(1/tick) for tick in xticks]
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xtick_labels)
+    ax.set_xlabel('Period (years)', fontsize=14)
+    ax.set_ylabel('Correlation', fontsize=14)
+    ax.set_title('Coherence between '+var+' and shelf break winds', fontsize=16)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    finished_plot(fig, fig_name=fig_name)
 
     
 
