@@ -263,6 +263,28 @@ def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
 
     for var_name in timeseries_types:
         read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, vline=year_start, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+
+
+# Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
+def wind_melt_coherence (sim_dir, var='pig_melting'):
+
+    from scipy.signal import detrend
+
+    file_path = real_dir(sim_dir) + 'output/timeseries.nc'
+
+    wind = detrend(read_netcdf(file_path, 'amundsen_shelf_break_uwind_avg'))
+    data = detrend(read_netcdf(file_path, var))
+
+    fig, ax = plt.subplots()
+    plt.cohere(wind, data, Fs=12)
+    ax.set_xlim([0,1])
+    plt.xlabel('Frequency (1/year)')
+    plt.ylabel('Correlation')
+    plt.title('Coherence between '+var+' and shelf break winds')
+    fig.show()
+
+    
+
     
 
     
