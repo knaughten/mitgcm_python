@@ -301,6 +301,43 @@ def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
     ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     finished_plot(fig, fig_name=fig_name)
+
+
+def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', fig_name=None):
+
+    from scipy.signal import welch
+
+    if isinstance(sim_dirs, str):
+        sim_dirs = [sim_dirs]
+    if isinstance(sim_names, str):
+        sim_names = [sim_names]
+    num_sims = len(sim_dirs)
+
+    freq = []
+    pxx = []
+    for n in range(num_sims):
+        file_path = real_dir(sim_dirs[n]) + 'output/timeseries.nc'
+        data = read_netcdf(file_path, var)
+        f, p = welch(data, fs=12, detrend='linear')
+        freq.append(f)
+        pxx.append(p)
+    fig, ax = plt.subplots(figsize=(11,6))
+    for n in range(num_sims):
+        ax.plot(freq[n], pxx[n], label=sim_names[n])
+    ax.set_xlim([0,1])
+    ax.grid(True)
+    xtick_labels = [10, 5, 3, 2, 1]
+    xticks = [1./tick for tick in xtick_labels]
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xtick_labels)
+    ax.set_xlabel('Period (years)', fontsize=14)
+    ax.set_ylabel('Power spectral density', fontsize=14)
+    ax.set_title(var, fontsize=16)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    finished_plot(fig, fig_name=fig_name)
+
     
 
     
