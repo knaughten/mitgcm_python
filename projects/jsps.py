@@ -307,6 +307,9 @@ def wind_melt_coherence (sim_dirs, sim_names, var='pig_melting', fig_name=None):
 def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', colours=None, alpha=False, fig_name=None):
 
     from scipy.signal import welch
+    year0 = 1955
+    start_year = 1979
+    num_spinup = (start_year-year0)*12
 
     if isinstance(sim_dirs, str):
         sim_dirs = [sim_dirs]
@@ -324,7 +327,7 @@ def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', colours=No
     pxx = []
     for n in range(num_sims):
         file_path = real_dir(sim_dirs[n]) + 'output/timeseries.nc'
-        data = read_netcdf(file_path, var)
+        data = read_netcdf(file_path, var)[num_spinup:]
         f, p = welch(data, fs=12, detrend='linear')
         freq.append(f)
         pxx.append(p)
