@@ -910,17 +910,12 @@ def dA_from_latlon (lon, lat, periodic=False, return_edges=False):
         lon_edges_w = 2*lon_edges_mid[:,0] - lon_edges_mid[:,1]
         lon_edges_e = 2*lon_edges_mid[:,-1] - lon_edges_mid[:,-2]
         lon_edges = np.concatenate((lon_edges_w, lon_edges_mid, lon_edges_e), axis=1)
-    dlon = lon_edges[:,1:] - lon_edges[:,:-1]
-    # Look for jumps of nearly 360
-    index = dlon > 300
-    dlon[index] = dlon[index] - 360
-    index = dlon < -300
-    dlon[index] = dlon[index] + 360    
+    dlon = lon_edges[:,1:] - lon_edges[:,:-1] 
     # Latitude
     lat_edges_mid = 0.5*(lat[:-1,:] + lat[1:,:])
     lat_edges_s = 2*lat_edges_mid[0,:] - lat_edges_mid[1,:]
     lat_edges_n = 2*lat_edges_mid[-1,:] - lat_edges_mid[-2,:]
-    lat_edges = np.concatenate((lat_edges_s, lat_edges_mid, lat_edges_n), axis=0)
+    lat_edges = np.concatenate((np.expand_dims(lat_edges_s,0), lat_edges_mid, np.expand_dims(lat_edges_n,0)), axis=0)
     dlat = lat_edges[1:,:] - lat_edges[:-1,:]
     # Now convert to Cartesian
     dx = rEarth*np.cos(lat*deg2rad)*dlon*deg2rad

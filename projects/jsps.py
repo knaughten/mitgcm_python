@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
 from ..file_io import read_binary, write_binary, read_netcdf
-from ..utils import real_dir, daily_to_monthly, fix_lon_range
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
@@ -355,13 +355,20 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
 
     # Read model grid and forcing file
     grid = Grid(grid_dir)
-    addmass = read_binary(addmass_file, [grid.nx, grid.ny, grid.nz], 'xyz')
+    addmass = read_binary(addmass_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=64)
     # Sum in vertical
     addmass = np.sum(addmass, axis=0)
-    
-    mlon = fix_lon_range(read_netcdf(merino_file, 'longitude')[0,:])
+
+    mlon = read_netcdf(merino_file, 'longitude')[0,:]
+    # Cut off the last two indices because the grid is wrapped
+    mlon = mlon[:-2]
+    # Need to do the split-rearrange thing like with the SOSE grid
+    i_split = np.nonzero(mlon < 0)[0][0]
+    mlon = split_longitude(mlon, i_split)
     mlat = read_netcdf(merino_file, 'latitude')[:,0]
     mflux = np.mean(read_netcdf(merino_file, 'Icb_flux'), axis=0)  # Annual mean from monthly climatology
+    # Deal with the longitude nonsense
+    mflux = split_longitude(mflux[:,:-2], i_split)    
     # Multiply Merino data by cell area to get flux in kg/s
     mdA, mlon_e, mlat_e = dA_from_latlon(mlon, mlat, periodic=True, return_edges=True)
     mflux = mflux*dA
