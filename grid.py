@@ -12,7 +12,7 @@ import sys
 import os
 
 from file_io import read_netcdf, find_cmip6_files
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic
 from constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -890,7 +890,46 @@ def build_forcing_grid (lon0, lon_inc, lat0, lat_inc, nlon, nlat):
     dx = rEarth*np.cos(lat*deg2rad)*lon_inc*deg2rad
     dy = rEarth*lat_inc*deg2rad
     dA = dx*dy
-    return lon, lat, dA    
+    return lon, lat, dA
+
+
+# General helper function to get the area of each cell from latitude and longitude arrays giving the coordinates of the cell centres.
+def dA_from_latlon (lon, lat, periodic=False, return_edges=False):
+
+    # Make sure they're 2D
+    if len(lon.shape) == 1 and len(lat.shape) == 1:
+        lon, lat = np.meshgrid(lon, lat)
+    # Now make the edges
+    # Longitude
+    if periodic:
+        lon_extend = wrap_periodic(lon, is_lon=True)
+        lon_edges = 0.5*(lon_extend[:,:-1] + lon_extend[:,1:])
+    else:
+        lon_edges_mid = 0.5*(lon[:,:-1] + lon[:,1:])
+        # Extrapolate the longitude boundaries
+        lon_edges_w = 2*lon_edges_mid[:,0] - lon_edges_mid[:,1]
+        lon_edges_e = 2*lon_edges_mid[:,-1] - lon_edges_mid[:,-2]
+        lon_edges = np.concatenate((lon_edges_w, lon_edges_mid, lon_edges_e), axis=1)
+    dlon = lon_edges[:,1:] - lon_edges[:,:-1]
+    # Look for jumps of nearly 360
+    index = dlon > 300
+    dlon[index] = dlon[index] - 360
+    index = dlon < -300
+    dlon[index] = dlon[index] + 360    
+    # Latitude
+    lat_edges_mid = 0.5*(lat[:-1,:] + lat[1:,:])
+    lat_edges_s = 2*lat_edges_mid[0,:] - lat_edges_mid[1,:]
+    lat_edges_n = 2*lat_edges_mid[-1,:] - lat_edges_mid[-2,:]
+    lat_edges = np.concatenate((lat_edges_s, lat_edges_mid, lat_edges_n), axis=0)
+    dlat = lat_edges[1:,:] - lat_edges[:-1,:]
+    # Now convert to Cartesian
+    dx = rEarth*np.cos(lat*deg2rad)*dlon*deg2rad
+    dy = rEarth*dlat*deg2rad
+    dA = dx*dy
+    if return_edges:
+        return dA, lon_edges, lat_edges
+    else:
+        return dA
 
 
 # ERA5Grid object containing basic surface grid variables and calendar variables for ERA5, processed as in forcing.py (everywhere south of 30S, 6-hourly)

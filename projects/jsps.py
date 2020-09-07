@@ -8,12 +8,13 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from ..grid import ERA5Grid, PACEGrid, Grid
+from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
 from ..file_io import read_binary, write_binary, read_netcdf
-from ..utils import real_dir, daily_to_monthly
+from ..utils import real_dir, daily_to_monthly, fix_lon_range
 from ..plot_utils.colours import set_colours
-from ..plot_utils.windows import finished_plot
+from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
+from ..constants import sec_per_year, kg_per_Gt
 
 
 # Global variables
@@ -347,6 +348,61 @@ def plot_psd (sim_dirs, sim_names, var='pine_island_bay_temp_bottom', colours=No
     ax.set_position([box.x0, box.y0, box.width*0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     finished_plot(fig, fig_name=fig_name)
+
+
+# Compare existing addMass file (idealised distribution of iceberg flux) to the estimate of Merino et al.
+def plot_addmass_merino (merino_file, addmass_file, grid_dir):
+
+    # Read model grid and forcing file
+    grid = Grid(grid_dir)
+    addmass = read_binary(addmass_file, [grid.nx, grid.ny, grid.nz], 'xyz')
+    # Sum in vertical
+    addmass = np.sum(addmass, axis=0)
+    
+    mlon = fix_lon_range(read_netcdf(merino_file, 'longitude')[0,:])
+    mlat = read_netcdf(merino_file, 'latitude')[:,0]
+    mflux = np.mean(read_netcdf(merino_file, 'Icb_flux'), axis=0)  # Annual mean from monthly climatology
+    # Multiply Merino data by cell area to get flux in kg/s
+    mdA, mlon_e, mlat_e = dA_from_latlon(mlon, mlat, periodic=True, return_edges=True)
+    mflux = mflux*dA
+    # Mask out zeros (will catch land as well as open ocean regions with zero flux)
+    mflux = np.ma.masked_where(mflux==0, mflux)
+
+    # Get boundaries of Merino data that align with model
+    i_start = np.where(mlon >= np.amin(grid.lon_2d))[0][0]
+    i_end = np.where(mlon > np.amax(grid.lon_2d))[0][0] - 1
+    j_start = np.where(mlat >= np.amin(grid.lat_2d))[0][0]
+    j_end = np.where(mlat > np.amax(grid.lat_2d))[0][0] - 1
+
+    # Calculate total flux in region for both datasets (Gt/y)
+    addmass_total = np.sum(addmass)*sec_per_year/kg_per_Gt
+    merino_total = np.sum(mflux[j_start:j_end,i_start:i_end])*sec_per_year/kg_per_Gt
+    print 'Total Amundsen Sea melt flux in Gt/y:'
+    print 'Existing setup: ' + str(addmass_total)
+    print 'Merino et al: ' + str(merino_total)
+
+    # Plot spatial distribution
+    fig, gs, cax = set_panels('1x2C1')
+    vmin = 0
+    vmax = max(np.amax(addmass), np.amax(mflux))
+    for n in range(2):
+        ax = plt.subplot(gs[0,n])
+        if n == 0:
+            img = latlon_plot(addmass, grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, title='Idealised addmass')
+        elif n == 1:
+            img = ax.pcolormesh(mlon_e[i_start:i_end+1], mlat_e[j_start:j_end+1], mflux[j_start:j_end,i_start:i_end], cmap='jet', vmin=vmin, vmax=vmax)
+            ax.set_xlim([np.amin(grid.lon_2d), np.amax(grid.lon_2d)])
+            ax.set_ylim([np.amin(grid.lat_2d), np.amax(grid.lat_2d)])
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_title('Merino et al.', fontsize=18)
+    plt.colorbar(img, ax=cax, orientation='horizontal')
+    plt.suptitle('Iceberg meltwater flux (kg/s)', fontsize=24)
+    finished_plot(fig)
+
+    
+
+    
 
     
 
