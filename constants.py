@@ -58,6 +58,7 @@ region_bounds = {
     'pine_island_bay': [-104, -100.5, -75.2, -74.2],
     'dotson_bay': [-114, -110.5, -74.3, -73.5],
     'getz': [-135., -114.7, -75.2, -73.5],
+    'dotson': [-114.6, -111.2, -75.3, -74.1],
     'dotson_crosson': [-114.7, -109., -75.4, -74.1],
     'thwaites': [-109., -103., -75.4, -74.6],
     'pig': [-103., -99., -75.4, -74.],
@@ -98,6 +99,7 @@ region_names = {
     'fris': 'Filchner-Ronne Ice Shelf',
     'ewed': 'Eastern Wedddell ice shelves',
     'getz': 'Getz Ice Shelf',
+    'dotson': 'Dotson Ice Shelf',
     'dotson_crosson': 'Dotson and Crosson Ice Shelves',
     'thwaites': 'Thwaites Ice Shelf',
     'pig': 'Pine Island Glacier Ice Shelf',
@@ -149,7 +151,30 @@ rignot_melt = {
     'abbot': [51.8, 19, 1.7, 0.6],
     'venable': [19.4, 2, 6.1, 0.7]
 }
-
+# Jenkins 2018 estimates of Dotson melting (Gt/y)
+dotson_melt_years = {
+    'year': [2000, 2006, 2007, 2009, 2011, 2012, 2014, 2016],
+    'melt': [25.0 55.7 44.4 91.6 53.8 20.3 20.9 19.5],
+    'err': [9.1 15.3 35.2 31.6 12.3 6.1 8.0 15.4]
+}
+# Jacobs 2013 estimates of Getz melting (Gt/y)
+getz_melt_years = {
+    'year': [2000, 2007],
+    'melt': np.array([37, 137])*rho_ice/rho_fw,
+    'err': np.array([13, 16])*rho_ice/rho_fw
+}
+# Dutrieux 2014 + Heywood 2016 estimates of PIG melting (Gt/y)
+dutrieux_sw = np.array([51.3, 79.7, 75.2, 37.3])*rho_ice/rho_fw
+dutrieux_mw = np.array([49.1, 79.4, 69.2, 34.7])*rho_ice/rho_fw
+dutrieux_melt = 0.5*(dutrieux_sw+dutrieux_mw)
+dutrieux_err_fac = 0.1
+heywood_melt = np.array([40])*rho_ice/rho_fw
+heywood_err_fac = 0.4
+pig_melt_years = {
+    'year': [1994, 2009, 2010, 2012, 2014],
+    'melt': np.concatenate((dutrieux_melt, heywood_melt)),
+    'err': np.concatenate((dutrieux_melt*dutrieux_err_fac, heywood_melt*heywood_err_fac))
+}
 
 # Titles for Ua variables
 ua_titles = {

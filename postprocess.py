@@ -1306,7 +1306,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     from plot_latlon import read_plot_latlon_comparison
     from plot_misc import amundsen_rignot_comparison, ctd_cast_compare
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
     hovmoller_loc = ['pine_island_bay', 'dotson_bay']
     hovmoller_file = 'hovmoller.nc'
@@ -1380,7 +1380,12 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     # Make casts plot showing full ensemble, ERA5, and obs
     for loc in hovmoller_loc:
-        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_dir+'casts_'+loc+'.png')
+        for std in [True, False]:
+            fig_name = fig_dir + 'casts_' + loc
+            if std:
+                fig_name += '_std'
+            fig_name += '.png'
+        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_name)
     
     
 

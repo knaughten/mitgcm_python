@@ -15,7 +15,7 @@ from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
 from ..plot_latlon import latlon_plot
-from ..constants import sec_per_year, kg_per_Gt
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names
 
 
 # Global variables
@@ -414,6 +414,15 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     plt.colorbar(img, cax=cax, orientation='horizontal', extend='max')
     plt.suptitle(r'Iceberg meltwater flux (10$^3$ kg/s)', fontsize=24)
     finished_plot(fig, fig_name='addmass.png')
+
+
+# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation(s), with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
+# timeseries_file can either be a single filename, or a list.
+def plot_ismr_timeseries_obs (timeseries_file, fig_name=None):
+
+    shelf = ['pig', 'dotson', 'getz']
+    obs = [pig_melt_years, dotson_melt_years, getz_melt_years]
+    
 
     
 
