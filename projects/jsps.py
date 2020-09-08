@@ -449,7 +449,7 @@ def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
             obs_date = datetime.date(obs[n]['year'][t], obs_month, 1)
             ax.errorbar(obs_date, obs[n]['melt'][t], yerr=obs[n]['err'][t], fmt='none', color='red', capsize=4)
         ax.grid(True)
-        ax.set_title(region_names[shelf[n]], fontsize=18))
+        ax.set_title(region_names[shelf[n]], fontsize=18)
         if n == 0:
             ax.set_ylabel('Gt/y', fontsize=14)
     plt.suptitle('Ice shelf mass loss compared to observations', fontsize=24)
