@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import datetime
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
-from ..file_io import read_binary, write_binary, read_netcdf
+from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
@@ -435,10 +435,11 @@ def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
     time = time[t0:]
     model_melt = []
     for s in shelf:
-        model_melt.append(read_netcdf(timeseries_file, s)[t0:])
+        model_melt.append(read_netcdf(timeseries_file, s+'_massloss')[t0:])
 
     # Set up the plot
     fig, gs = set_panels('3x1C0')
+    gs.update(bottom=0.05, top=0.9)
     for n in range(len(shelf)):
         ax = plt.subplot(gs[n,0])
         # Plot the model timeseries
@@ -452,6 +453,8 @@ def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
         ax.set_title(region_names[shelf[n]], fontsize=18)
         if n == 0:
             ax.set_ylabel('Gt/y', fontsize=14)
+        if n != len(shelf)-1:
+            ax.set_xticklabels([])
     plt.suptitle('Ice shelf mass loss compared to observations', fontsize=24)
     finished_plot(fig, fig_name=fig_name)
                      
