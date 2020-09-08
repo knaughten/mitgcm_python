@@ -7,6 +7,7 @@ from itertools import compress, cycle
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import datetime
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
 from ..file_io import read_binary, write_binary, read_netcdf
@@ -416,12 +417,45 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     finished_plot(fig, fig_name='addmass.png')
 
 
-# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation(s), with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
-# timeseries_file can either be a single filename, or a list.
-def plot_ismr_timeseries_obs (timeseries_file, fig_name=None):
+# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
+def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
+
+    # Could do: option for ensemble with mean on top
 
     shelf = ['pig', 'dotson', 'getz']
     obs = [pig_melt_years, dotson_melt_years, getz_melt_years]
+    obs_month = 2  # Assume all obs in February
+
+    # Read data and trim the spinup
+    time = netcdf_time(timeseries_file, monthly=False)
+    for t in range(time.size):
+        if time[t].year == start_year:
+            t0 = t
+            break
+    time = time[t0:]
+    model_melt = []
+    for s in shelf:
+        model_melt.append(read_netcdf(timeseries_file, s)[t0:])
+
+    # Set up the plot
+    fig, gs = set_panels('3x1C0')
+    for n in range(len(shelf)):
+        ax = plt.subplot(gs[n,0])
+        # Plot the model timeseries
+        ax.plot_date(time, model_melt[n], '-', color='blue')
+        # Loop over observational years and plot the range
+        num_obs = len(obs[n]['year'])
+        for t in range(num_obs):
+            obs_date = datetime.date(obs[n]['year'][t], obs_month, 1)
+            ax.errorbar(obs_date, obs[n]['melt'][t], yerr=obs[n]['err'][t], fmt='none', color='red', capsize=4)
+        ax.grid(True)
+        ax.set_title(region_names[shelf[n], fontsize=18))
+        if n == 0:
+            ax.set_ylabel('Gt/y', fontsize=14)
+    plt.suptitle('Ice shelf mass loss compared to observations', fontsize=24)
+    finished_plot(fig, fig_name=fig_name)
+                     
+                                                 
     
 
     
