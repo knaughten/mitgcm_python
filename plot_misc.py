@@ -524,11 +524,12 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 # grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables
 
 # Optional keyword arguments:
+# std: boolean (default False) to plot standard deviation instead of range and mean
 # ens_hovmoller_files: list of paths to precomputed Hovmoller files for each member of a model ensemble
 # month: month of model output to plot (1-12). Default is to plot each modelled February. To plot all months, set month=None.
 # fig_name: as in finished_plot.
 
-def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=None, month=2, fig_name=None):
+def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, std=False, ens_hovmoller_files=None, month=2, fig_name=None):
 
     from scipy.io import loadmat
 
@@ -599,28 +600,45 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=N
         colours = ['black', 'red', 'blue']
         num_ranges = len(colours)
     titles = ['Temperature', 'Salinity']
+    if std:
+        titles = [t+' std' for t in titles]
     units = [deg_string+'C', 'psu']
-    vmin = [-2, 33]
-    vmax = [2, 34.75]
+    if std:
+        vmin = [None, None]
+        vmax = [None, None]
+    else:
+        vmin = [-2, 33]
+        vmax = [2, 34.75]
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         if ensemble:
             # Plot transparent ranges, with means on top
+            # OR just plot standard deviation
             for n in range(num_ranges):
-                ax.fill_betweenx(depths[n], np.amin(all_data[n][i], axis=0), x2=np.amax(all_data[n][i], axis=0), color=colours[n], alpha=0.3)
-                ax.plot(np.mean(all_data[n][i], axis=0), depths[n], color=colours[n], linewidth=2)
+                if std:
+                    ax.plot(np.std(all_data[n][i], axis=0), depths[n], color=colours[n], linewidth=2)
+                else:
+                    ax.fill_betweenx(depths[n], np.amin(all_data[n][i], axis=0), x2=np.amax(all_data[n][i], axis=0), color=colours[n], alpha=0.3)
+                    ax.plot(np.mean(all_data[n][i], axis=0), depths[n], color=colours[n], linewidth=2)
         else:
-            # Plot individual lines
-            # Plot obs, all in grey
-            for n in range(num_obs):
-                ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6), linewidth=1)
-            # Plot obs mean in thicker dashedblack
-            ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2, linestyle='dashed')
-            # Plot model years, in different colours
-            for n in range(num_model):
-                ax.plot(model_data[i][n,:], grid.z, linewidth=1)
-            # Plot model mean in thicker black
-            ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
+            # Plot obs
+            if std:
+                ax.plot(np.std(obs_data[i], axis=0), obs_depth, color='black', linewidth=2)
+            else:
+                # Plot individual lines
+                for n in range(num_obs):
+                    ax.plot(obs_data[i][n,:], obs_depth, color=(0.6, 0.6, 0.6), linewidth=1)
+                # Plot obs mean in thicker dashedblack
+                ax.plot(np.mean(obs_data[i], axis=0), obs_depth, color='black', linewidth=2, linestyle='dashed')
+            # Plot model years
+            if std:
+                ax.plot(np.std(model_data[i], axis=0), grid.z, color='blue', linewidth=2)
+            else:
+                # Different colours for each year
+                for n in range(num_model):
+                    ax.plot(model_data[i][n,:], grid.z, linewidth=1)
+                # Plot model mean in thicker black
+                ax.plot(np.mean(model_data[i], axis=0), grid.z, color='black', linewidth=2)
         ax.set_xlim([vmin[i], vmax[i]])
         ax.grid(True)
         plt.title(titles[i], fontsize=16)
@@ -630,9 +648,12 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, ens_hovmoller_files=N
         else:
             ax.set_yticklabels([])
     if ensemble:
-        plt.suptitle(loc + ': CTDs (grey), ERA5 (red), PACE ensemble (blue)', fontsize=20)
+        plt.suptitle(loc + ': CTDs (black), ERA5 (red), PACE ensemble (blue)', fontsize=20)
     else:
-        plt.suptitle(loc + ': model (colours) vs CTDs (grey)', fontsize=20)
+        if std:
+            plt.suptitle(loc + ': model (blue) vs CTDs (black)', fontsize=20)
+        else:
+            plt.suptitle(loc + ': model (colours) vs CTDs (grey)', fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
 

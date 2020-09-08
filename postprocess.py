@@ -1295,16 +1295,12 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 # All the steps to analyse a newly finished ERA5 run and matching PACE ensemble!
 def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, year_end=2013):
 
-    # TODO
+    # Could do:
     # Fix grid lines being on top of timeseries ensembles
     # Fix isotherm NaNs
-    # Test casts plot
     # Split into seasonal averages
     # Plot standard deviation as well as mean
     # Compare ismr estimates to what Paul uses in obs/
-    # Spectrum of melt rate variability compared to wind variability
-    # 2-year running mean of timeseries
-    # Timeseries of uwind in box
 
     from plot_1d import read_plot_timeseries_ensemble
     from plot_latlon import read_plot_latlon_comparison
