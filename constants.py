@@ -154,8 +154,8 @@ rignot_melt = {
 # Jenkins 2018 estimates of Dotson melting (Gt/y)
 dotson_melt_years = {
     'year': [2000, 2006, 2007, 2009, 2011, 2012, 2014, 2016],
-    'melt': [25.0 55.7 44.4 91.6 53.8 20.3 20.9 19.5],
-    'err': [9.1 15.3 35.2 31.6 12.3 6.1 8.0 15.4]
+    'melt': [25.0, 55.7, 44.4, 91.6, 53.8, 20.3, 20.9, 19.5],
+    'err': [9.1, 15.3, 35.2, 31.6, 12.3, 6.1, 8.0, 15.4]
 }
 # Jacobs 2013 estimates of Getz melting (Gt/y)
 getz_melt_years = {
