@@ -8,7 +8,7 @@ import os
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
-from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude
+from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
 from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
 from calculus import area_integral
@@ -992,7 +992,7 @@ def ukesm_tas_timeseries (out_dir='./'):
 # Create a 3D addMass file using the iceberg meltwater fluxes of Merino et al. spread out over the upper 300 m.
 def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
 
-    depth_spread = 300.
+    depth0 = -300.
 
     # Read model grid
     grid = Grid(grid_dir)
@@ -1002,31 +1002,35 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
     i_split = np.nonzero(mlon < 0)[0][0]
     mlon = split_longitude(mlon, i_split)
     mlat = read_netcdf(in_file, 'latitude')[:,0]
-    mflux = split_longitude(read_netcdf(merino_file, 'Icb_flux')[:,:,:-2], i_split)
+    mflux = split_longitude(read_netcdf(in_file, 'Icb_flux')[:,:,:-2], i_split)
     if seasonal:
         print 'Error (merino_meltwater_addmass): have not written the option for seasonal=True yet'
         sys.exit()
     else:
         mflux = np.mean(mflux, axis=0)
-    # Convert to flux in kg/s
-    mdA = dA_from_latlon(mlon, mlat, periodic=True)
-    mflux = mflux*mdA
 
     # Interpolate to 2D model grid
     mflux_interp = interp_reg_xy(mlon, mlat, mflux, grid.lon_2d, grid.lat_2d, fill_value=0)
+    # Now convert to flux in kg/s, mask land and ice shelves
+    mflux_interp = mflux_interp*grid.dA
+    mflux_interp[grid.land_mask] = 0
+    mflux_interp[grid.ice_mask] = 0
     # Spread evenly over the upper 300 m (or over the entire water column if it's shallower than 300 m)
-    weights = z_to_xyz(grid.dz, grid)*grid.hfac/np.minimum(xy_to_xyz(-grid.bathy, grid), depth_spread)
+    dz_3d = z_to_xyz(grid.dz, grid)
+    z_above_3d = z_to_xyz(grid.z_edges[:-1], grid)
+    layer_thickness = np.maximum(np.minimum(dz_3d*grid.hfac, z_above_3d-depth0), 0)
+    depth_spread = xy_to_xyz(np.minimum(-grid.bathy, -depth0), grid)
+    weights = layer_thickness/depth_spread
+    weights[xy_to_xyz(grid.land_mask, grid)] = 0
+    weights[xy_to_xyz(grid.ice_mask, grid)] = 0    
     mflux_3d = xy_to_xyz(mflux_interp, grid)*weights
-    # Mask land and ice shelves with zeros
-    mflux_3d[grid.land_mask] = 0
-    mflux_3d[grid.ice_mask] = 0
 
     # Print total value
     total_flux = np.sum(mflux_3d)*sec_per_year/kg_per_Gt
     print 'Total meltwater flux after interpolation: '+str(total_flux)+' Gt/y'
 
     # Save to file
-    write_binary(total_flux, out_file, prec=64)
+    write_binary(mflux_3d, out_file, prec=64)
     
             
         
