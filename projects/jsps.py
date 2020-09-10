@@ -360,6 +360,8 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     addmass = read_binary(addmass_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=64)
     # Sum in vertical and mask
     addmass = mask_land_ice(np.sum(addmass, axis=0), grid)
+    # Scale by area to get kg/m^2/s
+    addmass = addmass/grid.dA
 
     mlon = read_netcdf(merino_file, 'longitude')[0,:]
     # Cut off the last two indices because the grid is wrapped
@@ -370,12 +372,11 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     mlat = read_netcdf(merino_file, 'latitude')[:,0]
     mflux = np.mean(read_netcdf(merino_file, 'Icb_flux'), axis=0)  # Annual mean from monthly climatology
     # Deal with the longitude nonsense
-    mflux = split_longitude(mflux[:,:-2], i_split)    
-    # Multiply Merino data by cell area to get flux in kg/s
-    mdA, mlon_e, mlat_e = dA_from_latlon(mlon, mlat, periodic=True, return_edges=True)
-    mflux = mflux*mdA
+    mflux = split_longitude(mflux[:,:-2], i_split)   
     # Mask out zeros (will catch land as well as open ocean regions with zero flux)
     mflux = np.ma.masked_where(mflux==0, mflux)
+    # Get more grid variables
+    mdA, mlon_e, mlat_e = dA_from_latlon(mlon, mlat, periodic=True, return_edges=True)
     # Remesh the lat/lon edges
     mlon_e, mlat_e = np.meshgrid(mlon_e[0,:], mlat_e[:,0])    
 
@@ -386,8 +387,8 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     j_end = np.where(mlat > np.amax(grid.lat_2d))[0][0] - 1
 
     # Calculate total flux in region for both datasets (Gt/y)
-    addmass_total = np.sum(addmass)*sec_per_year/kg_per_Gt
-    merino_total = np.sum(mflux[j_start:j_end,i_start:i_end])*sec_per_year/kg_per_Gt
+    addmass_total = np.sum(addmass*grid.dA)*sec_per_year/kg_per_Gt
+    merino_total = np.sum(mflux[j_start:j_end,i_start:i_end]*mdA[j_start:j_end,i_start:i_end])*sec_per_year/kg_per_Gt
     print 'Total Amundsen Sea melt flux in Gt/y:'
     print 'Existing setup: ' + str(addmass_total)
     print 'Merino et al: ' + str(merino_total)
@@ -399,7 +400,7 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     # Plot spatial distribution
     fig, gs, cax = set_panels('1x2C1', figsize=(15,6))
     vmin = 0
-    vmax = 10 #max(np.amax(addmass), np.amax(mflux[j_start:j_end,i_start:i_end]))
+    vmax = max(np.amax(addmass), np.amax(mflux[j_start:j_end,i_start:i_end]))
     ymax = -70
     for n in range(2):
         ax = plt.subplot(gs[0,n])
@@ -413,8 +414,8 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
             ax.set_yticklabels([])
             ax.set_title('Merino et al. ('+str(merino_total)+' Gt/y)', fontsize=18)
     plt.colorbar(img, cax=cax, orientation='horizontal', extend='max')
-    plt.suptitle(r'Iceberg meltwater flux (10$^3$ kg/s)', fontsize=24)
-    finished_plot(fig, fig_name='addmass.png')
+    plt.suptitle(r'Iceberg meltwater flux (10$^3$ kg/m$^2$/s)', fontsize=24)
+    finished_plot(fig) #, fig_name='addmass.png')
 
 
 # Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
