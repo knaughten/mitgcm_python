@@ -1308,7 +1308,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 
     timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
     timeseries_file = 'timeseries.nc'
-    hovmoller_loc = ['pine_island_bay', 'dotson_bay']
+    hovmoller_loc = ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']
     hovmoller_file = 'hovmoller.nc'
     obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
     latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice', 'fwflx']
