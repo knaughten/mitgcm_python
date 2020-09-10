@@ -11,7 +11,7 @@ import datetime
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
@@ -393,14 +393,14 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     print 'Existing setup: ' + str(addmass_total)
     print 'Merino et al: ' + str(merino_total)
 
-    # Divide by 1000 for readability
-    addmass *= 1e-3
-    mflux *= 1e-3
+    # Multiply by 1e4 for readability
+    addmass *= 1e4
+    mflux *= 1e4
 
     # Plot spatial distribution
     fig, gs, cax = set_panels('1x2C1', figsize=(15,6))
     vmin = 0
-    vmax = max(np.amax(addmass), np.amax(mflux[j_start:j_end,i_start:i_end]))
+    vmax = 1 #max(np.amax(addmass), np.amax(mflux[j_start:j_end,i_start:i_end]))
     ymax = -70
     for n in range(2):
         ax = plt.subplot(gs[0,n])
@@ -414,8 +414,8 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
             ax.set_yticklabels([])
             ax.set_title('Merino et al. ('+str(merino_total)+' Gt/y)', fontsize=18)
     plt.colorbar(img, cax=cax, orientation='horizontal', extend='max')
-    plt.suptitle(r'Iceberg meltwater flux (10$^3$ kg/m$^2$/s)', fontsize=24)
-    finished_plot(fig) #, fig_name='addmass.png')
+    plt.suptitle(r'Iceberg meltwater flux (10$^{-4}$ kg/m$^2$/s)', fontsize=24)
+    finished_plot(fig, fig_name='addmass.png')
 
 
 # Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
