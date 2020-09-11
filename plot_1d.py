@@ -120,7 +120,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
         if (thick_first and i==0) or (thick_last and i==len(datas)-1):
             linewidth=2
         else:
-            linewidth=1
+            linewidth=1.5
         if first_on_top and i==0:
             if dates:
                 ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=0)
