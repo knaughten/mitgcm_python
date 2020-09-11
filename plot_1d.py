@@ -426,7 +426,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         # Plot in thicker red
         # First replace any red in the colours array
         if 'red' in colours:
-            colours[colours.index('red')] = (0.6, 0.6, 0.6)
+            colours[colours.index('red')] = (0.4, 0.4, 0.4)
         colours.append('red')
         if alphas is not None:
             alphas.append(1)
