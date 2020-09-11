@@ -117,9 +117,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
             time = times[i]
         else:
             time = times
-        if thick_first and i==0:
-            linewidth=1.5
-        elif thick_last and i==len(datas)-1:
+        if (thick_first and i==0) or (thick_last and i==len(datas)-1):
             linewidth=3
         else:
             linewidth=1.5
