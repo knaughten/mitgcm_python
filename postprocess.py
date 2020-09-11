@@ -505,7 +505,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
         elif key == 'WSK':
             timeseries_types = ['fris_mass_balance', 'hice_corner', 'mld_ewed', 'eta_avg', 'seaice_area', 'fris_temp', 'fris_salt']
         elif key == 'PAS':
-            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'seaice_area']
+            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
 
     # Build the grid
     if grid is None:
@@ -1094,7 +1094,7 @@ def calc_ice_prod (file_path, out_file, monthly=True):
 
 
 # Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_bay'], var=['temp', 'salt'], monthly=True):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break'], var=['temp', 'salt'], monthly=True):
 
     if isinstance(loc, str):
         # Make it a list
