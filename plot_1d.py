@@ -422,6 +422,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             sys.exit()            
         # Calculate the mean
         all_datas.append(np.mean(all_datas[n0:], axis=0))
+        all_times.append(all_times[n0])
         # Plot in thicker black
         # First replace any black in the colours array
         if 'black' in colours:
