@@ -255,7 +255,7 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
 
 
 # Plot timeseries of 2-year running means of a bunch of variables for the given list of simulations.
-def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
+def plot_timeseries_2y (sim_dir, sim_names, ens_mean=True, first_in_mean=False, fig_dir='./'):
 
     from ..plot_1d import read_plot_timeseries_ensemble
 
@@ -266,7 +266,7 @@ def plot_timeseries_2y (sim_dir, sim_names, fig_dir='./'):
     year_start = 1979
 
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, alpha=True, vline=year_start, time_use=None, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, smooth=smooth, alpha=True, vline=year_start, time_use=None, plot_mean=plot_mean, first_in_mean=first_in_mean, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
@@ -418,7 +418,7 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     finished_plot(fig, fig_name='addmass.png')
 
 
-# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top. If there is more than one simulation, plot the range and the ensemble mean.
+# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top.
 def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
 
     # Could do: option for ensemble with mean on top
