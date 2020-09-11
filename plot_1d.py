@@ -74,7 +74,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, first_on_top=False, vline=None, return_fig=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, thick_first=False, first_on_top=False, vline=None, return_fig=False):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -117,7 +117,9 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
             time = times[i]
         else:
             time = times
-        if thick_last and i==len(datas)-1:
+        if thick_first and i==0:
+            linewidth=1.5
+        elif thick_last and i==len(datas)-1:
             linewidth=3
         else:
             linewidth=1.5
@@ -437,4 +439,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         for data, sim in zip(all_datas, sim_names):
             print sim + ': ' + str(np.mean(data)) + ' ' + units
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, linestyles=linestyles, alphas=alphas, first_on_top=True, vline=vline)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=True, vline=vline)
