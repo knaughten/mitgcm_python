@@ -1385,7 +1385,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
             if std:
                 fig_name += '_std'
             fig_name += '.png'
-        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], fig_name=fig_name)
+        ctd_cast_compare(loc, hovmoller_paths[0], obs_file, grid, ens_hovmoller_files=hovmoller_paths[1:], std=std, fig_name=fig_name)
     
     
 
