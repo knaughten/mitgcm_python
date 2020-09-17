@@ -250,8 +250,11 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
 # Helper function to set colours automatically.
 def default_colours (n):
 
-    from matplotlib.pyplot import cm
-    return cm.rainbow(np.linspace(0,1,n))
+    colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
+    if n > len(colours):
+        print 'Error (default_colours): must specify colours if there are more than ' + len(colours)
+        sys.exit()
+    return colours[:n]
 
 
 # NetCDF interface to timeseries_multi_plot, for multiple variables in the same simulation (that have the same units). Can set diff=True and file_path as a list of two file paths if you want a difference plot.
