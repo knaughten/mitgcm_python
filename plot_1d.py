@@ -428,7 +428,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             colours.append('red')
         else:
             # Just generate new colours - they were automatic to begin with
-            colours = default_colours(len(file_paths+1))
+            colours = default_colours(len(file_paths)+1)
         if alphas is not None:
             alphas.append(1)
         if sim_names is not None:
