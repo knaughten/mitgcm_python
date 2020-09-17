@@ -247,14 +247,11 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
         make_timeseries_plot(time, data, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi)
 
 
-# Helper function to set up to 7 colours automatically.
+# Helper function to set colours automatically.
 def default_colours (n):
 
-    colours = ['black', 'red', 'blue', 'green', 'cyan', 'magenta', 'yellow']
-    if n > len(colours):
-        print 'Error (default_colours): need to specify colours if you need more than ' + str(len(colours))
-        sys.exit()
-    return colours[:n]
+    from matplotlib.pyplot import cm
+    return cm.rainbow(np.linspace(0,1,n))
 
 
 # NetCDF interface to timeseries_multi_plot, for multiple variables in the same simulation (that have the same units). Can set diff=True and file_path as a list of two file paths if you want a difference plot.
