@@ -420,11 +420,15 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         # Calculate the mean
         all_datas.append(np.mean(all_datas[n0:], axis=0))
         all_times.append(all_times[n0])
-        # Plot in thicker red
-        # First replace any red in the colours array
-        if 'red' in colours:
-            colours[colours.index('red')] = (0.4, 0.4, 0.4)
-        colours.append('red')
+        # Plot in thicker colour
+        if isinstance(colours, list):
+            # First replace any red in the colours array
+            if 'red' in colours:
+                colours[colours.index('red')] = (0.4, 0.4, 0.4)
+            colours.append('red')
+        else:
+            # Just generate new colours - they were automatic to begin with
+            colours = default_colours(len(file_paths+1))
         if alphas is not None:
             alphas.append(1)
         if sim_names is not None:
