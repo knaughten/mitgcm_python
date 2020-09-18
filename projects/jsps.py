@@ -11,7 +11,7 @@ import datetime
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
@@ -458,6 +458,32 @@ def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
             ax.set_xticklabels([])
     plt.suptitle('Ice shelf mass loss compared to observations', fontsize=24)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Determine the most spiky, least spiky, and medium ensemble members (from the first 10) based on their PIG and Dotson melt rates.
+def order_ensemble_std (base_dir='./'):
+
+    # Run IDs for each member, in order
+    run_id = ['018', '027', '028', '029', '030', '033', '034', '035', '036', '037']
+    # ERA5 ID for comparison
+    era5_id = ['031']
+    run_names = ['PACE '+str(n+1) for n in range(10)] + ['ERA5']
+    ts_file = 'timeseries.nc'
+    smooth = 12
+    base_dir = real_dir(base_dir)
+
+    for var_name in ['pig_massloss', 'dotson_massloss']:
+        print var_name
+        std_list = []
+        for rid in run_id+era5_id:
+            data = read_netcdf(base_dir+'PAS_'+rid+'/output/'+ts_file, var_name)
+            data_smooth = moving_average(data, smooth)
+            std_list.append(np.std(data_smooth))
+        sort_index = np.argsort(std_list)
+        print 'Members, from flattest to spikiest:'
+        for n in sort_index:
+            print run_names[n]
+        
                      
                                                  
     
