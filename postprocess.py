@@ -1293,7 +1293,7 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 
 
 # Precompute both timeseries and Hovmollers for all output files in the (standalone) simulation, or the files in fnames (if set).
-def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc', hovmoller_file='hovmoller.nc', timeseries_types=None, hovmoller_loc=None, obs_file=None, key='PAS', grid=None, time_average=False)
+def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc', hovmoller_file='hovmoller.nc', timeseries_types=None, hovmoller_loc=None, obs_file=None, key='PAS', grid=None, time_average=False):
 
     if key == 'PAS':
         if timeseries_types is None:
