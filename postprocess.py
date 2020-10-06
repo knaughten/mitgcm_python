@@ -1290,6 +1290,32 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
         else:
             simple_average_files(files_to_avg, out_file, t_start=t_start, t_end=t_end)        
     return out_file
+
+
+# Precompute both timeseries and Hovmollers for all output files in the (standalone) simulation, or the files in fnames (if set).
+def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc', hovmoller_file='hovmoller.nc', timeseries_types=None, hovmoller_loc=None, obs_file=None, key='PAS', grid=None, time_average=False)
+
+    if key == 'PAS':
+        if timeseries_types is None:
+            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
+        if hovmoller_loc is None:
+            hovmoller_loc = ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']
+    else:
+        print 'Error (precompute_all): invalid key ' + key
+        sys.exit()
+    if obs_file is None:
+        obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
+    output_dir = real_dir(output_dir)
+
+    if fnames is None:
+        fnames = get_output_files(output_dir)
+    for f in fnames:
+        file_path = output_dir + f
+        if grid is None:
+            grid = Grid(file_path)
+        print 'Processing ' + file_path
+        precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, grid=grid, time_average=time_average)
+        precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)            
     
 
 # All the steps to analyse a newly finished ERA5 run and matching PACE ensemble!
@@ -1305,12 +1331,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     from plot_1d import read_plot_timeseries_ensemble
     from plot_latlon import read_plot_latlon_comparison
     from plot_misc import amundsen_rignot_comparison, ctd_cast_compare
-
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss'] #, 'pine_island_bay_depth_isotherm_0.5', 'dotson_bay_depth_isotherm_0.5', 'pine_island_bay_depth_isotherm_1', 'dotson_bay_depth_isotherm_0']
-    timeseries_file = 'timeseries.nc'
-    hovmoller_loc = ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']
-    hovmoller_file = 'hovmoller.nc'
-    obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
+    
     latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice', 'fwflx']
     ymax = -70
     change_points = [5, 10, 30]
@@ -1334,23 +1355,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         avg_file = file_path[file_path.rfind('/')+1:]
 
     # Calculate timeseries and Hovmollers
-    timeseries_paths = [d + timeseries_file for d in directories]
-    hovmoller_paths = [d + hovmoller_file for d in directories]
-    grid = None
-    for d, tf, hf in zip(directories, timeseries_paths, hovmoller_paths):
-        fnames = get_output_files(d)
-        if os.path.isfile(tf):
-            print 'Timeseries file exists'
-            if grid is None:
-                grid = Grid(d+fnames[0])
-            continue
-        for f in fnames:
-            file_path = d + f
-            if grid is None:
-                grid = Grid(file_path)
-            print 'Calculating timeseries for ' + file_path
-            precompute_timeseries(file_path, tf, timeseries_types=timeseries_types, grid=grid)
-            precompute_hovmoller(file_path, hf, loc=hovmoller_loc)
+    for d in directories:
+        print 'Calculating timeseries and Hovmollers for ' + d
+        precompute_all(output_dir=d, key='PAS')
 
     # Plot ensemble for all timeseries
     for var_name in timeseries_types:
