@@ -259,7 +259,7 @@ def plot_timeseries_2y (sim_dir, sim_names, plot_mean=True, first_in_mean=False,
 
     from ..plot_1d import read_plot_timeseries_ensemble
 
-    timeseries_types = ['thwaites_melting', 'dotson_crosson_melting', 'pig_melting', 'pine_island_bay_temp_bottom', 'dotson_bay_temp_bottom', 'amundsen_shelf_break_uwind_avg', 'pig_massloss', 'dotson_massloss']
+    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
     timeseries_file = 'timeseries.nc'
     timeseries_paths = [real_dir(d) + 'output/' + timeseries_file for d in sim_dir]
     smooth = 12
