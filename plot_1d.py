@@ -387,6 +387,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             if trim_before:
                 # Trim everything before the baseline period
                 data = data[t_start:]
+                time = time[t_start:]
         all_times.append(time)
         all_datas.append(data)
     if time_use is None:
@@ -423,6 +424,8 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     elif title is None or units is None:
         print 'Error (read_plot_timeseries_ensemble): must set title and units'
         sys.exit()
+    if plot_anomaly:
+        title += ' \n(anomaly from '+str(base_year_start)+'-'+str(base_year_end)+' mean)'
     if colours is None:
         colours = default_colours(len(file_paths))
     if alpha:
