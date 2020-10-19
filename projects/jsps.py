@@ -255,11 +255,12 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
 
 
 # Plot timeseries of 2-year running means of a bunch of variables for the given list of simulations.
-def plot_timeseries_2y (sim_dir, sim_names, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None):
+def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None, plot_anomaly=False, base_year_start=1920, base_year_end=1949, trim_before=True):
 
     from ..plot_1d import read_plot_timeseries_ensemble
 
-    timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
+    if timeseries_types is None:
+        timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
     timeseries_file = 'timeseries.nc'
     timeseries_paths = [real_dir(d) + 'output/' + timeseries_file for d in sim_dir]
     smooth = 12
@@ -269,7 +270,7 @@ def plot_timeseries_2y (sim_dir, sim_names, plot_mean=True, first_in_mean=False,
         year_start = 1979
 
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=year_start, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=year_start, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
@@ -486,6 +487,8 @@ def order_ensemble_std (base_dir='./'):
         print 'Members, from flattest to spikiest:'
         for n in sort_index:
             print run_names[n]
+
+    
         
                      
                                                  

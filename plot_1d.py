@@ -339,11 +339,16 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # title, units: set these strings if var_name is multiple variables to sum.
 # print_mean: set to True if you want to print the mean value for each ensemble member
 # operator: 'add' or 'subtract' each additional variable name after the first one (if var_name is a list); default add
+# plot_anomaly, base_year_start, base_year_end: will plot as an anomaly from the average over the given years
+# trim_before: if base_year_start is set, don't show any timeseries before that year
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False, plot_anomaly=False, base_year_start=None, base_year_end=None, trim_before=False):
 
     if isinstance(var_name, str):
         var_name = [var_name]
+    if plot_anomaly and (base_year_start is None or base_year_end is None):
+        print 'Error (read_plot_timeseries_ensemble): must set base_year_start and base_year_end'
+        sys.exit()
 
     # Read data
     all_times = []
@@ -369,6 +374,19 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                 else:
                     print 'Error (read_plot_timeseries_ensemble): invalid operator ' + operator
                     sys.exit()
+        if plot_anomaly:
+            # Find the time indices that define the baseline period
+            years = np.array([t.year for t in time])
+            t_start = np.where(years==base_year_start)[0][0]
+            if years[-1] == base_year_end:
+                t_end = years.size
+            else:
+                t_end = np.where(years>base_year_end)[0][0]
+            # Subtract the mean over that period
+            data -= np.mean(data[t_start:t_end])
+            if trim_before:
+                # Trim everything before the baseline period
+                data = data[t_start:]
         all_times.append(time)
         all_datas.append(data)
     if time_use is None:
