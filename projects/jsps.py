@@ -506,19 +506,45 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         sys.exit()
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+hovmoller_file for d in sim_dir]
+    smooth = 6
+    grid = choose_grid(grid, None)
+    
+    if loc == 'amundsen_west_shelf_break':
+        title = 'Shelf break'
+        if var == 'temp':
+            vmin = -0.5
+            vmax = 1.4
+        elif var == 'salt':
+            vmin = 34.4
+            vmax = 34.72
+    elif loc == 'dotson_bay':
+        title = 'Dotson front'
+        if var == 'temp':
+            vmin = -1.8
+            vmax = 1
+        elif var == 'salt':
+            vmin = 34.2
+            vmax = 34.65
+    elif loc == 'pine_island_bay':
+        title = 'Pine Island Bay'
+        if var == 'temp':
+            vmin = -1.5
+            vmax = 1.5
+        elif var == 'salt':
+            vmin = 34.2
+            vmax = 34.72
+    else:
+        print 'Error (hovmoller_ensemble_tiles): invalid location ' + loc
+        sys.exit()            
     if var == 'temp':
-        vmin = -1.5
-        vmax = 1.5
+        title += ' temperature ('+deg_string+'C)'
         contours = [0, 1]
     elif var == 'salt':
-        vmin = 34
-        vmax = 34.71
+        title += ' salinity (psu)'
         contours = [34.5, 34.7]
     else:
         print 'Error (hovmoller_ensemble_tiles): invalid variable ' + var
         sys.exit()
-    smooth = 6
-    grid = choose_grid(grid, None)
 
     fig, gs, cax = set_panels(str(num_members)+'x1C1')
     for n in range(num_members):
@@ -548,10 +574,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         # Ensemble name on the right
         plt.text(1.02, 0.5, sim_names[n], ha='left', va='center', transform=ax.transAxes, fontsize=12)
     # Main title
-    title, units = read_title_units(file_paths[0], loc+'_'+var)
-    if var == 'temp':
-        units = deg_string+'C'
-    plt.suptitle(title+' ('+units+')', fontsize=16, x=0.05, ha='left')
+    plt.suptitle(title, fontsize=16, x=0.05, ha='left')
     # Colourbar on top right
     cbar = plt.colorbar(img, cax=cax, extend='both', orientation='horizontal')
     reduce_cbar_labels(cbar)
