@@ -512,7 +512,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         contours = [0, 1]
     elif var == 'salt':
         vmin = 34
-        smax = 34.71
+        vmax = 34.71
         contours = [34.5, 34.7]
     else:
         print 'Error (hovmoller_ensemble_tiles): invalid variable ' + var
