@@ -68,6 +68,8 @@ def set_panels (key, figsize=None):
             figsize = (8, 8)
         elif key == 'PS111_3x2C0':
             figsize = (8, 12)
+        elif key == '10x1C1':
+            figsize = (5, 12)
 
     fig = plt.figure(figsize=figsize)
     
@@ -221,6 +223,14 @@ def set_panels (key, figsize=None):
         # 3 rows and 2 columns, space for map inset at top left
         gs = plt.GridSpec(3,2)
         gs.update(left=0.1, right=0.99, bottom=0.04, top=0.85, wspace=0.02, hspace=0.35)
+    elif key == '10x1C1':
+        # 10 plots arranged vertically (Hovmoller-type aspect ratio) with one colourbar in the top right, and a bit of space for titles on the right
+        gs = plt.GridSpec(10,1)
+        gs.update(left=0.05, right=0.9, bottom=0.01, top=0.95, hspace=0.05)
+        cax = fig.add_axes([0.9, 0.98, 0.09, 0.015])
+    else:
+        print 'Error (set_panels): no entry for key ' + key
+        sys.exit()
         
     if key == 'CTD':
         return fig, gs_1, gs_2

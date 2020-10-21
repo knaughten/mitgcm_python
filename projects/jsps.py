@@ -10,13 +10,14 @@ import matplotlib.pyplot as plt
 import datetime
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
-from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time
+from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_1d import default_colours
 from ..plot_latlon import latlon_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string
+from ..plot_misc import hovmoller_plot
 
 
 # Global variables
@@ -268,9 +269,13 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
         year_start = 1920
     else:
         year_start = 1979
+    if plot_anomaly:
+        vline = None
+    else:
+        vline = year_start
 
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=year_start, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
@@ -487,6 +492,65 @@ def order_ensemble_std (base_dir='./'):
         print 'Members, from flattest to spikiest:'
         for n in sort_index:
             print run_names[n]
+
+
+# Make a massive plot of Hovmollers in all PACE ensemble members (pass in order), for a given location and variable.
+def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/', fig_name=None):
+
+    year_start = 1920  # Trim the spinup before this
+    year_end = 2013
+    num_members = len(sim_dir)
+    if num_members not in [10]:
+        print 'Error (hovmoller_ensemble_tiles): need to write an entry in set_panels for ' + str(num_members) + ' members'
+        sys.exit()
+    sim_names = ['PACE '+str(n+1) for n in range(num_members)]
+    file_paths = [real_dir(d)+'/output/'+hovmoller_file for d in sim_dir]
+    if var == 'temp':
+        vmin = -1.7
+        vmax = 1.5
+        contours = [0, 1]
+    elif var == 'salt':
+        vmin = 34
+        smax = 34.71
+        contours = [34.5, 34.7]
+    else:
+        print 'Error (hovmoller_ensemble_tiles): invalid variable ' + var
+        sys.exit()
+    smooth = 6
+    grid = choose_grid(grid, None)
+
+    fig, gs, cax = set_panels(str(num_members)+'x1C1')
+    for n in range(num_members):
+        # Select the axes
+        ax = plt.subplot(gs[n,0])
+        # Read the data
+        data = read_netcdf(file_paths[n], loc+'_'+var)
+        time = netcdf_time(file_paths[n], monthly=False)
+        # Trim everything before the spinup
+        years = np.array([time.year for t in time])
+        t_start = np.where(years==year_start)[0][0]
+        data = data[t_start:]
+        time = time[t_start:]
+        # Plot the Hovmoller
+        img = hovmoller_plot(data, time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, contours=contours)
+        # Set limits on time axes so they all line up
+        ax.set_xlim([datetime.date(year_start, 1, 1), datetime.date(year_end+1, 1, 1)])
+        if n != 0:
+            # Hide the depth labels
+            ax.set_yticklabels([])
+        if n != num_members-1:
+            # Hide the time labels
+            ax.set_xticklabels([])
+        # Ensemble name on the right
+        plt.text(1.1, 0.5, sim_names[n], ha='left', va='center', transform=ax.transAxes, fontsize=16)
+    # Main title
+    title, units = read_title_units(file_paths[0], loc+'_'+var)
+    if var == 'temp':
+        units = deg_string+'C'
+    plt.suptitle(title+' ('+units+')', fontsize=22)
+    # Colourbar on top right
+    plt.colorbar(img, cax=cax, extend='both', orientation='horizontal')
+    finished_plot(fig, fig_name=fig_name)
 
     
         
