@@ -9,11 +9,12 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import datetime
 
-from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
+from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
+from ..plot_utils.labels import reduce_cbar_labels
 from ..plot_1d import default_colours
 from ..plot_latlon import latlon_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string
@@ -506,7 +507,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+hovmoller_file for d in sim_dir]
     if var == 'temp':
-        vmin = -1.7
+        vmin = -1.5
         vmax = 1.5
         contours = [0, 1]
     elif var == 'salt':
@@ -527,7 +528,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         data = read_netcdf(file_paths[n], loc+'_'+var)
         time = netcdf_time(file_paths[n], monthly=False)
         # Trim everything before the spinup
-        years = np.array([time.year for t in time])
+        years = np.array([t.year for t in time])
         t_start = np.where(years==year_start)[0][0]
         data = data[t_start:]
         time = time[t_start:]
@@ -535,22 +536,37 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         img = hovmoller_plot(data, time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, contours=contours)
         # Set limits on time axes so they all line up
         ax.set_xlim([datetime.date(year_start, 1, 1), datetime.date(year_end+1, 1, 1)])
+        ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(year_start, year_end, 10)])
         if n != 0:
             # Hide the depth labels
             ax.set_yticklabels([])
         if n != num_members-1:
             # Hide the time labels
             ax.set_xticklabels([])
+        ax.set_xlabel('')
+        ax.set_ylabel('')
         # Ensemble name on the right
-        plt.text(1.1, 0.5, sim_names[n], ha='left', va='center', transform=ax.transAxes, fontsize=16)
+        plt.text(1.02, 0.5, sim_names[n], ha='left', va='center', transform=ax.transAxes, fontsize=12)
     # Main title
     title, units = read_title_units(file_paths[0], loc+'_'+var)
     if var == 'temp':
         units = deg_string+'C'
-    plt.suptitle(title+' ('+units+')', fontsize=22)
+    plt.suptitle(title+' ('+units+')', fontsize=16, x=0.05, ha='left')
     # Colourbar on top right
-    plt.colorbar(img, cax=cax, extend='both', orientation='horizontal')
+    cbar = plt.colorbar(img, cax=cax, extend='both', orientation='horizontal')
+    reduce_cbar_labels(cbar)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Call hovmoller_ensemble_tiles for all combinations of 3 locations and 2 variables.
+def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/', fig_dir='./'):
+
+    grid = choose_grid(grid, None)
+    fig_dir = real_dir(fig_dir)
+    for loc in ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']:
+        for var in ['temp', 'salt']:
+            fig_name = fig_dir+'hov_ens_'+loc+'_'+var+'.png'
+            hovmoller_ensemble_tiles(loc, var, sim_dir, hovmoller_file=hovmoller_file, grid=grid, fig_name=fig_name)
 
     
         

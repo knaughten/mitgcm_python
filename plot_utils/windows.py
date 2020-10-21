@@ -69,7 +69,7 @@ def set_panels (key, figsize=None):
         elif key == 'PS111_3x2C0':
             figsize = (8, 12)
         elif key == '10x1C1':
-            figsize = (5, 12)
+            figsize = (7, 12)
 
     fig = plt.figure(figsize=figsize)
     
@@ -226,8 +226,8 @@ def set_panels (key, figsize=None):
     elif key == '10x1C1':
         # 10 plots arranged vertically (Hovmoller-type aspect ratio) with one colourbar in the top right, and a bit of space for titles on the right
         gs = plt.GridSpec(10,1)
-        gs.update(left=0.05, right=0.9, bottom=0.01, top=0.95, hspace=0.05)
-        cax = fig.add_axes([0.9, 0.98, 0.09, 0.015])
+        gs.update(left=0.07, right=0.87, bottom=0.03, top=0.94, hspace=0.07)
+        cax = fig.add_axes([0.8, 0.98, 0.19, 0.015])
     else:
         print 'Error (set_panels): no entry for key ' + key
         sys.exit()
