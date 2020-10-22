@@ -595,7 +595,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
 # Calculate the trends in ice shelf melting, and their significance, for the given ice shelf in each ensemble member.
 # "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file.
-def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc'):
+def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=None):
 
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
@@ -605,6 +605,9 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc'):
     year_start = 1920
     year_end = 1949
 
+    fig, ax = plt.subplots()
+    ax.axhline()
+    ax.axvline()
     for n in range(num_members):
         data = read_netcdf(file_paths[n], shelf+'_melting')
         time = netcdf_time(file_paths[n], monthly=False)
@@ -628,6 +631,13 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc'):
             print sim_names[n] + ': not significant'
         elif slope == 0:
             print sim_names[n] + ': somehow has slope 0?!'
+        if p_value < p0:
+            # Add to plot
+            ax.plot(slope, 0, 'o')
+    ax.set_yticklabels([])
+    ax.set_xlabel('Trend (%/decade)')
+    ax.set_title('Trend in melting of '+region_names[shelf])
+    finished_plot(fig, fig_name=fig_name)
 
     
     
