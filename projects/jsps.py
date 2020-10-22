@@ -586,7 +586,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
     grid = choose_grid(grid, None)
     fig_dir = real_dir(fig_dir)
-    for loc in ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']:
+    for loc in ['pine_island_bay', 'dotson_bay']: #, 'amundsen_west_shelf_break']:
         for var in ['temp', 'salt']:
             fig_name = fig_dir+'hov_ens_'+loc+'_'+var+'.png'
             hovmoller_ensemble_tiles(loc, var, sim_dir, hovmoller_file=hovmoller_file, grid=grid, fig_name=fig_name)
