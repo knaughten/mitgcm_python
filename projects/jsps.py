@@ -12,7 +12,7 @@ from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels
@@ -556,8 +556,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         data = read_netcdf(file_paths[n], loc+'_'+var)
         time = netcdf_time(file_paths[n], monthly=False)
         # Trim everything before the spinup
-        years = np.array([t.year for t in time])
-        t_start = np.where(years==year_start)[0][0]
+        t_start = index_year_start(time, year_start)
         data = data[t_start:]
         time = time[t_start:]
         # Plot the Hovmoller
@@ -596,29 +595,35 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
 # Calculate the trends in ice shelf melting, and their significance, for the given ice shelf in each ensemble member.
 # "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file.
-def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', option='smooth'):
+def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc'):
 
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+timeseries_file for d in sim_dir]
-    smooth = 12
     p0 = 0.05
+    # Years over which to calculate the baseline
+    year_start = 1920
+    year_end = 1949
 
     for n in range(num_members):
         data = read_netcdf(file_paths[n], shelf+'_melting')
-        if option == 'smooth':
-            # 2-year smoothing to filter out seasonal cycle
-            data = moving_average(data, smooth)
-        elif option == 'annual':
-            # Annual average to filter out seasonal cycle
-            time = netcdf_time(file_paths[n], monthly=False)
-            time, data = calc_annual_averages(time, data)
+        time = netcdf_time(file_paths[n], monthly=False)
+        # Express as percentage of mean over baseline
+        t_start, t_end = index_period(time, year_start, year_end)
+        data_mean = np.mean(data[t_start:t_end])
+        data = data/data_mean*100
+        # Annual average to filter out seasonal cycle
+        # First trim to the nearest complete year
+        new_size = len(time)/12*12
+        time = time[:new_size]
+        data = data[:new_size]
+        time, data = calc_annual_averages(time, data)
         # Calculate trends
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
         if slope > 0 and p_value < p0:
-            print sim_names[n] + ': positive ('+str(slope)+')'
+            print sim_names[n] + ': positive ('+str(slope*10)+' %/decade)'
         elif slope < 0 and p_value < p0:
-            print sim_names[n] + ': negative ('+str(slope)+')'
+            print sim_names[n] + ': negative ('+str(slope*10)+' %/decade)'
         elif p_value > p0:
             print sim_names[n] + ': not significant'
         elif slope == 0:

@@ -13,7 +13,7 @@ from timeseries import calc_special_timeseries, calc_special_timeseries_diff, se
 from plot_utils.labels import monthly_ticks, yearly_ticks
 from plot_utils.windows import finished_plot
 from file_io import netcdf_time, read_netcdf
-from utils import trim_titles, moving_average
+from utils import trim_titles, moving_average, index_period
 
 
 # Helper function to plot timeseries.
@@ -376,12 +376,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                     sys.exit()
         if plot_anomaly:
             # Find the time indices that define the baseline period
-            years = np.array([t.year for t in time])
-            t_start = np.where(years==base_year_start)[0][0]
-            if years[-1] == base_year_end:
-                t_end = years.size
-            else:
-                t_end = np.where(years>base_year_end)[0][0]
+            t_start, t_end = index_period(time, base_year_start, base_year_end)
             # Subtract the mean over that period
             data -= np.mean(data[t_start:t_end])
             if trim_before:

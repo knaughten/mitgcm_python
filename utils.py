@@ -724,3 +724,22 @@ def moving_average (data, radius, time=None):
         return data_smoothed, time_trimmed
     else:
         return data_smoothed
+
+
+# Return the index of the given start year in the array of Datetime objects.
+def index_year_start (time, year0):
+    years = np.array([t.year for t in time])
+    return np.where(years==year0)[0][0]
+
+# Return the first index after the given end year in the array of Datetime objects.
+def index_year_end (time, year):
+    years = np.array([t.year for t in time])
+    if years[-1] == year0:
+        return years.size
+    else:
+        return np.where(years>year0)[0][0]
+
+# Do both at once
+def index_period (time, year_start, year_end):
+    return index_year_start(time, year_start), index_year_end(time, year_end)
+        
