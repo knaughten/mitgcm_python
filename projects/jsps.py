@@ -638,8 +638,9 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
             print sim_names[n] + ': somehow has slope 0?!'
         if p_value < p0:
             # Add to plot
-            ax.plot(slope, 0, 'o', color=colours[n], label=)
+            ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
     ax.text(0.95, 0.95, str(not_sig)+' members had no significant trend', ha='right', va='top', fontsize=12, transform=ax.transAxes)
+    ax.legend()
     ax.set_yticklabels([])
     ax.set_xlabel('Trend (%/decade)')
     ax.set_title('Trend in melting of '+region_names[shelf])
