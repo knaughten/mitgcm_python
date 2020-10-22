@@ -645,6 +645,16 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
     ax.set_title('Trend in melting of '+region_names[shelf])
     finished_plot(fig, fig_name=fig_name)
 
+
+# Call for all ice shelves.
+def plot_all_trends (sim_dir, fig_dir=None):
+    for shelf in ['abbot', 'cosgrove', 'dotson_crosson', 'getz', 'pig', 'thwaites', 'venable']:
+        if fig_dir is None:
+            fig_name = None
+        else:
+            fig_name = real_dir(fig_dir) + shelf + '_trends.png'
+        melting_trends(shelf, sim_dir, fig_name=fig_name)
+
     
     
 
