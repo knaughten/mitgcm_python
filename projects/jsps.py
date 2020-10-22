@@ -594,7 +594,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
 
 # Calculate the trends in ice shelf melting, and their significance, for the given ice shelf in each ensemble member.
-# "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file.
+# "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file as *_melting.
 def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=None):
 
     num_members = len(sim_dir)
@@ -623,10 +623,12 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
         time, data = calc_annual_averages(time, data)
         # Calculate trends
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
+        # Multiply slope by 10 to get trend per decade
+        slope *= 10
         if slope > 0 and p_value < p0:
-            print sim_names[n] + ': positive ('+str(slope*10)+' %/decade)'
+            print sim_names[n] + ': positive ('+str(slope)+' %/decade)'
         elif slope < 0 and p_value < p0:
-            print sim_names[n] + ': negative ('+str(slope*10)+' %/decade)'
+            print sim_names[n] + ': negative ('+str(slope)+' %/decade)'
         elif p_value > p0:
             print sim_names[n] + ': not significant'
         elif slope == 0:
