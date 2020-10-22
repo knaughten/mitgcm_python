@@ -600,6 +600,7 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+timeseries_file for d in sim_dir]
+    colours = default_colours(num_members)
     p0 = 0.05
     # Years over which to calculate the baseline
     year_start = 1920
@@ -608,6 +609,7 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
     fig, ax = plt.subplots()
     ax.axhline()
     ax.axvline()
+    not_sig = 0
     for n in range(num_members):
         data = read_netcdf(file_paths[n], shelf+'_melting')
         time = netcdf_time(file_paths[n], monthly=False)
@@ -631,11 +633,13 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
             print sim_names[n] + ': negative ('+str(slope)+' %/decade)'
         elif p_value > p0:
             print sim_names[n] + ': not significant'
+            not_sig += 1
         elif slope == 0:
             print sim_names[n] + ': somehow has slope 0?!'
         if p_value < p0:
             # Add to plot
-            ax.plot(slope, 0, 'o')
+            ax.plot(slope, 0, 'o', color=colours[n])
+    ax.text(0.95, 0.95, str(not_sig)+' members had no significant trend', ha='right', va='top', fontsize=12)
     ax.set_yticklabels([])
     ax.set_xlabel('Trend (%/decade)')
     ax.set_title('Trend in melting of '+region_names[shelf])
