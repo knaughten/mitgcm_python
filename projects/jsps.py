@@ -12,7 +12,7 @@ from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, calc_annual_averages
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels
@@ -601,6 +601,7 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', option='smo
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+timeseries_file for d in sim_dir]
     smooth = 12
+    p0 = 0.05
 
     for n in range(num_members):
         data = read_netcdf(file_paths[n], shelf+'_melting')
@@ -613,7 +614,14 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', option='smo
             time, data = calc_annual_averages(time, data)
         # Calculate trends
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
-        print sim_names[n] + ': slope=' + str(slope) + ', r^2=' + str(r_value**2) + ', p-value=' + str(p_value)
+        if slope > 0 and p_value < p0:
+            print sim_names[n] + ': positive ('+str(slope)+')'
+        elif slope < 0 and p_value < p0:
+            print sim_names[n] + ': negative ('+str(slope)+')'
+        elif p_value > p0:
+            print sim_names[n] + ': not significant'
+        elif slope == 0:
+            print sim_names[n] + ': somehow has slope 0?!'
 
     
     
