@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import datetime
+from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
@@ -590,6 +591,35 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
         for var in ['temp', 'salt']:
             fig_name = fig_dir+'hov_ens_'+loc+'_'+var+'.png'
             hovmoller_ensemble_tiles(loc, var, sim_dir, hovmoller_file=hovmoller_file, grid=grid, fig_name=fig_name)
+
+
+# Calculate the trends in ice shelf melting, and their significance, for the given ice shelf in each ensemble member.
+# "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file.
+def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', option='smooth'):
+
+    num_members = len(sim_dir)
+    sim_names = ['PACE '+str(n+1) for n in range(num_members)]
+    file_paths = [real_dir(d)+'/output/'+timeseries_file for d in sim_dir]
+    smooth = 12
+
+    for n in range(num_members):
+        data = read_netcdf(file_paths[n], shelf+'_melting')
+        if option == 'smooth':
+            # 2-year smoothing to filter out seasonal cycle
+            data = moving_average(data, smooth)
+        elif option == 'annual':
+            # Annual average to filter out seasonal cycle
+            time = netcdf_time(file_paths[n], monthly=False)
+            time, data = calc_annual_averages(time, data)
+        # Calculate trends
+        slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
+        print sim_names[n] + ': slope=' + str(slope) + ', r^2=' + str(r_value**2) + ', p-value=' + str(p_value)
+
+    
+    
+
+
+
 
     
         
