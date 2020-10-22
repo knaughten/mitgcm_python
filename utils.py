@@ -732,7 +732,7 @@ def index_year_start (time, year0):
     return np.where(years==year0)[0][0]
 
 # Return the first index after the given end year in the array of Datetime objects.
-def index_year_end (time, year):
+def index_year_end (time, year0):
     years = np.array([t.year for t in time])
     if years[-1] == year0:
         return years.size
