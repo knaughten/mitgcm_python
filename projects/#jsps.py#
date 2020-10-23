@@ -664,6 +664,7 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
     sim_dir = [era5_dir] + pace_dir
     sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)] + ['black']
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)]
+    thickness = [2, 
     plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours)
 
     

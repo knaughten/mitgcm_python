@@ -120,7 +120,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
         if (thick_first and i==0) or (thick_last and i==len(datas)-1):
             linewidth=2
         else:
-            linewidth=1.5
+            linewidth=1
         if first_on_top and i==0:
             if dates:
                 ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=0)
@@ -439,15 +439,12 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         # Calculate the mean
         all_datas.append(np.mean(all_datas[n0:], axis=0))
         all_times.append(all_times[n0])
-        # Plot in thicker colour
-        if isinstance(colours, list):
+        if len(colours) != len(all_datas):
+            # Choose a colour
             # First replace any black in the colours array
             if 'black' in colours:
                 colours[colours.index('black')] = (0.4, 0.4, 0.4)
             colours.append('black')
-        else:
-            # Just generate new colours - they were automatic to begin with
-            colours = default_colours(len(file_paths)+1)
         if alphas is not None:
             alphas.append(1)
         if sim_names is not None:
