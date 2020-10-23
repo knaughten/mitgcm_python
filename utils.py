@@ -742,4 +742,38 @@ def index_year_end (time, year0):
 # Do both at once
 def index_period (time, year_start, year_end):
     return index_year_start(time, year_start), index_year_end(time, year_end)
+
+
+# Helper function to make a 2D mask 3D, with masking of bathymetry and optional depth bounds (zmin=deep, zmax=shallow, both negative in metres)
+def mask_2d_to_3d (mask, grid, zmin=None, zmax=None):
+
+    if zmin is None:
+        zmin = grid.z[-1]
+    if zmax is None:
+        zmax = self.z[0]
+    mask = xy_to_xyz(mask, grid)
+    # Mask out closed cells
+    mask *= self.hfac!=0
+    # Mask out everything outside of depth bounds
+    z_3d = z_to_xyz(grid.z, grid)
+    mask *= (z_3d >= zmin)*(z_3d <= zmax)
+    return mask
+
+
+# Helper function to average 1 year of monthly data from a variable (starting with time index index t0), of any dimension (as long as time is first), with proper monthly weighting for the given calendar (360-day, noleap, or standard - if standard need to provide the year).
+def average_12_months (data, t0, calendar='standard', year=None):
+
+    if calendar == 'standard' and year is None:
+        print 'Error (average_12_months): must provide year'
+    if calendar in ['360-day', '360_day']:
+        days = None
+    else:
+        if calendar == 'noleap':
+            # Dummy year
+            year = 1979
+        days = np.array([days_per_month(n, year) for n in arange(1,12+1)])
+    return np.mean(data[t0:t0+12,...], axis=0, weights=days)
+
+    
+
         

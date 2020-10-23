@@ -12,7 +12,7 @@ from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d
 from ..plot_utils.colours import set_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels
@@ -21,6 +21,7 @@ from ..plot_latlon import latlon_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string
 from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages
+from ..postprocess import get_output_files
 
 
 # Global variables
@@ -666,6 +667,45 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)] + ['black']
     plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours)
 
+
+# Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
+def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
+
+    output_dir = real_dir(sim_dir) + 'output/'
+    fnames = get_output_files(output_dir)
+    file_paths = [output_dir + f for f in fnames]
+    grid = Grid(file_paths[0])
+    
+    # Get the mask for the region
+    if region.endswith('_front'):
+        # Ice shelf front
+        shelf = region[:region.index('_front')]
+        mask = grid.get_icefront_mask(shelf)
+    else:
+        mask = grid.get_region_mask(region)
+    if z0 is None:
+        # Choose default value for z0
+        if region.endswith('_front'):
+            # Doesn't matter, ice front will cut off most of it anyway
+            z0 = 0
+        if region in ['pine_island_bay', 'dotson_bay']:
+            # Approximate the thermocline
+            z0 = -500
+        else:
+            print 'Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'
+            sys.exit()
+    # Now make the mask 3D and cut off anything shallower than this
+    mask = mask_2d_to_3d(mask, grid, zmax=z0)
+    
+    # Read temperature and salinity data
+    # Trim before year_start
+    # Annually average
+    # Count the number of decades and set up that many colours
+    # Loop over years
+    # Choose colour
+    # Plot one point for each cell in the mask (iterate over the index somehow)
+    # Legend for decades
+    # Axes labels and title (include region, z0)
     
     
 

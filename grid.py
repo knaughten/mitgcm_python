@@ -12,7 +12,7 @@ import sys
 import os
 
 from file_io import read_netcdf, find_cmip6_files
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic
+from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d
 from constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -280,7 +280,7 @@ class Grid:
         open_ocean[self.get_ice_mask(gtype=gtype)] = 0
 
         return open_ocean
-
+    
     
     # Build and return a mask for a given region of the ocean. These points must be:
     # 1. within the lat/lon bounds of the given region,
@@ -310,7 +310,7 @@ class Grid:
             ice_mask = np.invert(ice_mask)
         mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
         # Now restrict based on lat-lon bounds
-        mask =  self.restrict_mask(mask, region, gtype=gtype)
+        mask = self.restrict_mask(mask, region, gtype=gtype)
 
         if include_iceberg and region=='sws_shelf':
             # Add grounded iceberg A23A to the mask
@@ -324,15 +324,7 @@ class Grid:
                 [zmin, zmax] = region_depth_bounds[region]
             except(KeyError):
                 pass
-            if zmin is None:
-                zmin = self.z[-1]
-            if zmax is None:
-                zmax = self.z[0]
-            mask = xy_to_xyz(mask, self)
-            # Make sure to mask out closed cells in 3D
-            mask *= self.hfac!=0
-            z_3d = z_to_xyz(self.z, self)
-            mask = mask*(z_3d >= zmin)*(z_3d <=zmax)
+            mask = mask_2d_to_3d(mask, self, zmin=zmin, zmax=zmax)
 
         return mask
 
@@ -403,7 +395,7 @@ class Grid:
 
 
     # Build and return a mask for the ice shelf front points of the given ice shelf.
-    def get_icefront_mask (self, shelf='all', gtype='t'):
+    def get_icefront_mask (self, shelf='all', gtype='t', is_3d=False):
 
         if shelf == 'filchner':
             shelf_use = 'fris'
@@ -415,7 +407,10 @@ class Grid:
             shelf_use = shelf
             [xmin, xmax, ymin, ymax] = [None, None, None, None]
         ice_mask = self.get_ice_mask(shelf=shelf_use, gtype=gtype)
-        return ice_shelf_front_points(self, ice_mask=ice_mask, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        mask = ice_shelf_front_points(self, ice_mask=ice_mask, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        if is_3d:
+            mask = mask_2d_to_3d(mask, self)
+        return mask
 
     
     # Build and return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
