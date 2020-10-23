@@ -441,10 +441,10 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         all_times.append(all_times[n0])
         # Plot in thicker colour
         if isinstance(colours, list):
-            # First replace any red in the colours array
-            if 'red' in colours:
-                colours[colours.index('red')] = (0.4, 0.4, 0.4)
-            colours.append('red')
+            # First replace any black in the colours array
+            if 'black' in colours:
+                colours[colours.index('black')] = (0.4, 0.4, 0.4)
+            colours.append('black')
         else:
             # Just generate new colours - they were automatic to begin with
             colours = default_colours(len(file_paths)+1)

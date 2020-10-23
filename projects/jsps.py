@@ -656,6 +656,16 @@ def plot_all_trends (sim_dir, fig_dir=None):
             fig_name = real_dir(fig_dir) + shelf + '_trends.png'
         melting_trends(shelf, sim_dir, fig_name=fig_name)
 
+
+# Call plot_timeseries_2y for the PACE ensemble, ensemble mean, and ERA5 using the right colours.
+def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fig_dir='./'):
+
+    num_ens = len(pace_dir)
+    sim_dir = [era5_dir] + pace_dir
+    sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)]
+    colours = ['red'] + [(0.4, 0.4, 0.4) for n in range(num_ens)]
+    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours)
+
     
     
 
