@@ -260,7 +260,7 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
 
 
 # Plot timeseries of 2-year running means of a bunch of variables for the given list of simulations.
-def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None, plot_anomaly=False, base_year_start=1920, base_year_end=1949, trim_before=True):
+def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None, plot_anomaly=False, base_year_start=1920, base_year_end=1949, trim_before=True, ismr_percent=True):
 
     from ..plot_1d import read_plot_timeseries_ensemble
 
@@ -279,7 +279,8 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
         vline = year_start
 
     for var_name in timeseries_types:
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        percent = ismr_percent and (var_name.endswith('melting') or var_name.endswith('massloss'))
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, percent=percent, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
@@ -659,13 +660,13 @@ def plot_all_trends (sim_dir, fig_dir=None):
 
 
 # Call plot_timeseries_2y for the PACE ensemble, ensemble mean, and ERA5 using the right colours.
-def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fig_dir='./'):
+def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, ismr_percent=True, fig_dir='./'):
 
     num_ens = len(pace_dir)
     sim_dir = [era5_dir] + pace_dir
     sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)]
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)] + ['black']
-    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours)
+    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, ismr_percent=ismr_percent, fig_dir=fig_dir, colours=colours)
 
 
 # Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
@@ -675,7 +676,7 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
     fnames = get_output_files(output_dir)
     file_paths = [output_dir + f for f in fnames]
     grid = Grid(file_paths[0])
-    
+
     # Get the mask for the region
     if region.endswith('_front'):
         # Ice shelf front
@@ -700,7 +701,7 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
         title += ', below ' + str(abs(z0)) + 'm'
     # Now make the mask 3D and cut off anything shallower than this
     mask = mask_2d_to_3d(mask, grid, zmax=z0)
-    
+
     # Read temperature and salinity data, annually averaged
     temp, years = read_annual_average('THETA', file_paths, return_years=True)
     salt = read_annual_average('SALT', file_paths)
@@ -715,7 +716,7 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
         if t % 10 == 0:
             num_decades += 1
     colours = choose_n_colours(num_decades)
-    
+
     # Set up plot
     fig, ax = plt.subplots(figsize=(12,8))
     # Loop over years

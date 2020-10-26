@@ -342,11 +342,11 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # plot_anomaly, base_year_start, base_year_end: will plot as an anomaly from the average over the given years
 # trim_before: if base_year_start is set, don't show any timeseries before that year
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False, plot_anomaly=False, base_year_start=None, base_year_end=None, trim_before=False):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False, plot_anomaly=False, base_year_start=None, base_year_end=None, trim_before=False, percent=False):
 
     if isinstance(var_name, str):
         var_name = [var_name]
-    if plot_anomaly and (base_year_start is None or base_year_end is None):
+    if (plot_anomaly or percent) and (base_year_start is None or base_year_end is None):
         print 'Error (read_plot_timeseries_ensemble): must set base_year_start and base_year_end'
         sys.exit()
 
@@ -374,11 +374,17 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                 else:
                     print 'Error (read_plot_timeseries_ensemble): invalid operator ' + operator
                     sys.exit()
-        if plot_anomaly:
+        if plot_anomaly or percent:
             # Find the time indices that define the baseline period
             t_start, t_end = index_period(time, base_year_start, base_year_end)
-            # Subtract the mean over that period
-            data -= np.mean(data[t_start:t_end])
+            # Calculate the mean over that period
+            data_mean = np.mean(data[t_start:t_end])
+            if plot_anomaly:
+                # Subtract the mean
+                data -= data_mean
+            if percent:
+                # Express as percentage of mean
+                data = data/data_mean*100
             if trim_before:
                 # Trim everything before the baseline period
                 data = data[t_start:]
@@ -419,6 +425,8 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     elif title is None or units is None:
         print 'Error (read_plot_timeseries_ensemble): must set title and units'
         sys.exit()
+    if percent:
+        units = '% of '+str(base_year_start)+'-'+str(base_year_end)+' mean'
     if plot_anomaly:
         title += ' \n(anomaly from '+str(base_year_start)+'-'+str(base_year_end)+' mean)'
     if colours is None:

@@ -753,7 +753,7 @@ def mask_2d_to_3d (mask, grid, zmin=None, zmax=None):
         zmax = self.z[0]
     mask = xy_to_xyz(mask, grid)
     # Mask out closed cells
-    mask *= self.hfac!=0
+    mask *= grid.hfac!=0
     # Mask out everything outside of depth bounds
     z_3d = z_to_xyz(grid.z, grid)
     mask *= (z_3d >= zmin)*(z_3d <= zmax)
