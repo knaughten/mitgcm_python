@@ -78,15 +78,22 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
-    # Boolean which will tell us whether we need a line at 0
+    # Booleans which will tell us whether we need a line at 0 or 100
     negative = False
     positive = False
+    lt_100 = False
+    gt_100 = False
     for data in datas:
         if np.amin(data) < 0:
             negative = True
         if np.amax(data) > 0:
             positive = True
+        if np.amin(data) < 100:
+            lt_100 = True
+        if np.amax(data) > 100:
+            gt_100 = True
     crosses_zero = negative and positive
+    crosses_100 = lt_100 and gt_100 and units[0] == '%'
     if not dates:
         if multi_time:
             start_time = times[0][0]
@@ -138,6 +145,9 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
     if crosses_zero:
         # Add a line at 0
         ax.axhline(color='black', linestyle='dashed')
+    if crosses_100:
+        # Add a line at 100%
+        ax.axhline(100, color='black', linestyle='dashed')
     if vline is not None:
         if dates:
             vline = datetime.date(vline, 1, 1)

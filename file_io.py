@@ -641,11 +641,13 @@ def read_annual_average (var_name, file_paths, return_years=False):
             t_start = 0
         # Loop over complete years
         for t in range(t_start, (time.size-t_start)/12*12, 12):
+            print time[t].year
             years.append(time[t].year)
             data_annual = update_data_annual(data, t, time[t].year, data_annual)
         if t+12 < time.size:
             # Read partial year from end
             data_tmp = data[t+12:,...]
+            print time[t+12].year
             years.append(time[t+12].year)
         else:
             # Reset
