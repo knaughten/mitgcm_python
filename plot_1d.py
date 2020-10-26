@@ -74,7 +74,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, thick_first=False, first_on_top=False, vline=None, return_fig=False):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, thick_first=False, first_on_top=False, vline=None, return_fig=False, year_ticks=year_ticks):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
@@ -154,6 +154,10 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
         ax.axvline(vline, color='black', linestyle='dashed')
     if not monthly:
         monthly_ticks(ax)
+    if year_ticks is not None:
+        if dates:
+            year_ticks = [datetime.date(y,1,1) for y in year_ticks]
+        ax.set_xticks(year_ticks)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=16)
     if not dates:
@@ -352,7 +356,7 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
 # plot_anomaly, base_year_start, base_year_end: will plot as an anomaly from the average over the given years
 # trim_before: if base_year_start is set, don't show any timeseries before that year
 
-def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False, plot_anomaly=False, base_year_start=None, base_year_end=None, trim_before=False, percent=False):
+def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomputed=False, grid=None, lon0=None, lat0=None, plot_mean=False, first_in_mean=True, annual_average=False, time_use=0, colours=None, linestyles=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, smooth=0, title=None, units=None, print_mean=False, operator='add', vline=None, alpha=False, plot_anomaly=False, base_year_start=None, base_year_end=None, trim_before=False, percent=False, year_ticks=year_ticks):
 
     if isinstance(var_name, str):
         var_name = [var_name]
@@ -481,4 +485,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         for data, sim in zip(all_datas, sim_names):
             print sim + ': ' + str(np.mean(data)) + ' ' + units
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=(plot_mean and not first_in_mean), vline=vline)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=(plot_mean and not first_in_mean), vline=vline, year_ticks=year_ticks)

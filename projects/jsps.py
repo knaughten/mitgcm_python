@@ -271,8 +271,10 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
     smooth = 12
     if hindcast:
         year_start = 1920
+        year_ticks = np.arange(1920, 2010+1, 10)
     else:
         year_start = 1979
+        year_ticks = np.arange(1980, 2010+1, 10)
     if trim_before:
         vline = None
     else:
@@ -280,7 +282,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
 
     for var_name in timeseries_types:
         percent = ismr_percent and (var_name.endswith('melting') or var_name.endswith('massloss'))
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, percent=percent, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, percent=percent, year_ticks=year_ticks, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
