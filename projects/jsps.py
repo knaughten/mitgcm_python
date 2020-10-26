@@ -683,37 +683,12 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
 
 
 # Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
-def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
+def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, smin=None, smax=None, tmin=None, tmax=None, multi_region=False, fig_name=None):
 
     output_dir = real_dir(sim_dir) + 'output/'
     fnames = get_output_files(output_dir)
     file_paths = [output_dir + f for f in fnames]
     grid = Grid(file_paths[0])
-
-    # Get the mask for the region
-    if region.endswith('_front'):
-        # Ice shelf front
-        shelf = region[:region.index('_front')]
-        mask = grid.get_icefront_mask(shelf)
-        title = region_names[shelf] + ' front'
-    else:
-        mask = grid.get_region_mask(region)
-        title = region_names[region]
-    if z0 is None:
-        # Choose default value for z0
-        if region.endswith('_front'):
-            # Doesn't matter, ice front will cut off most of it anyway
-            z0 = 0
-        if region in ['pine_island_bay', 'dotson_bay']:
-            # Approximate the thermocline
-            z0 = -500
-        else:
-            print 'Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'
-            z0 = 0
-    if z0 is not None and z0 != 0:
-        title += ', below ' + str(abs(z0)) + 'm'
-    # Now make the mask 3D and cut off anything shallower than this
-    mask = mask_2d_to_3d(mask, grid, zmax=z0)
 
     # Read temperature and salinity data, annually averaged
     temp, years = read_annual_average('THETA', file_paths, return_years=True)
@@ -730,24 +705,93 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
             num_decades += 1
     colours = choose_n_colours(num_decades)
 
-    # Set up plot
-    fig, ax = plt.subplots(figsize=(12,8))
-    # Loop over years
-    for t in range(years.size):
-        # Choose decade (to determine colour)
-        decade = (years[t]-years[0])/10
-        label = None
-        if years[t] % 10 == 0:
-            label = str(years[t]) + 's'
-        # Plot one point for each cell in the mask
-        for temp0, salt0 in zip(temp[t,mask], salt[t,mask]):
-            ax.plot(salt0, temp0, 'o', color=colours[decade], label=label)
-    # Finish the rest of the plot
-    ax.legend()
-    ax.set_xlabel('Salinity (psu)', fontsize=14)
-    ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=14)
-    ax.set_title(title, fontsize=22)
-    finished_plot(fig, fig_name=fig_name)
+# Check if it's only one region
+if multi_region:
+    num_region = len(region)
+    if smin is None:
+        smin = [None for n in range(num_region)]
+    if smax is None:
+        smax = [None for n in range(num_region)]
+    if tmin is None:
+        tmin = [None for n in range(num_region)]
+    if tmax is None:
+        tmax = [None for n in range(num_region)]
+    if z0 is None:
+        z0 = [None for n in range(num_region)]
+    if fig_name is None:
+        fig_name = [None for n in range(num_region)]
+else:
+    num_region = 1
+    region = [region]
+    smin = [smin]
+    smax = [smax]
+    tmin = [tmin]
+    tmax = [tmax]
+    z0 = [z0]
+    fig_name = [fig_name]
+
+    for n in range(num_region):
+        # Get the mask for the region
+        if region[n].endswith('_front'):
+            # Ice shelf front
+            shelf = region[n][:region[n].index('_front')]
+            mask = grid.get_icefront_mask(shelf)
+            title = region_names[shelf] + ' front'
+        else:
+            mask = grid.get_region_mask(region[n])
+            title = region_names[region[n]]
+        if z0[n] is None:
+            # Choose default value for z0
+            if region[n] in ['pine_island_bay', 'dotson_bay']:
+                # Approximate the thermocline
+                z0[n] = -500
+            else:
+                if not region[n].endswith('_front'):
+                    print 'Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'
+                z0[n] = 0
+        if z0[n] is not None and z0[n] != 0:
+            title += ', below ' + str(abs(z0[n])) + 'm'
+        # Now make the mask 3D and cut off anything shallower than this
+        mask = mask_2d_to_3d(mask, grid, zmax=z0[n])
+
+        # Set up plot
+        fig, ax = plt.subplots(figsize=(10,7))
+        # Loop over decades
+        for t in range(0, len(years), 10):
+            # Choose decade (to determine colour)
+            decade = (years[t]-years[0])/10
+            label = None
+            if years[t] % 10 == 0:
+                label = str(years[t]) + 's'
+            # Average over the decade
+            t_end = min(t+10, len(years))
+            temp_decade = np.mean(temp[t:t_end,:], axis=0)
+            salt_decade = np.mean(salt[t:t_end,:], axis=0)
+            # Plot one point for each cell in the mask
+            ax.plot(salt_decade[mask], temp_decade[mask], 'o', color=colours[decade], label=label, markersize=2)
+        # Finish the rest of the plot
+        ax.set_xlim([smin[n], smax[n]])
+        ax.set_ylim([tmin[n], tmax[n]])
+        ax.legend()
+        ax.set_xlabel('Salinity (psu)', fontsize=14)
+        ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=14)
+        ax.set_title(title, fontsize=20)
+        finished_plot(fig, fig_name=fig_name[n])
+
+
+# Call plot_ts_decades for 2 regions and every ensemble member.
+def plot_ts_decades (sim_dir, fig_dir='./'):
+
+    num_ens = len(sim_dir)
+    sim_names = ['ens'+str(n).zfill(2) for n in range(num_ens)]
+    regions = ['pine_island_bay', 'dotson_bay']
+    num_regions = len(regions)
+    smin = [34.45, None]
+    tmin = [-0.75, None]
+    fig_dir = real_dir(fig_dir)
+    for n in range(num_ens):
+        fig_name = [fig_dir+'ts_decades_'+r+'_'+sim_names[n]+'.png' for r in regions]
+        plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name
     
     
 

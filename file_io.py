@@ -654,7 +654,7 @@ def read_annual_average (var_name, file_paths, return_years=False):
             data_tmp = None
 
     if return_years:
-        return data_annual, np.array(years)
+        return data_annual, years
     else:
         return data_annual
 
