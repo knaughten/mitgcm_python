@@ -250,7 +250,7 @@ def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=No
 # Helper function to set colours automatically.
 def default_colours (n):
 
-    colours = ['black'] + plt.rcParams['axes.prop_cycle'].by_key()['color']
+    colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
     if n > len(colours):
         print 'Error (default_colours): must specify colours if there are more than ' + len(colours)
         sys.exit()

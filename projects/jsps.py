@@ -11,9 +11,9 @@ import datetime
 from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
-from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units
+from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d
-from ..plot_utils.colours import set_colours
+from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels
 from ..plot_1d import default_colours
@@ -681,8 +681,10 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
         # Ice shelf front
         shelf = region[:region.index('_front')]
         mask = grid.get_icefront_mask(shelf)
+        title = region_names[shelf] + ' front'
     else:
         mask = grid.get_region_mask(region)
+        title = region_names[region]
     if z0 is None:
         # Choose default value for z0
         if region.endswith('_front'):
@@ -693,19 +695,45 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, fig_name=None):
             z0 = -500
         else:
             print 'Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'
-            sys.exit()
+            z0 = 0
+    if z0 is not None and z0 != 0:
+        title += ', below ' + str(abs(z0)) + 'm'
     # Now make the mask 3D and cut off anything shallower than this
     mask = mask_2d_to_3d(mask, grid, zmax=z0)
     
-    # Read temperature and salinity data
+    # Read temperature and salinity data, annually averaged
+    temp, years = read_annual_average('THETA', file_paths, return_years=True)
+    salt = read_annual_average('SALT', file_paths)
     # Trim before year_start
-    # Annually average
+    t_start = years.index(year_start)
+    temp = temp[t_start:,:]
+    salt = salt[t_start:,:]
+    years = years[t_start:]
     # Count the number of decades and set up that many colours
+    num_decades = 0
+    for t in years:
+        if t % 10 == 0:
+            num_decades += 1
+    colours = choose_n_colours(num_decades)
+    
+    # Set up plot
+    fig, ax = plt.subplots(figsize=(12,8))
     # Loop over years
-    # Choose colour
-    # Plot one point for each cell in the mask (iterate over the index somehow)
-    # Legend for decades
-    # Axes labels and title (include region, z0)
+    for t in range(years.size):
+        # Choose decade (to determine colour)
+        decade = (years[t]-years[0])/10
+        label = None
+        if years[t] % 10 == 0:
+            label = str(years[t]) + 's'
+        # Plot one point for each cell in the mask
+        for temp0, salt0 in zip(temp[t,mask], salt[t,mask]):
+            ax.plot(salt0, temp0, 'o', color=colours[decade], label=label)
+    # Finish the rest of the plot
+    ax.legend()
+    ax.set_xlabel('Salinity (psu)', fontsize=14)
+    ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=14)
+    ax.set_title(title, fontsize=22)
+    finished_plot(fig, fig_name=fig_name)
     
     
 

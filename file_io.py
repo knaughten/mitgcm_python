@@ -609,7 +609,7 @@ def read_iceprod (file_path, time_index=None, t_start=None, t_end=None, time_ave
 
 
 # Calculate annual averages of the given variable in the given (chronological) list of files.
-def read_annual_average (var_name, file_paths):
+def read_annual_average (var_name, file_paths, return_years=False):
 
     # Inner function to calculate the average and save to data_annual
     def update_data_annual (data_read, t0, year, data_annual):
@@ -625,6 +625,7 @@ def read_annual_average (var_name, file_paths):
     # Now read all the data
     data_tmp = None
     data_annual = None
+    years = []
     for f in file_paths:
         time, units, calendar = netcdf_time(f, return_units=True)
         data = read_netcdf(f, var_name)
@@ -640,15 +641,20 @@ def read_annual_average (var_name, file_paths):
             t_start = 0
         # Loop over complete years
         for t in range(t_start, (time.size-t_start)/12*12, 12):
+            years.append(time[t].year)
             data_annual = update_data_annual(data, t, time[t].year, data_annual)
         if t+12 < time.size:
             # Read partial year from end
             data_tmp = data[t+12:,...]
+            years.append(time[t+12].year)
         else:
             # Reset
             data_tmp = None
 
-    return data_annual
+    if return_time:
+        return data_annual, np.array(time)
+    else:
+        return data_annual
 
 
             

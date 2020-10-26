@@ -253,3 +253,11 @@ def parula_cmap ():
      [0.9763, 0.9831, 0.0538]]
 
     return cl.LinearSegmentedColormap.from_list('parula', cm_data)
+
+
+# Evenly choose n colours from the 'jet' colourmap.
+def choose_n_colours (n):
+
+    cmap = plt.get_cmap('jet')
+    loc = np.linspace(0, 1, num=n)
+    return cmap(loc)
