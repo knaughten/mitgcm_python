@@ -771,8 +771,9 @@ def average_12_months (data, t0, calendar='standard', year=None):
         if calendar == 'noleap':
             # Dummy year
             year = 1979
-        days = np.array([days_per_month(n, year) for n in arange(1,12+1)])
-    return np.mean(data[t0:t0+12,...], axis=0, weights=days)
+        days = np.array([days_per_month(n, year) for n in np.arange(1,12+1)])
+    return np.ma.average(data[t0:t0+12,...], axis=0, weights=days)
+    
 
     
 
