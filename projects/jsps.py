@@ -666,6 +666,7 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
     sim_dir = [era5_dir] + pace_dir
     sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)]
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)] + ['black']
+    first_in_mean = False
     if ismr_percent or plot_anomaly:
         if era5_dir is not None:
             print 'Warning: removing ERA5'
@@ -673,7 +674,8 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
         sim_dir = sim_dir[1:]
         sim_names = sim_names[1:]
         colours = colours[1:]
-    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours, percent=ismr_percent, plot_anomaly=plot_anomaly)
+        first_in_mean = True
+    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=first_in_mean, fig_dir=fig_dir, colours=colours, ismr_percent=ismr_percent, plot_anomaly=plot_anomaly)
 
 
 # Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
