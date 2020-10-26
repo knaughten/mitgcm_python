@@ -705,30 +705,30 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, smin=None, smax=
             num_decades += 1
     colours = choose_n_colours(num_decades)
 
-# Check if it's only one region
-if multi_region:
-    num_region = len(region)
-    if smin is None:
-        smin = [None for n in range(num_region)]
-    if smax is None:
-        smax = [None for n in range(num_region)]
-    if tmin is None:
-        tmin = [None for n in range(num_region)]
-    if tmax is None:
-        tmax = [None for n in range(num_region)]
-    if z0 is None:
-        z0 = [None for n in range(num_region)]
-    if fig_name is None:
-        fig_name = [None for n in range(num_region)]
-else:
-    num_region = 1
-    region = [region]
-    smin = [smin]
-    smax = [smax]
-    tmin = [tmin]
-    tmax = [tmax]
-    z0 = [z0]
-    fig_name = [fig_name]
+    # Check if it's only one region
+    if multi_region:
+        num_region = len(region)
+        if smin is None:
+            smin = [None for n in range(num_region)]
+        if smax is None:
+            smax = [None for n in range(num_region)]
+        if tmin is None:
+            tmin = [None for n in range(num_region)]
+        if tmax is None:
+            tmax = [None for n in range(num_region)]
+        if z0 is None:
+            z0 = [None for n in range(num_region)]
+        if fig_name is None:
+            fig_name = [None for n in range(num_region)]
+    else:
+        num_region = 1
+        region = [region]
+        smin = [smin]
+        smax = [smax]
+        tmin = [tmin]
+        tmax = [tmax]
+        z0 = [z0]
+        fig_name = [fig_name]
 
     for n in range(num_region):
         # Get the mask for the region
