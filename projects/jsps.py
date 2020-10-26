@@ -780,10 +780,10 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, smin=None, smax=
 
 
 # Call plot_ts_decades for 2 regions and every ensemble member.
-def plot_ts_decades (sim_dir, fig_dir='./'):
+def plot_all_ts_decades (sim_dir, fig_dir='./'):
 
     num_ens = len(sim_dir)
-    sim_names = ['ens'+str(n).zfill(2) for n in range(num_ens)]
+    sim_names = ['ens'+str(n+1).zfill(2) for n in range(num_ens)]
     regions = ['pine_island_bay', 'dotson_bay']
     num_regions = len(regions)
     smin = [34.45, None]
