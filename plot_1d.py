@@ -384,11 +384,19 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                 else:
                     print 'Error (read_plot_timeseries_ensemble): invalid operator ' + operator
                     sys.exit()
-        if plot_anomaly or percent:
+        if plot_anomaly or percent or trim_before:
             # Find the time indices that define the baseline period
-            t_start, t_end = index_period(time, base_year_start, base_year_end)
-            # Calculate the mean over that period
-            data_mean = np.mean(data[t_start:t_end])
+            if time[0].year > base_year_start:
+                if (not plot_anomaly) and (not percent):
+                    # This is ok
+                    t_start = 0
+                else:
+                    print 'Error (read_plot_timeseries_ensemble): this simulation does not cover the baseline period'
+                    sys.exit()
+            else:
+                t_start, t_end = index_period(time, base_year_start, base_year_end)
+                # Calculate the mean over that period
+                data_mean = np.mean(data[t_start:t_end])
             if plot_anomaly:
                 # Subtract the mean
                 data -= data_mean
@@ -398,7 +406,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             if trim_before:
                 # Trim everything before the baseline period
                 data = data[t_start:]
-                time = time[t_start:]
+                time = time[t_start:]                
         all_times.append(time)
         all_datas.append(data)
     if time_use is None:

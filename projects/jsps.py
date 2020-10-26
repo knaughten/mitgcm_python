@@ -273,7 +273,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
         year_start = 1920
     else:
         year_start = 1979
-    if plot_anomaly:
+    if trim_before:
         vline = None
     else:
         vline = year_start
