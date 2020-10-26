@@ -660,13 +660,13 @@ def plot_all_trends (sim_dir, fig_dir=None):
 
 
 # Call plot_timeseries_2y for the PACE ensemble, ensemble mean, and ERA5 using the right colours.
-def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, ismr_percent=True, fig_dir='./'):
+def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fig_dir='./'):
 
     num_ens = len(pace_dir)
     sim_dir = [era5_dir] + pace_dir
     sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)]
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)] + ['black']
-    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, ismr_percent=ismr_percent, fig_dir=fig_dir, colours=colours)
+    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=False, fig_dir=fig_dir, colours=colours)
 
 
 # Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
