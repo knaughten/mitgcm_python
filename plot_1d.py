@@ -74,7 +74,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
 
 # Optional keyword arguments: as in make_timeseries_plot
 
-def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, thick_first=False, first_on_top=False, vline=None, return_fig=False, year_ticks=year_ticks):
+def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alphas=None, title='', units='', monthly=True, fig_name=None, dpi=None, legend_in_centre=False, legend_outside=True, dates=True, thick_last=False, thick_first=False, first_on_top=False, vline=None, return_fig=False, year_ticks=None):
 
     # Figure out if time is a list or a single array that applies to all timeseries
     multi_time = isinstance(times, list)
