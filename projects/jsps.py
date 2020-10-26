@@ -271,7 +271,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
     smooth = 12
     if hindcast:
         year_start = 1920
-        year_ticks = np.arange(1920, 2010+1, 10)
+        year_ticks = np.arange(1930, 2010+1, 10)
     else:
         year_start = 1979
         year_ticks = np.arange(1980, 2010+1, 10)
