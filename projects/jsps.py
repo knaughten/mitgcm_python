@@ -260,7 +260,7 @@ def ground_abbot (grid_path, bathy_file_in, draft_file_in, pload_file_in, bathy_
 
 
 # Plot timeseries of 2-year running means of a bunch of variables for the given list of simulations.
-def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None, plot_anomaly=False, base_year_start=1920, base_year_end=1949, trim_before=True, ismr_percent=True):
+def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=True, first_in_mean=False, fig_dir='./', hindcast=True, colours=None, plot_anomaly=False, base_year_start=1920, base_year_end=1949, base_year_start_first=None, trim_before=True, ismr_percent=True):
 
     from ..plot_1d import read_plot_timeseries_ensemble
 
@@ -282,7 +282,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
 
     for var_name in timeseries_types:
         percent = ismr_percent and (var_name.endswith('melting') or var_name.endswith('massloss'))
-        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, percent=percent, year_ticks=year_ticks, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
+        read_plot_timeseries_ensemble(var_name, timeseries_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=vline, time_use=None, alpha=(colours is None), plot_mean=plot_mean, first_in_mean=first_in_mean, plot_anomaly=plot_anomaly, base_year_start=base_year_start, base_year_end=base_year_end, trim_before=trim_before, base_year_start_first=base_year_start_first, percent=percent, year_ticks=year_ticks, fig_name=fig_dir+'timeseries_'+var_name+'_2y.png')
 
 
 # Try with pig_melting, thwaites_melting, dotson_crosson_melting, pine_island_bay_temp_bottom, dotson_bay_temp_bottom
@@ -669,6 +669,7 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
     sim_names = ['ERA5', 'PACE ensemble'] + [None for n in range(num_ens-1)]
     colours = ['red'] + [(0.6, 0.6, 0.6) for n in range(num_ens)] + ['black']
     first_in_mean = False
+    base_year_start_first = 1979
     if ismr_percent or plot_anomaly:
         if era5_dir is not None:
             print 'Warning: removing ERA5'
@@ -677,7 +678,8 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
         sim_names = sim_names[1:]
         colours = colours[1:]
         first_in_mean = True
-    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=first_in_mean, fig_dir=fig_dir, colours=colours, ismr_percent=ismr_percent, plot_anomaly=plot_anomaly)
+        base_year_start_first = None
+    plot_timeseries_2y(sim_dir, sim_names, timeseries_types=timeseries_types, plot_mean=True, first_in_mean=first_in_mean, fig_dir=fig_dir, colours=colours, ismr_percent=ismr_percent, plot_anomaly=plot_anomaly, base_year_start_first=base_year_start_first)
 
 
 # Plot a T/S diagram for a given (single) simulation and region, with each decade plotted in a different colour. You can restrict the depth to everything deeper than z0 (negative, in metres).
