@@ -650,6 +650,8 @@ def read_annual_average (var_name, file_paths):
             # Reset
             data_tmp = None
 
+    return data_annual
+
 
             
 
