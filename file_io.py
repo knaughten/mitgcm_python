@@ -611,9 +611,8 @@ def read_iceprod (file_path, time_index=None, t_start=None, t_end=None, time_ave
 # Calculate annual averages of the given variable in the given (chronological) list of files.
 def read_annual_average (var_name, file_paths):
 
-    data_annual = None
     # Inner function to calculate the average and save to data_annual
-    def update_data_annual (data_read, t0, year):
+    def update_data_annual (data_read, t0, year, data_annual):
         data_avg = average_12_months(data_read, t0, calendar=calendar, year=year)
         # Add a dummy time dimension
         data_avg = np.expand_dims(data_avg, axis=0)
@@ -621,30 +620,29 @@ def read_annual_average (var_name, file_paths):
             data_annual = data_avg
         else:
             data_annual = np.concatenate((data_annual, data_avg), axis=0)
+        return data_annual
 
     # Now read all the data
     data_tmp = None
+    data_annual = None
     for f in file_paths:
         time, units, calendar = netcdf_time(f, return_units=True)
         data = read_netcdf(f, var_name)
         if data_tmp is not None:
             # There is a partial year from last time - complete it
             num_months = 12-data_tmp.shape[0]
-            print 'Partial 2: 0 to '+str(num_months)
             data_tmp2 = data[:num_months,...]
             data_year = np.concatenate((data_tmp, data_tmp2), axis=0)
-            update_data_annual(data_year, 0, time[0].year)
+            data_annual = update_data_annual(data_year, 0, time[0].year, data_annual)
             t_start = num_months
         else:
             # This file starts at the beginning of a year
             t_start = 0
         # Loop over complete years
-        for t in range(t0_start, time.size/12*12, 12):
-            print str(t) + ' to ' + str(t+12)
-            update_data_annual(data, t, time[t].year)
+        for t in range(t_start, (time.size-t_start)/12*12, 12):
+            data_annual = update_data_annual(data, t, time[t].year, data_annual)
         if t+12 < time.size:
             # Read partial year from end
-            print 'Partial 1: '+str(t+12)+' to '+str(time.size)
             data_tmp = data[t+12:,...]
         else:
             # Reset
