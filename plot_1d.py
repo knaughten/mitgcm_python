@@ -94,15 +94,15 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
             gt_100 = True
     crosses_zero = negative and positive
     crosses_100 = lt_100 and gt_100 and units[0] == '%'
-    if not dates:
-        if multi_time:
-            start_time = times[0][0]
-            end_time = start_time
-            for time in times:
-                end_time = max(end_time, time[-1])
-        else:
-            start_time = times[0]
-            end_time = times[-1]
+    if multi_time:
+        start_time = times[0][0]
+        end_time = start_time
+        for time in times:
+            if time[-1] > end_time:
+                end_time = time[-1]
+    else:
+        start_time = times[0]
+        end_time = times[-1]
 
     plot_legend = labels is not None
     if labels is None:
@@ -133,13 +133,12 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
                 ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=len(datas))
             else:
                 ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i], zorder=len(datas))
-                ax.set_xlim(start_time, end_time)
         else:            
             if dates:
                 ax.plot_date(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i])
             else:
                 ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i])
-                ax.set_xlim(start_time, end_time)
+        ax.set_xlim(start_time, end_time)
 
     ax.grid(True)
     if crosses_zero:
