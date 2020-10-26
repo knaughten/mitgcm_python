@@ -791,7 +791,7 @@ def plot_ts_decades (sim_dir, fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     for n in range(num_ens):
         fig_name = [fig_dir+'ts_decades_'+r+'_'+sim_names[n]+'.png' for r in regions]
-        plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name
+        plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name)
     
     
 
