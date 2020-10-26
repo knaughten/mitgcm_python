@@ -473,4 +473,4 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         for data, sim in zip(all_datas, sim_names):
             print sim + ': ' + str(np.mean(data)) + ' ' + units
 
-    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=thick_first, vline=vline)
+    timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=(plot_mean and not first_in_mean), vline=vline)
