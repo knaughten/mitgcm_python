@@ -629,13 +629,13 @@ def read_annual_average (var_name, file_paths, return_years=False):
     for f in file_paths:
         time, units, calendar = netcdf_time(f, return_units=True)
         data = read_netcdf(f, var_name)
+        if time.size == 1:
+            # Single time record in this file: add a time dimension
+            data = np.expand_dims(data, axis=0)
         if data_tmp is not None:
             # There is a partial year from last time - complete it
             num_months = 12-data_tmp.shape[0]
             data_tmp2 = data[:num_months,...]
-            if num_months == 1:
-                # Preserve the time dimension of size 1
-                data_tmp2 = np.expand_dims(data_tmp2, axis=0)
             data_year = np.concatenate((data_tmp, data_tmp2), axis=0)
             data_annual = update_data_annual(data_year, 0, time[0].year, data_annual)
             t_start = num_months
@@ -650,9 +650,6 @@ def read_annual_average (var_name, file_paths, return_years=False):
         if t+12 < time.size:
             # Read partial year from end
             data_tmp = data[t+12:,...]
-            if t+12 == time.size-1:
-                # Preserve the time dimension of size 1
-                data_tmp = np.expand_dims(data_tmp, axis=0)
             print time[t+12].year
             years.append(time[t+12].year)
         else:
