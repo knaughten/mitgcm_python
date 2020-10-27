@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average
 from interpolation import interp_bilinear, neighbours, interp_to_depth
@@ -168,7 +168,7 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0.
+# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0, timeseries_avg_below_z0.
 def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None, z0=None):
 
     if var_name == 'RHO':
@@ -198,6 +198,15 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
                 data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
             # Volume average or integrate
             timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
+        elif option in ['below_z0']:
+            # 3D volume average below the given depth
+            # First make 2D mask 3D
+            if mask is None:
+                # Dummy mask
+                mask = np.ones([grid.ny, grid.nx]).astype(bool)
+            mask = mask_2d_to_3d(mask, grid, zmax=z0)
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+            timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
         elif option in ['bottom', 'z0']:
             # 2D area-average
             if option == 'bottom':
@@ -232,6 +241,11 @@ def timeseries_avg_bottom (file_path, var_name, grid, gtype='t', time_index=None
 # Same but area-averaged value over the given depth.
 def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     return timeseries_vol_3d('z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+
+
+# Same but volume-averaged value below the given depth.
+def timeseries_avg_below_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    return timeseries_vol_3d('below_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0) 
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -595,7 +609,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
         print 'Error (calc_timeseries): must specify point0 and point1'
         sys.exit()
-    elif option == 'delta_rho' and z0 is None:
+    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0'] and z0 is None:
         print 'Error (calc_timeseries): must specify z0'
         sys.exit()
     if var_name == 'RHO' and rho is None:
@@ -613,7 +627,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'min_depth', 'iso_depth']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'min_depth', 'iso_depth']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -685,6 +699,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_z0':
             values_tmp = timeseries_avg_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'avg_below_z0':
+            values_tmp = timeseries_avg_below_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'min_depth':
             values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'iso_depth':
@@ -801,6 +817,8 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_temp_min_depth': depth of temperature minimum averaged over the given region
 #      '*_depth_isotherm_*': depth of the given isotherm (end of string, such as -0.5 or 1.5 or 2) averaged over the given region (beginning of string). If there are multiple such isotherms in the water column, it will choose the deepest one.
 #      '*_uwind_avg': zonal wind averaged over the given region
+#      '*_temp_below_*': temperature volume-averaged below the given depth of the given region, eg pine_island_bay_temp_below_500m
+#      '*_salt_below_*': similar for salinity
 def set_parameters (var):
 
     var_name = None
@@ -1167,6 +1185,18 @@ def set_parameters (var):
         threshold = float(var[len(region+'_depth_isotherm_'):])
         title = 'Depth of ' + str(threshold) + deg_string + 'C isotherm in ' + region_names[region]
         units = deg_string+'C'
+    elif '_temp_below_' in var:
+        option = 'avg_below_z0'
+        var_name = 'THETA'
+        region = var[:var.index('_temp_below')]
+        z0 = -1*int(var[len(region+'_temp_below_'):-1])
+        title = 'Average temperature below '+str(-z0)+'m in '+region_names[region]+' ('+deg_string+'C)'
+    elif '_salt_below_' in var:
+        option = 'avg_below_z0'
+        var_name = 'SALT'
+        region = var[:var.index('_salt_below')]
+        z0 = -1*int(var[len(region+'_salt_below_'):-1])
+        title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]+' (psu)'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
