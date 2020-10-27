@@ -186,6 +186,12 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
+    if option == 'below_z0':
+        # Need to make mask 3D
+        if mask is None:
+            # Dummy mask
+            mask = np.ones([grid.ny, grid.nx]).astype(bool)
+        mask = mask_2d_to_3d(mask, grid, zmax=z0)
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
@@ -199,12 +205,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
             # Volume average or integrate
             timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
         elif option in ['below_z0']:
-            # 3D volume average below the given depth
-            # First make 2D mask 3D
-            if mask is None:
-                # Dummy mask
-                mask = np.ones([grid.ny, grid.nx]).astype(bool)
-            mask = mask_2d_to_3d(mask, grid, zmax=z0)
+            # 3D volume average below the given depth            
             data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
         elif option in ['bottom', 'z0']:
