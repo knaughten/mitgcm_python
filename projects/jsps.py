@@ -789,7 +789,7 @@ def plot_all_ts_decades (sim_dir, fig_dir='./'):
     smin = [34.45, None]
     tmin = [-0.75, None]
     fig_dir = real_dir(fig_dir)
-    for n in range(num_ens):
+    for n in range(6, num_ens):
         fig_name = [fig_dir+'ts_decades_'+r+'_'+sim_names[n]+'.png' for r in regions]
         plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name)
     

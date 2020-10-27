@@ -635,6 +635,9 @@ def read_annual_average (var_name, file_paths, return_years=False):
         if data_tmp is not None:
             # There is a partial year from last time - complete it
             num_months = 12-data_tmp.shape[0]
+            if data.shape[0] < num_months:
+                print 'Error (read_annual_average): '+f+' has only '+str(data.shape[0])+' time indices. This is too short. Concatenate it with the next one and re-run.'
+                sys.exit()
             data_tmp2 = data[:num_months,...]
             data_year = np.concatenate((data_tmp, data_tmp2), axis=0)
             data_annual = update_data_annual(data_year, 0, time[0].year, data_annual)
