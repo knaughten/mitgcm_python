@@ -205,7 +205,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
                 # Dummy mask
                 mask = np.ones([grid.ny, grid.nx]).astype(bool)
             mask = mask_2d_to_3d(mask, grid, zmax=z0)
-            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+            data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
         elif option in ['bottom', 'z0']:
             # 2D area-average
