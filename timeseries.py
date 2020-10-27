@@ -1190,13 +1190,15 @@ def set_parameters (var):
         var_name = 'THETA'
         region = var[:var.index('_temp_below')]
         z0 = -1*int(var[len(region+'_temp_below_'):-1])
-        title = 'Average temperature below '+str(-z0)+'m in '+region_names[region]+' ('+deg_string+'C)'
+        title = 'Average temperature below '+str(-z0)+'m in '+region_names[region]
+        units = deg_string+'C'
     elif '_salt_below_' in var:
         option = 'avg_below_z0'
         var_name = 'SALT'
         region = var[:var.index('_salt_below')]
         z0 = -1*int(var[len(region+'_salt_below_'):-1])
-        title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]+' (psu)'
+        title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]
+        units = 'psu'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
