@@ -843,6 +843,7 @@ def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_be
      ax.set_xlabel('Trend in '+wind_title+' ('+wind_units+'/decade)')
      ax.set_ylabel('Trend in '+temp_title+' ('+temp_units+'/decade)')
      ax.set_title('Temperature versus wind trends in PACE', fontsize=18)
+     ax.text(0.05, 0.95, str(r'r$^2$='+str(r_value**2)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
      if not_sig > 0:
          ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
      # Add legend
