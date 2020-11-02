@@ -530,7 +530,7 @@ def timeseries_select_depth (option, file_path, var_name, grid, val0=None, mask=
                     sys.exit()
         elif option == 'max_gradient':
             # Calculate the gradient in the variable over depth
-            ddata_dz = (data_tmp[1:] - data_tmp[:-1])/(grid.z[1:] - grid.z[:-1])
+            ddata_dz = (data_tmp[1:] - data_tmp[:-1])/np.abs(grid.z[1:] - grid.z[:-1])
             # Find depth index of the maximum value (note - not absolute value)
             k = np.argmax(ddata_dz)
             # Remember it's offset by 1
