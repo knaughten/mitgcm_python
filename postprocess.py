@@ -1315,7 +1315,7 @@ def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc
             grid = Grid(file_path)
         print 'Processing ' + file_path
         precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, grid=grid, time_average=time_average)
-        if len(loc) > 0:
+        if len(hovmoller_loc) > 0:
             precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)            
     
 
