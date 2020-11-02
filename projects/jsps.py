@@ -610,7 +610,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     year_end = 1949
     smooth = 12
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(8,4))
     ax.axhline()
     ax.axvline()
     not_sig = 0
@@ -651,7 +651,9 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
     ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
-    ax.legend()
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     ax.set_yticks([])
     ax.set_yticklabels([])
     ax.set_xlabel('Trend ('+units+'/decade)')
