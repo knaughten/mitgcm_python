@@ -15,7 +15,7 @@ from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
-from ..plot_utils.labels import reduce_cbar_labels
+from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
 from ..plot_1d import default_colours
 from ..plot_latlon import latlon_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string
@@ -843,7 +843,7 @@ def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_be
      ax.set_xlabel('Trend in '+wind_title+' ('+wind_units+'/decade)')
      ax.set_ylabel('Trend in '+temp_title+' ('+temp_units+'/decade)')
      ax.set_title('Temperature versus wind trends in PACE', fontsize=18)
-     ax.text(0.05, 0.95, str(r'r$^2$='+str(r_value**2)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
+     ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2,3))+'\np='+str(round_to_decimals(p_value,3)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
      if not_sig > 0:
          ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
      # Add legend
