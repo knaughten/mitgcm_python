@@ -265,7 +265,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
     from ..plot_1d import read_plot_timeseries_ensemble
 
     if timeseries_types is None:
-        timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'crosson_thwaites_hice_avg', 'thwaites_pig_hice_avg', 'pine_island_bay_temp_bottom', 'pine_island_bay_salt_bottom', 'dotson_bay_temp_bottom', 'dotson_bay_salt_bottom', 'pine_island_bay_temp_min_depth', 'dotson_bay_temp_min_depth', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
+        timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
     timeseries_file = 'timeseries.nc'
     timeseries_paths = [real_dir(d) + 'output/' + timeseries_file for d in sim_dir]
     smooth = 12
@@ -597,9 +597,8 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
             hovmoller_ensemble_tiles(loc, var, sim_dir, hovmoller_file=hovmoller_file, grid=grid, fig_name=fig_name)
 
 
-# Calculate the trends in ice shelf melting, and their significance, for the given ice shelf in each ensemble member.
-# "shelf" can be: abbot, cosgrove, dotson_crosson, getz, pig, thwaites, venable - or anything else that's in the timeseries file as *_melting.
-def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=None):
+# Calculate the trends in the given variable, and their significance, for the given ice shelf in each ensemble member.
+def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None):
 
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
@@ -614,8 +613,9 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
     ax.axhline()
     ax.axvline()
     not_sig = 0
+    title = read_title_units(file_paths[0], var)[0]
     for n in range(num_members):
-        data = read_netcdf(file_paths[n], shelf+'_melting')
+        data = read_netcdf(file_paths[n], var)
         time = netcdf_time(file_paths[n], monthly=False)
         # Express as percentage of mean over baseline
         t_start, t_end = index_period(time, year_start, year_end)
@@ -647,18 +647,18 @@ def melting_trends (shelf, sim_dir, timeseries_file='timeseries.nc', fig_name=No
     ax.legend()
     ax.set_yticklabels([])
     ax.set_xlabel('Trend (%/decade)')
-    ax.set_title('Trend in melting of '+region_names[shelf])
+    ax.set_title('Trend in '+title)
     finished_plot(fig, fig_name=fig_name)
 
 
-# Call for all ice shelves.
+# Call for a bunch of variables.
 def plot_all_trends (sim_dir, fig_dir=None):
-    for shelf in ['abbot', 'cosgrove', 'dotson_crosson', 'getz', 'pig', 'thwaites', 'venable']:
+    for var in ['abbot_melting', 'cosgrove_melting', 'dotson_crosson_melting', 'getz_melting', 'pig_melting', 'thwaites_melting', 'venable_melting', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg']:
         if fig_dir is None:
             fig_name = None
         else:
             fig_name = real_dir(fig_dir) + shelf + '_trends.png'
-        melting_trends(shelf, sim_dir, fig_name=fig_name)
+        ensemble_trends(shelf, sim_dir, fig_name=fig_name)
 
 
 # Call plot_timeseries_2y for the PACE ensemble, ensemble mean, and ERA5 using the right colours.
@@ -789,7 +789,7 @@ def plot_all_ts_decades (sim_dir, fig_dir='./'):
     smin = [34.45, None]
     tmin = [-0.75, None]
     fig_dir = real_dir(fig_dir)
-    for n in range(6, num_ens):
+    for n in range(num_ens):
         fig_name = [fig_dir+'ts_decades_'+r+'_'+sim_names[n]+'.png' for r in regions]
         plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name)
     

@@ -312,7 +312,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(num_time))
-    writer = animation.FFMpegWriter(bitrate=2000, fps=12)
+    writer = animation.FFMpegWriter(bitrate=2000, fps=24) #12)
     anim.save(mov_name, writer=writer)
     
 
@@ -1413,10 +1413,16 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             data_sim_smooth.append(data_smooth_tmp)
             if n == 0:
                 # Also save time arrays, but just the year since start
-                time.append([t.year-time_tmp[0].year for t in time_tmp])
-                time_smoothed.append([(t.year-time_tmp[0].year) for t in time_smooth_tmp])
-        data.append(data_sim)
-        data_smoothed.append(data_sim_smooth)
+                time.append(np.array([t.year-time_tmp[0].year for t in time_tmp]))
+                time_smoothed.append(np.array([(t.year-time_tmp[0].year) for t in time_smooth_tmp]))
+        data.append(np.ma.array(data_sim))
+        data_smoothed.append(np.ma.array(data_sim_smooth))
+    # Trim before threshold_year for Stage 1
+    '''for v in range(num_vars):
+        for n in range(num_sims):
+            if threshold_year[n] is not None:
+                data[v][n] = np.ma.masked_where(time[v] >= threshold_year[n], data[v][n])
+                data_smoothed[v][n] = np.ma.masked_where(time_smoothed[v] >= threshold_year[n], data_smoothed[v][n])'''
 
     # Calculate % decrease in mass loss over Stage 1.
     #for n in range(1,num_sims):
