@@ -638,19 +638,22 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
         # Multiply slope by 10 to get trend per decade
         slope *= 10
-        if slope > 0 and p_value < p0:
-            print sim_names[n] + ': positive ('+str(slope)+' %/decade)'
-        elif slope < 0 and p_value < p0:
-            print sim_names[n] + ': negative ('+str(slope)+' %/decade)'
-        elif p_value > p0:
-            print sim_names[n] + ': not significant'
-            not_sig += 1
-        elif slope == 0:
-            print sim_names[n] + ': somehow has slope 0?!'
+        #if slope > 0 and p_value < p0:
+            #print sim_names[n] + ': positive ('+str(slope)+' %/decade)'
+        #elif slope < 0 and p_value < p0:
+            #print sim_names[n] + ': negative ('+str(slope)+' %/decade)'
+        #elif p_value > p0:
+            #print sim_names[n] + ': not significant'
+            #not_sig += 1
+        #elif slope == 0:
+            #print sim_names[n] + ': somehow has slope 0?!'
         if p_value < p0:
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
-    ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
+        else:
+            not_sig += 1
+    if not_sig > 0:
+        ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
