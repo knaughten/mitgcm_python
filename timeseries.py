@@ -531,8 +531,8 @@ def timeseries_select_depth (option, file_path, var_name, grid, val0=None, mask=
         elif option == 'max_gradient':
             # Calculate the gradient in the variable over depth
             ddata_dz = (data_tmp[1:] - data_tmp[:-1])/(grid.z[1:] - grid.z[:-1])
-            # Find depth index of the maximum absolute value
-            k = np.argmax(np.abs(ddata_dz))
+            # Find depth index of the maximum value (note - not absolute value)
+            k = np.argmax(ddata_dz)
             # Remember it's offset by 1
             timeseries.append(grid.z[k+1])
         else:
@@ -583,7 +583,7 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 #          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
 #          'min_depth': calculates the depth of the minimum value area-averaged over the given region
 #          'iso_depth': calculates the depth of the given isoline (deepest instance, if there are several) area-averaged over the given region
-#          'max_gradient_depth': calculates the depth of the maximum absolute gradient of the given variable, area-averaged over the given region (eg the thermocline depth)
+#          'max_gradient_depth': calculates the depth of the maximum gradient of the given variable, area-averaged over the given region (eg the thermocline depth - as long as it's warmer underneath because this isn't the maximum absolute value).
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
