@@ -598,7 +598,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
 
 # Calculate the trends in the given variable, and their significance, for the given ice shelf in each ensemble member.
-def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None):
+def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
 
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
@@ -608,25 +608,32 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     # Years over which to calculate the baseline
     year_start = 1920
     year_end = 1949
+    smooth = 12
 
     fig, ax = plt.subplots()
     ax.axhline()
     ax.axvline()
     not_sig = 0
-    title = read_title_units(file_paths[0], var)[0]
+    title, units = read_title_units(file_paths[0], var)
     for n in range(num_members):
         data = read_netcdf(file_paths[n], var)
         time = netcdf_time(file_paths[n], monthly=False)
-        # Express as percentage of mean over baseline
-        t_start, t_end = index_period(time, year_start, year_end)
-        data_mean = np.mean(data[t_start:t_end])
-        data = data/data_mean*100
-        # Annual average to filter out seasonal cycle
-        # First trim to the nearest complete year
-        new_size = len(time)/12*12
-        time = time[:new_size]
-        data = data[:new_size]
-        time, data = calc_annual_averages(time, data)
+        if var.endswith('_melting') or var.endswith('_massloss'):
+            # Express as percentage of mean over baseline
+            t_start, t_end = index_period(time, year_start, year_end)
+            data_mean = np.mean(data[t_start:t_end])
+            data = data/data_mean*100
+            units = '%'
+        if option == 'smooth':
+            # 2-year running mean to filter out seasonal cycle
+            data = moving_average(data, smooth)
+        elif option == 'annual':
+            # Annual average to filter out seasonal cycle
+            # First trim to the nearest complete year
+            new_size = len(time)/12*12
+            time = time[:new_size]
+            data = data[:new_size]
+            time, data = calc_annual_averages(time, data)
         # Calculate trends
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
         # Multiply slope by 10 to get trend per decade
@@ -645,8 +652,9 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
     ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
     ax.legend()
+    ax.set_yticks([])
     ax.set_yticklabels([])
-    ax.set_xlabel('Trend (%/decade)')
+    ax.set_xlabel('Trend ('+units+'/decade)')
     ax.set_title('Trend in '+title)
     finished_plot(fig, fig_name=fig_name)
 
