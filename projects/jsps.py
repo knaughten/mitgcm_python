@@ -597,18 +597,48 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
             hovmoller_ensemble_tiles(loc, var, sim_dir, hovmoller_file=hovmoller_file, grid=grid, fig_name=fig_name)
 
 
-# Calculate the trends in the given variable, and their significance, for the given ice shelf in each ensemble member.
-def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
+# Read a variable and calculate the trend, with a bunch of options. Returns the trend per decade, and a boolean indicating whether or not the trend is significant.
+def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=12, p0=0.05):
+
+    data = read_netcdf(file_path, var)
+    time = read_netcdf(file_path, monthly=False)
+    if percent:
+        # Express as percentage of mean over baseline
+        t_start, t_end = index_period(time, year_start, year_end)
+        data_mean = np.mean(data[t_start:t_end])
+        data = data/data_mean*100
+    if option == 'smooth':
+        # 2-year running mean to filter out seasonal cycle
+        data = moving_average(data, smooth)
+    elif option == 'annual':
+        # Annual average to filter out seasonal cycle
+        # First trim to the nearest complete year
+        new_size = len(time)/12*12
+        time = time[:new_size]
+        data = data[:new_size]
+        time, data = calc_annual_averages(time, data)
+    # Calculate trends
+    slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
+    # Multiply slope by 10 to get trend per decade
+    slope *= 10
+    sig = p_value < p0
+    return slope, sig
+
+
+# Helper function to set some common variables for the ensemble members
+def setup_ensemble (sim_dir, timeseries_file='timeseries.nc'):
 
     num_members = len(sim_dir)
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+timeseries_file for d in sim_dir]
     colours = default_colours(num_members)
-    p0 = 0.05
-    # Years over which to calculate the baseline
-    year_start = 1920
-    year_end = 1949
-    smooth = 12
+    return num_members, sim_names, file_paths, colours
+
+
+# Calculate the trends in the given variable, and their significance, for the given ice shelf in each ensemble member.
+def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
+
+    num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
 
     fig, ax = plt.subplots(figsize=(8,4))
     ax.axhline()
@@ -616,38 +646,11 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     not_sig = 0
     title, units = read_title_units(file_paths[0], var)
     for n in range(num_members):
-        data = read_netcdf(file_paths[n], var)
-        time = netcdf_time(file_paths[n], monthly=False)
-        if var.endswith('_melting') or var.endswith('_massloss'):
-            # Express as percentage of mean over baseline
-            t_start, t_end = index_period(time, year_start, year_end)
-            data_mean = np.mean(data[t_start:t_end])
-            data = data/data_mean*100
+        percent = var.endswith('_melting') or var.endswith('_massloss')
+        if percent:
             units = '%'
-        if option == 'smooth':
-            # 2-year running mean to filter out seasonal cycle
-            data = moving_average(data, smooth)
-        elif option == 'annual':
-            # Annual average to filter out seasonal cycle
-            # First trim to the nearest complete year
-            new_size = len(time)/12*12
-            time = time[:new_size]
-            data = data[:new_size]
-            time, data = calc_annual_averages(time, data)
-        # Calculate trends
-        slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
-        # Multiply slope by 10 to get trend per decade
-        slope *= 10
-        #if slope > 0 and p_value < p0:
-            #print sim_names[n] + ': positive ('+str(slope)+' %/decade)'
-        #elif slope < 0 and p_value < p0:
-            #print sim_names[n] + ': negative ('+str(slope)+' %/decade)'
-        #elif p_value > p0:
-            #print sim_names[n] + ': not significant'
-            #not_sig += 1
-        #elif slope == 0:
-            #print sim_names[n] + ': somehow has slope 0?!'
-        if p_value < p0:
+        slope, sig = read_calc_trends(var, file_paths[n], option, percent=percent, year_start=year_start, year_end=year_end, smooth=smooth, p0=p0)
+        if sig:
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
         else:
@@ -805,6 +808,56 @@ def plot_all_ts_decades (sim_dir, fig_dir='./'):
     for n in range(num_ens):
         fig_name = [fig_dir+'ts_decades_'+r+'_'+sim_names[n]+'.png' for r in regions]
         plot_ts_decades(sim_dir[n], regions, smin=smin, tmin=tmin, multi_region=True, fig_name=fig_name)
+
+
+# Make a scatterplot of wind trends vs. temperature trends in the PACE ensemble.
+def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_below_500m', timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
+
+     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
+     wind_var = 'amundsen_shelf_break_uwind_avg'
+     wind_title, wind_units = read_title_units(file_paths[0], wind_var)
+     temp_title, temp_units = read_title_units(file_paths[0], temp_var)
+
+     fig, ax = plt.subplots(figsize=(10,6))
+     ax.axhline()
+     ax.axvline()
+     wind_trends = []
+     temp_trends = []
+     not_sig = 0
+     for n in range(num_members):
+         wind_slope, wind_sig = read_calc_trends(wind_var, file_paths[n], option)
+         temp_slope, temp_sig = read_calc_trends(temp_var, file_paths[n], option)
+         if wind_sig and temp_sig:
+             # Plot, and save trends for line of best fit later
+             ax.plot(wind_slope, temp_slope, 'o', color=colours[n], label=sim_names[n])
+             wind_trends.append(wind_slope)
+             temp_trends.append(temp_slope)
+         else:
+             not_sig += 1
+     # Add line of best fit
+     slope, intercept, r_value, p_value, std_err = linregress(np.array(wind_trends), np.array(temp_trends))
+     [x0, x1] = ax.get_xlim()
+     [y0, y1] = slope*np.array([x0, x1]) + intercept
+     ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+     # Add titles
+     ax.set_xlabel('Trend in '+wind_title+' ('+wind_units+'/decade)')
+     ax.set_ylabel('Trend in '+temp_title+' ('+temp_units+'/decade)')
+     ax.set_title('Temperature versus wind trends in PACE', fontsize=18)
+     if not_sig > 0:
+         ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
+     # Add legend
+     box = ax.get_position()
+     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+     finished_plot(fig, fig_name=fig_name)
+     
+        
+    
+             
+            
+
+    
+
     
 
 
