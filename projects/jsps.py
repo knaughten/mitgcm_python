@@ -836,14 +836,19 @@ def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_be
              not_sig += 1
      # Add line of best fit
      slope, intercept, r_value, p_value, std_err = linregress(np.array(wind_trends), np.array(temp_trends))
-     [x0, x1] = ax.get_xlim()
-     [y0, y1] = slope*np.array([x0, x1]) + intercept
-     ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+     if p_value < 0.05:
+         [x0, x1] = ax.get_xlim()
+         [y0, y1] = slope*np.array([x0, x1]) + intercept
+         ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+         trend_title = 'r$^2$='+str(round_to_decimals(r_value**2,3))
+     else:
+         trend_title = 'no significant relationship'
+     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
      # Add titles
      ax.set_xlabel('Trend in '+wind_title+' ('+wind_units+'/decade)')
      ax.set_ylabel('Trend in '+temp_title+' ('+temp_units+'/decade)')
      ax.set_title('Temperature versus wind trends in PACE', fontsize=18)
-     ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2,3))+'\np='+str(round_to_decimals(p_value,3)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
+     
      if not_sig > 0:
          ax.text(0.95, 0.05, str(not_sig)+' members had\nno significant trend', ha='right', va='bottom', fontsize=12, transform=ax.transAxes)
      # Add legend
