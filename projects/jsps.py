@@ -657,8 +657,8 @@ def plot_all_trends (sim_dir, fig_dir=None):
         if fig_dir is None:
             fig_name = None
         else:
-            fig_name = real_dir(fig_dir) + shelf + '_trends.png'
-        ensemble_trends(shelf, sim_dir, fig_name=fig_name)
+            fig_name = real_dir(fig_dir) + var + '_trends.png'
+        ensemble_trends(var, sim_dir, fig_name=fig_name)
 
 
 # Call plot_timeseries_2y for the PACE ensemble, ensemble mean, and ERA5 using the right colours.
