@@ -527,7 +527,14 @@ def timeseries_select_depth (option, file_path, var_name, grid, val0=None, mask=
                 # Make sure we found it
                 if len(timeseries) != t+1:
                     print 'Error (timeseries_select_depth): did not find isotherm'
-                    sys.exit()                
+                    sys.exit()
+        elif option == 'max_gradient':
+            # Calculate the gradient in the variable over depth
+            ddata_dz = (data_tmp[1:] - data_tmp[:-1])/(grid.z[1:] - grid.z[:-1])
+            # Find depth index of the maximum absolute value
+            k = np.argmax(np.abs(ddata_dz))
+            # Remember it's offset by 1
+            timeseries.append(grid.z[k+1])
         else:
             print 'Error (timeseries_select_depth): invalid option ' + option
             sys.exit()
@@ -546,6 +553,11 @@ def timeseries_min_depth (file_path, var_name, grid, mask=None, gtype='t', time_
 # Calculate the depth of the given isoline for the given variable (the deepest such isoline, if there are several)
 def timeseries_iso_depth (file_path, var_name, val0, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
     return timeseries_select_depth('iso', file_path, var_name, grid, val0=val0, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+
+
+# Calculate the depth of the maximum gradient of the given variable. Useful for thermoclines, etc.
+def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+    return timeseries_select_depth('max_gradient', file_path, var_name, grid, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
 
 # Calculate timeseries from one or more files.
@@ -571,6 +583,7 @@ def timeseries_iso_depth (file_path, var_name, val0, grid, mask=None, gtype='t',
 #          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
 #          'min_depth': calculates the depth of the minimum value area-averaged over the given region
 #          'iso_depth': calculates the depth of the given isoline (deepest instance, if there are several) area-averaged over the given region
+#          'max_gradient_depth': calculates the depth of the maximum absolute gradient of the given variable, area-averaged over the given region (eg the thermocline depth)
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -628,7 +641,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'min_depth', 'iso_depth']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'min_depth', 'iso_depth', 'max_gradient_depth']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -706,6 +719,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'iso_depth':
             values_tmp = timeseries_iso_depth(fname, var_name, threshold, grid, mask=mask, time_average=time_average)
+        elif option == 'max_gradient_depth':
+            values_tmp = timeseries_max_gradient_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         if not (option == 'ismr' and mass_balance):
             values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
@@ -1200,6 +1215,12 @@ def set_parameters (var):
         z0 = -1*int(var[len(region+'_salt_below_'):-1])
         title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]
         units = 'psu'
+    elif '_thermocline' in var:
+        option = 'max_gradient_depth'
+        var_name = 'THETA'
+        region = var[:var.index('_thermocline')]
+        title = 'Thermocline depth in '+region_names[region]
+        units = 'm'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
