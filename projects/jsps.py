@@ -601,7 +601,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=12, p0=0.05):
 
     data = read_netcdf(file_path, var)
-    time = read_netcdf(file_path, monthly=False)
+    time = netcdf_time(file_path, monthly=False)
     if percent:
         # Express as percentage of mean over baseline
         t_start, t_end = index_period(time, year_start, year_end)
