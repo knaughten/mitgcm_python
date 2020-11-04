@@ -635,7 +635,7 @@ def setup_ensemble (sim_dir, timeseries_file='timeseries.nc'):
     return num_members, sim_names, file_paths, colours
 
 
-# Calculate the trends in the given variable, and their significance, for the given ice shelf in each ensemble member.
+# Calculate the trends in the given variable, and their significance, for the given variable in each ensemble member.
 def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
@@ -649,7 +649,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
         percent = var.endswith('_melting') or var.endswith('_massloss')
         if percent:
             units = '%'
-        slope, sig = read_calc_trends(var, file_paths[n], option, percent=percent, year_start=year_start, year_end=year_end, smooth=smooth, p0=p0)
+        slope, sig = read_calc_trends(var, file_paths[n], option, percent=percent)
         if sig:
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
