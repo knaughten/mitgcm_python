@@ -650,7 +650,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
         if percent:
             units = '%'
         slope, sig = read_calc_trends(var, file_paths[n], option, percent=percent)
-        if sig:
+        if True: #sig:
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
         else:
