@@ -638,6 +638,8 @@ def setup_ensemble (sim_dir, timeseries_file='timeseries.nc'):
 # Calculate the trends in the given variable, and their significance, for the given variable in each ensemble member.
 def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=None, option='smooth'):
 
+    from scipy.stats import ttest_1samp
+
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
 
     fig, ax = plt.subplots(figsize=(8,4))
@@ -645,6 +647,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     ax.axvline()
     not_sig = 0
     title, units = read_title_units(file_paths[0], var)
+    values = []
     for n in range(num_members):
         percent = var.endswith('_melting') or var.endswith('_massloss')
         if percent:
@@ -653,6 +656,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
         if True: #sig:
             # Add to plot
             ax.plot(slope, 0, 'o', color=colours[n], label=sim_names[n])
+            values.append(slope)
         else:
             not_sig += 1
     if not_sig > 0:
@@ -665,6 +669,8 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     ax.set_xlabel('Trend ('+units+'/decade)')
     ax.set_title('Trend in '+title)
     finished_plot(fig, fig_name=fig_name)
+    t_val, p_val = ttest_1samp(values, 0)
+    print 't-value='+str(t_val)+', p-value='+str(p_val)
 
 
 # Call for a bunch of variables.
