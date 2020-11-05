@@ -670,7 +670,8 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     ax.set_title('Trend in '+title)
     finished_plot(fig, fig_name=fig_name)
     t_val, p_val = ttest_1samp(values, 0)
-    print 't-value='+str(t_val)+', p-value='+str(p_val)
+    confidence = (1-p_val)*100
+    print 'Confidence trend is nonzero: '+str(confidence)+'%'
 
 
 # Call for a bunch of variables.
