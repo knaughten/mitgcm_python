@@ -870,6 +870,8 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
     smooth = 12
+    base_year_start = 1920
+    base_year_end = 1949
     fig_dir = real_dir(fig_dir)
 
     all_wind = None
@@ -879,9 +881,12 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
         time = netcdf_time(file_paths[n], monthly=False)
         ismr = read_netcdf(file_paths[n], shelf+'_melting')
         wind = read_netcdf(file_paths[n], 'amundsen_shelf_break_uwind_avg')
-        # Take anomalies from mean
-        ismr -= np.mean(ismr)
-        wind -= np.mean(wind)
+        # Take anomalies from 1920-1949 mean
+        t_start, t_end = index_period(time, base_year_start, base_year_end)
+        ismr_mean = np.mean(ismr[t_start:t_end])
+        ismr -= ismr_mean
+        wind_mean = np.mean(wind[t_start:t_end])
+        wind -= wind_mean
         # Calculate 2 year running means of both timeseries
         ismr, time = moving_average(ismr, smooth, time=time)
         wind = moving_average(wind, smooth)
