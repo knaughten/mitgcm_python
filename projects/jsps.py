@@ -16,9 +16,9 @@ from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, 
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
-from ..plot_1d import default_colours
+from ..plot_1d import default_colours, make_timeseries_plot_2sided
 from ..plot_latlon import latlon_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day
 from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages
 from ..postprocess import get_output_files
@@ -863,7 +863,57 @@ def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_be
      ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
      ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
      finished_plot(fig, fig_name=fig_name)
-     
+
+
+# Test the correlation between the time-integral of winds at the shelf break and melt rate anomalies for the given ice shelf. Plot one two-sided timeseries for each ensemble member, and then a big scatterplot showing the correlation.
+def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_dir='./'):
+
+    num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
+    smooth = 12
+    base_year_start = 1920
+    base_year_end = 1949
+    fig_dir = real_dir(fig_dir)
+
+    all_wind = None
+    all_ismr = None
+    for n in range(num_members):
+        # Read timeseries
+        time = netcdf_time(file_paths[n], monthly=False)
+        ismr = read_netcdf(shelf+'_melting', file_paths[n])
+        wind = read_netcdf('amundsen_shelf_break_uwind_avg', file_paths[n])
+        # Take ismr anomaly from 1920-1949 mean
+        t_start, t_end = index_period(time, base_year_start, base_year_end)
+        ismr_mean = np.mean(ismr[t_start:t_end])
+        ismr -= ismr_mean
+        # Calculate 2 year running means of both timeseries
+        ismr, time = moving_average(ismr, smooth, time=time)
+        wind = moving_average(wind, smooth)
+        # Now take time-integral of wind
+        dt = 365./12*sec_per_day  # Assume constant month length, no leap years
+        wind = np.cumsum(wind*dt)
+        # Plot with twin y-axes
+        make_timeseries_plot_2sided(time, wind, ismr, 'PACE '+str(n+1).zfill(2), 'time-integral of shelf break winds (m)', 'melt rate anomaly of '+region_names[shelf]+' (m/y)', fig_name=fig_dir+'wind_'+shelf+'_ens'+str(n+1).zfill(2)+'.png')
+        # Save to long arrays for correlation later
+        if all_wind is None:
+            all_wind = wind
+            all_ismr = ismr
+        else:
+            all_wind = np.concatenate((all_wind, wind), axis=0)
+            all_ismr = np.concatenate((all_ismr, ismr), axis=0)
+    # Now make the scatterplot
+    fig, ax = plt.subplots(figsize=(10,6))
+    ax.axhline()
+    ax.axvline()
+    ax.plot(all_wind, all_ismr, 'o', color='blue')
+    ax.set_xlabel('time-integral of shelf break winds (m)', fontsize=12)
+    ax.set_ylabel('melt rate anomaly of '+region_names[shelf]+' (m/y)')
+    # Add line of best fit
+    slope, intercept, r_value, p_value, std_err = linregress(np.array(all_wind), np.array(all_ismr))
+    [x0, x1] = ax.get_xlim()
+    [y0, y1] = slope*np.array([x0, x1]) + intercept
+    ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+    ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2,3))+'\np='+str(round_to_decimals(p_value,3)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
+    finished_plot(fig, fig_name=fig_dir+'wind_'+shelf+'_scatterplot.png')
         
     
              
