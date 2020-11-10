@@ -58,6 +58,13 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
     ax2.get_yaxis().get_major_formatter().set_useOffset(False)
     ax2.set_ylabel(units2, color='red', fontsize=16)
     ax2.tick_params(axis='y', labelcolor='red')
+    if np.amin(data1) < 0 and np.amax(data1) > 0 and np.amin(data2) < 0 and np.amax(data2) > 0:
+        # Both timeseries cross 0. Line them up there.
+        val1 = max(-np.amin(data1), np.amax(data1))
+        val2 = max(-np.amin(data2), np.amax(data2))
+        ax1.set_ylim([-val1, val1])
+        ax2.set_ylim([-val2, val2])
+        ax1.hline(color='black')
     plt.title(title, fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=dpi)        
 

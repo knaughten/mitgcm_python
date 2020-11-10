@@ -879,12 +879,14 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
     for n in range(num_members):
         # Read timeseries
         time = netcdf_time(file_paths[n], monthly=False)
-        ismr = read_netcdf(shelf+'_melting', file_paths[n])
-        wind = read_netcdf('amundsen_shelf_break_uwind_avg', file_paths[n])
-        # Take ismr anomaly from 1920-1949 mean
+        ismr = read_netcdf(file_paths[n], shelf+'_melting')
+        wind = read_netcdf(file_paths[n], 'amundsen_shelf_break_uwind_avg')
+        # Take anomalies from 1920-1949 mean
         t_start, t_end = index_period(time, base_year_start, base_year_end)
         ismr_mean = np.mean(ismr[t_start:t_end])
         ismr -= ismr_mean
+        wind_mean = np.mean(wind[t_start:t_end])
+        wind -= wind_mean
         # Calculate 2 year running means of both timeseries
         ismr, time = moving_average(ismr, smooth, time=time)
         wind = moving_average(wind, smooth)
@@ -892,7 +894,7 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
         dt = 365./12*sec_per_day  # Assume constant month length, no leap years
         wind = np.cumsum(wind*dt)
         # Plot with twin y-axes
-        make_timeseries_plot_2sided(time, wind, ismr, 'PACE '+str(n+1).zfill(2), 'time-integral of shelf break winds (m)', 'melt rate anomaly of '+region_names[shelf]+' (m/y)', fig_name=fig_dir+'wind_'+shelf+'_ens'+str(n+1).zfill(2)+'.png')
+        make_timeseries_plot_2sided(time, wind, ismr, 'PACE '+str(n+1).zfill(2), 'time-integral of shelf break winds (m)', region_names[shelf]+' melt rate (m/y)', fig_name=fig_dir+'wind_'+shelf+'_ens'+str(n+1).zfill(2)+'.png')
         # Save to long arrays for correlation later
         if all_wind is None:
             all_wind = wind
@@ -902,17 +904,17 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
             all_ismr = np.concatenate((all_ismr, ismr), axis=0)
     # Now make the scatterplot
     fig, ax = plt.subplots(figsize=(10,6))
-    ax.axhline()
-    ax.axvline()
-    ax.plot(all_wind, all_ismr, 'o', color='blue')
+    ax.axhline(color='black')
+    ax.axvline(color='black')
+    ax.plot(all_wind, all_ismr, 'o', color='blue', markersize=2)
     ax.set_xlabel('time-integral of shelf break winds (m)', fontsize=12)
-    ax.set_ylabel('melt rate anomaly of '+region_names[shelf]+' (m/y)')
+    ax.set_ylabel('melt rate anomaly of '+region_names[shelf]+' (m/y)', fontsize=12)
     # Add line of best fit
     slope, intercept, r_value, p_value, std_err = linregress(np.array(all_wind), np.array(all_ismr))
     [x0, x1] = ax.get_xlim()
     [y0, y1] = slope*np.array([x0, x1]) + intercept
-    ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
-    ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2,3))+'\np='+str(round_to_decimals(p_value,3)), ha='left', va='top', fontsize=12, transform=ax.transAxes)
+    ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1)
+    ax.text(0.05, 0.95, 'r$^2$='+str(r_value**2), ha='left', va='top', fontsize=12, transform=ax.transAxes)
     finished_plot(fig, fig_name=fig_dir+'wind_'+shelf+'_scatterplot.png')
         
     
