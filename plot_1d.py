@@ -64,7 +64,7 @@ def make_timeseries_plot_2sided (time, data1, data2, title, units1, units2, mont
         val2 = max(-np.amin(data2), np.amax(data2))
         ax1.set_ylim([-val1, val1])
         ax2.set_ylim([-val2, val2])
-        ax1.hline(color='black')
+        ax1.axhline(color='black')
     plt.title(title, fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=dpi)        
 
