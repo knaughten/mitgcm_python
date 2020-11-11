@@ -887,6 +887,10 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
         ismr -= ismr_mean
         wind_mean = np.mean(wind[t_start:t_end])
         wind -= wind_mean
+        # Trim the spinup
+        ismr = ismr[t_start:]
+        wind = wind[t_start:]
+        time = time[t_start:]
         # Calculate 2 year running means of both timeseries
         ismr, time = moving_average(ismr, smooth, time=time)
         wind = moving_average(wind, smooth)
@@ -916,6 +920,70 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
     ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1)
     ax.text(0.05, 0.95, 'r$^2$='+str(r_value**2), ha='left', va='top', fontsize=12, transform=ax.transAxes)
     finished_plot(fig, fig_name=fig_dir+'wind_'+shelf+'_scatterplot.png')
+
+
+# Find the best number of years to use for a moving average, such that the correlation between time-integrated winds and melt rates (both anomalies from their given moving average) is maximised.
+def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
+
+    num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
+    fig_dir = real_dir(fig_dir)
+    smooth_short = 12
+    year0 = 1920
+    test_smooth = range(5, 50+1)
+    num_tests = test_smooth.size
+
+    r2 = np.empty(num_tests)
+    for m in range(num_tests):
+        all_wind = None
+        all_ismr = None
+        for n in range(num_members):
+            # Read timeseries
+            time = netcdf_time(file_paths[n], monthly=False)
+            ismr = read_netcdf(file_paths[n], shelf+'_melting')
+            wind = read_netcdf(file_paths[n], 'amundsen_shelf_break_uwind_avg')
+            t_start = index_year_start(time, year0)
+            # Calculate long-term running mean
+            smooth_long = test_smooth[m]*12/2
+            ismr_tmp = moving_average(ismr, smooth_long)
+            wind_tmp = moving_average(wind, smooth_long)
+            # Pad to be the same size as the original arrays
+            def pad_array (A):
+                A_pad = np.empty(ismr.size)
+                A_pad[:smooth_long] = A[0]
+                A_pad[smooth_long:-smooth_long] = A
+                A_pad[-smooth_long:] = A[-1]
+                return A_pad
+            ismr_avg = pad_array(ismr_tmp)
+            wind_avg = pad_array(wind_tmp)
+            # Now get the anomaly from the moving average
+            ismr_anom = ismr - ismr_avg
+            wind_anom = wind - wind_avg
+            # Trim the spinup
+            ismr_anom = ismr_anom[t_start:]
+            wind_anom = wind_anom[t_start:]
+            # Calculate 2-year running means of both timeseries
+            ismr_anom = moving_average(ismr_anom, smooth_short)
+            wind_anom = moving_average(wind_anom, smooth_short)
+            # Now take time-integral of wind
+            dt = 365./12*sec_per_day
+            wind_anom = np.cumsum(wind_anom*dt)
+            # Save to long arrays for correlation
+            if all_wind is None:
+                all_wind = wind_anom
+                all_ismr = ismr_anom
+            else:
+                all_wind = np.concatenate((all_wind, wind_anom), axis=0)
+                all_ismr = np.concatenate((all_ismr, ismr_anom), axis=0)
+        # Calculate correlation
+        slope, intercept, r_value, p_value, std_err = linregress(np.array(all_wind), np.array(all_ismr))
+        r2[m] = r_value**2
+        print 'Timescale of '+str(test_smooth[m])+' years gives r^2='+str(r2[m])
+    m0 = np.argmax(r2)
+    print 'Best correlation is with timescale of '+str(test_smooth[m0])+' years: r^2='+str(r2[m0])
+
+    
+
+    
         
     
              
