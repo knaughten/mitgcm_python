@@ -10,8 +10,8 @@ from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
-from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average
-from interpolation import interp_bilinear, neighbours, interp_to_depth
+from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
+from interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
 from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst
 
 
@@ -560,7 +560,41 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
     return timeseries_select_depth('max_gradient', file_path, var_name, grid, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
 
-# Calculate timeseries from one or more files.
+# Calculate the southward heat transport, integrated over the given region and between the bounds 500-1500 m. (This is a placeholder until we have ADVy_TH in the diagnostics for the new ensemble. I'll write something more general later.)
+def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    zmin = -1500
+    zmax = -500
+
+    # Read temperature and v-velocity
+    temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    v = read_netcdf(file_path, 'VVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    
+    # Loop over timesteps
+    timeseries = []    
+    for t in range(temp.shape[0]):
+        # Interpolate temperature to v-grid
+        temp_v = interp_grid(temp[t,:], grid, 't', 'v', mask=False)
+        # Get integrands in 3D
+        dA = xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)
+        # Calculate southward heat flux
+        q = -temp_v*v[t,:]*dA
+        # Take difference, and pad northernmost row
+        adv_t = np.empty(q_s.shape)
+        adv_t[:,:-1,:] = q_s[:,1:,:] - q_s[:,:-1,:]
+        adv_t[:,-1,:] = adv_t_s[:,-2,:]
+        # Apply mask
+        adv_t = mask_3d(adv_t, grid, gtype='v')
+        if mask is not None:
+            adv_t = apply_mask(adv_t, np.invert(mask), depth_dependent=True)
+        # Mask depth bounds
+        z_3d = z_to_xyz(grid.z, grid)
+        adv_t = np.ma.masked_where(z_3d < zmin, adv_t)
+        adv_t = np.ma.masked_where(z_3d > zmax, adv_t)
+        # Volume-integrate
+        timeseries.append(volume_integral(adv_t, grid, gtype='v'))
+    return np.array(timeseries)
+                
 
 # Arguments:
 # file_path: either a single filename or a list of filenames
@@ -611,7 +645,7 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho', 'adv_heat_s'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
@@ -641,7 +675,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'min_depth', 'iso_depth', 'max_gradient_depth']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'adv_heat_s']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -721,6 +755,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_iso_depth(fname, var_name, threshold, grid, mask=mask, time_average=time_average)
         elif option == 'max_gradient_depth':
             values_tmp = timeseries_max_gradient_depth(fname, var_name, grid, mask=mask, time_average=time_average)
+        elif option == 'adv_heat_s':
+            values_tmp = timeseries_adv_heat_s(fname, grid, mask=mask, time_average=time_average)
         if not (option == 'ismr' and mass_balance):
             values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
@@ -1215,12 +1251,17 @@ def set_parameters (var):
         z0 = -1*int(var[len(region+'_salt_below_'):-1])
         title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]
         units = 'psu'
-    elif '_thermocline' in var:
+    elif var.endswith('_thermocline'):
         option = 'max_gradient_depth'
         var_name = 'THETA'
         region = var[:var.index('_thermocline')]
         title = 'Thermocline depth in '+region_names[region]
         units = 'm'
+    elif var.endswith('_adv_heat_s'):
+        option = 'adv_heat_s'
+        region = var[:var.index('_adv_heat_s')]
+        title = 'Southward advection of heat in '+region_names[region]+', 500-1500 m'
+        units = deg_string+'C m'$^3$'/s'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
