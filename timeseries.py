@@ -592,7 +592,7 @@ def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=
         adv_t = np.ma.masked_where(z_3d < zmin, adv_t)
         adv_t = np.ma.masked_where(z_3d > zmax, adv_t)
         # Volume-integrate
-        timeseries.append(volume_integral(adv_t, grid, gtype='v'))
+        timeseries.append(volume_integral(adv_t, grid))
     return np.array(timeseries)
                 
 
