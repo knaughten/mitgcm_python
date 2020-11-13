@@ -582,7 +582,7 @@ def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=
         # Take difference, and pad northernmost row
         adv_t = np.empty(q.shape)
         adv_t[:,:-1,:] = q[:,1:,:] - q[:,:-1,:]
-        adv_t[:,-1,:] = adv_t_s[:,-2,:]
+        adv_t[:,-1,:] = adv_t[:,-2,:]
         # Apply mask
         adv_t = mask_3d(adv_t, grid, gtype='v')
         if mask is not None:
