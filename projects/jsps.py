@@ -926,11 +926,10 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
 def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
-    fig_dir = real_dir(fig_dir)
     smooth_short = 12
     year0 = 1920
-    test_smooth = range(5, 50+1)
-    num_tests = test_smooth.size
+    test_smooth = range(20, 50+1)
+    num_tests = len(test_smooth)
 
     r2 = np.empty(num_tests)
     for m in range(num_tests):
