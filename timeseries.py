@@ -1261,7 +1261,7 @@ def set_parameters (var):
         option = 'adv_heat_s'
         region = var[:var.index('_adv_heat_s')]
         title = 'Southward advection of heat in '+region_names[region]+', 500-1500 m'
-        units = deg_string+'C m'$^3$'/s'
+        units = deg_string+r'C m$^3$/s'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
