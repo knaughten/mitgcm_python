@@ -580,8 +580,8 @@ def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=
         # Calculate southward heat flux
         q = -temp_v*v[t,:]*dA
         # Take difference, and pad northernmost row
-        adv_t = np.empty(q_s.shape)
-        adv_t[:,:-1,:] = q_s[:,1:,:] - q_s[:,:-1,:]
+        adv_t = np.empty(q.shape)
+        adv_t[:,:-1,:] = q[:,1:,:] - q[:,:-1,:]
         adv_t[:,-1,:] = adv_t_s[:,-2,:]
         # Apply mask
         adv_t = mask_3d(adv_t, grid, gtype='v')
