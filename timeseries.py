@@ -577,8 +577,8 @@ def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=
         temp_v = interp_grid(temp[t,:], grid, 't', 'v', mask=False)
         # Get integrands in 3D
         dA = xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)
-        # Calculate southward heat flux
-        q = -temp_v*v[t,:]*dA
+        # Calculate heat flux
+        q = temp_v*v[t,:]*dA
         # Take difference, and pad northernmost row
         adv_t = np.empty(q.shape)
         adv_t[:,:-1,:] = q[:,1:,:] - q[:,:-1,:]

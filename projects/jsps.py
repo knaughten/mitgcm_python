@@ -1022,9 +1022,9 @@ def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
             else:
                 str1 = var1
             str2 = var2
-            if n==0:
-                # Plot the first ensemble member with twin y-axes
-                make_timeseries_plot_2sided(time, data1, data2, 'PACE '+str(n+1).zfill(2), str1, str2, fig_name=fig_name_head+'_ens'+str(n+1).zfill(2)+'.png')
+            #if n==0:
+            # Plot the first ensemble member with twin y-axes
+            make_timeseries_plot_2sided(time, data1, data2, 'PACE '+str(n+1).zfill(2), str1, str2, fig_name=fig_name_head+'_ens'+str(n+1).zfill(2)+'.png')
             # Save to long arrays for correlation later
             if all_data1 is None:
                 all_data1 = data1
@@ -1055,7 +1055,7 @@ def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
     for n in range(len(var_names)-1):
         do_one_correlation(var_names[n], var_names[n+1], fig_dir+'correlation_'+abbrv[n]+'_'+abbrv[n+1], int_first=(abbrv[n]=='wind'))
     for m in range(len(shelves)):
-        do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+abbrv_shelves[m])
+        do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+'_'abbrv_shelves[m])
          
 
         
