@@ -980,6 +980,89 @@ def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
     m0 = np.argmax(r2)
     print 'Best correlation is with timescale of '+str(test_smooth[m0])+' years: r^2='+str(r2[m0])
 
+
+# Test the correlation in 4 stages:
+# 1) time-integral of winds at the shelf break and southward heat flux at the shelf break
+# 2) southward heat flux at the shelf break and thermocline depth on the shelf
+# 3) thermocline depth on the shelf and temperatures below 500 m on the shelf
+# 4) temperatures below 500 m on the shelf and melt rate of each ice shelf (Dotson/Crosson, Thwaites, PIG)
+def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
+
+    num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
+    smooth = 12
+    base_year_start = 1920
+    base_year_end = 1949
+    fig_dir = real_dir(fig_dir)
+
+    # Inner function to analyse one set of variables
+    def do_one_correlation (var1, var2, fig_name_head, int_first=False):
+        all_data1 = []
+        all_data2 = []
+        for n in range(num_members):
+            # Read timeseries
+            time = netcdf_time(file_paths[n], monthly=False)
+            data1 = read_netcdf(file_paths[n], var1)
+            data2 = read_netcdf(file_paths[n], var2)
+            # Take anomalies from 1920-1949 mean
+            t_start, t_end = index_period(time, base_year_start, base_year_end)
+            data1 -= np.mean(data1[t_start:t_end])
+            data2 -= np.mean(data2[t_start:t_end])
+            # Trim the spinup
+            data1 = data1[t_start:]
+            data2 = data2[t_start:]
+            time = time[t_start:]
+            # Calculate 2 year running means of both timeseries
+            data1, time = moving_average(data1, smooth, time=time)
+            data2 = moving_average(data2, smooth)
+            if int_first:
+                # Now take time-integral of first variable
+                dt = 365./12*sec_per_day
+                data1 = np.cumsum(data1*dt)
+                str1 = 'time-integral of '+var1
+            else:
+                str1 = var1
+            str2 = var2
+            if n==0:
+                # Plot the first ensemble member with twin y-axes
+                make_timeseries_plot_2sided(time, data1, data2, 'PACE '+str(n+1).zfill(2), str1, str2, fig_name=fig_name_head+'_ens'+str(n+1).zfill(2)+'.png')
+            # Save to long arrays for correlation later
+            if all_data1 is None:
+                all_data1 = data1
+                all_data2 = data2
+            else:
+                all_data1 = np.concatenate((all_data1, data1), axis=0)
+                all_data2 = np.concatenate((all_data2, data2), axis=0)
+        # Now make the scatterplot
+        fig, ax = plt.subplots(figsize=(10,6))
+        ax.axhline(color='black')
+        ax.axvline(color='black')
+        ax.plot(all_data1, all_data2, 'o', color='blue', markersize=2)
+        ax.set_xlabel(str1, fontsize=12)
+        ax.set_ylabel(str2, fontsize=12)
+        # Add line of best fit
+        slope, intercept, r_value, p_value, std_err = linregress(np.array(all_data1), np.array(all_data2))
+        [x0, x1] = ax.get_xlim()
+        [y0, y1] = slope*np.array([x0, x1]) + intercept
+        ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1)
+        ax.text(0.05, 0.95, 'r$^2$='+str(r_value**2), ha='left', va='top', fontsize=12, transform=ax.transAxes)
+        finished_plot(fig, fig_name=fig_name_head+'_scatterplot.png')
+
+    # Now call this function for each set of variables
+    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_break_adv_heat_s', 'inner_amundsen_shelf_thermocline', 'inner_amundsen_shelf_temp_below_500m']
+    abbrv = ['wind', 'hflx', 'thmc', 'temp']
+    shelves = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting']
+    abbrv_shelves = ['melt_dot', 'melt_thw', 'melt_pig']
+    for n in range(len(var_names)-1):
+        do_one_correlation(var_names[n], var_names[n+1], fig_dir+'correlation_'+abbrv[n]+'_'+abbrv[n+1], int_first=(abbrv[n]=='wind'))
+    for m in range(len(shelves)):
+        do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+abbrv_shelves[m])
+         
+
+        
+
+    
+
+    
     
 
     
