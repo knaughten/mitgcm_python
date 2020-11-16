@@ -1055,7 +1055,7 @@ def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
     for n in range(len(var_names)-1):
         do_one_correlation(var_names[n], var_names[n+1], fig_dir+'correlation_'+abbrv[n]+'_'+abbrv[n+1], int_first=(abbrv[n]=='wind'))
     for m in range(len(shelves)):
-        do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+'_'abbrv_shelves[m])
+        do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+'_'+abbrv_shelves[m])
          
 
         
