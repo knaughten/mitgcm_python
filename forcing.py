@@ -628,6 +628,13 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
         else:
             per_year = days_per_year
         t_start = (year-start_year)*per_year
+        if ens == 13:
+            # Missing all but the first day of 1988.
+            if year == 1988:
+                # Just repeat 1987
+                t_start -= per_year
+            elif year > 1988:
+                t_start -= per_year - 1
         t_end = t_start + per_year
         print 'Reading indices ' + str(t_start) + '-' + str(t_end-1)
         # Read data
@@ -653,8 +660,6 @@ def pace_all (in_dir, out_dir):
     var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
 
     for ens in range(1,20+1):
-        if ens == 13:
-            continue
         print 'Processing ensemble member ' + str(ens)
         for var in var_names:
             print 'Processing ' + var
