@@ -168,7 +168,7 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0, timeseries_avg_below_z0, timeseries_avg_between_z0.
+# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0, timeseries_avg_below_z0, timeseries_int_between_z0.
 def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None, z0=None):
 
     if var_name == 'RHO':
@@ -186,14 +186,14 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
-    if option in ['below_z0', 'between_z0']:
+    if option in ['avg_below_z0', 'int_between_z0']:
         # Need to make mask 3D
         if mask is None:
             # Dummy mask
             mask = np.ones([grid.ny, grid.nx]).astype(bool)
-        if option == 'below_z0':
+        if option == 'avg_below_z0':
             mask = mask_2d_to_3d(mask, grid, zmax=z0)
-        elif option == 'between_z0':
+        elif option == 'int_between_z0':
             mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
     # Process one time index at a time to save memory
     timeseries = []
@@ -207,16 +207,20 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
                 data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
             # Volume average or integrate
             timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
-        elif option in ['below_z0', 'between_z0']:
-            # 3D volume average below/between the given depth(s)            
+        elif option == 'avg_below_z0':
+            # 3D volume average below the given depth
             data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
-        elif option in ['bottom', 'z0']:
+        elif option == 'int_between_z0':
+            # 3D volume integral between the given depths
+            data_tmp = apply_mask(data_tmp, np.invert(mask))
+            timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
+        elif option in ['avg_bottom', 'avg_z0']:
             # 2D area-average
-            if option == 'bottom':
+            if option == 'avg_bottom':
                 # Select the bottom layer
                 data_tmp = select_bottom(data_tmp)
-            elif option == 'z0':
+            elif option == 'avg_z0':
                 # Interpolate to the given depth
                 data_tmp = interp_to_depth(data_tmp, z0, grid, gtype=gtype)
             if mask is not None:
@@ -239,12 +243,12 @@ def timeseries_int_3d (file_path, var_name, grid, gtype='t', time_index=None, t_
 
 # Same but the area-averaged value over the bottom layer.
 def timeseries_avg_bottom (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
-    return timeseries_vol_3d('bottom', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
+    return timeseries_vol_3d('avg_bottom', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho)
 
 
 # Same but area-averaged value over the given depth.
 def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
-    return timeseries_vol_3d('z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+    return timeseries_vol_3d('avg_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Same but volume-averaged value below the given depth.
@@ -252,11 +256,11 @@ def timeseries_avg_below_z0 (file_path, var_name, z0, grid, gtype='t', time_inde
     return timeseries_vol_3d('below_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
-# Same but volume-averaged value between the given depths (where z0=[z_deep, z_shallow])
-def timeseries_avg_between_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+# Same but volume-integrated value between the given depths (where z0=[z_deep, z_shallow])
+def timeseries_int_between_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     if not isinstance(z0, list) or len(z0) != 2:
-        print 'Error (timeseries_avg_between_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
-    return timeseries_vol_3d('between_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+        print 'Error (timeseries_int_between_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
+    return timeseries_vol_3d('int_between_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -631,7 +635,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
         print 'Error (calc_timeseries): must specify point0 and point1'
         sys.exit()
-    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0', 'avg_between_z0'] and z0 is None:
+    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0', 'int_between_z0'] and z0 is None:
         print 'Error (calc_timeseries): must specify z0'
         sys.exit()
     if var_name == 'RHO' and rho is None:
@@ -649,7 +653,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'avg_between_z0', 'min_depth', 'iso_depth', 'max_gradient_depth']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'int_between_z0', 'min_depth', 'iso_depth', 'max_gradient_depth']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -723,8 +727,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_avg_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_below_z0':
             values_tmp = timeseries_avg_below_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
-        elif option == 'avg_between_z0':
-            values_tmp = timeseries_avg_between_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'int_between_z0':
+            values_tmp = timeseries_int_between_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'min_depth':
             values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'iso_depth':
@@ -1232,7 +1236,7 @@ def set_parameters (var):
         title = 'Thermocline depth in '+region_names[region]
         units = 'm'
     elif '_adv_heat_ns' in var:
-        option = 'avg_between_z0'
+        option = 'int_between_z0'
         var_name = 'ADVy_TH'
         region = var[:var.index('_adv_heat_ns')]
         # Parse depth range
