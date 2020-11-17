@@ -560,39 +560,27 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
     return timeseries_select_depth('max_gradient', file_path, var_name, grid, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
 
 
-# Calculate the southward heat transport, integrated over the given region and between the bounds 500-1500 m. (This is a placeholder until we have ADVy_TH in the diagnostics for the new ensemble. I'll write something more general later.)
-def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+# Calculate the southward heat transport, integrated over the given region and between the given depth bounds z0=[z_shallow, z_deep].
+def timeseries_adv_heat_s (file_path, grid, mask=None, z0=z0, time_index=None, t_start=None, t_end=None, time_average=False):
 
-    zmin = -1500
-    zmax = -500
+    [zmax, zmin] = z0
 
-    # Read temperature and v-velocity
-    temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    v = read_netcdf(file_path, 'VVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    # Read advective flux of temperature and flip sign
+    data = -1*read_netcdf(file_path, 'ADVy_TH', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     
     # Loop over timesteps
     timeseries = []    
-    for t in range(temp.shape[0]):
-        # Interpolate temperature to v-grid
-        temp_v = interp_grid(temp[t,:], grid, 't', 'v', mask=False)
-        # Get integrands in 3D
-        dA = xy_to_xyz(grid.dx_s, grid)*z_to_xyz(grid.dz, grid)
-        # Calculate heat flux
-        q = temp_v*v[t,:]*dA
-        # Take difference, and pad northernmost row
-        adv_t = np.empty(q.shape)
-        adv_t[:,:-1,:] = q[:,1:,:] - q[:,:-1,:]
-        adv_t[:,-1,:] = adv_t[:,-2,:]
+    for t in range(adv_t.shape[0]):
         # Apply mask
-        adv_t = mask_3d(adv_t, grid, gtype='v')
+        data_tmp = mask_3d(data[t,:], grid, gtype='v')
         if mask is not None:
-            adv_t = apply_mask(adv_t, np.invert(mask), depth_dependent=True)
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
         # Mask depth bounds
         z_3d = z_to_xyz(grid.z, grid)
-        adv_t = np.ma.masked_where(z_3d < zmin, adv_t)
-        adv_t = np.ma.masked_where(z_3d > zmax, adv_t)
+        data_tmp = np.ma.masked_where(z_3d < zmin, data_tmp)
+        data_tmp = np.ma.masked_where(z_3d > zmax, data_tmp)
         # Volume-integrate
-        timeseries.append(volume_integral(adv_t, grid))
+        timeseries.append(volume_integral(data_tmp, grid))
     return np.array(timeseries)
                 
 
@@ -630,7 +618,7 @@ def timeseries_adv_heat_s (file_path, grid, mask=None, time_index=None, t_start=
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
 # tmin, tmax, smin, smax: as in function timeseries_watermass_volume. Only matters for 'watermass'.
 # point0, point1: endpoints of transect, each in form (lon, lat). Only matters for 'transport_transect' or 'delta_rho'.
-# z0: depth from which to extract density. Only matters for 'delta_rho'.
+# z0: specific depth for some timeseries types (negative, in metres)
 # direction: 'N' or 'S', as in function timeseries_transport_transect. Only matters for 'transport_transect'.
 # monthly: as in function netcdf_time
 # rho: precomputed density field
@@ -657,7 +645,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
         print 'Error (calc_timeseries): must specify point0 and point1'
         sys.exit()
-    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0'] and z0 is None:
+    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0', 'adv_heat_s'] and z0 is None:
         print 'Error (calc_timeseries): must specify z0'
         sys.exit()
     if var_name == 'RHO' and rho is None:
@@ -756,7 +744,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'max_gradient_depth':
             values_tmp = timeseries_max_gradient_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'adv_heat_s':
-            values_tmp = timeseries_adv_heat_s(fname, grid, mask=mask, time_average=time_average)
+            values_tmp = timeseries_adv_heat_s(fname, grid, mask=mask, z0=z0, time_average=time_average)
         if not (option == 'ismr' and mass_balance):
             values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
@@ -1257,10 +1245,15 @@ def set_parameters (var):
         region = var[:var.index('_thermocline')]
         title = 'Thermocline depth in '+region_names[region]
         units = 'm'
-    elif var.endswith('_adv_heat_s'):
+    elif '_adv_heat_s' in var:
         option = 'adv_heat_s'
         region = var[:var.index('_adv_heat_s')]
-        title = 'Southward advection of heat in '+region_names[region]+', 500-1500 m'
+        # Parse depth range
+        z_vals = var[len(region+'_adv_heat_s_'):-1]
+        z_shallow = -1*int(z_vals[:z_vals.index('_')])
+        z_deep = -1*int(z_vals[z_vals.index('_')+1:])
+        z0 = [z_shallow, z_deep]
+        title = 'Southward advection of heat in '+region_names[region]+', '+str(-z_shallow)+'-'+str(-z_deep)+'m'
         units = deg_string+r'C m$^3$/s'
     else:
         print 'Error (set_parameters): invalid variable ' + var
