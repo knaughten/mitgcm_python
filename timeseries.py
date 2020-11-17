@@ -256,7 +256,7 @@ def timeseries_avg_below_z0 (file_path, var_name, z0, grid, gtype='t', time_inde
 def timeseries_avg_between_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     if not isinstance(z0, list) or len(z0) != 2:
         print 'Error (timeseries_avg_between_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
-        return timeseries_vol_3d('between_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+    return timeseries_vol_3d('between_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
