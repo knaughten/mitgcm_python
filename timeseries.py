@@ -1233,6 +1233,7 @@ def set_parameters (var):
         units = 'm'
     elif '_adv_heat_ns' in var:
         option = 'avg_between_z0'
+        var_name = 'ADVy_TH'
         region = var[:var.index('_adv_heat_ns')]
         # Parse depth range
         z_vals = var[len(region+'_adv_heat_ns_'):-1]
