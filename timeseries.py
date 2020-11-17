@@ -207,7 +207,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
                 data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
             # Volume average or integrate
             timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
-        elif option in ['below_z0', 'bewteen_z0']:
+        elif option in ['below_z0', 'between_z0']:
             # 3D volume average below/between the given depth(s)            
             data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
