@@ -561,7 +561,7 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 
 
 # Calculate the southward heat transport, integrated over the given region and between the given depth bounds z0=[z_shallow, z_deep].
-def timeseries_adv_heat_s (file_path, grid, mask=None, z0=z0, time_index=None, t_start=None, t_end=None, time_average=False):
+def timeseries_adv_heat_s (file_path, grid, mask=None, z0=None, time_index=None, t_start=None, t_end=None, time_average=False):
 
     [zmax, zmin] = z0
 
