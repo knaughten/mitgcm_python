@@ -98,7 +98,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         return data_accum/num_years
 
     # Loop over daily and monthly variables
-    print 'Processing ERA5'
+    '''print 'Processing ERA5'
     era5_clim_daily = np.empty([num_vars_daily, days_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_daily):
         era5_clim_daily[n,:] = era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
@@ -122,7 +122,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         write_binary(era5_clim_regrid_daily[n,:], file_path)
     for n in range(num_vars_monthly):   
         file_path = real_dir(out_dir) + file_head_era5 + var_pace_monthly[n] + file_tail
-        write_binary(era5_clim_regrid_monthly[n,:], file_path)
+        write_binary(era5_clim_regrid_monthly[n,:], file_path)'''
 
     print 'Processing PACE'
     for n in range(num_vars):
