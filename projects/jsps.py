@@ -98,7 +98,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         return data_accum/num_years
 
     # Loop over daily and monthly variables
-    '''print 'Processing ERA5'
+    print 'Processing ERA5'
     era5_clim_daily = np.empty([num_vars_daily, days_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_daily):
         era5_clim_daily[n,:] = era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
@@ -122,7 +122,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         write_binary(era5_clim_regrid_daily[n,:], file_path)
     for n in range(num_vars_monthly):   
         file_path = real_dir(out_dir) + file_head_era5 + var_pace_monthly[n] + file_tail
-        write_binary(era5_clim_regrid_monthly[n,:], file_path)'''
+        write_binary(era5_clim_regrid_monthly[n,:], file_path)
 
     print 'Processing PACE'
     for n in range(num_vars):
@@ -132,8 +132,6 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         else:
             per_year = days_per_year
         for ens in range(1, num_ens+1):
-            if ens != 13:
-                continue
             ens_str = str(ens).zfill(2)
             print 'Processing PACE ensemble member ' + ens_str
             # As before, but simpler because no leap days and no need to regrid
@@ -1056,6 +1054,39 @@ def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
         do_one_correlation(var_names[n], var_names[n+1], fig_dir+'correlation_'+abbrv[n]+'_'+abbrv[n+1], int_first=(abbrv[n]=='wind'))
     for m in range(len(shelves)):
         do_one_correlation(var_names[-1], shelves[m], fig_dir+'correlation_'+abbrv[-1]+'_'+abbrv_shelves[m])
+
+
+# Calculate monthly climatologies from daily climatologies for ERA5 and PACE.
+def monthly_from_daily_climatologies (clim_dir):
+
+    models = ['ERA5'] + ['PACE_ens'+str(n+1).zfill(2) for n in range(num_ens)]
+    # Get PACE grid just for the sizes
+    grid = PACEGrid()
+    clim_dir = real_dir(clim_dir)
+    
+    # Start and end days for each month
+    start_days = [0]
+    end_days = []
+    for month in range(months_per_year-1):
+        ndays = days_per_month(month+1, 1979)  # Random non-leap-year
+        day_index = start_days[-1]+ndays
+        start_days.append(day_index)
+        end_days.append(day_index)
+    end_days.append(days_per_year)
+
+    for var in var_pace:
+        if var in ['FSDS', 'FLDS']:
+            # Already monthly
+            continue
+        print 'Processing ' + var
+        for model in models:
+            print 'Processing ' + model
+            data_daily = read_binary(clim_dir+model+'_'+var+'_clim', [grid.nx, grid.ny], 'xyt')
+            data_monthly = np.empty([months_per_year, grid.ny, grid.nx])
+            for month in range(months_per_year):
+                data_monthly[month,:] = np.mean(data_daily[start_days[month]:end_days[month],:], axis=0)
+            write_binary(data_monthly, clim_dir+model+'_'+var+'_clim_monthly')
+        
          
 
         
