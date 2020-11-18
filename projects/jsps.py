@@ -132,7 +132,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         else:
             per_year = days_per_year
         for ens in range(1, num_ens+1):
-            if ens == 13:
+            if ens != 13:
                 continue
             ens_str = str(ens).zfill(2)
             print 'Processing PACE ensemble member ' + ens_str
