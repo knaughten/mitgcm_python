@@ -215,7 +215,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     fig, ax = plt.subplots(figsize=(10,6))
     if ratio:
         ctype = 'ratio'
-        vmax = 2
+        vmax = 1.5
     else:
         ctype = 'plusminus'
         vmax = None
