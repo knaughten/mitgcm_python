@@ -12,7 +12,7 @@ from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -37,7 +37,7 @@ var_pace = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FSDS', 'FLDS']
 
 
 # Calculate the climatologies (daily or monthly) of each forcing variable in ERA5 (interpolated to the PACE grid) and in each PACE ensemble member.
-def calc_climatologies (era5_dir, pace_dir, out_dir):
+def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
 
     # Day of the year that's 29 Feb (0-indexed)
     leap_day = 31+28
@@ -46,6 +46,12 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     end_year = 2005
     num_years = end_year-start_year+1
 
+    if wind_speed:
+        # Overwrite variable lists
+        var_era5 = ['speed']
+        var_pace = ['speed']
+        wind_comp_era5 = ['uwind', 'vwind']
+        wind_comp_pace = ['UBOT', 'VBOT']
     monthly = [var in ['FSDS', 'FLDS'] for var in var_pace]
     var_era5_monthly = list(compress(var_era5, monthly))
     var_era5_daily = list(compress(var_era5, np.invert(monthly)))
@@ -82,8 +88,17 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         # Accumulate data over each year
         data_accum = np.zeros([per_year, era5_grid.ny, era5_grid.nx])
         for year in range(start_year, end_year+1):
-            file_path = real_dir(era5_dir) + file_head_era5 + var_name_era5 + '_' + str(year)
-            data = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
+            if var_name_pace == 'speed':
+                # Read wind components and calculate magnitude
+                def read_comp_era5 (var_comp):
+                    file_path = real_dir(era5_dir) + file_head_era5 + var_comp + '_' + str(year)
+                    return read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
+                data_u = read_comp_era5(wind_comp_era5[0])
+                data_v = read_comp_era5(wind_comp_era5[1])
+                data = np.sqrt(data_u**2 + data_v**2)
+            else:
+                file_path = real_dir(era5_dir) + file_head_era5 + var_name_era5 + '_' + str(year)
+                data = read_binary(file_path, [era5_grid.nx, era5_grid.ny], 'xyt')
             if monthly:
                 # Monthly averages
                 data = daily_to_monthly(data, year=year, per_day=per_day)
@@ -102,9 +117,10 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
     era5_clim_daily = np.empty([num_vars_daily, days_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_daily):
         era5_clim_daily[n,:] = era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
-    era5_clim_monthly = np.empty([num_vars_monthly, months_per_year, era5_grid.ny, era5_grid.nx])
-    for n in range(num_vars_monthly):
-        era5_clim_monthly[n,:] = era5_process_var(var_pace_monthly[n], var_era5_monthly[n], True)
+    if num_vars_monthly > 0:
+        era5_clim_monthly = np.empty([num_vars_monthly, months_per_year, era5_grid.ny, era5_grid.nx])
+        for n in range(num_vars_monthly):
+            era5_clim_monthly[n,:] = era5_process_var(var_pace_monthly[n], var_era5_monthly[n], True)
 
     # Now do all the binning at once to save memory
     era5_clim_regrid_daily = np.zeros([num_vars_daily, days_per_year, pace_grid.ny, pace_grid.nx])
@@ -115,7 +131,8 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
             if np.any(i_bins==i) and np.any(j_bins==j):
                 index = (i_bins==i)*(j_bins==j)
                 era5_clim_regrid_daily[:,:,j,i] = np.mean(era5_clim_daily[:,:,index], axis=-1)
-                era5_clim_regrid_monthly[:,:,j,i] = np.mean(era5_clim_monthly[:,:,index], axis=-1)
+                if num_vars_monthly > 0:
+                    era5_clim_regrid_monthly[:,:,j,i] = np.mean(era5_clim_monthly[:,:,index], axis=-1)
     # Write each variable to binary
     for n in range(num_vars_daily):   
         file_path = real_dir(out_dir) + file_head_era5 + var_pace_daily[n] + file_tail
@@ -134,11 +151,19 @@ def calc_climatologies (era5_dir, pace_dir, out_dir):
         for ens in range(1, num_ens+1):
             ens_str = str(ens).zfill(2)
             print 'Processing PACE ensemble member ' + ens_str
-            # As before, but simpler because no leap days and no need to regrid
+            # As before, but simpler because no leap days and no need to regrid 
             data_accum = np.zeros([per_year, pace_grid.ny, pace_grid.nx])
             for year in range(start_year, end_year+1):
-                file_path = real_dir(pace_dir) + file_head_pace + ens_str + '_' + var_pace[n] + '_' + str(year)
-                data = read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
+                if var_pace[n] == 'speed':
+                    def read_comp_pace (var_comp):
+                        file_path = real_dir(pace_dir) + file_head_pace + ens_str + '_' + var_comp + '_' + str(year)
+                        return read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
+                    data_u = read_comp_pace(wind_comp_pace[0])
+                    data_v = read_comp_pace(wind_comp_pace[1])
+                    data = np.sqrt(data_u**2 + data_v**2)
+                else:
+                    file_path = real_dir(pace_dir) + file_head_pace + ens_str + '_' + var_pace[n] + '_' + str(year)
+                    data = read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
                 data_accum += data
             data_clim = data_accum/num_years
             file_path = real_dir(out_dir) + file_head_pace + ens_str + '_' + var_pace[n] + file_tail
