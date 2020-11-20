@@ -174,7 +174,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
 # 1. A time-averaged, ensemble-averaged lat-lon bias plot
 # 2. An area-averaged (over the Amundsen Sea region) timeseries of each ensemble member, the ensemble mean, ERA5, and the ensemble-mean bias
 # Also print out the annual and monthly values of the bias in #2.
-def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
+def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
 
     # Latitude bounds on ERA5 data
     ylim_era5 = [-90, -30]
@@ -206,11 +206,16 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./'):
 
     # Plot spatial map
     # Ensemble-mean and time-mean bias
-    bias_xy = np.mean(data, axis=(0,1)) - np.mean(data_era5, axis=0)
+    if ratio:
+        bias_xy = np.mean(data, axis=(0,1))/np.mean(data_era5, axis=0)
+    else:
+        bias_xy = np.mean(data, axis=(0,1)) - np.mean(data_era5, axis=0)
     # Mask out everything north of 30S so it doesn't get counted in min/max
     bias_xy[grid.lat > ylim_era5[-1]] = 0
     fig, ax = plt.subplots(figsize=(10,6))
     cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
+    if ratio:
+        vmax = min(vmax, 3)
     img = ax.contourf(grid.lon, grid.lat, bias_xy, 30, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_ylim(ylim_era5)
     plt.colorbar(img)
