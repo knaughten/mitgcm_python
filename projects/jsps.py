@@ -215,11 +215,11 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     fig, ax = plt.subplots(figsize=(10,6))
     if ratio:
         ctype = 'ratio'
+        vmax = 3
     else:
         ctype = 'plusminus'
-    cmap, vmin, vmax = set_colours(bias_xy, ctype=ctype)
-    if ratio:
-        vmax = min(vmax, 3)
+        vmax = None
+    cmap, vmin, vmax = set_colours(bias_xy, ctype=ctype, vmax=vmax)
     img = ax.pcolormesh(grid.lon, grid.lat, bias_xy, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_ylim(ylim_era5)
     plt.colorbar(img)
