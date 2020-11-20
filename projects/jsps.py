@@ -216,7 +216,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
     if ratio:
         vmax = min(vmax, 3)
-    img = ax.contourf(grid.lon, grid.lat, bias_xy, 30, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(grid.lon, grid.lat, bias_xy, 30, cmap=cmap, vmin=vmin, vmax=vmax)
     ax.set_ylim(ylim_era5)
     plt.colorbar(img)
     plt.title(var_name, fontsize=18)
