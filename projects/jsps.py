@@ -213,7 +213,11 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     # Mask out everything north of 30S so it doesn't get counted in min/max
     bias_xy[grid.lat > ylim_era5[-1]] = 0
     fig, ax = plt.subplots(figsize=(10,6))
-    cmap, vmin, vmax = set_colours(bias_xy, ctype='plusminus')
+    if ratio:
+        ctype = 'ratio'
+    else:
+        ctype = 'plusminus'
+    cmap, vmin, vmax = set_colours(bias_xy, ctype=ctype)
     if ratio:
         vmax = min(vmax, 3)
     img = ax.pcolormesh(grid.lon, grid.lat, bias_xy, cmap=cmap, vmin=vmin, vmax=vmax)
