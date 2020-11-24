@@ -12,7 +12,7 @@ from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -1118,7 +1118,64 @@ def monthly_from_daily_climatologies (clim_dir):
             for month in range(months_per_year):
                 data_monthly[month,:] = np.mean(data_daily[start_days[month]:end_days[month],:], axis=0)
             write_binary(data_monthly, clim_dir+model+'_'+var+'_clim_monthly')
-        
+
+
+def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
+
+    # Build grid to get bounds
+    model_grid = Grid(grid_dir)
+    xmin = model_grid.lon_corners_1d[0]
+    xmax = 2*model_grid.lon_1d[-1] - model_grid.lon_corners_1d[-1]
+    ymin = model_grid.lat_corners_1d[0]
+    ymax = 2*model_grid.lat_1d[-1] - model_grid.lat_corners_1d[-1]
+    # Also build PACE grid to get sizes
+    pace_grid = PACEGrid()
+    clim_dir = real_dir(clim_dir)
+    fig_dir = real_dir(fig_dir)
+    
+    # Read data
+    pace_data = np.empty([num_ens, months_per_year, pace_grid.ny, pace_grid.nx])
+    for ens in range(num_ens):
+        file_path = clim_dir + 'PACE_ens' + str(ens+1).zfill(2) + '_' + var_name + '_clim'
+        if var_name not in ['FLDS', 'FSDS']:
+            file_path += '_monthly'
+        pace_data[ens,:] = read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
+    # Take ensemble mean
+    pace_data = np.mean(pace_data, axis=0)
+    # Read ERA5 data too (already interpolated to PACE grid)
+    file_path = file_path.replace('PAS_ens'+str(num_ens), 'ERA5')
+    era5_data = read_binary(file_path, [pace_grid.nx, pace_grid.ny], 'xyt')
+
+    # Get bounds across all months (annual mean is implicitly within this)
+    mask = add_time_dim((pace_grid.lon >= xmin)*(pace_grid.lon <= xmax)*(pace_grid.lat >= ymin)*(pace_grid.lat <= ymax), months_per_year)
+    vmin = np.amin(pace_data[mask] - era5_data[mask])
+    vmax = np.amax(pace_data[mask] - era5_data[mask])
+    cmap, vmin, vmax = set_colours(pace_data-era5_data, ctype='plusminus', vmin=vmin, vmax=vmax)
+
+    # Set up figure
+    fig, gs, cax = set_panels('3x4+1C1')
+    titles = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
+    for n in range(months_per_year+1):
+        if n == months_per_year:
+            # Plot annual mean in top right
+            ax = plt.subplot(gs[0,3])
+            img = ax.pcolormesh(np.mean(pace_data, axis=0)-np.mean(era5_data, axis=0), cmap=cmap, vmin=vmin, vmax=vmax)
+            ax.set_title('Annual')
+        else:
+            # Plot individual month
+            ax = plt.subplot(gs[n/4+1, n%4])
+            img = ax.pcolormesh(pace_data[n,:]-era5_data[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            ax.set_title(titles[n])
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
+        ax.set_xticks([])
+        ax.set_yticks([])
+    # Make colourbar
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    # Main title
+    plt.text(0.05, 0.95, var_name+': PACE ensemble mean minus ERA5', transform=fig.transFigure, fontsize=20, ha='left', va='top')
+    finished_plot(fig, fig_name=fig_dir+'monthly_bias_'+var_name+'.png')
+    
          
 
         

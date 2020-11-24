@@ -70,6 +70,8 @@ def set_panels (key, figsize=None):
             figsize = (8, 12)
         elif key == '10x1C1':
             figsize = (7, 12)
+        elif key == '3x4+1C1':
+            figsize = (12, 10)
 
     fig = plt.figure(figsize=figsize)
     
@@ -228,6 +230,11 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(10,1)
         gs.update(left=0.07, right=0.87, bottom=0.03, top=0.94, hspace=0.07)
         cax = fig.add_axes([0.8, 0.98, 0.19, 0.015])
+    elif key == '3x4+1C1':
+        # 13 plots with 12 arranged in 3 rows and 4 columns (monthly), the remaining 1 in the top right corner (annual mean) with space to the left for title and colourbar
+        gs = plt.GridSpec(4,4)
+        gs.update(left=0.01, right=0.99, bottom=0.01, top=0.9, wspace=0.03, hspace=0.03)
+        cax = fig.add_axes([0.55, 0.8, 0.1, 0.02])
     else:
         print 'Error (set_panels): no entry for key ' + key
         sys.exit()
