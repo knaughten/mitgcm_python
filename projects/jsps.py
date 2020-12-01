@@ -1120,6 +1120,7 @@ def monthly_from_daily_climatologies (clim_dir):
             write_binary(data_monthly, clim_dir+model+'_'+var+'_clim_monthly')
 
 
+# As in plot_biases, but showing a big 3x4+1 plot showing the monthly biases as well as annual mean
 def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 
     # Build grid to get bounds

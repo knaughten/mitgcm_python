@@ -667,7 +667,8 @@ def pace_all (in_dir, out_dir):
 
 
 # Read forcing (var='wind' or 'thermo') from a given atmospheric dataset (source='ERA5', 'UKESM', or 'PACE'). Time-average, ensemble-average (if PACE) and interpolate to the MITgcm grid. Save the otuput to a NetCDF file. This will be used to create spatially-varying, time-constant bias correction files in the functions katabatic_correction and thermo_correction.
-def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=None, start_year=1979, end_year=None):
+# Can also set monthly_clim=True to get monthly climatology instead of constant in time.
+def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=None, start_year=1979, end_year=None, monthly_clim=False):
 
     # Set parameters based on source dataset
     if source == 'ERA5':
@@ -733,27 +734,49 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         forcing_grid = PACEGrid()
     mit_grid = Grid(mit_grid_dir)
 
-    ncfile = NCfile(out_file, mit_grid, 'xy')
+    if monthly_clim:
+        dim_code = 'xyt'
+    else:
+        dim_code = 'xy'
+    ncfile = NCfile(out_file, mit_grid, dim_code)
 
     # Loop over variables
     for n in range(len(var_names)):
         print 'Processing variable ' + var_names[n]
         # Read the data, time-integrating as we go
         data = None
-        num_time = 0
+        if monthly_clim:
+            num_time = np.zeros(12)
+        else:
+            num_time = 0
 
         if source == 'ERA5':
             # Loop over years
             for year in range(start_year, end_year+1):
                 file_path = in_dir + file_head + var_names[n] + '_' + str(year)
                 data_tmp = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
-                if data is None:
-                    data = np.sum(data_tmp, axis=0)
+                if monthly_clim:
+                    # Integrate over each month
+                    data_sum = np.zeros([12, data_tmp.shape[1], data_tmp.shape[2]])
+                    t = 0
+                    for m in range(12):
+                        ndays = days_per_month(m+1, year)
+                        data_sum[m,:] = np.sum(data_tmp[t:t+ndays,:], axis=0)
+                        num_time[m] += ndays
+                        t += ndays                        
                 else:
-                    data += np.sum(data_tmp, axis=0)
-                num_time += data_tmp.shape[0]
+                    # Integrate over entire year
+                    data_sum = np.sum(data_tmp, axis=0)
+                    num_time += data_tmp.shape[0]
+                if data is None:
+                    data = data_sum
+                else:
+                    data += data_sum
 
         elif source ==' UKESM':
+            if monthly_clim:
+                print 'Error (process_forcing_for_correction): monthly_clim option not supported for UKESM'
+                sys.exit()
             in_files, start_years, end_years = find_cmip6_files(in_dir, expt, ensemble_member, var_names_in[n], 'day')
             # Loop over each file
             for t in range(len(in_files)):
@@ -794,8 +817,6 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                 data_tmp = None
                 num_ens_tmp = 0
                 for ens in range(1, num_ens+1):
-                    if ens == missing_ens:
-                        continue
                     file_path = in_dir + file_head + str(ens).zfill(2) + '_' + var_names_in[n] + '_' + str(year)
                     data_tmp_ens = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
                     if data_tmp is None:
@@ -805,22 +826,37 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                     num_ens_tmp += 1
                 # Ensemble mean for this year
                 data_tmp /= num_ens_tmp
-                # Now accumulate time integral
-                if monthly[n]:
-                    # Weighting for different number of days per month
-                    for month in range(data_tmp.shape[0]):
-                        # Get number of days per month with no leap years
-                        ndays = days_per_month(month+1, 1979)
-                        data_tmp[month,:] *= ndays
-                        num_time += ndays
+                # Now accumulate time integral                    
+                if monthly_clim:
+                    data_sum = np.zeros([12, data_tmp.shape[1], data_tmp.shape[2]])
+                    t = 0
+                    for m in range(12):
+                        ndays = days_per_month(m+1, year, allow_leap=False)
+                        if monthly[n]:
+                            # Already have monthly averages; just weight them
+                            data_sum[m,:] = data_tmp[m,:]*ndays
+                        else:
+                            data_sum[m,:] = np.sum(data_tmp[t:t+ndays,:], axis=0)
+                        num_time[m] += ndays
+                        t += ndays
                 else:
-                    num_time += data_tmp.shape[0]
+                    if monthly[n]:
+                        # Still have to weight monthly averages
+                        for m in range(12):
+                            ndays = days_per_month(m+1, year, allow_leap=False)
+                            data_tmp[month,:] *= ndays
+                            num_time += ndays
+                    else:
+                        data_sum = np.sum(data_tmp, axis=0)
+                        num_time += data_tmp.shape[0]                        
                 if data is None:
-                    data = np.sum(data_tmp, axis=0)
+                    data = data_sum
                 else:
-                    data += np.sum(data_tmp, axis=0)
+                    data += data_sum
 
         # Now convert from time-integral to time-average
+        if monthly_clim:
+            num_time = num_time[:,None,None]
         data /= num_time
 
         forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
