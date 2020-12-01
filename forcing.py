@@ -868,9 +868,15 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         # Now interpolate to MITgcm tracer grid        
         mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
         print 'Interpolating'
-        data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
+        if monthly_clim:
+            data_interp = np.empty([12, mit_grid.ny, mit_grid.nx])
+            for m in range(12):
+                print '...month ' + str(m+1)
+                data_interp[m,:] = interp_reg_xy(forcing_lon, forcing_lat, data[m,:], mit_lon, mit_lat)
+        else:
+            data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
         print 'Saving to ' + out_file
-        ncfile.add_variable(var_names[n], data_interp, 'xy', units=units[n])
+        ncfile.add_variable(var_names[n], data_interp, dim_code, units=units[n])
 
     ncfile.close()
 
