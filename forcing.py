@@ -677,6 +677,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
             in_dir = '/data/oceans_input/processed_input_data/ERA5/'
         file_head = 'ERA5_'
         gtype = ['t', 't', 't', 't', 't']
+        per_day = 4
     elif source == 'UKESM':
         if in_dir is None:
             # Path on JASMIN
@@ -745,10 +746,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         print 'Processing variable ' + var_names[n]
         # Read the data, time-integrating as we go
         data = None
-        if monthly_clim:
-            num_time = np.zeros(12)
-        else:
-            num_time = 0
+        num_time = 0
 
         if source == 'ERA5':
             # Loop over years
@@ -756,18 +754,18 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                 file_path = in_dir + file_head + var_names[n] + '_' + str(year)
                 data_tmp = read_binary(file_path, [forcing_grid.nx, forcing_grid.ny], 'xyt')
                 if monthly_clim:
-                    # Integrate over each month
+                    # Average over each month
                     data_sum = np.zeros([12, data_tmp.shape[1], data_tmp.shape[2]])
                     t = 0
                     for m in range(12):
-                        ndays = days_per_month(m+1, year)
-                        data_sum[m,:] = np.sum(data_tmp[t:t+ndays,:], axis=0)
-                        num_time[m] += ndays
-                        t += ndays                        
+                        nt = days_per_month(m+1, year)*per_day
+                        data_sum[m,:] = np.mean(data_tmp[t:t+nt,:], axis=0)
+                        t += nt
+                    num_time += 1  # in years
                 else:
                     # Integrate over entire year
                     data_sum = np.sum(data_tmp, axis=0)
-                    num_time += data_tmp.shape[0]
+                    num_time += data_tmp.shape[0]  # in timesteps
                 if data is None:
                     data = data_sum
                 else:
@@ -831,17 +829,17 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                     data_sum = np.zeros([12, data_tmp.shape[1], data_tmp.shape[2]])
                     t = 0
                     for m in range(12):
-                        ndays = days_per_month(m+1, year, allow_leap=False)
                         if monthly[n]:
-                            # Already have monthly averages; just weight them
-                            data_sum[m,:] = data_tmp[m,:]*ndays
+                            # Already have monthly averages
+                            data_sum[m,:] = data_tmp[m,:]
                         else:
-                            data_sum[m,:] = np.sum(data_tmp[t:t+ndays,:], axis=0)
-                        num_time[m] += ndays
-                        t += ndays
+                            ndays = days_per_month(m+1, year, allow_leap=False)
+                            data_sum[m,:] = np.mean(data_tmp[t:t+ndays,:], axis=0)
+                            t += ndays
+                    num_time += 1
                 else:
                     if monthly[n]:
-                        # Still have to weight monthly averages
+                        # Have to weight monthly averages
                         for m in range(12):
                             ndays = days_per_month(m+1, year, allow_leap=False)
                             data_tmp[month,:] *= ndays
@@ -855,8 +853,6 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                     data += data_sum
 
         # Now convert from time-integral to time-average
-        if monthly_clim:
-            num_time = num_time[:,None,None]
         data /= num_time
 
         forcing_lon, forcing_lat = forcing_grid.get_lon_lat(gtype=gtype[n], dim=1)
@@ -980,7 +976,8 @@ def thermo_correction (grid_dir, var_name, cmip_file, era5_file, out_file, prec=
     for fname in [cmip_file, era5_file]:
         data.append(read_netcdf(fname, var_name))
     data_diff = data[1] - data[0]
-    latlon_plot(data_diff, grid, ctype='plusminus', figsize=(10,6))
+    if len(data_diff.shape) == 2:
+        latlon_plot(data_diff, grid, ctype='plusminus', figsize=(10,6))
     write_binary(data_diff, out_file, prec=prec)
 
 
