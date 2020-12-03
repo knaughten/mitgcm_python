@@ -5,6 +5,9 @@
 import numpy as np
 import sys
 import os
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
 from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
