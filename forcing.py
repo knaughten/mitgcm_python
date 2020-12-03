@@ -14,6 +14,7 @@ from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_
 from calculus import area_integral
 from plot_latlon import latlon_plot
 from plot_utils.windows import set_panels, finished_plot
+from plot_utils.colours import set_colours
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
