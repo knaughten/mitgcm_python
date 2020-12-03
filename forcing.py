@@ -627,8 +627,8 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
             per_year = months_per_year
         else:
             per_year = days_per_year
-        t_start = (year-start_year)*per_year
-        if ens == 13 and not monthly:
+        t_start = (year-min(start_year,2006))*per_year
+        if ens == 13 and not monthly and year < 2006:
             # Missing all but the first day of 1988.
             if year == 1988:
                 # Just repeat 1987
