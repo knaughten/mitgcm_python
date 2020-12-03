@@ -13,6 +13,7 @@ from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discar
 from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
 from calculus import area_integral
 from plot_latlon import latlon_plot
+from plot_utils.windows import set_panels, finished_plot
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -981,6 +982,25 @@ def thermo_correction (grid_dir, var_name, cmip_file, era5_file, out_file, prec=
     data_diff = data[1] - data[0]
     if len(data_diff.shape) == 2:
         latlon_plot(data_diff, grid, ctype='plusminus', figsize=(10,6))
+    else:
+        titles = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec']
+        fig, gs, cax = set_panels('3x4+1C1')
+        cmap, vmin, vmax = set_colours(data_diff, ctype='plusminus')
+        for n in range(12+1):
+            if n == 12:
+                ax = plt.subplot(gs[0,3])
+                img = ax.pcolormesh(np.mean(data_diff,axis=0), cmap=cmap, vmin=vmin, vmax=vmax)
+                ax.set_title('Annual')
+            else:
+                ax = plt.subplot(gs[n/4+1, n%4])
+                img = ax.pcolormesh(data_diff[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
+                ax.set_title(titles[n])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.axis('tight')
+        plt.colorbar(img, cax=cax, orientation='horizontal')
+        plt.text(0.05, 0.95, var_name+' correction', transform=fig.transFigure, fontsize=20, ha='left', va='top')
+        finished_plot(fig, fig_name=var_name+'_correction.png')
     write_binary(data_diff, out_file, prec=prec)
 
 
