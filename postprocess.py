@@ -550,7 +550,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 # segment_dir: list of date codes, in chronological order, corresponding to the subdirectories within output_dir. This must be specified if timeseries_file already exists. If it is not specified, all available subdirectories of output_dir will be used.
 # timeseries_types: as in precompute_timeseries
 # time_average: Average each year to create an annually averaged timeseries
-def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', file_name='output.nc', segment_dir=None, timeseries_types=None, key='WSFRIS', time_average=False):
+def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.nc', hovmoller_file='hovmoller.nc', file_name='output.nc', segment_dir=None, timeseries_types=None, hovmoller_loc=None, key='PAS', time_average=False):
 
     if timeseries_types is None:
         if key == 'WSFRIS':
@@ -562,10 +562,17 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
             timeseries_types = ['sws_shelf_salt_adv', 'sws_shelf_salt_dif', 'sws_shelf_salt_sfc', 'sws_shelf_salt_sfc_corr', 'sws_shelf_salt_tend', 'sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'fris_age']
         elif key == 'FRIS':
             timeseries_types = ['fris_mass_balance', 'fris_temp', 'fris_salt', 'ocean_vol', 'eta_avg', 'seaice_area']
+        elif key == 'PAS':
+            timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
+    if hovmoller_loc is None:
+        if key == 'PAS':
+            hovmoller_loc = ['pine_island_bay', 'dotson_bay']
+        else:
+            hovmoller_loc = []
 
     output_dir = real_dir(output_dir)
 
-    if segment_dir is None and os.path.isfile(timeseries_file):
+    if segment_dir is None and os.path.isfile(output_dir+timeseries_file):
         print 'Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'
         sys.exit()
     segment_dir = check_segment_dir(output_dir, segment_dir)
@@ -574,7 +581,9 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
     # Call precompute_timeseries for each segment
     for file_path in file_paths:
         print 'Processing ' + file_path
-        precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=True, time_average=time_average)
+        precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, monthly=True, time_average=time_average)
+        if len(hovmoller_loc) > 0:
+            precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)
 
 
 # Make animations of lat-lon variables throughout a coupled UaMITgcm simulation, and also images of the first and last frames.
