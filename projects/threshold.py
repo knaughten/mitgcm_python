@@ -2006,7 +2006,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
             print titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'
     plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
-    plt.title('Global mean near-surface air temperature anomaly', fontsize=18)
+    plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
     plt.ylabel(deg_string+'C', fontsize=14)
     plt.xlabel('Year', fontsize=14)
     ax.grid(True)
