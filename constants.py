@@ -79,7 +79,7 @@ region_bounds = {
     'amundsen_shelf_break': [-115, -102, -71.8, -70.2],
     'amundsen_west_shelf_break': [-115, -112, -72, -71],
     'brunt_riiser_larsen': [-28, -10, -76.5, -71.6],
-    'ekstrom_jelbart_filmbul': [-10, 7.7, -72. -69]
+    'ekstrom_jelbart_fimbul': [-10, 7.7, -72. -69]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
