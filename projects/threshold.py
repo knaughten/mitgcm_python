@@ -1373,7 +1373,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_mean_psi', 'fris_temp', 'fris_massloss']
-    smooth = [5, 0, 2]
+    smooth = [5, 0, 5]
     titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
