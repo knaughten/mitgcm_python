@@ -706,7 +706,8 @@ def trim_titles (titles):
 
 
 # Smooth the given data with a moving average of the given radius, and trim the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
-def moving_average (data, radius, time=None):
+# If centered=False, the window will be 2*radius (instead of the default 2*radius+1) and the time array will be shifted by half an index.
+def moving_average (data, radius, time=None, centered=True):
 
     # Will have to trim each end by one radius
     t_first = radius
@@ -718,9 +719,23 @@ def moving_average (data, radius, time=None):
     zero_base = np.zeros(shape)
     # Do the smoothing in two steps
     data_cumsum = np.ma.concatenate((zero_base, np.ma.cumsum(data, axis=0)), axis=0)
-    data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius+1)
+    if centered:
+        data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius+1)
+    else:
+        data_smoothed = (data_cumsum[t_first+radius:t_last+radius,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius)
     if time is not None:
-        time_trimmed = time[radius:time.size-radius]
+        if centered:
+            time_trimmed = time[radius:time.size-radius]
+        else:
+            # Need to shift time array half an index forward
+            # This will work whether it's datetime or numerical values
+            time1 = time[radius-1:time.size-radius-1]
+            time2 = time[radius:time.size-radius]
+            if isinstance(time[0], int):
+                divisor = 2.
+            else:
+                divisor = 2  # Can't have a float for datetime
+            time_trimmed = time1 + (time2-time1)/divisor
         return data_smoothed, time_trimmed
     else:
         return data_smoothed
