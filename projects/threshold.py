@@ -32,7 +32,7 @@ from ..plot_misc import read_plot_hovmoller_ts, hovmoller_ts_plot
 from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
-from ..diagnostics import density, parallel_vector, tfreeze
+from ..diagnostics import density, parallel_vector, tfreeze, total_melt
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear
 
 
@@ -2557,6 +2557,17 @@ def plot_shelf_freshening (base_dir='./', fig_dir='./'):
             time = np.array([t.year-time_tmp[0].year for t in time_tmp])
 
     timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the\nSouthern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False, fig_name=fig_dir+'freshening.png')
+
+
+# Calculate the historical simulation mass loss from the major Eastern Weddell ice shelves. Pass the time-averaged historical file.
+def calc_ewed_massloss (file_path):
+
+    ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx'))
+    grid = Grid(file_path)
+
+    for var in ['brunt_riiser_larsen', 'ekstrom_jelbart_fimbul']:
+        mask = grid.get_ice_mask(shelf=var)
+        print var + ': ' + str(total_melt(ismr, mask, grid)) + ' Gt/y'
         
 
     
