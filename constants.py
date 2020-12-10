@@ -77,7 +77,9 @@ region_bounds = {
     'thwaites_pig': [-106, -100, -75.5, -74.75],
     'inner_amundsen_shelf': [-112, -100, -75.5, -74.25],
     'amundsen_shelf_break': [-115, -102, -71.8, -70.2],
-    'amundsen_west_shelf_break': [-115, -112, -72, -71]
+    'amundsen_west_shelf_break': [-115, -112, -72, -71],
+    'brunt_riiser_larsen': [-28, -10, -76.5, -71.6],
+    'ekstrom_jelbart_filmbul': [-10, 7.7, -72. -69]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -129,7 +131,9 @@ region_names = {
     'thwaites_pig': 'Continental shelf between Thwaites and PIG',
     'inner_amundsen_shelf': 'Inner Amundsen Sea continental shelf',
     'amundsen_shelf_break': 'Amundsen Sea shelf break',
-    'amundsen_west_shelf_break': 'Western Amundsen Sea shelf break'
+    'amundsen_west_shelf_break': 'Western Amundsen Sea shelf break',
+    'brunt_riiser_larsen': 'Brunt and Riiser-Larsen Ice Shelves',
+    'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves'
 }    
 
 # Resolution of SOSE grid in degrees
