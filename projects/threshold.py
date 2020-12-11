@@ -2580,7 +2580,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
     year_end = 2014
     var_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
     bdry_titles = [' at eastern boundary (30'+deg_string+'E)', ' at northern boundary (61'+deg_string+'S)']
-    bdry_dim = ['yz', 'xz']
+    bdry_dim = ['yzt', 'xzt']
     obcs_dir = real_dir(obcs_dir)
     woa_dir = real_dir(woa_dir)
     woa_head = woa_dir + 'woa18_decav_'
@@ -2599,45 +2599,49 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
     # Loop over the boundaries
     for m in range(len(bdry)):
         # Get WOA interpolation weights
-        if bdry == 'E':
+        if bdry[m] == 'E':
             i1, i2, c1, c2 = interp_slice_helper(woa_lon, grid.lon_1d[-1])
-        elif bdry == 'N':
+            mit_hfac = grid.hfac[:,:,-1]
+        elif bdry[m] == 'N':
             j1, j2, c1, c2 = interp_slice_helper(woa_lat, grid.lat_1d[-1])
+            mit_hfac = grid.hfac[:,-1,:]
         # Set up the figure
         fig, gs, cax1, cax2, cax3, cax4 = set_panels('2x3C4')
         cax = [[cax1, cax2], [cax3, cax4]]
         # Loop over the variables
         for n in range(len(var_names)):
             # Read and time-integrate the boundary conditions
-            ukesm_data= None
-            for year in range(start_year, end_year+1):
+            ukesm_data = None
+            for year in range(year_start, year_end+1):
                 ukesm_file = obcs_dir + var_names[n] + file_mid + bdry[m] + '_' + str(year)
                 data_tmp = read_binary(ukesm_file, [grid.nx, grid.ny, grid.nz], bdry_dim[m])
-                if ukesm_var is None:
+                # Time-average over the year
+                data_tmp = np.mean(data_tmp, axis=0)
+                if ukesm_data is None:
                     ukesm_data = data_tmp
                 else:
                     ukesm_data += data_tmp
             # Convert integral to average
-            ukesm_data /= (end_year - start_year + 1)
+            ukesm_data /= (year_end - year_start + 1)
             # Apply land mask
-            ukesm_data = np.ma.masked_where(ukesm_data==0, ukesm_data)
+            ukesm_data = np.ma.masked_where(mit_hfac==0, ukesm_data)
             # Read World Ocean Atlas data
             woa_data_3d = read_netcdf(woa_files[n], woa_var[n]+woa_var_tail)
             # Interpolate to boundary, and then to the MITgcm grid on the remaining axes
-            if bdry == 'E':
+            if bdry[m] == 'E':
                 woa_data = c1*woa_data_3d[:,:,i1] + c2*woa_data_3d[:,:,i2]
                 woa_h = woa_lat
                 mit_h = grid.lat_1d
                 h_axis = 'lat'
-            elif bdry == 'N':
+            elif bdry[m] == 'N':
                 woa_data = c1*woa_data_3d[:,j1,:] + c2*woa_data_3d[:,j2,:]
                 woa_h = woa_lon
                 mit_h = grid.lon_1d
                 h_axis = 'lon'
             # Get mask and convert to hfac equivalent (1 for unmasked, 0 for masked)
             woa_hfac = 1 - (woa_data.mask).astype(float)
-            woa_data_interp = interp_bdry(woa_h, woa_depth, woa_data, woa_hfac, mit_h, grid.z, grid.hfac)
-            woa_data_interp = np.ma.masked_where(ukesm_data.mask, woa_data_interp)
+            woa_data_interp = interp_bdry(woa_h, woa_z, woa_data, woa_hfac, mit_h, grid.z, grid.hfac)
+            woa_data_interp = np.ma.masked_where(mit_hfac==0, woa_data_interp)
             data_diff = ukesm_data - woa_data_interp
             # Get min/max values
             vmin_abs = min(np.amin(ukesm_data), np.amin(woa_data_interp))
@@ -2654,19 +2658,22 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
                 ax = plt.subplot(gs[n,p])
                 img = ax.pcolormesh(mit_h, grid.z, data[p], cmap=cmap[p], vmin=vmin[p], vmax=vmax[p])
                 ax.axis('tight')
-                if p==0 and n==0:
+                if bdry[m] == 'E':
+                    # Cut off the masked continent
+                    ax.set_xlim([-70, grid.lat_1d[-1]])
+                if p==0:
                     slice_axes(ax, h_axis=h_axis)
                 else:
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
-                ax.set_title(titles[p], fontsize=14)
+                ax.set_title(titles[p], fontsize=18)
                 # Colourbar on each side
                 if p==0:
-                    plt.colorbar(img, cax=cax[0])
+                    plt.colorbar(img, cax=cax[n][0])
                 elif p==2:
-                    plt.colorbar(img, cax=cax[1])
+                    plt.colorbar(img, cax=cax[n][1])
             # Variable title
-            plt.text(0.5, 0.1+0.4*n, var_titles[n], fontsize=20, transform=fig.transFigure, ha='center', va='center')
+            plt.text(0.5, 0.97-0.5*n, var_titles[n]+bdry_titles[m], fontsize=24, transform=fig.transFigure, ha='center', va='top')
         finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
             
             

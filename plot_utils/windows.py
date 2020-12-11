@@ -146,11 +146,11 @@ def set_panels (key, figsize=None):
     elif key == '2x3C4':
         # Six plots in 2 rows and 3 columns, with colourbars to the left and right
         gs = plt.GridSpec(2,3)
-        gs.update(left=0.1, right=0.9, bottom=0.025, top=0.9, wspace=0.05, hspace=0.1)
+        gs.update(left=0.12, right=0.9, bottom=0.025, top=0.88, wspace=0.05, hspace=0.25)
         cax1 = fig.add_axes([0.01, 0.55, 0.015, 0.3])
         cax2 = fig.add_axes([0.93, 0.55, 0.015, 0.3])
-        cax3 = fig.add_axes([0.01, 0.15, 0.015, 0.3])
-        cax4 = fig.add_axes([0.93, 0.15, 0.015, 0.3])
+        cax3 = fig.add_axes([0.01, 0.06, 0.015, 0.3])
+        cax4 = fig.add_axes([0.93, 0.06, 0.015, 0.3])
     elif key == '3x3C6+T3':
 
         # Nine plots arranged into three rows and three columns, with one colourbar to the left of each row and one to the right, and a title above each row
