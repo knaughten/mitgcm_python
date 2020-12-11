@@ -33,7 +33,7 @@ from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze, total_melt
-from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
 
 
 # Global variables
@@ -2559,7 +2559,7 @@ def plot_shelf_freshening (base_dir='./', fig_dir='./'):
     timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the\nSouthern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False, fig_name=fig_dir+'freshening.png')
 
 
-# Calculate the historical simulation mass loss from the major Eastern Weddell ice shelves. Pass the time-averaged historical file.
+# Calculate the historical simulation mass loss from the major Eastern Weddell ice shelves. Argument is the time-averaged historical file.
 def calc_ewed_massloss (file_path):
 
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx'))
@@ -2568,6 +2568,110 @@ def calc_ewed_massloss (file_path):
     for var in ['brunt_riiser_larsen', 'ekstrom_jelbart_fimbul']:
         mask = grid.get_ice_mask(shelf=var)
         print var + ': ' + str(total_melt(ismr, mask, grid)) + ' Gt/y'
+
+
+# Compare the UKESM boundary conditions to the World Ocean Atlas 2018 for temperature and salinity.
+def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
+
+    var_names = ['THETA', 'SALT']
+    file_mid = '_historical.OBCS_'
+    bdry = ['E', 'N']
+    year_start = 1979
+    year_end = 2014
+    var_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
+    bdry_titles = [' at eastern boundary (30'+deg_string+'E)', ' at northern boundary (61'+deg_string+'S)']
+    bdry_dim = ['yz', 'xz']
+    obcs_dir = real_dir(obcs_dir)
+    woa_dir = real_dir(woa_dir)
+    woa_head = woa_dir + 'woa18_decav_'
+    woa_tail = '00_01.nc'
+    woa_var = ['t', 's']
+    woa_files = [woa_head + v + woa_tail for v in woa_var]
+    woa_var_tail = '_mn'
+
+    # Build grid, just for the dimensions
+    grid = Grid(grid_dir)
+    # Read WOA grid
+    woa_lon = read_netcdf(woa_files[0], 'lon')
+    woa_lat = read_netcdf(woa_files[0], 'lat')
+    woa_z = -1*read_netcdf(woa_files[0], 'depth')
+
+    # Loop over the boundaries
+    for m in range(len(bdry)):
+        # Get WOA interpolation weights
+        if bdry == 'E':
+            i1, i2, c1, c2 = interp_slice_helper(woa_lon, grid.lon_1d[-1])
+        elif bdry == 'N':
+            j1, j2, c1, c2 = interp_slice_helper(woa_lat, grid.lat_1d[-1])
+        # Set up the figure
+        fig, gs, cax1, cax2, cax3, cax4 = set_panels('2x3C4')
+        cax = [[cax1, cax2], [cax3, cax4]]
+        # Loop over the variables
+        for n in range(len(var_names)):
+            # Read and time-integrate the boundary conditions
+            ukesm_data= None
+            for year in range(start_year, end_year+1):
+                ukesm_file = obcs_dir + var_names[n] + file_mid + bdry[m] + '_' + str(year)
+                data_tmp = read_binary(ukesm_file, [grid.nx, grid.ny, grid.nz], bdry_dim[m])
+                if ukesm_var is None:
+                    ukesm_data = data_tmp
+                else:
+                    ukesm_data += data_tmp
+            # Convert integral to average
+            ukesm_data /= (end_year - start_year + 1)
+            # Apply land mask
+            ukesm_data = np.ma.masked_where(ukesm_data==0, ukesm_data)
+            # Read World Ocean Atlas data
+            woa_data_3d = read_netcdf(woa_files[n], woa_var[n]+woa_var_tail)
+            # Interpolate to boundary, and then to the MITgcm grid on the remaining axes
+            if bdry == 'E':
+                woa_data = c1*woa_data_3d[:,:,i1] + c2*woa_data_3d[:,:,i2]
+                woa_h = woa_lat
+                mit_h = grid.lat_1d
+                h_axis = 'lat'
+            elif bdry == 'N':
+                woa_data = c1*woa_data_3d[:,j1,:] + c2*woa_data_3d[:,j2,:]
+                woa_h = woa_lon
+                mit_h = grid.lon_1d
+                h_axis = 'lon'
+            # Get mask and convert to hfac equivalent (1 for unmasked, 0 for masked)
+            woa_hfac = 1 - (woa_data.mask).astype(float)
+            woa_data_interp = interp_bdry(woa_h, woa_depth, woa_data, woa_hfac, mit_h, grid.z, grid.hfac)
+            woa_data_interp = np.ma.masked_where(ukesm_data.mask, woa_data_interp)
+            data_diff = ukesm_data - woa_data_interp
+            # Get min/max values
+            vmin_abs = min(np.amin(ukesm_data), np.amin(woa_data_interp))
+            vmax_abs = max(np.amax(ukesm_data), np.amax(woa_data_interp))
+            cmap_abs, vmin_abs, vmax_abs = set_colours(ukesm_data, vmin=vmin_abs, vmax=vmax_abs)
+            cmap_diff, vmin_diff, vmax_diff = set_colours(data_diff, ctype='plusminus')
+            # Wrap up for adding to plot
+            data = [ukesm_data, woa_data_interp, data_diff]
+            vmin = [vmin_abs, vmin_abs, vmin_diff]
+            vmax = [vmax_abs, vmax_abs, vmax_diff]
+            cmap = [cmap_abs, cmap_abs, cmap_diff]
+            titles = ['UKESM', 'World Ocean Atlas', 'Model bias']
+            for p in range(3):
+                ax = plt.subplot(gs[n,p])
+                img = ax.pcolormesh(mit_h, grid.z, data[p], cmap=cmap[p], vmin=vmin[p], vmax=vmax[p])
+                ax.axis('tight')
+                if p==0 and n==0:
+                    slice_axes(ax, h_axis=h_axis)
+                else:
+                    ax.set_xticklabels([])
+                    ax.set_yticklabels([])
+                ax.set_title(titles[p], fontsize=14)
+                # Colourbar on each side
+                if p==0:
+                    plt.colorbar(img, cax=cax[0])
+                elif p==2:
+                    plt.colorbar(img, cax=cax[1])
+            # Variable title
+            plt.text(0.5, 0.1+0.4*n, var_titles[n], fontsize=20, transform=fig.transFigure, ha='center', va='center')
+        finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
+            
+            
+        
+
         
 
     
