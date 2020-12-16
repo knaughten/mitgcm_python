@@ -765,7 +765,7 @@ def mask_2d_to_3d (mask, grid, zmin=None, zmax=None):
     if zmin is None:
         zmin = grid.z[-1]
     if zmax is None:
-        zmax = self.z[0]
+        zmax = grid.z[0]
     mask = xy_to_xyz(mask, grid)
     # Mask out closed cells
     mask *= grid.hfac!=0

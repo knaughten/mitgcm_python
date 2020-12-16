@@ -253,7 +253,7 @@ def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None
 
 # Same but volume-averaged value below the given depth.
 def timeseries_avg_below_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
-    return timeseries_vol_3d('below_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+    return timeseries_vol_3d('avg_below_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Same but volume-integrated value between the given depths (where z0=[z_deep, z_shallow])
