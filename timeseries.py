@@ -8,7 +8,7 @@ import datetime
 
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
 from interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
