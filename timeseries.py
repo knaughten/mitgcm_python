@@ -82,7 +82,7 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
         if mask is None:
             data_tmp = mask_land(data[t,:], grid, gtype=gtype)
         else:
-            data_tmp = apply_mask(data[t,:], np.invert(mask)
+            data_tmp = apply_mask(data[t,:], np.invert(mask))
         max_data[t] = var_min_max(data_tmp, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
     return max_data
 
