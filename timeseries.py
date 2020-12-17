@@ -694,7 +694,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             else:
                 values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average)
         elif option == 'max':
-            values_tmp = timeseries_max(fname, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, time_average=time_average)
+            values_tmp = timeseries_max(fname, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, mask=mask, time_average=time_average)
         elif option == 'avg_sfc':
             values_tmp = timeseries_avg_sfc(fname, var_name, grid, gtype=gtype, mask=mask, time_average=time_average)
         elif option == 'int_sfc':
