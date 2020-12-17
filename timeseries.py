@@ -68,6 +68,9 @@ def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_inde
 def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None, mask=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if var == 'PsiVEL':
+        # Special case to get absolute value of vertically integrated streamfunction
+        data = np.abs(np.sum(data, axis=-3))
     if len(data.shape)==2:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
