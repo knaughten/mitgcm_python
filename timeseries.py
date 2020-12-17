@@ -65,7 +65,7 @@ def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_inde
 
 
 # Read the given lat x lon variable from the given NetCDF file, and calculate timeseries of its maximum value in the given region.
-def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None):
+def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, xmin=None, xmax=None, ymin=None, ymax=None, mask=None):
 
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if len(data.shape)==2:
@@ -75,7 +75,12 @@ def timeseries_max (file_path, var_name, grid, gtype='t', time_index=None, t_sta
     num_time = data.shape[0]
     max_data = np.zeros(num_time)
     for t in range(num_time):
-        max_data[t] = var_min_max(data[t,:], grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
+        # Mask
+        if mask is None:
+            data_tmp = mask_land(data[t,:], grid, gtype=gtype)
+        else:
+            data_tmp = apply_mask(data[t,:], np.invert(mask)
+        max_data[t] = var_min_max(data_tmp, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1]
     return max_data
 
 
@@ -653,7 +658,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'int_between_z0', 'min_depth', 'iso_depth', 'max_gradient_depth']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'int_between_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -839,6 +844,7 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      '*_salt_tend': total salt tendency integrated over the given region (psu m^3/s)
 #      '*_res_time': mean cavity residence time for the given ice shelf (years)
 #      '*_mean_psi': mean absolute value of the barotropic streamfunction for the given region (Sv)
+#      '*_max_psi': maximum absolute value of the barotropic streamfunction for the given region (Sv)
 #      '*_ustar': area-averaged friction velocity under the given ice shelf (m/s)
 #      '*_thermal_driving': area-averaged ice-ocean boundary temperature minus in-situ freezing point under the given ice shelf (C)
 #      'ronne_delta_rho': difference in density between Ronne Depression and Ronne cavity
@@ -1168,6 +1174,13 @@ def set_parameters (var):
         var_name = 'PsiVEL'
         region = var[:var.index('_mean_psi')]
         title = 'Mean absolute barotropic streamfunction\nfor ' + region_names[region]
+        units = 'Sv'
+        factor = 1e-6
+    elif var.endswith('max_psi'):
+        option = 'max'
+        var_name = 'PsiVEL'
+        region = var[:var.index('_max_psi')]
+        title = 'Maximum absolute barotropic streamfunction\nfor ' + region_names[region]
         units = 'Sv'
         factor = 1e-6
     elif var.endswith('ustar'):
