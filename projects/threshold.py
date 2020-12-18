@@ -2457,7 +2457,7 @@ def calc_threshold_stage1 (base_dir='./'):
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_max_psi', 'fris_temp', 'fris_massloss']
-    fnames = [timeseries_file, timeseries_file, timeseries_file]
+    fnames = [timeseries_file_final, timeseries_file_final, timeseries_file_final]
     smooth = 5
     titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
     units = ['Sv', deg_string+'C', 'Gt/y']
@@ -2481,7 +2481,7 @@ def calc_threshold_stage1 (base_dir='./'):
             time_tmp = netcdf_time(file_path, monthly=False)
             data_tmp = read_netcdf(file_path, var_names[v])
             # Calculate annual averages
-            time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
+            #time_tmp, data_tmp = calc_annual_averages(time_tmp, data_tmp)
             # Now get mean and std of 11-year chunks
             data_mean_tmp = []
             data_std_tmp = []
