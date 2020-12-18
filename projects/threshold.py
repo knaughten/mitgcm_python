@@ -2460,7 +2460,7 @@ def calc_threshold_stage1 (base_dir='./'):
     fnames = [timeseries_file_final, timeseries_file_final]
     smooth = 10
     titles = ['Average temperature in FRIS cavity', 'Basal mass loss from FRIS']
-    units = [eg_string+'C', 'Gt/y']
+    units = [deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
 
