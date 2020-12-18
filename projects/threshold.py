@@ -1451,7 +1451,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             for n in range(num_sims):
                 if smooth[v] != 0:
                     # Plot unsmoothed versions in a lighter colour and thinner weight
-                    ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.5, linewidth=1)
+                    ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.4, linewidth=1)
                 # Plot smoothed versions on top
                 ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
                 # Dashed vertical line at threshold year
