@@ -1378,9 +1378,9 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
-    vmin = [[0.25, 0.25], [-2.28, -2.28], [0, 0]]
-    vmax = [[0.65, 0.8], [-1.45, 0.6], [250, 1800]]
-    ticks = [[np.arange(0.3, 0.7, 0.1), np.arange(0.3, 0.9, 0.15)], [np.arange(-2.2, -1.5, 0.2), np.arange(-2.2, 0.5, 0.6)], [np.arange(0, 300, 50), np.arange(200, 1800, 400)]]
+    vmin = [[0.15, 0.15], [-2.28, -2.28], [0, 0]]
+    vmax = [[0.9, 0.9], [-1.45, 0.6], [250, 1800]]
+    ticks = [[np.arange(0.2, 1, 0.2), np.arange(0.2, 1, 0.2)], [np.arange(-2.2, -1.5, 0.2), np.arange(-2.2, 0.5, 0.6)], [np.arange(0, 300, 50), np.arange(200, 1800, 400)]]
     threshold_year = [None, 147, 79]
     split_year = 150
     num_years = 200
@@ -1451,7 +1451,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             for n in range(num_sims):
                 if smooth[v] != 0:
                     # Plot unsmoothed versions in a lighter colour and thinner weight
-                    ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.6, linewidth=1)
+                    ax.plot(time[v], data[v][n], color=sim_colours[n], alpha=0.5, linewidth=1)
                 # Plot smoothed versions on top
                 ax.plot(time_smoothed[v], data_smoothed[v][n], color=sim_colours[n], linewidth=1.75, label=sim_names_plot[n])
                 # Dashed vertical line at threshold year
