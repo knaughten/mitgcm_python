@@ -2456,11 +2456,11 @@ def calc_threshold_stage1 (base_dir='./'):
     sim_dirs_plot = [sim_dirs[n] for n in sim_numbers]
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
-    var_names = ['fris_max_psi', 'fris_temp', 'fris_massloss']
-    fnames = [timeseries_file_final, timeseries_file_final, timeseries_file_final]
-    smooth = 5
-    titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
-    units = ['Sv', deg_string+'C', 'Gt/y']
+    var_names = ['fris_temp', 'fris_massloss']
+    fnames = [timeseries_file_final, timeseries_file_final]
+    smooth = 10
+    titles = ['Average temperature in FRIS cavity', 'Basal mass loss from FRIS']
+    units = [eg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
 
