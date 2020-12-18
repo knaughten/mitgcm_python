@@ -582,7 +582,7 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
     for file_path in file_paths:
         print 'Processing ' + file_path
         precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, monthly=True, time_average=time_average)
-        if len(hovmoller_loc) > 0:
+        if len(hovmoller_loc) > 0 and hovmoller_loc is not None:
             precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)
 
 
