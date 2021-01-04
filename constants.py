@@ -71,7 +71,7 @@ region_bounds = {
     'berkner_bank': [-50, -44, -78, -77],
     'wdw_core': [-60, -20, -75, -65],
     'filchner_front': [-45, -36, -79, -77],
-    'deep_ronne_cavity': [-85, -55, -85, -75.5],
+    'deep_ronne_cavity': [-85, -66, -85, -75.5],
     'offshore_filchner': [-40, -25, -75, -72],
     'crosson_thwaites': [-110, -106.7, -75.5, -74.75],
     'thwaites_pig': [-106, -100, -75.5, -74.75],
@@ -79,7 +79,9 @@ region_bounds = {
     'amundsen_shelf_break': [-115, -102, -71.8, -70.2],
     'amundsen_west_shelf_break': [-115, -112, -72, -71],
     'brunt_riiser_larsen': [-28, -10, -76.5, -71.6],
-    'ekstrom_jelbart_fimbul': [-10, 7.7, -72, -69]
+    'ekstrom_jelbart_fimbul': [-10, 7.7, -72, -69],
+    'filchner_sill': [-36, -30, -74.7, -74],
+    'filchner_trough_cavity': [-44, -38, -81, -76]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -92,6 +94,8 @@ region_bathy_bounds = {
     'deep_ronne_cavity': [None, -1000],
     'wdw_core': [None, -2000],
     'offshore_filchner': [None, -2000],
+    'filchner_sill': [-1500, -600],
+    'filchner_trough_cavity': [None, -1000]
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {
@@ -133,7 +137,9 @@ region_names = {
     'amundsen_shelf_break': 'Amundsen Sea shelf break',
     'amundsen_west_shelf_break': 'Western Amundsen Sea shelf break',
     'brunt_riiser_larsen': 'Brunt and Riiser-Larsen Ice Shelves',
-    'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves'
+    'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves',
+    'filchner_sill': 'Filchner Trough Sill',
+    'filchner_cavity': 'Filchner Trough in cavity'
 }    
 
 # Resolution of SOSE grid in degrees

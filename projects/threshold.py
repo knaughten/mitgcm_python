@@ -2486,7 +2486,7 @@ def calc_threshold_stage1 (base_dir='./'):
             data_mean_tmp = []
             data_std_tmp = []
             for t in range(smooth, data_tmp.size-smooth):
-                data_slice = data_tmp[t-smooth:t+smooth+1]
+                data_slice = data_tmp[t-smooth:t+smooth]
                 data_mean_tmp.append(np.mean(data_slice))
                 data_std_tmp.append(np.std(data_slice))
             data_mean_sim.append(np.array(data_mean_tmp))
