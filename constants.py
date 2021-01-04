@@ -139,7 +139,7 @@ region_names = {
     'brunt_riiser_larsen': 'Brunt and Riiser-Larsen Ice Shelves',
     'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves',
     'filchner_sill': 'Filchner Trough Sill',
-    'filchner_cavity': 'Filchner Trough in cavity'
+    'filchner_trough_cavity': 'Filchner Trough in cavity'
 }    
 
 # Resolution of SOSE grid in degrees
