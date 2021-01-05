@@ -33,7 +33,7 @@ from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze, total_melt, potential_density
-from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry, vertical_average
 
 
 # Global variables
@@ -2686,13 +2686,16 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     year0 = [2910, 1850, 1850, 1850]
     start_year = [0, 0, 79, 150]
     end_year = [199, 78, 149, 199]
-    base_dir = real_dir(base_dir)
+    titles = ['Control', 'Stage 1', 'Stage 2', 'Stage 2 extension']
+    h0 = -2500
+    compass_centre = [-25, -78]
+    compass_rad = [4, 1]
 
     if os.path.isfile(precompute_file):
         # Read the time-averaged density precomputed in file
         density_all = read_netcdf(precompute_file, 'potential_density')
         # Also read the grid from one file (the last one, to agree with other case - shouldn't really matter though)
-        file_path = base_dir + out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
+        file_path = out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
         grid = Grid(file_path)
     else:
         # Calculate and time-average density, based on annually averaged T and S
@@ -2701,6 +2704,7 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
             density_int = None
             for year in range(year0[n]+start_year[n], year0[n]+end_year[n]+1):
                 file_path = base_dir + out_dir[n] + str(year) + '01/MITgcm/output.nc'
+                print 'Processing ' + file_path
                 grid = Grid(file_path)
                 temp = read_netcdf(file_path, 'THETA', time_average=True)
                 salt = read_netcdf(file_path, 'SALT', time_average=True)
@@ -2713,22 +2717,52 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
                 density_all = np.ma.empty([num_periods, grid.nz, grid.ny, grid.nx])
             density_all[n,:] = density_int/(end_year[n]-start_year[n]+1)
         # Now save to file
+        print 'Saving ' + precompute_file
         ncfile = NCfile(precompute_file, grid, 'xyzt')
         ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
         ncfile.close()
 
-
-    # Choose vertical option:
-    # Bottom layer
-    # Some representative depth
-    # Average below some representative depth
-    # Average over entire water column
-
     # Choose density option:
     # d/dy
-    # Subtract average over FRIS
+    drho_dy = np.ma.empty(density_all.shape)
+    drho_dy[:,:,:-1,:] = density_all[:,:,1:,:] - density_all[:,:,:-1,:]
+    drho_dy[:,:,-1,:] = drho_dy[:,:,-2,:]
+    drho_dy /= grid.dA    
+    # Or: subtract average over FRIS?
+    
+    # Choose vertical option:
+    # Average over entire water column
+    drho_dy = vertical_average(drho_dy, grid, time_dependent=True)
+    # Or: bottom layer? Some representative depth? Average below some depth?
 
-    # Plot 4 panels
+    # Mask deep ocean
+    drho_dy = np.ma.masked_where(grid.bathy <= h0, drho_dy)
+    # Overwrite this with manual bounds!
+    vmin = np.amin(drho_dy)
+    vmax = np.amax(drho_dy)
+
+    # Generate coordinates for compass outline - will be overlaid with pretty arrows and N/S/E/W in Corel Draw
+    compass_lon = np.linspace(compass_centre[0]-compass_rad[0], compass_centre[0]+compass_rad[0])
+    compass_lat = np.linspace(compass_centre[1]-compass_rad[1], compass_centre[1]+compass_rad[1])
+    compass_lon_x, compass_lon_y = polar_stereo(compass_lon, np.zeros(compass_lon.size)+compass_centre[1])
+    compass_lat_x, compass_lat_y = polar_stereo(np.zeros(compass_lat.size)+compass_centre[0], compass_lat)
+
+    # Plot 4 panels - if polar stereographic, need to add compass in post
+    fig, gs, cax = set_panels('2x2C1')
+    for n in range(num_periods):
+        ax = plt.subplot(gs[n/2, n%2])
+        ax.axis('equal')
+        img = latlon_plot(drho_dy[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=True, pster=True, title=titles[n])
+        ax.set_xticks([])
+        ax.set_yticks([])
+        if n==0:
+            # Plot outline of compass
+            ax.plot(compass_lon_x, compass_lon_y, color='black')
+            ax.plot(compass_lat_x, compass_lat_y, color='black')
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle(r'Meridional gradient in potential density (kg/m$^3$)', fontsize=24)
+    finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
+    
             
             
         
