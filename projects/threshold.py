@@ -2690,7 +2690,10 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
 
     if os.path.isfile(precompute_file):
         # Read the time-averaged density precomputed in file
-        pass
+        density_all = read_netcdf(precompute_file, 'potential_density')
+        # Also read the grid from one file (the last one, to agree with other case - shouldn't really matter though)
+        file_path = base_dir + out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
+        grid = Grid(file_path)
     else:
         # Calculate and time-average density, based on annually averaged T and S
         density_all = None
@@ -2714,10 +2717,17 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
         ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
         ncfile.close()
 
-        
-    # Could select bottom, or show d/dy (of what level?)
-    # Mask deep ocean
-    # Average over FRIS for each time period; save and subtract this value
+
+    # Choose vertical option:
+    # Bottom layer
+    # Some representative depth
+    # Average below some representative depth
+    # Average over entire water column
+
+    # Choose density option:
+    # d/dy
+    # Subtract average over FRIS
+
     # Plot 4 panels
             
             
