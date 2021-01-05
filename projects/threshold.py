@@ -32,7 +32,7 @@ from ..plot_misc import read_plot_hovmoller_ts, hovmoller_ts_plot
 from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
-from ..diagnostics import density, parallel_vector, tfreeze, total_melt
+from ..diagnostics import density, parallel_vector, tfreeze, total_melt, potential_density
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
 
 
@@ -2675,6 +2675,50 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
             # Variable title
             plt.text(0.5, 0.97-0.5*n, var_titles[n]+bdry_titles[m], fontsize=24, transform=fig.transFigure, ha='center', va='top')
         finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
+
+
+def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
+
+    # 4 time periods to average
+    num_periods = 4
+    sim_keys = [1, 3, 3, 3]
+    out_dir = [real_dir(base_dir) + sim_dirs[key] for key in sim_keys]
+    year0 = [2910, 1850, 1850, 1850]
+    start_year = [0, 0, 79, 150]
+    end_year = [199, 78, 149, 199]
+    base_dir = real_dir(base_dir)
+
+    if os.path.isfile(precompute_file):
+        # Read the time-averaged density precomputed in file
+        pass
+    else:
+        # Calculate and time-average density, based on annually averaged T and S
+        density_all = None
+        for n in range(num_periods):
+            density_int = None
+            for year in range(year0[n]+start_year[n], year0[n]+end_year[n]+1):
+                file_path = base_dir + out_dir[n] + str(year) + '01/MITgcm/output.nc'
+                grid = Grid(file_path)
+                temp = read_netcdf(file_path, 'THETA', time_average=True)
+                salt = read_netcdf(file_path, 'SALT', time_average=True)
+                density = mask_3d(potential_density('MDJWF', salt, temp), grid)
+                if density_int is None:
+                    density_int = density
+                else:
+                    density_int += density
+            if density_all is None:
+                density_all = np.ma.empty([num_periods, grid.nz, grid.ny, grid.nx])
+            density_all[n,:] = density_int/(end_year[n]-start_year[n]+1)
+        # Now save to file
+        ncfile = NCfile(precompute_file, grid, 'xyzt')
+        ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
+        ncfile.close()
+
+        
+    # Could select bottom, or show d/dy (of what level?)
+    # Mask deep ocean
+    # Average over FRIS for each time period; save and subtract this value
+    # Plot 4 panels
             
             
         
