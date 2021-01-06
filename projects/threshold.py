@@ -33,7 +33,8 @@ from ..plot_slices import get_loc, slice_plot
 from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze, total_melt, potential_density
-from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry, vertical_average
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
+from ..calculus import vertical_average
 
 
 # Global variables
@@ -2711,6 +2712,7 @@ def precompute_density (precompute_file, base_dir='./'):
     ncfile = NCfile(precompute_file, grid, 'xyzt')
     ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
     ncfile.close()
+    
 
 def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
 
