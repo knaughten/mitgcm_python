@@ -71,10 +71,14 @@ def prepare_dz_hfac (data, grid, gtype='t', time_dependent=False):
 def over_depth (option, data, grid, gtype='t', time_dependent=False):
 
     dz, hfac = prepare_dz_hfac(data, grid, gtype=gtype, time_dependent=time_dependent)
+    if isinstance(data, np.ma.MaskedArray):
+        mask = np.invert(data.mask).astype(float)
+    else:
+        mask = np.ones(data.shape)
     if option == 'average':
-        return np.sum(data*dz*hfac, axis=-3)/np.sum(dz*hfac, axis=-3)
+        return np.sum(data*dz*hfac*mask, axis=-3)/np.sum(dz*hfac*mask, axis=-3)
     elif option == 'integrate':
-        return np.sum(data*dz*hfac, axis=-3)
+        return np.sum(data*dz*hfac*mask, axis=-3)
     else:
         print 'Error (over_depth): invalid option ' + option
         sys.exit()
