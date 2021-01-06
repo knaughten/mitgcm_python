@@ -18,10 +18,10 @@ import datetime
 
 from ..grid import Grid, choose_grid, UKESMGrid
 from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binary, NCfile_basiclatlon
-from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo
+from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo, z_to_xyz
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
-from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis
+from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis, round_to_decimals
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
@@ -34,7 +34,7 @@ from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze, total_melt, potential_density
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
-from ..calculus import vertical_average
+from ..calculus import vertical_average, volume_average
 
 
 # Global variables
@@ -2678,6 +2678,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
         finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
 
 
+# Precompute density time-averaged over 4 time periods during the piControl and abrupt-4xCO2 simulations.
 def precompute_density (precompute_file, base_dir='./'):
 
     # 4 time periods to average
@@ -2713,6 +2714,7 @@ def precompute_density (precompute_file, base_dir='./'):
     ncfile.close()
     
 
+# Plot the density precomputed above (as difference from FRIS mean; vertically averaged beneath FRIS and depth-averaged below 300 m on the continental shelf)
 def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
 
     num_periods = 4
@@ -2722,52 +2724,47 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    # Read the time-averaged density precomputed in file
-    density_all = read_netcdf(precompute_file, 'potential_density')
+    # Read the time-averaged density precomputed in file and subtract 1000 for ease of colourbars
+    density_all = read_netcdf(precompute_file, 'potential_density')-1e3
     # Also read the initial grid
     grid = Grid(base_dir+grid_path)
 
     # Calculate, save, and subtract the average density beneath FRIS
-    # d/dy
-    drho_dy = np.ma.empty(density_all.shape)
-    drho_dy[:,:,:-1,:] = density_all[:,:,1:,:] - density_all[:,:,:-1,:]
-    drho_dy[:,:,-1,:] = drho_dy[:,:,-2,:]
-    drho_dy /= grid.dA    
-    # Or: subtract average over FRIS?
+    fris_mean = []    
+    for n in range(num_periods):
+        # Get the mask as shown by the data, not the grid (as the grounding line changes and the data will have the most permissive mask for the given time period)
+        mask = np.invert(density_all[n,:].mask)
+        # Now restrict to the FRIS region
+        fris_mask = grid.restrict_mask(mask, 'fris_cavity')
+        fris_density = np.ma.masked_where(np.invert(fris_mask), density_all[n,:])
+        fris_mean_tmp = volume_average(fris_density, grid)
+        fris_mean.append(fris_mean_tmp)
+        density_all[n,:] -= fris_mean_tmp
 
     # Average below 300m on shelf, over all depths in cavity, and mask deep ocean
-    
-    # Choose vertical option:
-    # Average over entire water column
-    drho_dy = vertical_average(drho_dy, grid, time_dependent=True)
-    # Or: bottom layer? Some representative depth? Average below some depth?
+    # Do this by masking the upper open ocean and the entire deep ocean, then vertically average what's left
+    upper_ocean = mask_2d_to_3d(grid.get_open_ocean_mask(), zmin=h_front)
+    deep_ocean = xy_to_xyz(grid.bathy <= h_shelf)
+    density_final = np.empty([num_periods, grid.ny, grid.nx])
+    for n in range(num_periods):
+        density_tmp = np.ma.masked_where(upper_ocean, density_all[n,:])
+        density_tmp = np.ma.masked_where(deep_ocean, density_tmp)
+        density_final[n,:] = vertical_average(density_tmp, grid)
+    # Overwrite this with manual bounds?
+    vmin = np.amin(density_final)
+    vmax = np.amax(density_final)
 
-    # Mask deep ocean
-    drho_dy = np.ma.masked_where(grid.bathy <= h0, drho_dy)
-    # Overwrite this with manual bounds!
-    vmin = np.amin(drho_dy)
-    vmax = np.amax(drho_dy)
-
-    # Generate coordinates for compass outline - will be overlaid with pretty arrows and N/S/E/W in Corel Draw
-    compass_lon = np.linspace(compass_centre[0]-compass_rad[0], compass_centre[0]+compass_rad[0])
-    compass_lat = np.linspace(compass_centre[1]-compass_rad[1], compass_centre[1]+compass_rad[1])
-    compass_lon_x, compass_lon_y = polar_stereo(compass_lon, np.zeros(compass_lon.size)+compass_centre[1])
-    compass_lat_x, compass_lat_y = polar_stereo(np.zeros(compass_lat.size)+compass_centre[0], compass_lat)
-
-    # Plot 4 panels - if polar stereographic, need to add compass in post
+    # Plot 4 panels
     fig, gs, cax = set_panels('2x2C1')
     for n in range(num_periods):
         ax = plt.subplot(gs[n/2, n%2])
         ax.axis('equal')
-        img = latlon_plot(drho_dy[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=True, pster=True, title=titles[n])
+        img = latlon_plot(density_final[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=True, pster=True, title=titles[n])
+        plt.text(0.99, 0.01, 'FRIS mean = '+round_to_decimals(fris_mean[n],3), ha='right', va='bottom', transform=ax.transAxes)
         ax.set_xticks([])
         ax.set_yticks([])
-        if n==0:
-            # Plot outline of compass
-            ax.plot(compass_lon_x, compass_lon_y, color='black')
-            ax.plot(compass_lat_x, compass_lat_y, color='black')
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
-    plt.suptitle(r'Meridional gradient in potential density (kg/m$^3$)', fontsize=24)
+    plt.suptitle(r'Density difference from FRIS mean (kg/m$^3$-1000), abrupt-4xCO2', fontsize=24)
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
     
             
