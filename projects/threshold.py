@@ -2725,11 +2725,11 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
 
     # Read the time-averaged density precomputed in file
-    density_all = read_netcdf(precompute_file, 'potential_density')
+    density_all = read_netcdf(precompute_file, 'potential_density') - 1e3
     # Also read the initial grid
     grid = Grid(base_dir+grid_path)
 
-    # Calculate, save, and subtract the average density beneath FRIS
+    '''# Calculate, save, and subtract the average density beneath FRIS
     fris_mean = []    
     for n in range(num_periods):
         # Get the mask as shown by the data, not the grid (as the grounding line changes and the data will have the most permissive mask for the given time period)
@@ -2739,7 +2739,7 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
         fris_density = np.ma.masked_where(np.invert(fris_mask), density_all[n,:])
         fris_mean_tmp = volume_average(fris_density, grid)
         fris_mean.append(fris_mean_tmp)
-        #density_all[n,:] -= fris_mean_tmp
+        density_all[n,:] -= fris_mean_tmp'''
 
     # Average below 300m on shelf, over all depths in cavity, and mask deep ocean
     # Do this by masking the upper open ocean and the entire deep ocean, then vertically average what's left
@@ -2748,23 +2748,27 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     density_final = np.ma.empty([num_periods, grid.ny, grid.nx])
     for n in range(num_periods):
         density_tmp = np.ma.masked_where(upper_ocean, density_all[n,:])
-        #density_tmp = np.ma.masked_where(deep_ocean, density_tmp)
+        density_tmp = np.ma.masked_where(deep_ocean, density_tmp)
         density_final[n,:] = mask_land(vertical_average(density_tmp, grid), grid)
     # Overwrite this with manual bounds?
     vmin = np.amin(density_final)
     vmax = np.amax(density_final)
 
     # Plot 4 panels
-    fig, gs, cax = set_panels('2x2C1', figsize=(6,7))
+    fig, gs, cax1, cax2 = set_panels('2x2C2', figsize=(6,7))
+    vmin = [np.amin(density_final[:2,:])]*2 + [np.amin(density_final[2:,:])]*2
+    vmax = [np.amax(density_final[:2,:])]*2 + [np.amax(density_final[2:,:])]*2
+    cax = [None, cax1, None, cax2]
     for n in range(num_periods):
         ax = plt.subplot(gs[n/2, n%2])
         ax.axis('equal')
-        img = latlon_plot(density_final[n,:], grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, zoom_fris=True, pster=True, title=titles[n])
-        plt.text(0.99, 0.01, 'FRIS mean = \n'+round_to_decimals(fris_mean[n],3), ha='right', va='bottom', transform=ax.transAxes)
+        img = latlon_plot(density_final[n,:], grid, ax=ax, make_cbar=False, vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=titles[n])
+        #plt.text(0.99, 0.01, 'FRIS mean = \n'+round_to_decimals(fris_mean[n],3), ha='right', va='bottom', transform=ax.transAxes)
         ax.set_xticks([])
         ax.set_yticks([])
-    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
-    plt.suptitle(r'Density difference from FRIS mean (kg/m$^3$)', fontsize=20)
+        if cax[n] is not None:
+            cbar = plt.colorbar(img, cax=cax[n])
+    plt.suptitle(r'Density (kg/m$^3$-1000), abrupt-4xCO2', fontsize=20)
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
 
             
