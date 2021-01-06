@@ -2677,7 +2677,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
         finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
 
 
-def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
+def precompute_density (precompute_file, base_dir='./'):
 
     # 4 time periods to average
     num_periods = 4
@@ -2685,42 +2685,46 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     out_dir = [real_dir(base_dir) + sim_dirs[key] for key in sim_keys]
     year0 = [2910, 1850, 1850, 1850]
     start_year = [0, 0, 79, 150]
-    end_year = [199, 78, 149, 199]
+    end_year = [1, 1, 80, 151]
+    #end_year = [199, 78, 149, 199]
+
+    # Calculate and time-average density, based on annually averaged T and S
+    density_all = None
+    for n in range(num_periods):
+        density_int = None
+        for year in range(year0[n]+start_year[n], year0[n]+end_year[n]+1):
+            file_path = base_dir + out_dir[n] + str(year) + '01/MITgcm/output.nc'
+            print 'Processing ' + file_path
+            grid = Grid(file_path)
+            temp = read_netcdf(file_path, 'THETA', time_average=True)
+            salt = read_netcdf(file_path, 'SALT', time_average=True)
+            density = mask_3d(potential_density('MDJWF', salt, temp), grid)
+            if density_int is None:
+                density_int = density
+            else:
+                density_int += density
+        if density_all is None:
+            density_all = np.ma.empty([num_periods, grid.nz, grid.ny, grid.nx])
+        density_all[n,:] = density_int/(end_year[n]-start_year[n]+1)
+    # Now save to file
+    print 'Saving ' + precompute_file
+    ncfile = NCfile(precompute_file, grid, 'xyzt')
+    ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
+    ncfile.close()
+
+def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
+
+    num_periods = 4
     titles = ['Control', 'Stage 1', 'Stage 2', 'Stage 2 extension']
     h0 = -2500
     compass_centre = [-25, -78]
     compass_rad = [4, 1]
 
-    if os.path.isfile(precompute_file):
-        # Read the time-averaged density precomputed in file
-        density_all = read_netcdf(precompute_file, 'potential_density')
-        # Also read the grid from one file (the last one, to agree with other case - shouldn't really matter though)
-        file_path = out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
-        grid = Grid(file_path)
-    else:
-        # Calculate and time-average density, based on annually averaged T and S
-        density_all = None
-        for n in range(num_periods):
-            density_int = None
-            for year in range(year0[n]+start_year[n], year0[n]+end_year[n]+1):
-                file_path = base_dir + out_dir[n] + str(year) + '01/MITgcm/output.nc'
-                print 'Processing ' + file_path
-                grid = Grid(file_path)
-                temp = read_netcdf(file_path, 'THETA', time_average=True)
-                salt = read_netcdf(file_path, 'SALT', time_average=True)
-                density = mask_3d(potential_density('MDJWF', salt, temp), grid)
-                if density_int is None:
-                    density_int = density
-                else:
-                    density_int += density
-            if density_all is None:
-                density_all = np.ma.empty([num_periods, grid.nz, grid.ny, grid.nx])
-            density_all[n,:] = density_int/(end_year[n]-start_year[n]+1)
-        # Now save to file
-        print 'Saving ' + precompute_file
-        ncfile = NCfile(precompute_file, grid, 'xyzt')
-        ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
-        ncfile.close()
+    # Read the time-averaged density precomputed in file
+    density_all = read_netcdf(precompute_file, 'potential_density')
+    # Also read the grid from one file (the last one, to agree with other case - shouldn't really matter though)
+    file_path = out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
+    grid = Grid(file_path)
 
     # Choose density option:
     # d/dy
