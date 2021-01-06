@@ -2686,8 +2686,7 @@ def precompute_density (precompute_file, base_dir='./'):
     out_dir = [real_dir(base_dir) + sim_dirs[key] for key in sim_keys]
     year0 = [2910, 1850, 1850, 1850]
     start_year = [0, 0, 79, 150]
-    end_year = [1, 1, 80, 151]
-    #end_year = [199, 78, 149, 199]
+    end_year = [199, 78, 149, 199]
 
     # Calculate and time-average density, based on annually averaged T and S
     density_all = None
@@ -2718,23 +2717,25 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
 
     num_periods = 4
     titles = ['Control', 'Stage 1', 'Stage 2', 'Stage 2 extension']
-    h0 = -2500
-    compass_centre = [-25, -78]
-    compass_rad = [4, 1]
+    h_front = -300
+    h_shelf = -2500
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
 
     # Read the time-averaged density precomputed in file
     density_all = read_netcdf(precompute_file, 'potential_density')
-    # Also read the grid from one file (the last one, to agree with other case - shouldn't really matter though)
-    file_path = out_dir[-1] + str(end_year[-1]) + '01/MITgcm/output.nc'
-    grid = Grid(file_path)
+    # Also read the initial grid
+    grid = Grid(base_dir+grid_path)
 
-    # Choose density option:
+    # Calculate, save, and subtract the average density beneath FRIS
     # d/dy
     drho_dy = np.ma.empty(density_all.shape)
     drho_dy[:,:,:-1,:] = density_all[:,:,1:,:] - density_all[:,:,:-1,:]
     drho_dy[:,:,-1,:] = drho_dy[:,:,-2,:]
     drho_dy /= grid.dA    
     # Or: subtract average over FRIS?
+
+    # Average below 300m on shelf, over all depths in cavity, and mask deep ocean
     
     # Choose vertical option:
     # Average over entire water column
