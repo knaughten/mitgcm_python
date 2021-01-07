@@ -67,7 +67,7 @@ def set_panels (key, figsize=None):
         elif key == '2x1C0':
             figsize = (6, 8)
         elif key == 'trans_2x1C0':
-            figsize = (6, 9)
+            figsize = (6, 8)
         elif key == 'PS111_2x2C2':
             figsize = (8, 8)
         elif key == 'PS111_3x2C0':
@@ -228,9 +228,9 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(2,1)
         gs.update(left=0.15, right=0.95, bottom=0.12, top=0.85, hspace=0.3)
     elif key == 'trans_2x1C0':
-        # Like 2x1C0 but space for map inset at top left
+        # Like 2x1C0 but space for map inset at top left, and colourbar above
         gs = plt.GridSpec(2,1)
-        gs.update(left=0.15, right=0.95, bottom=0.12, top=0.75, hspace=0.3)
+        gs.update(left=0.15, right=0.95, bottom=0.05, top=0.79, hspace=0.3)
     elif key == 'PS111_2x2C2':
         # Like 2x2C2 but space for map inset at top left
         gs = plt.GridSpec(2,2)

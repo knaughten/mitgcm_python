@@ -21,7 +21,7 @@ from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binar
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo, z_to_xyz, mask_2d_to_3d
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
-from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis, round_to_decimals
+from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis, round_to_decimals, lat_label
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
@@ -2752,14 +2752,14 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
 
 
-# Plot transects of bottom density through the Ronne Depression and Filchner Trough, at the 4 time slices precomputed earlier.
+# Plot transects of bottom density through the Ronne Depression and Filchner Trough, at the first 3 of 4 time slices precomputed earlier.
 def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
 
     rd_bounds = [[-74.5, -70, -79, -77.5], [-72, -62, -77.5, -75.5], [-63, -55, -75.5, -75], [-62, -55, -75, -73.7]]
     ft_bounds = [[-50,-38,-80.5,-78], [-45, -25, -78, -75], [-32.5, -31.5, -75, -74]]
-    num_periods = 4
-    labels = ['Control', 'Stage 1', 'Stage 2', 'Stage 2 extension']
-    colours = ['black', 'blue', 'red', 'magenta']
+    num_periods = 3
+    labels = ['piControl', 'Stage 1', 'Stage 2']
+    colours = ['black', 'blue', 'red']
     titles = ['a) Ronne Depression', 'b) Filchner Trough']
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -2776,27 +2776,30 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         bathy = np.ma.masked_where(np.invert(mask),grid.bathy)
         i_trans = []
         j_trans = []
-        lat_trans = []
+        lon_trans = []
+        lat_trans = []        
         draft_trans = []
         for j in range(grid.ny):
             i = np.argmin(bathy[j,:])
             if bathy[j,i] is not np.ma.masked:
                 i_trans.append(i)
                 j_trans.append(j)
+                lon_trans.append(grid.lon_1d[i])
                 lat_trans.append(grid.lat_1d[j])
                 draft_trans.append(grid.draft[j,i])
         # Find the latitude of the ice shelf front (last point with a nonzero draft)
         index_front = np.where(np.array(draft_trans)==0)[0][0] -1
-        lat_front = lat_front[index_front]
-        return i_trans, j_trans, lat_trans, lat_front
+        lat_front = lat_trans[index_front]
+        return i_trans, j_trans, lon_trans, lat_trans, lat_front
 
-    i_rd, j_rd, lat_rd, lat_front_rd = select_transect(rd_bounds)
-    i_ft, j_ft, lat_ft, lat_front_ft = select_transect(ft_bounds)
+    i_rd, j_rd, lon_rd, lat_rd, lat_front_rd = select_transect(rd_bounds)
+    i_ft, j_ft, lon_ft, lat_ft, lat_front_ft = select_transect(ft_bounds)
+    lon_trans = [lon_rd, lon_ft]
     lat_trans = [lat_rd, lat_ft]
     lat_front = [lat_front_rd, lat_front_ft]
 
     # Read precomputed density
-    density_3d = read_netcdf(precompute_file, 'potential_density')
+    density_3d = read_netcdf(precompute_file, 'potential_density') - 1e3
     transects = []
     for t in range(num_periods):
         # Select bottom layer
@@ -2808,19 +2811,43 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
 
     # Plot
     fig, gs = set_panels('trans_2x1C0')
+    ymin = 27.2
+    ymax = 28.2
     for n in range(2):
         ax = plt.subplot(gs[n,0])
         for t in range(num_periods):
             ax.plot(lat_trans[n], transects[t][n], color=colours[t], linewidth=1.75, label=labels[t])
         ax.grid(True)
-        ax.set_title(titles[n], fontsize=18)
-        # TODO: Axes labels
+        ax.set_title(titles[n], fontsize=16)
+        ax.set_ylabel(r'kg/m$^3$-1000', fontsize=12)
+        ax.set_xlim([lat_trans[n][0], lat_trans[n][-1]])
+        ax.set_ylim([ymin, ymax])
+        # Make nice latitude labels
+        lat_ticks = ax.get_xticks()
+        lat_labels = []
+        for x in lat_ticks:
+            lat_labels.append(lat_label(x))
+        ax.set_xticklabels(lat_labels)
         # Indicate the ice shelf front with a dashed line
         ax.axvline(lat_front[n], color='black', linestyle='dashed', linewidth=1)
-        # TODO: Label cavity, shelf, ice shelf front
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.4), fontsize=14)
-    ax.suptitle('Transects of bottom density', fontsize=20)
-    # TODO: Add map up top
+        # Label ice shelf cavity, continental shelf, and (for Filchner Trough) offshore
+        plt.text(lat_front[n]-0.15, 28.1, 'cavity', ha='right', va='center', fontsize=13)
+        plt.text(lat_front[n]+0.15, 28.1, 'shelf', ha='left', va='center', fontsize=13)
+        if n==0:
+            ax.legend(loc='upper center', bbox_to_anchor=(0.6,1.35), fontsize=12, ncol=3)
+        if n==1:
+            plt.text(lat_trans[n][-1]-0.1, 28.18, 'offshore', ha='right', va='top', rotation=90, fontsize=13)
+    # Add map in top left showing transects
+    ax = fig.add_axes([0.01, 0.82, 0.23, 0.17])
+    empty_data = mask_land_ice(np.ones([grid.ny, grid.nx]), grid)-100
+    latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4.5e5, ymin=1.2e5, ymax=1.75e6, ctype='plusminus', vmin=-300)
+    for n in range(2):
+        x_trans, y_trans = polar_stereo(lon_trans[n], lat_trans[n])
+        ax.plot(x_trans, y_trans, color='red')
+        # Label with a or b
+        plt.text(x_trans[-1], y_trans[-1], chr(ord('`')+n+1), ha='left', va='bottom', fontsize=13, color='red')
+    plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
+    finished_plot(fig, fig_name=fig_dir+'density_transects.png', dpi=300)
 
             
             
