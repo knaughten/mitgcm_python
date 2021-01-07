@@ -34,7 +34,7 @@ from ..timeseries import calc_annual_averages
 from ..plot_ua import read_ua_difference, check_read_gl, read_ua_bdry, ua_plot
 from ..diagnostics import density, parallel_vector, tfreeze, total_melt, potential_density
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_bilinear, interp_slice_helper, interp_bdry
-from ..calculus import vertical_average, volume_average
+from ..calculus import vertical_average, volume_average, area_average
 
 
 # Global variables
@@ -1824,11 +1824,11 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
     point_colours = ['blue', 'red']
     #colours = ['magenta', 'blue', 'DodgerBlue', 'green', 'red']
     region_titles = ['Southern\nWeddell Sea\ncontinental shelf', 'Filchner\nTrough'] #['Southern\nWeddell Sea\ncontinental shelf', 'Ronne\nDepression', 'Deep Ronne\nIce Shelf cavity', 'Filchner\nTrough', 'Offshore\nWDW']
-    region_title_loc = [[0.365, 0.58], [0.61, 0.52]]#[[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
+    region_title_loc = [[0.35, 0.7], [0.565, 0.6]]#[[0.365, 0.58], [0.42, 0.47], [0.49, 0.34], [0.61, 0.52], [0.62, 0.79]]
     point_title_loc = [[0.44, 0.32], [0.6, 0.82]]
     num_regions = len(regions)
     num_points = len(points)
-    [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.6e6] # 1.85e6]
+    [xmin, xmax, ymin, ymax] = [-1.7e6, -5.4e5, 1.5e5, 1.5e6] #[-1.75e6, -4.8e5, 1.1e5, 1.85e6]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -2801,6 +2801,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
     # Read precomputed density
     density_3d = read_netcdf(precompute_file, 'potential_density') - 1e3
     transects = []
+    fris_mean = []
     for t in range(num_periods):
         # Select bottom layer
         bottom_density = select_bottom(density_3d[t,:])
@@ -2808,6 +2809,11 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         trans_rd = np.array([bottom_density[j,i] for j,i in zip(j_rd,i_rd)])
         trans_ft = np.array([bottom_density[j,i] for j,i in zip(j_ft,i_ft)])
         transects.append([trans_rd, trans_ft])
+        # Now average over FRIS - careful with mask because the grounding line might be different to Grid object
+        fris_mask = grid.restrict_mask(np.invert(grid.land_mask), 'fris')
+        fris_mask = np.ma.masked_where(grid.get_open_ocean_mask(), fris_mask)
+        density_fris = np.ma.masked_where(np.invert(fris_mask), bottom_density)
+        fris_mean.append(area_average(density_grid, grid))
 
     # Plot
     fig, gs = set_panels('trans_2x1C0')
@@ -2817,6 +2823,10 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         ax = plt.subplot(gs[n,0])
         for t in range(num_periods):
             ax.plot(lat_trans[n], transects[t][n], color=colours[t], linewidth=1.75, label=labels[t])
+            if n==0:
+                ax.plot(lat_front[n], fris_mean[t], '*', color=colours[t], markersize=13, markeredgecolor='black')
+                if t==0:
+                    plt.text(lat_front[n], fris_mean[t], 'FRIS mean', ha='right', va='center', fontsize=12)
         ax.grid(True)
         ax.set_title(titles[n], fontsize=16)
         ax.set_ylabel(r'kg/m$^3$-1000', fontsize=12)
@@ -2847,7 +2857,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         # Label with a or b
         plt.text(x_trans[-1], y_trans[-1], chr(ord('`')+n+1), ha='left', va='bottom', fontsize=13, color='red')
     plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'density_transects.png', dpi=300)
+    finished_plot(fig)# , fig_name=fig_dir+'density_transects.png', dpi=300)
 
             
             
