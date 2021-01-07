@@ -2725,51 +2725,102 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
 
     # Read the time-averaged density precomputed in file
-    density_all = read_netcdf(precompute_file, 'potential_density') - 1e3
+    density_all = read_netcdf(precompute_file, 'potential_density')
     # Also read the initial grid
     grid = Grid(base_dir+grid_path)
 
-    '''# Calculate, save, and subtract the average density beneath FRIS
-    fris_mean = []    
-    for n in range(num_periods):
-        # Get the mask as shown by the data, not the grid (as the grounding line changes and the data will have the most permissive mask for the given time period)
-        mask = np.invert(density_all[n,:].mask)
-        # Now restrict to the FRIS region, without relying on the ice mask (don't want to mask any ice that's sometimes grounded)
-        fris_mask = np.ma.masked_where(xy_to_xyz(grid.get_open_ocean_mask(), grid), grid.restrict_mask(mask, 'fris'))
-        fris_density = np.ma.masked_where(np.invert(fris_mask), density_all[n,:])
-        fris_mean_tmp = volume_average(fris_density, grid)
-        fris_mean.append(fris_mean_tmp)
-        density_all[n,:] -= fris_mean_tmp'''
-
-    # Average below 300m on shelf, over all depths in cavity, and mask deep ocean
-    # Do this by masking the upper open ocean and the entire deep ocean, then vertically average what's left
-    upper_ocean = mask_2d_to_3d(grid.get_open_ocean_mask(), grid, zmin=h_front)
+    # Mask the deep ocean and select the bottom layer everywhere else
     deep_ocean = xy_to_xyz(grid.bathy <= h_shelf, grid)
     density_final = np.ma.empty([num_periods, grid.ny, grid.nx])
     for n in range(num_periods):
-        density_tmp = np.ma.masked_where(upper_ocean, density_all[n,:])
-        density_tmp = np.ma.masked_where(deep_ocean, density_tmp)
-        density_final[n,:] = mask_land(vertical_average(density_tmp, grid), grid)
-    # Overwrite this with manual bounds?
-    vmin = np.amin(density_final)
-    vmax = np.amax(density_final)
+        density_final[n,:] = select_bottom(np.ma.masked_where(deep_ocean, density_all[n,:]))
 
     # Plot 4 panels
     fig, gs, cax1, cax2 = set_panels('2x2C2', figsize=(6,7))
-    vmin = [np.amin(density_final[:2,:])]*2 + [np.amin(density_final[2:,:])]*2
+    vmin = [27.4, 27.4, 26.8, 26.8]
     vmax = [np.amax(density_final[:2,:])]*2 + [np.amax(density_final[2:,:])]*2
     cax = [None, cax1, None, cax2]
     for n in range(num_periods):
         ax = plt.subplot(gs[n/2, n%2])
         ax.axis('equal')
         img = latlon_plot(density_final[n,:], grid, ax=ax, make_cbar=False, vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=titles[n])
-        #plt.text(0.99, 0.01, 'FRIS mean = \n'+round_to_decimals(fris_mean[n],3), ha='right', va='bottom', transform=ax.transAxes)
         ax.set_xticks([])
         ax.set_yticks([])
         if cax[n] is not None:
             cbar = plt.colorbar(img, cax=cax[n])
-    plt.suptitle(r'Density (kg/m$^3$-1000), abrupt-4xCO2', fontsize=20)
+    plt.suptitle(r'Bottom density (kg/m$^3$), abrupt-4xCO2', fontsize=20)
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
+
+
+# Plot transects of bottom density through the Ronne Depression and Filchner Trough, at the 4 time slices precomputed earlier.
+def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
+
+    rd_bounds = [[-74.5, -70, -79, -77.5], [-72, -62, -77.5, -75.5], [-63, -55, -75.5, -75], [-62, -55, -75, -73.7]]
+    ft_bounds = [[-50,-38,-80.5,-78], [-45, -25, -78, -75], [-32.5, -31.5, -75, -74]]
+    num_periods = 4
+    labels = ['Control', 'Stage 1', 'Stage 2', 'Stage 2 extension']
+    colours = ['black', 'blue', 'red', 'magenta']
+    titles = ['a) Ronne Depression', 'b) Filchner Trough']
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    
+    grid = Grid(base_dir+grid_path)
+
+    # Inner function to select the deepest point at each latitude within the given sets of bounds
+    def select_transect (all_bounds):
+        mask = np.zeros([grid.ny, grid.nx], dtype='bool')
+        for bound in all_bounds:
+            [xmin, xmax, ymin, ymax] = bound
+            index = np.invert(grid.land_mask)*(grid.lon_2d >= xmin)*(grid.lon_2d <= xmax)*(grid.lat_2d >= ymin)*(grid.lat_2d <= ymax)
+            mask[index] = True
+        bathy = np.ma.masked_where(np.invert(mask),grid.bathy)
+        i_trans = []
+        j_trans = []
+        lat_trans = []
+        draft_trans = []
+        for j in range(grid.ny):
+            i = np.argmin(bathy[j,:])
+            if bathy[j,i] is not np.ma.masked:
+                i_trans.append(i)
+                j_trans.append(j)
+                lat_trans.append(grid.lat_1d[j])
+                draft_trans.append(grid.draft[j,i])
+        # Find the latitude of the ice shelf front (last point with a nonzero draft)
+        index_front = np.where(np.array(draft_trans)==0)[0][0] -1
+        lat_front = lat_front[index_front]
+        return i_trans, j_trans, lat_trans, lat_front
+
+    i_rd, j_rd, lat_rd, lat_front_rd = select_transect(rd_bounds)
+    i_ft, j_ft, lat_ft, lat_front_ft = select_transect(ft_bounds)
+    lat_trans = [lat_rd, lat_ft]
+    lat_front = [lat_front_rd, lat_front_ft]
+
+    # Read precomputed density
+    density_3d = read_netcdf(precompute_file, 'potential_density')
+    transects = []
+    for t in range(num_periods):
+        # Select bottom layer
+        bottom_density = select_bottom(density_3d[t,:])
+        # Extract each transect
+        trans_rd = np.array([bottom_density[j,i] for j,i in zip(j_rd,i_rd)])
+        trans_ft = np.array([bottom_density[j,i] for j,i in zip(j_ft,i_ft)])
+        transects.append([trans_rd, trans_ft])
+
+    # Plot
+    fig, gs = set_panels('trans_2x1C0')
+    for n in range(2):
+        ax = plt.subplot(gs[n,0])
+        for t in range(num_periods):
+            ax.plot(lat_trans[n], transects[t][n], color=colours[t], linewidth=1.75, label=labels[t])
+        ax.grid(True)
+        ax.set_title(titles[n], fontsize=18)
+        # TODO: Axes labels
+        # Indicate the ice shelf front with a dashed line
+        ax.axvline(lat_front[n], color='black', linestyle='dashed', linewidth=1)
+        # TODO: Label cavity, shelf, ice shelf front
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.4), fontsize=14)
+    ax.suptitle('Transects of bottom density', fontsize=20)
+    # TODO: Add map up top
 
             
             
