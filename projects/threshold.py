@@ -1828,7 +1828,7 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
     point_title_loc = [[0.44, 0.32], [0.6, 0.82]]
     num_regions = len(regions)
     num_points = len(points)
-    [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.85e6]
+    [xmin, xmax, ymin, ymax] = [-1.75e6, -4.8e5, 1.1e5, 1.6e6] # 1.85e6]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1847,7 +1847,7 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
         mask = grid.get_region_mask(regions[n], include_iceberg=True).astype(float)
         ax.contour(x, y, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
         plt.text(region_title_loc[n][0], region_title_loc[n][1], region_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=region_colours[n])
-    # Plot and label the points
+    '''# Plot and label the points
     for n in range(num_points):
         # Two points in each set
         for point, num in zip(points[n], [1,2]):
@@ -1855,7 +1855,7 @@ def plot_region_map (base_dir='./', fig_dir='./', plot_regions=None):
             x0_label, y0_label = polar_stereo(point[0]+1, point[1]+0.4)
             ax.plot(x0, y0, '*', color=point_colours[n], markersize=13, markeredgecolor='black')
             plt.text(x0_label, y0_label, str(num), color=point_colours[n], fontsize=12, ha='center', va='center')
-        plt.text(point_title_loc[n][0], point_title_loc[n][1], point_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=point_colours[n])
+        plt.text(point_title_loc[n][0], point_title_loc[n][1], point_titles[n], fontsize=14, transform=fig.transFigure, ha='center', va='center', color=point_colours[n])'''
     plt.title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
