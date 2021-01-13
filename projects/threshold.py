@@ -2813,7 +2813,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         fris_mask = grid.restrict_mask(np.invert(grid.land_mask), 'fris')
         fris_mask = np.ma.masked_where(grid.get_open_ocean_mask(), fris_mask)
         density_fris = np.ma.masked_where(np.invert(fris_mask), bottom_density)
-        fris_mean.append(area_average(density_grid, grid))
+        fris_mean.append(area_average(density_fris, grid))
 
     # Plot
     fig, gs = set_panels('trans_2x1C0')
@@ -2823,10 +2823,10 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         ax = plt.subplot(gs[n,0])
         for t in range(num_periods):
             ax.plot(lat_trans[n], transects[t][n], color=colours[t], linewidth=1.75, label=labels[t])
-            if n==0:
+            '''if n==0:
                 ax.plot(lat_front[n], fris_mean[t], '*', color=colours[t], markersize=13, markeredgecolor='black')
                 if t==0:
-                    plt.text(lat_front[n], fris_mean[t], 'FRIS mean', ha='right', va='center', fontsize=12)
+                    plt.text(lat_front[n], fris_mean[t], 'FRIS mean', ha='right', va='center', fontsize=12)'''
         ax.grid(True)
         ax.set_title(titles[n], fontsize=16)
         ax.set_ylabel(r'kg/m$^3$-1000', fontsize=12)
@@ -2857,7 +2857,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         # Label with a or b
         plt.text(x_trans[-1], y_trans[-1], chr(ord('`')+n+1), ha='left', va='bottom', fontsize=13, color='red')
     plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
-    finished_plot(fig)# , fig_name=fig_dir+'density_transects.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'density_transects.png', dpi=300)
 
             
             
