@@ -21,7 +21,7 @@ from ..file_io import read_netcdf, NCfile, netcdf_time, read_iceprod, read_binar
 from ..utils import real_dir, var_min_max, select_bottom, mask_3d, mask_except_ice, convert_ismr, add_time_dim, mask_land, xy_to_xyz, moving_average, mask_land_ice, fix_lon_range, split_longitude, polar_stereo, z_to_xyz, mask_2d_to_3d
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.latlon import shade_land_ice, prepare_vel, overlay_vectors
-from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis, round_to_decimals, lat_label
+from ..plot_utils.labels import latlon_axes, parse_date, slice_axes, depth_axis, round_to_decimals, lat_label, reduce_cbar_labels
 from ..plot_utils.slices import transect_patches, transect_values, plot_slice_patches
 from ..plot_utils.colours import set_colours, parula_cmap
 from ..postprocess import segment_file_paths, precompute_timeseries_coupled
@@ -2748,6 +2748,7 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
         ax.set_yticks([])
         if cax[n] is not None:
             cbar = plt.colorbar(img, cax=cax[n])
+            reduce_cbar_labels(cbar)
     plt.suptitle(r'Bottom density (kg/m$^3$), abrupt-4xCO2', fontsize=20)
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
 
