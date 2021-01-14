@@ -2657,24 +2657,29 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
             titles = ['UKESM', 'World Ocean Atlas', 'Model bias']
             for p in range(3):
                 ax = plt.subplot(gs[n,p])
-                img = ax.pcolormesh(mit_h, grid.z, data[p], cmap=cmap[p], vmin=vmin[p], vmax=vmax[p])
+                img = ax.pcolormesh(mit_h, grid.z*1e-3, data[p], cmap=cmap[p], vmin=vmin[p], vmax=vmax[p])
                 ax.axis('tight')
                 if bdry[m] == 'E':
                     # Cut off the masked continent
                     ax.set_xlim([-70, grid.lat_1d[-1]])
                 if p==0:
-                    slice_axes(ax, h_axis=h_axis)
+                    slice_axes(ax, h_axis=h_axis, km=True)
+                    labels = ax.get_xticklabels()
+                    for label in labels[::2]:
+                        label.set_visible(False)
                 else:
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                 ax.set_title(titles[p], fontsize=18)
                 # Colourbar on each side
                 if p==0:
-                    plt.colorbar(img, cax=cax[n][0])
+                    cbar = plt.colorbar(img, cax=cax[n][0])
                 elif p==2:
-                    plt.colorbar(img, cax=cax[n][1])
+                    cbar = plt.colorbar(img, cax=cax[n][1])
+                reduce_cbar_labels(cbar)
+                cbar.ax.tick_params(labelsize=12)
             # Variable title
-            plt.text(0.5, 0.97-0.5*n, var_titles[n]+bdry_titles[m], fontsize=24, transform=fig.transFigure, ha='center', va='top')
+            plt.text(0.5, 0.97-0.49*n, var_titles[n]+bdry_titles[m], fontsize=22, transform=fig.transFigure, ha='center', va='top')
         finished_plot(fig, fig_name=fig_dir+'ukesm_woa_'+bdry[m]+'.png')
 
 
@@ -2748,7 +2753,6 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
         ax.set_yticks([])
         if cax[n] is not None:
             cbar = plt.colorbar(img, cax=cax[n])
-            reduce_cbar_labels(cbar)
     plt.suptitle(r'Bottom density (kg/m$^3$), abrupt-4xCO2', fontsize=20)
     finished_plot(fig) #, fig_name=fig_dir+'density_panels.png', dpi=300)
 
