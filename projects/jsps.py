@@ -301,7 +301,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
     smooth = 12
     if hindcast:
         year_start = 1920
-        year_ticks = np.arange(1930, 2010+1, 10)
+        year_ticks = np.arange(1920, 2010+1, 10)
     else:
         year_start = 1979
         year_ticks = np.arange(1980, 2010+1, 10)
@@ -631,12 +631,16 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=12, p0=0.05):
 
     data = read_netcdf(file_path, var)
-    time = netcdf_time(file_path, monthly=False)
+    time = netcdf_time(file_path, monthly=False)    
     if percent:
         # Express as percentage of mean over baseline
         t_start, t_end = index_period(time, year_start, year_end)
         data_mean = np.mean(data[t_start:t_end])
         data = data/data_mean*100
+    # Trim everything before year_start
+    t0 = index_year_start(time, year_start)
+    time = time[t0:]
+    data = data[t0:]
     if option == 'smooth':
         # 2-year running mean to filter out seasonal cycle
         data = moving_average(data, smooth)
@@ -706,7 +710,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
 
 # Call for a bunch of variables.
 def plot_all_trends (sim_dir, fig_dir=None):
-    for var in ['abbot_melting', 'cosgrove_melting', 'dotson_crosson_melting', 'getz_melting', 'pig_melting', 'thwaites_melting', 'venable_melting', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg', 'inner_amundsen_shelf_sss_avg']:
+    for var in ['abbot_melting', 'cosgrove_melting', 'dotson_crosson_melting', 'getz_melting', 'pig_melting', 'thwaites_melting', 'venable_melting', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg', 'inner_amundsen_shelf_sss_avg', 'amundsen_shelf_break_adv_heat_ns_300_1500m']:
         if fig_dir is None:
             fig_name = None
         else:

@@ -2647,7 +2647,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
             # Get min/max values
             vmin_abs = min(np.amin(ukesm_data), np.amin(woa_data_interp))
             vmax_abs = max(np.amax(ukesm_data), np.amax(woa_data_interp))
-            cmap_abs, vmin_abs, vmax_abs = set_colours(ukesm_data, vmin=vmin_abs, vmax=vmax_abs)
+            cmap_abs, vmin_abs, vmax_abs = set_colours(ukesm_data, vmin=vmin_abs, vmax=vmax_abs, ctype='parula')
             cmap_diff, vmin_diff, vmax_diff = set_colours(data_diff, ctype='plusminus')
             # Wrap up for adding to plot
             data = [ukesm_data, woa_data_interp, data_diff]
