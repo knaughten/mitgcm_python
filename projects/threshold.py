@@ -2766,9 +2766,11 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
     labels = ['piControl', 'Stage 1', 'Stage 2']
     colours = ['black', 'blue', 'red']
     titles = ['a) Ronne Depression', 'b) Filchner Trough']
+    point_lat = [[-78, -76, -74.8], [-80, -74.1]]
+    point_labels = [['1', '2', '3'], ['4', '5']]
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    
+
     grid = Grid(base_dir+grid_path)
 
     # Inner function to select the deepest point at each latitude within the given sets of bounds
@@ -2795,7 +2797,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         # Find the latitude of the ice shelf front (last point with a nonzero draft)
         index_front = np.where(np.array(draft_trans)==0)[0][0] -1
         lat_front = lat_trans[index_front]
-        return i_trans, j_trans, lon_trans, lat_trans, lat_front
+        return np.array(i_trans), np.array(j_trans), np.array(lon_trans), np.array(lat_trans), lat_front
 
     i_rd, j_rd, lon_rd, lat_rd, lat_front_rd = select_transect(rd_bounds)
     i_ft, j_ft, lon_ft, lat_ft, lat_front_ft = select_transect(ft_bounds)
@@ -2852,6 +2854,22 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
             ax.legend(loc='upper center', bbox_to_anchor=(0.6,1.35), fontsize=12, ncol=3)
         if n==1:
             plt.text(lat_trans[n][-1]-0.1, 28.18, 'offshore', ha='right', va='top', rotation=90, fontsize=13)
+        # Label marker points
+        for m in range(len(point_lat[n])):
+            for t in range(num_periods):
+                if n==1 and m==1 and t!=0:
+                    # Only need to label offshore point once
+                    continue
+                # Find the data values at this point
+                i1, i2, c1, c2 = interp_slice_helper(lat_trans[n], point_lat[n][m])
+                point_val = c1*transects[t][n][i1] + c2*transects[t][n][i2]
+                ax.plot(point_lat[n][m], point_val, 'o', color=colours[t], markersize=7, markeredgecolor=colours[t])
+                if t==0:
+                    if n==1 and m==1:
+                        ha = 'right'
+                    else:
+                        ha = 'center'
+                    plt.text(point_lat[n][m], point_val-0.035, point_labels[n][m], ha=ha, va='top', fontsize=12, color=colours[t])
     # Add map in top left showing transects
     ax = fig.add_axes([0.01, 0.82, 0.23, 0.17])
     empty_data = mask_land_ice(np.ones([grid.ny, grid.nx]), grid)-100
@@ -2861,12 +2879,23 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
         ax.plot(x_trans, y_trans, color='red')
         # Label with a or b
         plt.text(x_trans[-1], y_trans[-1], chr(ord('`')+n+1), ha='left', va='bottom', fontsize=13, color='red')
+        # Now add marker points
+        for m in range(len(point_lat[n])):
+            i1, i2, c1, c2 = interp_slice_helper(lat_trans[n], point_lat[n][m])
+            x_val = c1*x_trans[i1] + c2*x_trans[i2]
+            y_val = c1*y_trans[i1] + c2*y_trans[i2]
+            ax.plot(x_val, y_val, 'o', color='black', markersize=4, markeredgecolor=None)
+            if n==0:
+                va='bottom'
+            else:
+                va='top'
+            plt.text(x_val+2e4, y_val-1e4, point_labels[n][m], ha='left', va=va, fontsize=10, color='black')
     plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'density_transects.png', dpi=300)
 
-            
-            
-        
+
+
+
 
         
 
