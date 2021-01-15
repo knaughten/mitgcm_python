@@ -2869,7 +2869,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                         ha = 'right'
                     else:
                         ha = 'center'
-                    plt.text(point_lat[n][m], point_val-0.035, point_labels[n][m], ha=ha, va='top', fontsize=12, color=colours[t])
+                    plt.text(point_lat[n][m], point_val-0.035, point_labels[n][m], ha=ha, va='top', fontsize=12, color='black')
     # Add map in top left showing transects
     ax = fig.add_axes([0.01, 0.82, 0.23, 0.17])
     empty_data = mask_land_ice(np.ones([grid.ny, grid.nx]), grid)-100
