@@ -2864,7 +2864,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 i1, i2, c1, c2 = interp_slice_helper(lat_trans[n], point_lat[n][m])
                 point_val = c1*transects[t][n][i1] + c2*transects[t][n][i2]
                 ax.plot(point_lat[n][m], point_val, 'o', color=colours[t], markersize=7, markeredgecolor=colours[t])
-                if t==0:
+                if (n==0 and t==1) or (n==1 and t==0):
                     if n==1 and m==1:
                         ha = 'right'
                     else:
