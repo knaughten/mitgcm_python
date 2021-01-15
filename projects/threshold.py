@@ -2870,7 +2870,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                     else:
                         ha = 'center'
                     if n==0:
-                        ylab = point_val+0.01
+                        ylab = point_val+0.035
                         va = 'bottom'
                     else:
                         ylab = point_val-0.035
