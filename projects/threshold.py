@@ -2864,18 +2864,16 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 i1, i2, c1, c2 = interp_slice_helper(lat_trans[n], point_lat[n][m])
                 point_val = c1*transects[t][n][i1] + c2*transects[t][n][i2]
                 ax.plot(point_lat[n][m], point_val, 'o', color=colours[t], markersize=7, markeredgecolor=colours[t])
-                if (n==0 and t==1) or (n==1 and t==0):
+                if t==0:
                     if n==1 and m==1:
                         ha = 'right'
                     else:
                         ha = 'center'
                     if n==0:
-                        ylab = point_val+0.035
-                        va = 'bottom'
-                    else:
-                        ylab = point_val-0.035
                         va = 'top'
-                    plt.text(point_lat[n][m], ylab, point_labels[n][m], ha=ha, va=va, fontsize=12, color='black')
+                    else:
+                        va = 'bottom'
+                    plt.text(point_lat[n][m], point_val-0.05, point_labels[n][m], ha=ha, va=va, fontsize=12, color='black')
     # Add map in top left showing transects
     ax = fig.add_axes([0.01, 0.82, 0.23, 0.17])
     empty_data = mask_land_ice(np.ones([grid.ny, grid.nx]), grid)-100
