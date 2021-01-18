@@ -2011,7 +2011,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     plt.text(1890, 4, 'Stage 1\ndetectable', ha='center', va='center', fontsize=14)
     ax.axhline(data[-1][-1], color='black', linestyle='dashed')
     print 'Final observations: '+str(data[-1][-1])+'C'
-    plt.text(1970, 1.3, 'Current warming', ha='center', va='center', fontsize=14)
+    plt.text(1970, 1.35, 'Current warming', ha='center', va='center', fontsize=14)
     #plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
     plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
     plt.ylabel(deg_string+'C', fontsize=14)
