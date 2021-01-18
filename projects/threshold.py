@@ -1990,9 +1990,9 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
         words = line.split()
         time_obs.append(float(words[0]))
         data_obs.append(float(words[1]))    
-    # Trim 2020 because it's not complete, and change baseline to 1850
-    data.append(np.array(data_obs[:-1])-data_obs[0])
-    time.append(np.array(time_obs[:-1]))
+    # Change baseline to 1850
+    data.append(np.array(data_obs)-data_obs[0])
+    time.append(np.array(time_obs))
     data_min.append(None)
     data_max.append(None)
 
@@ -2010,6 +2010,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     plt.text(1957, 6.66, 'Stage 2 begins', ha='center', va='center', fontsize=14)
     plt.text(1890, 4, 'Stage 1\ndetectable', ha='center', va='center', fontsize=14)
     ax.axhline(data[-1][-1], color='black', linestyle='dashed')
+    print 'Final observations: '+str(data[-1][-1])+'C'
     plt.text(1970, 1.3, 'Current warming', ha='center', va='center', fontsize=14)
     #plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
     plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
