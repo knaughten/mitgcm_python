@@ -1951,7 +1951,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     titles = ['1pctCO2', 'abrupt-4xCO2', 'historical', 'SSP1-2.6', 'SSP2-4.5', 'SSP3-7.0', 'SSP5-8.5', 'HadCRUT\nobservations']
     colours = ['blue', 'red', 'Grey', 'DodgerBlue', 'ForestGreen', 'DarkViolet', 'DeepPink', 'black']
     var_name = 'tas_mean'
-    stage1_year = [75, 10]
+    stage1_year = [69, 14]
     threshold_year = [147, 79]
     num_ens = 4
 
@@ -2004,9 +2004,14 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
         ax.plot(time[n], data[n], color=colours[n], label=titles[n], linewidth=1.5)
         if n < 2:
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
+            ax.plot(stage1_year[n]+1850, data[n][stage1_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
             print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
             print titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'
-    plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
+    plt.text(1957, 6.66, 'Stage 2 begins', ha='center', va='center', fontsize=14)
+    plt.text(1890, 4, 'Stage 1\ndetectable', ha='center', va='center', fontsize=14)
+    ax.axhline(data[-1][-1], color='black', linestyle='dashed')
+    plt.text(1970, 1.3, 'Current warming', ha='center', va='center', fontsize=14)
+    #plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
     plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
     plt.ylabel(deg_string+'C', fontsize=14)
     plt.xlabel('Year', fontsize=14)
