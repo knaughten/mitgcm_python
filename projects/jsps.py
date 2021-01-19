@@ -11,7 +11,7 @@ import datetime
 from scipy.stats import linregress
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
-from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average
+from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
@@ -20,7 +20,7 @@ from ..plot_1d import default_colours, make_timeseries_plot_2sided
 from ..plot_latlon import latlon_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day
 from ..plot_misc import hovmoller_plot
-from ..timeseries import calc_annual_averages
+from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 
 
@@ -643,7 +643,7 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
     data = data[t0:]
     if option == 'smooth':
         # 2-year running mean to filter out seasonal cycle
-        data = moving_average(data, smooth)
+        data = moving_average(data, smooth, centered=False)
     elif option == 'annual':
         # Annual average to filter out seasonal cycle
         # First trim to the nearest complete year
@@ -1248,9 +1248,82 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
     ncfile.add_variable(var_name+'_trend', trends, file_dim, gtype=gtype, long_name='trend in '+long_name, units=units+'/y')
     ncfile.close()
 
-    
 
-    
+def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
+
+    loc = ['pine_island_bay', 'dotson_bay', 'inner_amundsen_shelf']
+    ismr = ['pig_massloss', 'dotson_massloss', None]
+    var_ts = ['_temp_below_500m', '_salt_below_500m']
+    max_cutoff = 0
+    num_cutoff = 50
+    year_start = 1920
+    smooth = 12
+    num_ens = len(sim_dir)
+    file_paths = [d + '/output/' + timeseries_file for d in sim_dir]
+
+    # Read one time array as scalar values, assume it's the same everywhere (i.e. all ensemble members have finished)
+    time = netcdf_time(file_paths[0], monthly=False, return_date=False)
+    t0 = index_year_start(time, year_start)
+    time = time[t0:]
+    # Now smooth a dummy array so we can trim the time correctly
+    time = moving_average(np.arange(time.size), smooth, time=time, centered=False)[1]
+    num_time = time.size
+
+    # Loop over regions
+    for l in range(len(loc)):
+        
+        # Read temperature for this region, for all ensemble members
+        temp = np.empty([num_ens, num_time])
+        for n in range(num_ens):
+            temp[n,:] = moving_average(read_netcdf(file_paths[n], loc[l]+var[0])[t0:], smooth, centered=False)
+        # Get range of cutoff temperatures
+        cutoff_temp = np.linspace(np.amin(temp), max_cutoff, num=num_cutoff)
+        
+        # Now loop over all variables for this region: temp, salt, and maybe ismr
+        var_names = [loc[l]+v for v in var_ts]
+        if ismr[l] is not None:
+            var_names += ismr[l]
+        for var in var_names:
+            # Get the title and units
+            var_title, var_units = set_parameters(var)[2:4]
+            
+            # Read this variable for all ensemble members
+            var_data = np.empty([num_ens, num_time])
+            for n in range(num_ens):
+                var_data[n,:] = moving_average(read_netcdf(file_paths[n], var)[t0:], smooth, centered=False)
+                
+            # Now calculate mean trend and significance for each cutoff temp
+            mean_trend = np.empty(num_cutoff)
+            sig = np.empty(num_cutoff)
+            for m in range(num_cutoff):
+                # Calculate trend for each ensemble member
+                all_trends = np.empty(num_ens)
+                for n in range(num_ens):
+                    # Extract values where temperature exceeds this cutoff
+                    index = temp[n,:] > cutoff_temp[m]
+                    all_trends[n] = linregress(time[index], var_data[n,index])[0]
+                # Now save mean trend and significance of ensemble
+                mean_trend[m] = np.mean(all_trends)
+                p_val = ttest_1samp(all_trends, 0)[1]
+                sig[m] = (1-p_val)*100
+                
+            # Plot cutoff temperature versus mean trend, and cutoff temperature versus significance
+            data_plot = [mean_trend, sig]
+            titles = ['Mean trend in '+var_title, 'Significance of trend in '+var_title]
+            units = [var_units+'/y', '%']
+            file_tail = ['_cutoff_trend', '_cutoff_sig']
+            for p in range(len(data_plot)):
+                fig, ax = plt.subplots()
+                ax.plot(cutoff_temp, data_plot[p], '-', linewidth=1.5)
+                if p==1:
+                    # Add dashed lines at 90% and 95% threshold
+                    for y in [90, 95]:
+                        ax.axhline(y, color='black', linestyle='dashed')
+                ax.grid(True)
+                plt.title(titles[p], fontsize=18)
+                plt.xlabel('Cutoff temperature for convection ('+deg_string+'C)', fontsize=16)
+                plt.ylabel(units[p], fontsize=16)
+                finished_plot(fig, fig_name=fig_dir+var+file_tail[p]+'.png')   
     
          
 
