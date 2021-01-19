@@ -1292,29 +1292,31 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
             for n in range(num_ens):
                 var_data[n,:] = moving_average(read_netcdf(file_paths[n], var)[t0:], smooth, centered=False)
 
-            # Now calculate mean trend and significance for each cutoff temp
-            mean_trend = np.empty(num_cutoff)
+            # Now calculate trends and significance for each cutoff temp
+            all_trends = np.empty([num_ens, num_cutoff])
             sig = np.empty(num_cutoff)
             for m in range(num_cutoff):
-                # Calculate trend for each ensemble member
-                all_trends = np.empty(num_ens)
+                # Calculate trend for each ensemble member (convert to per decade)
                 for n in range(num_ens):
                     # Extract values where temperature exceeds this cutoff
                     index = temp[n,:] > cutoff_temp[m]
-                    all_trends[n] = linregress(time[index], var_data[n,index])[0]
-                # Now save mean trend (convert to per decade) and significance of ensemble
-                mean_trend[m] = np.mean(all_trends)*10
-                p_val = ttest_1samp(all_trends, 0)[1]
+                    all_trends[n, m] = linregress(time[index], var_data[n,index])[0]*10
+                # Now calculate significance of ensemble
+                p_val = ttest_1samp(all_trends[:,m], 0)[1]
                 sig[m] = (1-p_val)*100
 
             # Plot cutoff temperature versus mean trend, and cutoff temperature versus significance
-            data_plot = [mean_trend, sig]
-            titles = ['Mean trend in\n'+var_title, 'Significance of trend in\n'+var_title]
+            data_plot = [all_trends, sig]
+            titles = ['Trends in\n'+var_title, 'Significance of ensemble trend in\n'+var_title]
             units = [var_units+'/decade', '%']
             file_tail = ['_cutoff_trend', '_cutoff_sig']
             for p in range(len(data_plot)):
                 fig, ax = plt.subplots()
-                ax.plot(cutoff_temp, data_plot[p], '-', linewidth=1.5)
+                if p == 0:
+                    for n in range(num_ens):
+                        ax.plot(cutoff_temp, data_plot[p][n,:], linewidth=1.5)
+                else:
+                    ax.plot(cutoff_temp, data_plot[p], '-', linewidth=1.5)
                 if p==1:
                     # Add dashed lines at 90% and 95% threshold
                     for y in [90, 95]:
