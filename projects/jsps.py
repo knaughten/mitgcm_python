@@ -21,7 +21,7 @@ from ..plot_latlon import latlon_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day
 from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages
-from ..postprocess import get_output_files
+from ..postprocess import get_output_files, segment_file_paths
 
 
 # Global variables
@@ -1180,6 +1180,68 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
     # Main title
     plt.text(0.05, 0.95, var_name+': PACE ensemble mean minus ERA5', transform=fig.transFigure, fontsize=20, ha='left', va='top')
     finished_plot(fig, fig_name=fig_dir+'monthly_bias_'+var_name+'.png')
+
+
+def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t'):
+
+    num_ens = len(sim_dir)
+
+    grid = Grid(grid_dir)
+    # Construct region mask
+    if region == 'all':
+        # All ocean points, 2D or 3D
+        if dim == 3:
+            mask = grid.get_hfac(gtype=gtype) != 0
+        elif dim == 2:
+            mask = grid.get_land_mask(gtype=gtype)
+    elif region == 'ice':
+        # All cavity points, 2D or 3D
+        mask = grid.get_ice_mask(gtype=gtype)
+        if dim == 3:
+            mask = xy_to_xyz(mask, grid)*(grid.get_hfac(gtype=gtype) != 0)
+    else:
+        # Specific region
+        mask = grid.get_region_mask(region, is_3d=(dim==3))
+    # Save number of indices in the region
+    num_pts = np.count_nonzero(mask)
+    # Set up an array to hold trends for each ensemble member; 0 outside the given region
+    if dim == 2:
+        trends = np.zeros([num_ens, grid.ny, grid.nx])
+    elif dim == 3:
+        trends = np.zeros([num_ens, grid.nz, grid.ny, grid.nx])
+
+    # Loop over ensemble member
+    for m in range(num_ens):
+        print 'Processing ' + sim_dir[m]
+        # Get all the file paths (assume one for each year)
+        file_paths = segment_file_paths(sim_dir[m]+'/output/')
+        num_years = len(file_paths)
+        # Read annually-averaged data at each point in the mask
+        data_save = np.empty([num_years, num_pts])
+        for t in range(num_years):
+            print '...Reading ' + file_paths[t]
+            data = read_netcdf(file_paths[t], var_name, time_average=True)
+            if len(data.shape) != dim:
+                print 'Error (make_trend_file): wrong dimension for this variable.'
+                sys.exit()
+            data_save[t,:] = data[mask]
+        # Now calculate the trend at each point
+        print 'Calculating trends'
+        trends_tmp = np.empty(num_pts)
+        for p in range(num_pts):
+            slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[:,p])
+            trends_tmp[p] = slope
+        # Save to master array
+        trends[m,mask] = trends_tmp
+
+    # Mask master array outside the given region (where it's still zero)
+    trends = np.ma.masked_where(trends==0, trends)
+    
+    # Save to NetCDF
+
+    
+
+    
     
          
 
