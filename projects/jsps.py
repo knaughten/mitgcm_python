@@ -1317,7 +1317,10 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
                         ax.plot(cutoff_temp, data_plot[p][n,:], linewidth=1.5)
                 else:
                     ax.plot(cutoff_temp, data_plot[p], '-', linewidth=1.5)
-                if p==1:
+                if p==0:
+                    # Add horizontal line at 0 trend
+                    ax.axhline(color='black')
+                elif p==1:
                     # Add dashed lines at 90% and 95% threshold
                     for y in [90, 95]:
                         ax.axhline(y, color='black', linestyle='dashed')
