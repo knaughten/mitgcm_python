@@ -1187,6 +1187,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
     num_ens = len(sim_dir)
 
     grid = Grid(grid_dir)
+    units = None
     # Construct region mask
     if region == 'all':
         # All ocean points, 2D or 3D
@@ -1220,7 +1221,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         data_save = np.empty([num_years, num_pts])
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
-            data = read_netcdf(file_paths[t], var_name, time_average=True)
+            data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
                 print 'Error (make_trend_file): wrong dimension for this variable.'
                 sys.exit()
@@ -1237,7 +1238,15 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
     # Mask master array outside the given region (where it's still zero)
     trends = np.ma.masked_where(trends==0, trends)
     
-    # Save to NetCDF
+    # Save to NetCDF - treat ensemble axis as time for convenience
+    if dim == 2:
+        file_dim = 'xyt'
+    elif dim == 3:
+        file_dim = 'xyzt'
+    ncfile = NCfile(out_file, grid, file_dim)
+    ncfile.add_time(np.arange(num_ens)+1, units='ensemble member')
+    ncfile.add_variable(var_name+'_trend', trends, file_dim, gtype=gtype, long_name='trend in '+long_name, units=units+'/y')
+    ncfile.close()
 
     
 

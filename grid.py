@@ -323,7 +323,8 @@ class Grid:
             try:
                 [zmin, zmax] = region_depth_bounds[region]
             except(KeyError):
-                pass
+                zmin = None
+                zmax = None
             mask = mask_2d_to_3d(mask, self, zmin=zmin, zmax=zmax)
 
         return mask
