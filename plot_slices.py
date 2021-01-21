@@ -37,7 +37,7 @@ def get_loc (loc0, lon0=None, lat0=None, point0=None, point1=None):
 
 # Helper function to make a basic slice plot.
 # Reduces duplicated code between slice_plot and slice_plot_diff.
-def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, point0=None, point1=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', date_string=None, fig_name=None):
+def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, point0=None, point1=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', titlesize=18, date_string=None, fig_name=None):
 
     # Set colour map
     cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
@@ -63,7 +63,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
     # Add a colourbar
     plt.colorbar(img, extend=extend)
     # Add a title
-    plt.title(title, fontsize=18)
+    plt.title(title, fontsize=titlesize)
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
@@ -87,7 +87,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, ctype='basic', title='', date_string=None, fig_name=None):
+def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, ctype='basic', title='', titlesize=18, date_string=None, fig_name=None):
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
@@ -111,7 +111,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1
         vmax = vmax_tmp
         
     # Plot
-    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, point0=point0, point1=point1, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, date_string=date_string, fig_name=fig_name)
+    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, point0=point0, point1=point1, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, titlesize=titlesize, date_string=date_string, fig_name=fig_name)
 
 
 # Slice plot showing difference between two simulations (2 minus 1). It is assumed the corresponding data arrays cover the same period of time.

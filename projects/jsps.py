@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -1334,10 +1334,11 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
 
 
 # Make plots from the trend file created above.
-def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t'):
+def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive'):
 
     grid = Grid(grid_dir)
     lon, lat = grid.get_lon_lat(gtype=gtype)
+    z_3d = z_to_xyz(grid.z, grid)
     # Get x-y bounds on region
     if region == 'all':
         [xmin, xmax, ymin, ymax] = [None, None, None, None]
@@ -1358,29 +1359,40 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
     sig = (1-p_val)*100
     # For any trends which aren't significant, fill with zeros for now
     mean_trend[sig < 95] = 0
+    # Also mask out depths we don't care about
+    if zmin is not None:
+        mean_trend = np.ma.masked_where(z_3d<zmin, mean_trend)
+    if zmax is not None:
+        mean_trend = np.ma.masked_where(z_3d>zmax, mean_trend)
 
     if dim == 2:
         print 'Error (trend_region_plots): Still need to write 2D analysis code.'
         sys.exit()
     else:
         # Select maximum significant trend over depth, and the depth at which this occurs
-        k_max = np.argmax(np.abs(mean_trend), axis=0)
+        if sign == 'positive':
+            k_max = np.argmax(mean_trend, axis=0)
+        elif sign == 'negative':
+            k_max = np.argmin(mean_trend, axis=0)
         k, j, i = k_max, np.arange(grid.ny)[:,None], np.arange(grid.nx)
         max_trend = mean_trend[k,j,i]
-        z_3d = z_to_xyz(grid.z, grid)
         max_trend_depth = z_3d[k,j,i]
         # Now mask out anything with 0 trend
         max_trend = np.ma.masked_where(max_trend==0, max_trend)
         max_trend_depth = np.ma.masked_where(max_trend==0, max_trend_depth)
         # Plot both of them
-        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')')
-        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Depth of maximum '+lon_name+',\n'+region_names[region]+' (m)')
-        # Now find longitude of maximum trend (lat-depth average)
-        zonal_trend = np.mean(mean_trend, axis=(0,1))
-        i_max = np.argmax(np.abs(zonal_trend))
-        lon0 = lon[i_max]
-        # Plot trend at that longitude (lat-depth slice)
-        slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', title=long_name+' ('+units+')')
+        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14)
+        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14)
+        
+    # Now find longitude of maximum trend (lat-depth average)
+    zonal_trend = np.mean(mean_trend, axis=(0,1))
+    if sign == 'positive':
+        i_max = np.argmax(zonal_trend)
+    elif sign == 'negative':
+        i_max = np.argmin(zonal_trend)
+    lon0 = lon[0,i_max]
+    # Plot trend at that longitude (lat-depth slice)
+    slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14)
 
     
 
