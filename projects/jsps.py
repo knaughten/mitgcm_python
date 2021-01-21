@@ -1385,7 +1385,7 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
         latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14)
     
     # Now plot trend at every integer longitude within the domain (lat-depth slices)
-    for lon0 in range(np.ceil(xmin), np.ceil(xmax)):
+    for lon0 in range(int(np.ceil(xmin)), int(np.ceil(xmax))):
         slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14)
 
     
