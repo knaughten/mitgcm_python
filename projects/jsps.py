@@ -18,7 +18,8 @@ from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
 from ..plot_1d import default_colours, make_timeseries_plot_2sided
 from ..plot_latlon import latlon_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day
+from ..plot_slices import slice_plot
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds
 from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -1180,6 +1181,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'monthly_bias_'+var_name+'.png')
 
 
+# Calculate the trend at every point in the given region, for the given variable, and all ensemble members. Save to a NetCDF file (3D or 4D depending on whether variable is 2D or 3D).
 def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t'):
 
     num_ens = len(sim_dir)
@@ -1328,11 +1330,57 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
                 plt.title(titles[p])
                 plt.xlabel('Cutoff temperature for convection ('+deg_string+'C)')
                 plt.ylabel(units[p])
-                finished_plot(fig, fig_name=fig_dir+var+file_tail[p]+'.png')   
-    
-         
+                finished_plot(fig, fig_name=fig_dir+var+file_tail[p]+'.png')
 
-        
+
+# Make plots from the trend file created above.
+def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t'):
+
+    grid = Grid(grid_dir)
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+    # Get x-y bounds on region
+    if region == 'all':
+        [xmin, xmax, ymin, ymax] = [None, None, None, None]
+    elif region == 'ice':
+        ice_mask = grid.get_ice_mask(gtype=gtype)
+        xmin = np.amin(lon[ice_mask])
+        xmax = np.amax(lon[ice_mask])
+        ymin = np.amin(lat[ice_mask])
+        ymax = np.amax(lat[ice_mask])
+    else:
+        [xmin, xmax, ymin, ymax] = region_bounds[region]
+
+    # Read data
+    trends, long_name, units = read_netcdf(in_file, var_name+'_trend', return_info=True)
+    # Calculate mean trend and significance along first axis (ensemble member)
+    mean_trend = np.mean(trends, axis=0)
+    t_val, p_val = ttest_1samp(trends, 0, axis=0)
+    sig = (1-p_val)*100
+    # For any trends which aren't significant, fill with zeros for now
+    mean_trend[sig < 95] = 0
+
+    if dim == 2:
+        print 'Error (trend_region_plots): Still need to write 2D analysis code.'
+        sys.exit()
+    else:
+        # Select maximum significant trend over depth, and the depth at which this occurs
+        k_max = np.argmax(np.abs(mean_trend), axis=0)
+        k, j, i = k_max, np.arange(grid.ny)[:,None], np.arange(grid.nx)
+        max_trend = mean_trend[k,j,i]
+        z_3d = z_to_xyz(grid.z, grid)
+        max_trend_depth = z_3d[k,j,i]
+        # Now mask out anything with 0 trend
+        max_trend = np.ma.masked_where(max_trend==0, max_trend)
+        max_trend_depth = np.ma.masked_where(max_trend==0, max_trend_depth)
+        # Plot both of them
+        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')')
+        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Depth of maximum '+lon_name+',\n'+region_names[region]+' (m)')
+        # Now find longitude of maximum trend (lat-depth average)
+        zonal_trend = np.mean(mean_trend, axis=(0,1))
+        i_max = np.argmax(np.abs(zonal_trend))
+        lon0 = lon[i_max]
+        # Plot trend at that longitude (lat-depth slice)
+        slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', title=long_name+' ('+units+')')
 
     
 
