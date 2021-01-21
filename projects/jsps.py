@@ -1383,16 +1383,10 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
         # Plot both of them
         latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14)
         latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14)
-        
-    # Now find longitude of maximum trend (lat-depth average)
-    zonal_trend = np.mean(mean_trend, axis=(0,1))
-    if sign == 'positive':
-        i_max = np.argmax(zonal_trend)
-    elif sign == 'negative':
-        i_max = np.argmin(zonal_trend)
-    lon0 = lon[0,i_max]
-    # Plot trend at that longitude (lat-depth slice)
-    slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14)
+    
+    # Now plot trend at every integer longitude within the domain (lat-depth slices)
+    for lon0 in range(np.ceil(xmin), np.ceil(xmax)):
+        slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14)
 
     
 
