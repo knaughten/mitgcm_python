@@ -40,7 +40,7 @@ def extract_geomip_westerlies ():
             for t in range(time.size):
                 jet_lat[t] = lat[jet_jmax[t]]
             time, jet_lat = calc_annual_averages(time, jet_lat)
-            jet_lat, time = moving_average(jet_lat, 5, time=time)
+            jet_lat, time = moving_average(jet_lat, 11, time=time)
             if jet_lat_range is None:
                 jet_lat_range = np.empty([num_ens, time.size])
             jet_lat_range[ens,:] = jet_lat

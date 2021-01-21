@@ -298,7 +298,7 @@ def plot_timeseries_2y (sim_dir, sim_names, timeseries_types=None, plot_mean=Tru
         timeseries_types = ['dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'getz_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting', 'eta_avg', 'hice_max', 'pine_island_bay_temp_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_temp_below_500m', 'dotson_bay_salt_below_500m', 'inner_amundsen_shelf_temp_below_500m', 'inner_amundsen_shelf_salt_below_500m', 'amundsen_shelf_break_uwind_avg', 'dotson_massloss', 'pig_massloss', 'getz_massloss']
     timeseries_file = 'timeseries.nc'
     timeseries_paths = [real_dir(d) + 'output/' + timeseries_file for d in sim_dir]
-    smooth = 12
+    smooth = 24
     if hindcast:
         year_start = 1920
         year_ticks = np.arange(1920, 2010+1, 10)
@@ -515,7 +515,7 @@ def order_ensemble_std (base_dir='./'):
     era5_id = ['031']
     run_names = ['PACE '+str(n+1) for n in range(10)] + ['ERA5']
     ts_file = 'timeseries.nc'
-    smooth = 12
+    smooth = 24
     base_dir = real_dir(base_dir)
 
     for var_name in ['pig_massloss', 'dotson_massloss']:
@@ -542,7 +542,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         sys.exit()
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+hovmoller_file for d in sim_dir]
-    smooth = 6
+    smooth = 12
     grid = choose_grid(grid, None)
     
     if loc == 'amundsen_west_shelf_break':
@@ -628,7 +628,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 
 
 # Read a variable and calculate the trend, with a bunch of options. Returns the trend per decade, and a boolean indicating whether or not the trend is significant.
-def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=12, p0=0.05):
+def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=24, p0=0.05):
 
     data = read_netcdf(file_path, var)
     time = netcdf_time(file_path, monthly=False)    
@@ -643,7 +643,7 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
     data = data[t0:]
     if option == 'smooth':
         # 2-year running mean to filter out seasonal cycle
-        data = moving_average(data, smooth, centered=False)
+        data = moving_average(data, smooth)
     elif option == 'annual':
         # Annual average to filter out seasonal cycle
         # First trim to the nearest complete year
@@ -651,8 +651,8 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
         time = time[:new_size]
         data = data[:new_size]
         time, data = calc_annual_averages(time, data)
-    # Calculate trends
-    slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size), data)
+    # Calculate trends per year (monthly output)
+    slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size)/12., data)
     # Multiply slope by 10 to get trend per decade
     slope *= 10
     sig = p_value < p0
@@ -901,7 +901,7 @@ def wind_temp_trend_scatterplot (sim_dir, temp_var='inner_amundsen_shelf_temp_be
 def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_dir='./'):
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
-    smooth = 12
+    smooth = 24
     base_year_start = 1920
     base_year_end = 1949
     fig_dir = real_dir(fig_dir)
@@ -958,7 +958,7 @@ def wind_melt_correlation (sim_dir, shelf, timeseries_file='timeseries.nc', fig_
 def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
-    smooth_short = 12
+    smooth_short = 24
     year0 = 1920
     test_smooth = range(20, 50+1)
     num_tests = len(test_smooth)
@@ -974,7 +974,7 @@ def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
             wind = read_netcdf(file_paths[n], 'amundsen_shelf_break_uwind_avg')
             t_start = index_year_start(time, year0)
             # Calculate long-term running mean
-            smooth_long = test_smooth[m]*12/2
+            smooth_long = test_smooth[m]*12
             ismr_tmp = moving_average(ismr, smooth_long)
             wind_tmp = moving_average(wind, smooth_long)
             # Pad to be the same size as the original arrays
@@ -1021,7 +1021,7 @@ def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
 def correlation_4pt (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
 
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
-    smooth = 12
+    smooth = 24
     base_year_start = 1920
     base_year_end = 1949
     fig_dir = real_dir(fig_dir)
@@ -1255,19 +1255,19 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
     max_cutoff = 0
     num_cutoff = 50
     year_start = 1920
-    smooth = 12
+    smooth = 24
     num_ens = len(sim_dir)
     file_paths = [d + '/output/' + timeseries_file for d in sim_dir]
 
-    # Read one time array as scalar values, assume it's the same everywhere (i.e. all ensemble members have finished)
-    time = netcdf_time(file_paths[0], monthly=False, return_date=False)
-    # Also read as Date values to get index of year_start
-    time_date = netcdf_time(file_paths[0], monthly=False)
-    t0 = index_year_start(time_date, year_start)
+    # Read one time array, assume it's the same everywhere (i.e. all ensemble members have finished)
+    time = netcdf_time(file_paths[0], monthly=False)
+    t0 = index_year_start(time, year_start)
     time = time[t0:]
     # Now smooth a dummy array so we can trim the time correctly
-    time = moving_average(np.arange(time.size), smooth, time=time, centered=False)[1]
+    time = moving_average(np.arange(time.size), smooth, time=time)[1]
     num_time = time.size
+    # Overwrite the time array with scalars of unit years (monthly averaged, assume evenly spaced for simplicity)
+    time = np.arange(num_time*12)/12.
 
     # Loop over regions
     for l in range(len(loc)):
@@ -1275,7 +1275,7 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
         # Read temperature for this region, for all ensemble members
         temp = np.empty([num_ens, num_time])
         for n in range(num_ens):
-            temp[n,:] = moving_average(read_netcdf(file_paths[n], loc[l]+var_ts[0])[t0:], smooth, centered=False)
+            temp[n,:] = moving_average(read_netcdf(file_paths[n], loc[l]+var_ts[0])[t0:], smooth)
         # Get range of cutoff temperatures
         cutoff_temp = np.linspace(np.amin(temp), max_cutoff, num=num_cutoff)
         
@@ -1290,7 +1290,7 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
             # Read this variable for all ensemble members
             var_data = np.empty([num_ens, num_time])
             for n in range(num_ens):
-                var_data[n,:] = moving_average(read_netcdf(file_paths[n], var)[t0:], smooth, centered=False)
+                var_data[n,:] = moving_average(read_netcdf(file_paths[n], var)[t0:], smooth)
 
             # Now calculate trends and significance for each cutoff temp
             all_trends = np.empty([num_ens, num_cutoff])

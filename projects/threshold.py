@@ -431,7 +431,7 @@ def filchner_trough_hovmollers (base_dir='./', fig_dir='./'):
     grid = Grid(base_dir+grid_path)
 
     for n in range(num_sim):
-        read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', grid, smooth=6, t_contours=[-1.9], fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
+        read_plot_hovmoller_ts(file_paths[n], 'filchner_trough', grid, smooth=12, t_contours=[-1.9], fig_name=fig_dir+'hovmoller_ft_'+sim_keys[n]+'.png')
 
 
 # Plot anomalies in Ua variables (ice thickness and velocity) for four scenarios:
@@ -961,7 +961,7 @@ def plot_freezing_months (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'freezing_months.png')
 
 
-# Plot timeseries of changes in atmospheric temperature and wind speed, averaged over several different regions. Smooth with the given radius.
+# Plot timeseries of changes in atmospheric temperature and wind speed, averaged over several different regions. Smooth with the given window.
 def plot_atm_timeseries (sim_key, smooth=0, base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -1002,7 +1002,7 @@ def plot_atm_timeseries (sim_key, smooth=0, base_dir='./', fig_dir='./'):
             data.append(data_smoothed)
         title = var_titles[v]
         if smooth > 0:
-            title += ' ('+str(2*smooth+1)+'-year smoothed)'
+            title += ' ('+str(smooth)+'-year smoothed)'
         title += title_tail
         timeseries_multi_plot(time, data, region_titles, colours, title=title, units=var_units[v], fig_name=fig_dir+'timeseries_'+var[:var.index('_avg')]+'_'+sim_key+'.png')
 
@@ -1354,7 +1354,7 @@ def timeseries_contenders (base_dir='./', fig_dir='./'):
         
     var_names = ['sws_shelf_salt', 'fris_mean_psi', 'fris_temp', 'fris_massloss', 'ft_sill_delta_rho']
     file_names = [timeseries_file, timeseries_file_psi, timeseries_file, timeseries_file, timeseries_file_drho]
-    smooths = [0, 2, 0, 0, 0]
+    smooths = [0, 5, 0, 0, 0]
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -1374,7 +1374,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     sim_names_plot = [sim_names[n][:-3] for n in sim_numbers]  # Trim the -IO
     sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_max_psi', 'fris_temp', 'fris_massloss']
-    smooth = [5, 0, 5]
+    smooth = [11, 0, 11]
     titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
@@ -1525,7 +1525,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     for t in range(spinup_time):
         time[t] = datetime.datetime(time[t].year-2910+1850,time[t].month,1)
 
-    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_year=split_year, smooth=6, centered=False, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_year=split_year, smooth=12, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
     for ax in [axs[0], axs[2]]:
         for year in [0, threshold_year]: #, 150]:
             ax.axvline(year, linestyle='dashed', color='black', linewidth=1)
@@ -1874,7 +1874,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
     plot_titles = ['a) Salt fluxes (all depths)', 'b) Surface freshwater fluxes']
     units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
     num_plots = len(var_names)
-    smooth = 5
+    smooth = 11
     num_years_spinup = 20
     num_years = 150
 

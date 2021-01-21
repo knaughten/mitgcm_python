@@ -705,9 +705,14 @@ def trim_titles (titles):
     return title_start, titles
 
 
-# Smooth the given data with a moving average of the given radius, and trim the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
-# If centered=False, the window will be 2*radius (instead of the default 2*radius+1) and the time array will be shifted by half an index.
-def moving_average (data, radius, time=None, centered=True):
+# Smooth the given data with a moving average of the given window, and trim and/or shift the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
+def moving_average (data, window, time=None, centered=True):
+
+    centered = window%2==1
+    if centered:
+        radius = (window-1)/2
+    else:
+        radius = window/2
 
     # Will have to trim each end by one radius
     t_first = radius
