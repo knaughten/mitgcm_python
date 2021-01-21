@@ -1334,8 +1334,9 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
 
 
 # Make plots from the trend file created above.
-def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive'):
+def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive', lon0_slices=[]):
 
+    fig_dir = real_dir(fig_dir)
     grid = Grid(grid_dir)
     lon, lat = grid.get_lon_lat(gtype=gtype)
     z_3d = z_to_xyz(grid.z, grid)
@@ -1381,12 +1382,12 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
         max_trend = np.ma.masked_where(max_trend==0, max_trend)
         max_trend_depth = np.ma.masked_where(max_trend==0, max_trend_depth)
         # Plot both of them
-        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14)
-        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14)
+        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_max.png')
+        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14, fig_name=fig_dir+var_name+'_trend_depth.png')
     
     # Now plot trend at every integer longitude within the domain (lat-depth slices)
-    for lon0 in range(int(np.ceil(xmin)), int(np.ceil(xmax))):
-        slice_plot(np.ma.masked_where(mean_trend==0, mean_trend), grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14)
+    for lon0 in lon0_slices:
+        slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png')
 
     
 
