@@ -1267,7 +1267,7 @@ def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', f
     time = moving_average(np.arange(time.size), smooth, time=time)[1]
     num_time = time.size
     # Overwrite the time array with scalars of unit years (monthly averaged, assume evenly spaced for simplicity)
-    time = np.arange(num_time*12)/12.
+    time = np.arange(num_time)/12.
 
     # Loop over regions
     for l in range(len(loc)):
