@@ -1085,15 +1085,15 @@ def set_parameters (var):
         var_name = 'EXFaqh'
         region = var[:var.index('_aqh_avg')]
         title = 'Specific humidity over '+region_names[region]
-        units = r'10$^{-6}$ kg/kg'
-        factor = 1e6
+        units = r'10$^{-3}$ kg/kg'
+        factor = 1e3
     elif var.endswith('precip_avg'):
         option = 'avg_sfc'
         var_name = 'EXFpreci'
         region = var[:var.index('_precip_avg')]
         title = 'Precipitation averaged over '+region_names[region]
-        units = r'10$^{-6}$ m/s'
-        factor = 1e6
+        units = r'10$^{-9}$ m/s'
+        factor = 1e9
     elif var.endswith('sst_avg'):
         option = 'avg_sfc'
         var_name = 'THETA'
