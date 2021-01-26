@@ -1403,8 +1403,10 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
     output_dir = [real_dir(d) + 'output/' for d in pace_dir]
     ts_paths = [od + timeseries_file for od in output_dir]
     smooth = 24
+    max_lag = 24
     ymax = -70
     fig_dir = real_dir(fig_dir)
+    vmax = 0.5
 
     grid = Grid(grid_path)
     mask = grid.get_ice_mask()
@@ -1415,8 +1417,10 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
     t_start, t_end = index_period(time, base_year_start, base_year_end)
 
     # Read and process the ice shelf melt rates
-    ismr_data = None
+    print 'Reading ice shelf melt rates'
+    ismr_data = None    
     for n in range(num_ens):
+        print '...' + pace_dir[n]
         ismr_tmp = None
         file_paths = segment_file_paths(output_dir[n])
         for f in file_paths:
@@ -1439,10 +1443,13 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
 
     # Now process one forcing at a time
     for m in range(num_forcing):
+        print 'Processing ' + forcing_names[m]
+        print 'Reading forcing timeseries and calculating lags'
         forcing_data = np.empty([num_ens, num_time])
         avg_lag = np.empty(num_ens)
-        
+
         for n in range(num_ens):
+            print '...'+pace_dir[n]
             # Read and process the timeseries
             data_tmp = read_netcdf(ts_paths[n], forcing_names[m])            
             if forcing_names[m] == 'amundsen_shelf_break_uwind_avg':
@@ -1467,16 +1474,19 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
                 # Calculate cross-correlation with forcing
                 corr = np.correlate(forcing_data[n,:], ismr_ts, mode='full')
                 # Get best lag period: peak in correlation, shifted to account for different sized arrays (as in https://stackoverflow.com/questions/49372282/find-the-best-lag-from-the-numpy-correlate-output)
-                # Do the shift first by trimming all indices that would lead to a negative lag
+                # Do the shift first by trimming all indices that would lead to a negative lag, or a lag larger than the maximum
                 corr = corr[num_time-1:]
-                lag.append(np.argmax(corr))
+                corr = corr[:max_lag+1]
+                lag[p] = np.argmax(corr)
             # Now calculate average lag over all points, and save to master array
-            avg_lag[n] = lag
+            avg_lag[n] = np.mean(lag)
 
         # Calculate average lag over all ensemble members and round to nearest int
         final_lag = int(np.round(np.mean(avg_lag)))
+        print 'Optimum lag of ' + str(final_lag) + ' months'
 
         # Now get ensemble-mean correlation coefficients for each point and each member
+        print 'Calculating correlation coefficients'
         mean_r = np.empty(num_ice_pts)
         for p in range(num_ice_pts):
             r_values = np.empty(num_ens)
@@ -1492,9 +1502,10 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
         r_data = np.zeros([grid.ny, grid.nx])
         r_data[mask] = mean_r
         r_data = mask_except_ice(r_data, grid)
+        print 'Mean r over all points and ensemble members = '+str(np.mean(r_data))
 
         # Plot this map
-        latlon_plot(r_data, grid, ctype='plusminus', ymax=ymax, title=title_head+forcing_titles[m]+' at optimum lag of '+round_to_decimals(final_lag/12.,2)+' years', titlesize=14, figsize=(14,5)) #, fig_name=fig_dir+'correlation_map_ismr_'+forcing_abbrv[m]+'.png')
+        latlon_plot(r_data, grid, ctype='plusminus', ymax=ymax, vmin=-vmax, vmax=vmax, title=title_head+forcing_titles[m]+'\nat optimum lag of '+str(final_lag)+' months', titlesize=14, figsize=(14,5), fig_name=fig_dir+'correlation_map_ismr_'+forcing_abbrv[m]+'.png')
     
 
     
