@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -1389,6 +1389,112 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
     for lon0 in lon0_slices:
         slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png')
 
+
+def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc', fig_dir='./'):
+
+    forcing_names = ['amundsen_shelf_break_uwind_avg', 'inner_amundsen_shelf_atemp_avg', 'inner_amundsen_shelf_aqh_avg', 'inner_amundsen_shelf_precip_avg']
+    forcing_titles = ['time-integral of winds at shelf break', 'air temperature over inner shelf', 'humidity over inner shelf', 'precipitation over inner shelf']
+    forcing_abbrv = ['uwind', 'atemp', 'aqh', 'precip']
+    title_head = 'Correlation of ice shelf melting and '
+    num_forcing = len(forcing_names)
+    base_year_start = 1920
+    base_year_end = 1949    
+    num_ens = len(pace_dir)
+    output_dir = [real_dir(d) + 'output/' for d in pace_dir]
+    ts_paths = [od + timeseries_file for od in output_dir]
+    smooth = 24
+    ymax = -70
+    fig_dir = real_dir(fig_dir)
+
+    grid = Grid(grid_path)
+    mask = grid.get_ice_mask()
+    num_ice_pts = np.count_nonzero(mask)
+
+    # Get time indices of the base period
+    time = netcdf_time(ts_paths[0], monthly=False)
+    t_start, t_end = index_period(time, base_year_start, base_year_end)
+
+    # Read and process the ice shelf melt rates
+    ismr_data = None
+    for n in range(num_ens):
+        ismr_tmp = None
+        file_paths = segment_file_paths(output_dir[n])
+        for f in file_paths:
+            ismr_1y = mask_except_ice(convert_ismr(read_netcdf(f, 'SHIfwFlx')), grid, time_dependent=True)
+            if ismr_tmp is None:
+                ismr_tmp = ismr_1y
+            else:
+                ismr_tmp = np.concatenate((ismr_tmp, ismr_1y), axis=0)
+        # Trim the spinup
+        ismr_tmp = ismr_tmp[t_start:,:]
+        # Get 2 year running mean
+        ismr_tmp = moving_average(ismr_tmp, smooth)
+        # Centre the data by subtracting the time-mean at each point
+        ismr_tmp -= np.mean(ismr_tmp, axis=0)
+        # Save to master array, but only the ice shelf points
+        if ismr_data is None:
+            num_time = ismr_tmp.shape[0]
+            ismr_data = np.ma.empty([num_ens, num_time, num_ice_pts])
+        ismr_data[n,:] = ismr_tmp[:,mask]
+
+    # Now process one forcing at a time
+    for m in range(num_forcing):
+        forcing_data = np.empty([num_ens, num_time])
+        avg_lag = np.empty(num_ens)
+        
+        for n in range(num_ens):
+            # Read and process the timeseries
+            data_tmp = read_netcdf(ts_paths[n], forcing_names[m])            
+            if forcing_names[m] == 'amundsen_shelf_break_uwind_avg':
+                # Time-integral of wind anomaly from 1920-1949 mean
+                data_tmp -= np.mean(data_tmp[t_start:t_end])
+                dt = 365./12*sec_per_day
+                data_tmp = np.cumsum(data_tmp*dt)
+            # Trim the spinup
+            data_tmp = data_tmp[t_start:]
+            # Get 2 year running mean
+            data_tmp = moving_average(data_tmp, smooth)
+            # Now centre the data by subtracting the mean
+            data_tmp -= np.mean(data_tmp)
+            # Save to master array
+            forcing_data[n,:] = data_tmp
+
+            # Loop over ice shelf points
+            lag = np.empty(num_ice_pts)
+            for p in range(num_ice_pts):
+                # Extract timeseries of ice shelf melting at this point
+                ismr_ts = ismr_data[n,:,p]
+                # Calculate cross-correlation with forcing
+                corr = np.correlate(forcing_data[n,:], ismr_ts, mode='full')
+                # Get best lag period: peak in correlation, shifted to account for different sized arrays (as in https://stackoverflow.com/questions/49372282/find-the-best-lag-from-the-numpy-correlate-output)
+                # Do the shift first by trimming all indices that would lead to a negative lag
+                corr = corr[num_time-1:]
+                lag.append(np.argmax(corr))
+            # Now calculate average lag over all points, and save to master array
+            avg_lag[n] = lag
+
+        # Calculate average lag over all ensemble members and round to nearest int
+        final_lag = int(np.round(np.mean(avg_lag)))
+
+        # Now get ensemble-mean correlation coefficients for each point and each member
+        mean_r = np.empty(num_ice_pts)
+        for p in range(num_ice_pts):
+            r_values = np.empty(num_ens)
+            for n in range(num_ens):
+                # Extract the two timeseries and shift by the correct lag
+                forcing_ts = forcing_data[n,:-final_lag]
+                ismr_ts = ismr_data[n,final_lag:,p]
+                # Now do the linear regression
+                r_values[n] = linregress(forcing_ts, ismr_ts)[2]
+            # Take mean over ensemble members
+            mean_r[p] = np.mean(r_values)
+        # Convert this array to lon-lat and fill in the mask
+        r_data = np.zeros([grid.ny, grid.nx])
+        r_data[mask] = mean_r
+        r_data = mask_except_ice(r_data, grid)
+
+        # Plot this map
+        latlon_plot(r_data, grid, ctype='plusminus', ymax=ymax, title=title_head+forcing_titles[m]+' at optimum lag of '+round_to_decimals(final_lag/12.,2)+' years', titlesize=14, figsize=(14,5)) #, fig_name=fig_dir+'correlation_map_ismr_'+forcing_abbrv[m]+'.png')
     
 
     

@@ -47,7 +47,7 @@ from calculus import vertical_average
 # change_points: only matters if ctype='ismr'. As in function set_colours.
 # extend: 'neither', 'min', 'max', 'both', or None (will be determined automatically based on vmin and vmax)
 # label_latlon: whether to label latitude and longitude axes
-# land_mask, ice_mask: alternate land and ice masks to use for shading (usefulf or coupled simulations)
+# land_mask, ice_mask: alternate land and ice masks to use for shading (useful for coupled simulations)
 # figsize: (width, height) of figure in inches.
 
 def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, land_mask=None, ice_mask=None, figsize=(8,6), dpi=None, contour_shelf=True):
