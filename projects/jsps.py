@@ -23,6 +23,7 @@ from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_ye
 from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
+from ..diagnostics import adv_heat_wrt_freezing
 
 
 # Global variables
@@ -1225,6 +1226,9 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             if len(data.shape) != dim:
                 print 'Error (make_trend_file): wrong dimension for this variable.'
                 sys.exit()
+            if var_name in ['ADVx_TH', 'ADVy_TH']:
+                # Need to convert to heat advection relative to freezing point
+                
             data_save[t,:] = data[mask]
         # Now calculate the trend at each point
         print 'Calculating trends'
