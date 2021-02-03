@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_ice, region_bounds, Cp_sw
+from constants import rho_ice, region_bounds, Cp_sw, Tf_ref
 from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
 from calculus import area_integral, vertical_integral, indefinite_ns_integral
 from plot_utils.slices import get_transect
@@ -296,11 +296,51 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
     else:
         print 'Error (transport_transect): invalid shore ' + shore
         sys.exit()
+
+
+# Convert the heat advection terms from MITgcm (with respect to 0C) to be with respect to the surface freezing point (assuming constant salinity for simplicity).
+# Input arguments:
+# adv: list of length 3, containing the x, y, and z components of advection. If you only want some components, set the others to be None.
+# vel: list of length 3, containing the u, v, and w arrays (same shape as adv arrays). One of them can be None as for adv.
+# grid: Grid object
+# Optional keyword arguments:
+# time_dependent: whether there is a time dimension on the arrays
+def adv_heat_wrt_freezing (adv, vel, grid, time_dependent=False):
+
+    dim = 3
+    calc = [adv[n] is not None for n in range(dim)] # Which dimensions we need to calculate
+    result = [None for n in range(dim)]
+    dz = z_to_xyz(grid.dz, grid)
+    dA = [xy_to_xyz(grid.dy_w, grid)*dz, xy_to_xyz(grid.dx_s, grid)*dz, z_to_xyz(grid.dA, grid)]  # Product of two faces from other dimensions
+    
+    if time_dependent:
+        # Add time dimension to dA
+        num_time = None
+        for n in range(dim):
+            if calc[n]:
+                num_time = adv[n].shape[0]
+                break
+        for n in range(dim):
+            dA[n] = add_time_dim(dA[n], num_time)
+
+    # Now calculate the result
+    for n in range(dim):
+        if calc[n]:
+            result[n] = adv[n] - Tf_ref*vel[n]*dh[n]*dz
+
+    return result
+    
+    
+    
+
+
+
     
     
 
     
-            
+
+        
 
     
     

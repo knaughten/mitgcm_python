@@ -38,6 +38,8 @@ Cp_sw = 4180.
 vaf_to_gmslr = -910./1028./3.625e14
 # kg per Gt
 kg_per_Gt = 1e12
+# Reference surface freezing point (degC)
+Tf_ref = -1.9
 
 # Degrees formatted nicely in a string
 deg_string = r'$^{\circ}$'
