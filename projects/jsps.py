@@ -1195,7 +1195,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         if dim == 3:
             mask = grid.get_hfac(gtype=gtype) != 0
         elif dim == 2:
-            mask = grid.get_land_mask(gtype=gtype)
+            mask = np.invert(grid.get_land_mask(gtype=gtype))
     elif region == 'ice':
         # All cavity points, 2D or 3D
         mask = grid.get_ice_mask(gtype=gtype)
