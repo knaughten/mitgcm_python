@@ -1226,9 +1226,13 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             if len(data.shape) != dim:
                 print 'Error (make_trend_file): wrong dimension for this variable.'
                 sys.exit()
-            if var_name in ['ADVx_TH', 'ADVy_TH']:
+            if var_name == 'ADVx_TH':
                 # Need to convert to heat advection relative to freezing point
-                
+                u = read_netcdf(file_paths[t], 'UVEL', time_average=True)
+                [data, tmp] = adv_heat_wrt_freezing([data, None], [u, None], grid)
+            elif var_name == 'ADVy_TH':
+                v = read_netcdf(file_paths[t], 'VVEL', time_average=True)
+                [tmp, data] = adv_heat_wrt_freezing([None, data], [None, v], grid)                
             data_save[t,:] = data[mask]
         # Now calculate the trend at each point
         print 'Calculating trends'

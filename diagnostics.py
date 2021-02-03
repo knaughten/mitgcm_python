@@ -326,7 +326,7 @@ def adv_heat_wrt_freezing (adv, vel, grid, time_dependent=False):
     # Now calculate the result
     for n in range(dim):
         if calc[n]:
-            result[n] = adv[n] - Tf_ref*vel[n]*dh[n]*dz
+            result[n] = adv[n] - Tf_ref*vel[n]*dA[n]
 
     return result
     
