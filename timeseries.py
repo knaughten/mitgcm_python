@@ -402,6 +402,11 @@ def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None
 def timeseries_adv_dif (file_path, var_name, grid, z0, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
 
     data_x, data_y = read_data_xy(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if z0 is not None:
+        # Mask out bounds
+        if mask is None:
+            mask = np.ones([grid.ny, grid.nx]).astype(bool)
+        mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data_x.shape[0]):
@@ -410,10 +415,6 @@ def timeseries_adv_dif (file_path, var_name, grid, z0, time_index=None, t_start=
         data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
         # Sum over the given region
         data_tmp = mask_3d(data_tmp, grid)
-        if z0 is not None:
-            if mask is None:
-                mask = np.ones([grid.ny, grid.nx]).astype(bool)
-            mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
         if mask is not None:
             data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
         timeseries.append(np.sum(data_tmp))
