@@ -202,7 +202,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         if mask is None:
             # Dummy mask
             mask = np.ones([grid.ny, grid.nx]).astype(bool)
-        mask = mask_2d_to_3d(mask, grid, zmax=z0[0], zmax=z0[1])
+        mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
