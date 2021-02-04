@@ -706,7 +706,13 @@ def trim_titles (titles):
 
 
 # Smooth the given data with a moving average of the given window, and trim and/or shift the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
-def moving_average (data, window, time=None, centered=True):
+def moving_average (data, window, time=None):
+
+    if window == 0:
+        if time is not None:
+            return data, time
+        else:
+            return time
 
     centered = window%2==1
     if centered:
