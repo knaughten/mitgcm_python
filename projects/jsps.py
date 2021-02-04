@@ -1183,7 +1183,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 
 
 # Calculate the trend at every point in the given region, for the given variable, and all ensemble members. Save to a NetCDF file (3D or 4D depending on whether variable is 2D or 3D).
-def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t'):
+def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920):
 
     num_ens = len(sim_dir)
 
@@ -1217,6 +1217,8 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         print 'Processing ' + sim_dir[m]
         # Get all the file paths (assume one for each year)
         file_paths = segment_file_paths(sim_dir[m]+'/output/')
+        t_start = file_paths.index(sim_dir[m]+'/output/'+str(start_year)+'01/MITgcm/output.nc')
+        file_paths = file_paths[t_start:]
         num_years = len(file_paths)
         # Read annually-averaged data at each point in the mask
         data_save = np.empty([num_years, num_pts])
