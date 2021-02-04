@@ -9,10 +9,10 @@ import datetime
 from grid import choose_grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land
-from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze
+from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
 from interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
-from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst
+from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst, Cp_sw
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (as specified in region_names in constants.py). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -176,9 +176,9 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
     return np.array(timeseries)
 
 
-# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0, timeseries_avg_below_z0, timeseries_int_between_z0.
+# Helper function for timeseries_avg_3d, timeseries_int_3d, timeseries_avg_bottom, timeseries_avg_z0, timeseries_avg_btw_z0, timeseries_int_btw_z0.
 def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None, z0=None):
-
+        
     if var_name == 'RHO':
         if rho is None:
             print 'Error (timeseries_avg_3d): must precompute density'
@@ -191,18 +191,18 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         data = temp - tfreeze(salt, 0)
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if var_name == 'THETA' and option in ['integrate', 'int_btw_z0']:
+        # Convert to Kelvin
+        data += temp_C2K
     if len(data.shape)==3:
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
-    if option in ['avg_below_z0', 'int_between_z0']:
+    if option in ['avg_btw_z0', 'int_btw_z0']:
         # Need to make mask 3D
         if mask is None:
             # Dummy mask
             mask = np.ones([grid.ny, grid.nx]).astype(bool)
-        if option == 'avg_below_z0':
-            mask = mask_2d_to_3d(mask, grid, zmax=z0)
-        elif option == 'int_between_z0':
-            mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
+        mask = mask_2d_to_3d(mask, grid, zmax=z0[0], zmax=z0[1])
     # Process one time index at a time to save memory
     timeseries = []
     for t in range(data.shape[0]):
@@ -215,11 +215,11 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
                 data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
             # Volume average or integrate
             timeseries.append(over_volume(option, data_tmp, grid, gtype=gtype))
-        elif option == 'avg_below_z0':
-            # 3D volume average below the given depth
+        elif option == 'avg_btw_z0':
+            # 3D volume average between the given depths
             data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_average(data_tmp, grid, gtype=gtype))
-        elif option == 'int_between_z0':
+        elif option == 'int_btw_z0':
             # 3D volume integral between the given depths
             data_tmp = apply_mask(data_tmp, np.invert(mask))
             timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
@@ -259,16 +259,18 @@ def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None
     return timeseries_vol_3d('avg_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
-# Same but volume-averaged value below the given depth.
-def timeseries_avg_below_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
-    return timeseries_vol_3d('avg_below_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
-
-
-# Same but volume-integrated value between the given depths (where z0=[z_deep, z_shallow])
-def timeseries_int_between_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+# Same but volume-averaged value between the given depths (where z0=[z_deep, z_shallow]).
+def timeseries_avg_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     if not isinstance(z0, list) or len(z0) != 2:
-        print 'Error (timeseries_int_between_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
-    return timeseries_vol_3d('int_between_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+        print 'Error (timeseries_avg_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
+    return timeseries_vol_3d('avg_btw_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+
+
+# Same but volume-integrated value between the given depths.
+def timeseries_int_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
+    if not isinstance(z0, list) or len(z0) != 2:
+        print 'Error (timeseries_int_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
+    return timeseries_vol_3d('int_btw_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -383,6 +385,12 @@ def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None
     var_y = var_name.replace('x', 'y')
     data_x = read_netcdf(file_path, var_x, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     data_y = read_netcdf(file_path, var_y, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if var_name == 'ADVx_TH':
+        # Need to convert to heat advection relative to freezing point
+        u = read_netcdf(file_path, 'UVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        v = read_netcdf(file_path, 'VVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        grid = Grid(file_path)
+        [data_x, data_y] = adv_heat_wrt_freezing([data_x, data_y], [u, v], grid)
     if len(data_x.shape)==3:
         # Just one timestep; add a dummy time dimension
         data_x = np.expand_dims(data_x,0)
@@ -391,7 +399,7 @@ def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None
 
 
 # Calculate the net horizontal advection or diffusion into the given 3D region.
-def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+def timeseries_adv_dif (file_path, var_name, grid, z0, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
 
     data_x, data_y = read_data_xy(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     # Process one time index at a time to save memory
@@ -401,9 +409,12 @@ def timeseries_adv_dif (file_path, var_name, grid, time_index=None, t_start=None
         data_tmp = np.ma.zeros(data_x.shape[1:])
         data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
         # Sum over the given region
-        if mask is None:
-            data_tmp = mask_3d(data_tmp, grid)
-        else:
+        data_tmp = mask_3d(data_tmp, grid)
+        if z0 is not None:
+            if mask is None:
+                mask = np.ones([grid.ny, grid.nx]).astype(bool)
+            mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
+        if mask is not None:
             data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
         timeseries.append(np.sum(data_tmp))
     return np.array(timeseries)
@@ -643,7 +654,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
         print 'Error (calc_timeseries): must specify point0 and point1'
         sys.exit()
-    elif option in ['delta_rho', 'avg_z0', 'avg_below_z0', 'int_between_z0'] and z0 is None:
+    elif option in ['delta_rho', 'avg_z0', 'avg_btw_z0', 'int_btw_z0'] and z0 is None:
         print 'Error (calc_timeseries): must specify z0'
         sys.exit()
     if var_name == 'RHO' and rho is None:
@@ -661,7 +672,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_below_z0', 'int_between_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_btw_z0', 'int_btw_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -720,7 +731,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'pmepr':
             values_tmp = timeseries_int_sfc(fname, ['oceFWflx', 'SIfwmelt', 'SIfwfrz'], grid, mask=mask, time_average=time_average, operator='subtract')
         elif option == 'adv_dif':
-            values_tmp = timeseries_adv_dif(fname, var_name, grid, mask=mask, time_average=time_average)
+            values_tmp = timeseries_adv_dif(fname, var_name, grid, z0, mask=mask, time_average=time_average)
         elif option == 'adv_dif_bdry':
             values_tmp = timeseries_adv_dif_bdry(fname, var_name, grid, mask, bdry_mask, time_average=time_average)
         elif option == 'res_time':
@@ -733,10 +744,10 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_avg_bottom(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'avg_z0':
             values_tmp = timeseries_avg_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
-        elif option == 'avg_below_z0':
-            values_tmp = timeseries_avg_below_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
-        elif option == 'int_between_z0':
-            values_tmp = timeseries_int_between_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'avg_btw_z0':
+            values_tmp = timeseries_avg_btw_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
+        elif option == 'int_btw_z0':
+            values_tmp = timeseries_int_btw_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'min_depth':
             values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
         elif option == 'iso_depth':
@@ -1246,18 +1257,22 @@ def set_parameters (var):
         title = 'Depth of ' + str(threshold) + deg_string + 'C isotherm in ' + region_names[region]
         units = deg_string+'C'
     elif '_temp_below_' in var:
-        option = 'avg_below_z0'
+        option = 'avg_btw_z0'
         var_name = 'THETA'
         region = var[:var.index('_temp_below')]
-        z0 = -1*int(var[len(region+'_temp_below_'):-1])
-        title = 'Average temperature below '+str(-z0)+'m in '+region_names[region]
+        z_shallow = -1*int(var[len(region+'_temp_below_'):-1])
+        z_deep = None
+        z0 = [z_deep, z_shallow]
+        title = 'Average temperature below '+str(-z_shallow)+'m in '+region_names[region]
         units = deg_string+'C'
     elif '_salt_below_' in var:
-        option = 'avg_below_z0'
+        option = 'avg_btw_z0'
         var_name = 'SALT'
         region = var[:var.index('_salt_below')]
-        z0 = -1*int(var[len(region+'_salt_below_'):-1])
-        title = 'Average salinity below '+str(-z0)+'m in '+region_names[region]
+        z_shallow = -1*int(var[len(region+'_salt_below_'):-1])
+        z_deep = None
+        z0 = [z_deep, z_shallow]
+        title = 'Average salinity below '+str(-z_shallow)+'m in '+region_names[region]
         units = 'psu'
     elif var.endswith('_thermocline'):
         option = 'max_gradient_depth'
@@ -1266,7 +1281,7 @@ def set_parameters (var):
         title = 'Thermocline depth in '+region_names[region]
         units = 'm'
     elif '_adv_heat_ns' in var:
-        option = 'int_between_z0'
+        option = 'int_btw_z0'
         var_name = 'ADVy_TH'
         region = var[:var.index('_adv_heat_ns')]
         # Parse depth range
@@ -1276,6 +1291,24 @@ def set_parameters (var):
         z0 = [z_deep, z_shallow]
         title = 'Meridional advection of heat in '+region_names[region]+', '+str(-z_shallow)+'-'+str(-z_deep)+'m'
         units = deg_string+r'C m$^3$/s'
+    elif 'dohc_adv_below' in var:
+        option = 'adv_dif'
+        var_name = 'ADVx_TH'
+        region = var[:var.index('_dohc_adv_below')]
+        z_shallow = -1*int(var[len(region+'_dohc_adv_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Change in ocean heat content from horizontal advection in '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
+    elif 'ohc_below' in var:
+        option = 'int_btw_z0'
+        var_name = 'THETA'
+        region = var[:var.index('_ohc_below')]
+        z_shallow = -1*int(var[len(region+'_ohc_adv_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Ocean heat content in '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

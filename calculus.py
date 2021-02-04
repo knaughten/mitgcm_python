@@ -3,6 +3,7 @@
 ###############################################################
 
 import numpy as np
+import datetime
 from utils import z_to_xyz, xy_to_xyz, add_time_dim, is_depth_dependent
 
 
@@ -255,15 +256,16 @@ def depth_derivative (data, grid, gtype='t', time_dependent=False):
 
 def time_derivative (data, time):
 
-    # Tile the time array in space
-    time_tiled = np.empty(data.shape)
-    for t in range(len(time)):
-        time_tiled[t,:] = time[t]
-    return derivative(data, time_tiled, axis=0)
-
-    
-    
-    
+    if isinstance(time[0], datetime.datetime):
+        # Get time intervals in seconds
+        dt = np.array([(time[n]-time[n-1]).total_seconds() for n in range(1,time.size)])
+    ddata = data[1:,:] - data[:-1,:]
+    # Expand the dimensions of dt to match ddata
+    for n in range(len(ddata.shape)-1):
+        dt = np.expand_dims(dt,-1)
+    ddata_dt = ddata/dt
+    # Now pad with zeros at the first time index
+    return np.concatenate((np.expand_dims(np.zeros(ddata_dt[0,...].shape),0), ddata_dt), axis=0)  
         
 
     

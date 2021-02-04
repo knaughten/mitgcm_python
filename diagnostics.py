@@ -303,15 +303,18 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
 # adv: list of length 2 or 3, containing the x, y, and maybe z components of advection. If you only want some components, set the others to be None.
 # vel: list of length 2 or 3, containing the u, v, and maybe w arrays (same shape as adv arrays). One of them can be None as for adv.
 # grid: Grid object
-# Optional keyword arguments:
-# time_dependent: whether there is a time dimension on the arrays
-def adv_heat_wrt_freezing (adv, vel, grid, time_dependent=False):
+def adv_heat_wrt_freezing (adv, vel, grid):
 
     dim = len(adv)
     calc = [adv[n] is not None for n in range(dim)] # Which dimensions we need to calculate
     result = [None for n in range(dim)]
     dz = z_to_xyz(grid.dz, grid)
     dA = [xy_to_xyz(grid.dy_w, grid)*dz, xy_to_xyz(grid.dx_s, grid)*dz, xy_to_xyz(grid.dA, grid)]  # Product of two faces from other dimensions
+
+    time_dependent = False
+    for n in range(dim):
+        if adv[n] is not None and len(adv[n].shape)==4:
+            time_dependent=True
     
     if time_dependent:
         # Add time dimension to dA
