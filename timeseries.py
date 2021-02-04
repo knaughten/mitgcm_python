@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import datetime
 
-from grid import choose_grid
+from grid import choose_grid, Grid
 from file_io import read_netcdf, netcdf_time
 from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land
 from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing
