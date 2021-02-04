@@ -259,7 +259,7 @@ def time_derivative (data, time):
     if isinstance(time[0], datetime.datetime):
         # Get time intervals in seconds
         dt = np.array([(time[n]-time[n-1]).total_seconds() for n in range(1,time.size)])
-    ddata = data[1:,:] - data[:-1,:]
+    ddata = data[1:,...] - data[:-1,...]
     # Expand the dimensions of dt to match ddata
     for n in range(len(ddata.shape)-1):
         dt = np.expand_dims(dt,-1)
