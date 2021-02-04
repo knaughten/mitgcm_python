@@ -1305,7 +1305,7 @@ def set_parameters (var):
         option = 'int_btw_z0'
         var_name = 'THETA'
         region = var[:var.index('_ohc_below')]
-        z_shallow = -1*int(var[len(region+'_ohc_adv_below_'):-1])
+        z_shallow = -1*int(var[len(region+'_ohc_below_'):-1])
         z0 = [None, z_shallow]
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Ocean heat content in '+region_names[region]+' below '+str(-z_shallow)+'m'
