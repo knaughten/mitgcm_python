@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import datetime
-from scipy.stats import linregress, ttest_1samp
+from scipy.stats import linregress, ttest_1samp, pearsonr
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
@@ -16,7 +16,7 @@ from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, 
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
-from ..plot_1d import default_colours, make_timeseries_plot_2sided
+from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds
@@ -1549,12 +1549,14 @@ def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, e
     ncfile.close()
 
 
-def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_year_start=1920, base_year_end=1949, fig_name=None):
+# Plot the ensemble mean rate of change of ocean heat content below 300 m in the inner shelf, and the contribution from horizontal advection.
+def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_year_start=1920, base_year_end=1949, fig_dir='./'):
 
     num_ens = len(sim_dir)
+    fig_dir = real_dir(fig_dir)
 
     for n in range(num_ens):
-        file_path = real_dir(sim_dir[n]) + 'output/' + timeseries_files
+        file_path = real_dir(sim_dir[n]) + 'output/' + timeseries_file
         ohc_tmp = read_netcdf(file_path, 'inner_amundsen_shelf_ohc_below_300m')
         dohc_adv_tmp = read_netcdf(file_path, 'inner_amundsen_shelf_dohc_adv_below_300m')
         if n==0:
@@ -1578,9 +1580,19 @@ def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_y
     # Smooth
     dohc_smooth, time_smooth = moving_average(dohc, smooth, time=time)
     dohc_adv_smooth = moving_average(dohc_adv, smooth)
+    # Get the correlation coefficient between the two timeseries
+    r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
+    print 'Sum of dOHC: '+str(np.sum(dohc_smooth))
+    print 'Sum of dOHC_adv: '+str(np.sum(dohc_adv_smooth))
 
     # Plot
-    timeseries_multi_plot(time, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf'], units='GJ/s', vline=base_year_start, fig_name=fig_name)
+    timeseries_multi_plot(time_smooth, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf']+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_dohc_adv.png')
+
+    # Now plot the residual
+    residual = dohc_smooth-dohc_adv_smooth
+    r, p = pearsonr(dohc_smooth, residual)
+    print 'Sum of residual: '+str(np.sum(residual))
+    timeseries_multi_plot(time_smooth, [dohc_smooth, residual], ['Total', 'Residual', ['blue', 'green', title=['Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf']+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_dohc_residual.png')
 
     
     

@@ -712,7 +712,7 @@ def moving_average (data, window, time=None):
         if time is not None:
             return data, time
         else:
-            return time
+            return data
 
     centered = window%2==1
     if centered:
