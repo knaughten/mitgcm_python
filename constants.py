@@ -83,7 +83,8 @@ region_bounds = {
     'brunt_riiser_larsen': [-28, -10, -76.5, -71.6],
     'ekstrom_jelbart_fimbul': [-10, 7.7, -72, -69],
     'filchner_sill': [-36, -30, -74.7, -74],
-    'filchner_trough_cavity': [-44, -38, -81, -76]
+    'filchner_trough_cavity': [-44, -38, -81, -76],
+    'amundsen_shelf': [-115, -100, -75.5, -70]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -97,7 +98,8 @@ region_bathy_bounds = {
     'wdw_core': [None, -2000],
     'offshore_filchner': [None, -2000],
     'filchner_sill': [-1500, -600],
-    'filchner_trough_cavity': [None, -1000]
+    'filchner_trough_cavity': [None, -1000],
+    'amundsen_shelf': [-1750, None]
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {
@@ -141,7 +143,8 @@ region_names = {
     'brunt_riiser_larsen': 'Brunt and Riiser-Larsen Ice Shelves',
     'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves',
     'filchner_sill': 'Filchner Trough Sill',
-    'filchner_trough_cavity': 'Filchner Trough in cavity'
+    'filchner_trough_cavity': 'Filchner Trough in cavity',
+    'amundsen_shelf': 'Amundsen Sea continental shelf'
 }    
 
 # Resolution of SOSE grid in degrees

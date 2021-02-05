@@ -1518,7 +1518,34 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
 
         # Plot this map
         latlon_plot(r_data, grid, ctype='plusminus', ymax=ymax, vmin=-vmax, vmax=vmax, title=title_head+forcing_titles[m]+'\nat optimum lag of '+str(final_lag)+' months', titlesize=14, figsize=(14,5), fig_name=fig_dir+'correlation_map_ismr_'+forcing_abbrv[m]+'.png')
-    
+
+
+# Precompute the ensemble mean, annual mean temperature and salinity for each year of the PACE ensemble (excluding spinup).
+def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, end_year=2013):
+
+    var_names = ['THETA', 'SALT']
+    units = ['degC', 'psu']
+    num_var = len(var_names)
+    num_ens = len(sim_dir)
+    num_years = end_year-start_year+1
+    grid = Grid(grid_dir)
+
+    final_data = np.ma.zeros([num_var, num_years, grid.nz, grid.ny, grid.nx])
+    for d in sim_dir:
+        for year in range(start_year, end_year+1):
+            file_path = real_dir(d) + 'output/' + str(year)+ '01/MITgcm/output.nc'
+            print 'Reading ' + file_path
+            for n in range(num_var):
+                final_data[n,year-start_year,:] += read_netcdf(file_path, var_names[n], time_average=True)
+    # Divide by number of simulations to get ensemble mean
+    final_data /= num_ens
+
+    print 'Writing ' + out_file
+    ncfile = NCfile(out_file, grid, 'xyzt')
+    ncfile.add_time(np.arange(start_year, end_year+1), units='year')
+    for n in range(num_var):
+        ncfile.add_variable(var_names[n], final_data[n,:], 'xyzt', units=units)
+    ncfile.close()
 
     
     
