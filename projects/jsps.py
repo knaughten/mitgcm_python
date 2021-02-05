@@ -24,6 +24,7 @@ from ..plot_misc import hovmoller_plot
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing
+from ..calculus import time_derivative
 
 
 # Global variables
@@ -1546,6 +1547,40 @@ def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, e
     for n in range(num_var):
         ncfile.add_variable(var_names[n], final_data[n,:], 'xyzt', units=units)
     ncfile.close()
+
+
+def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_year_start=1920, base_year_end=1949, fig_name=None):
+
+    num_ens = len(sim_dir)
+
+    for n in range(num_ens):
+        file_path = real_dir(sim_dir[n]) + 'output/' + timeseries_files
+        ohc_tmp = read_netcdf(file_path, 'inner_amundsen_shelf_ohc_below_300m')
+        dohc_adv_tmp = read_netcdf(file_path, 'inner_amundsen_shelf_dohc_adv_below_300m')
+        if n==0:
+            # Read the time axis and initialise the arrays
+            time = netcdf_time(file_path, monthly=False)
+            ohc = ohc_tmp
+            dohc_adv = dohc_adv_tmp
+        else:
+            # Update the arrays
+            ohc += ohc_tmp
+            dohc_adv += dohc_adv_tmp
+    # Now take ensemble mean
+    ohc /= num_ens
+    dohc_adv /= num_ens
+
+    # Subtract 1920-1949 mean from advective convergence
+    t_start, t_end = index_period(time, base_year_start, base_year_end)
+    dohc_adv -= np.mean(dohc_adv[t_start:t_end])
+    # Differentiate OHC
+    dohc = time_derivative(ohc, time)
+    # Smooth
+    dohc_smooth, time_smooth = moving_average(dohc, smooth, time=time)
+    dohc_adv_smooth = moving_average(dohc_adv, smooth)
+
+    # Plot
+    timeseries_multi_plot(time, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf'], units='GJ/s', vline=base_year_start, fig_name=fig_name)
 
     
     
