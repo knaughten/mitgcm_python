@@ -20,10 +20,10 @@ from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_m
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds
-from ..plot_misc import hovmoller_plot
+from ..plot_misc import hovmoller_plot, ts_animation
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
-from ..diagnostics import adv_heat_wrt_freezing
+from ..diagnostics import adv_heat_wrt_freezing, potential_density
 from ..calculus import time_derivative
 
 
@@ -1593,6 +1593,17 @@ def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_y
     r, p = pearsonr(dohc_smooth, residual)
     print 'Sum of residual: '+str(np.sum(residual))
     timeseries_multi_plot(time_smooth, [dohc_smooth, residual], ['Total', 'Residual'], ['blue', 'green'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf']+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_dohc_residual.png')
+
+
+# Create an animated T/S diagram of the precomputed ensemble mean conditions on the continental shelf, over the 20th century. 
+def ts_animation_pace_shelf (precompute_file, grid_path, region='amundsen_shelf', sim_title='PACE ensemble mean', mov_name='ts_diagram.mp4'):    
+
+    grid = Grid(grid_path)
+    time = read_netcdf(precompute_file, 'time')  # In years, not Date objects
+    temp = read_netcdf(precompute_file, 'THETA')
+    salt = read_netcdf(precompute_file, 'SALT')
+    ts_animation(temp, salt, time, grid, region, sim_title, mov_name=mov_name)
+    
                           
     
     

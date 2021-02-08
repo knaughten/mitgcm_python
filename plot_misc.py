@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 import datetime
+import itertools
 
 from grid import choose_grid, Grid
 from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
@@ -15,7 +16,7 @@ from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_l
 from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from plot_1d import timeseries_multi_plot
-from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average
+from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average, mask_2d_to_3d
 from diagnostics import tfreeze
 from constants import deg_string, rignot_melt, region_bounds, region_names
 from interpolation import interp_bilinear
@@ -696,6 +697,98 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
     # Plot
     timeseries_multi_plot(time, [ground, unground], ['# Grounded', '# Ungrounded'], ['blue', 'red'], title='Changes in ocean cells', fig_name=fig_name_1)
     timeseries_multi_plot(time, [thin, thick], ['Maximum thinning', 'Maximum thickening'], ['red', 'blue'], title='Changes in ice shelf draft', fig_name=fig_name_2)
+
+
+# Create an animated T/S diagram of the given annually-averaged temperature and salinity fields for each year, in the given region.
+def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mask=None, plot_tfreeze=False, rho_lev=None, mov_name=None):
+
+    import matplotlib.animation as animation
+
+    if mask is None:
+        mask = grid.get_region_mask(region)
+    if len(mask.shape)==2:
+        # Get 3D version of 2D mask
+        mask_2d_to_3d(mask, grid)
+    num_years = time.size
+
+    # Inner function to get min and max values in region
+    def get_vmin_vmax (data):
+        vmin = np.amax(data)
+        vmax = np.amin(data)
+        for t in range(num_years):
+            data_tmp = data[t,:]
+            vmin = min(vmin, np.amin(data[mask]))
+            vmax = max(vmax, np.amax(data[mask]))
+        return vmin, vmax
+    tmin, tmax = get_vmin_vmax(temp)
+    smin, smax = get_vmin_vmax(salt)
+
+    # Set up bins
+    def set_bins (bounds):
+        eps = (bounds[1]-bounds[0])*1e-3
+        edges = np.linspace(bounds[0]-eps, bounds[1]+eps, num=num_bins+1)
+        centres = 0.5*(edges[:-1] + edges[1:])
+        return edges, centres
+    temp_edges, temp_centres = set_bins([tmin, tmax])
+    salt_edges, salt_centres = set_bins([smin, smax])
+    volume = np.zeros([num_years, num_bins, num_bins])
+
+    # Now loop over years and categorise the values
+    for t in range(num_years):
+        temp_year = temp[t,:]
+        salt_year = salt[t,:]
+        for temp_val, salt_val, grid_val in itertools.izip(temp[mask], salt[mask], grid.dV[mask]):
+            temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
+            salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
+            volume[t, temp_index, salt_index] += grid_val
+    # Mask bins with zero volume
+    volume = np.ma.masked_where(volume==0, volume)
+    # Calculate potential density of bins
+    salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
+    rho = potential_density('MDJWF', salt_2d, temp_2d)
+    if plot_tfreeze:
+        # Calculate surface freezing point
+        tfreeze_sfc = tfreeze(salt_centres, 0)
+
+    # Now make the animation
+    # Set up some parameters
+    min_vol = np.log(np.amin(volume))
+    max_vol = np.log(np.amax(volume))
+    if rho_lev is None:
+        rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
+    # Initialise plot
+    fig, ax = plt.subplots(figsize=(8,6))
+    
+    # Inner function to plot one frame
+    def plot_one_frame (t):
+        img = ax.pcolormesh(salt_edges, temp_edges, np.log(volume[t,:]), vmin=min_vol, vmax=max_vol)
+        ax.contour(salt_centres, temp_centres, rho, rho_lev, colors='black', linestyles='dotted')
+        if plot_tfreeze:
+            ax.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
+        ax.grid(True)
+        ax.set_xlim([smin, salt_edges[-1]])
+        ax.set_ylim([temp_edges[0], temp_edges[-1]])
+        plt.xlabel('Salinity (psu)')
+        plt.ylabel('Temperature ('+deg_string+'C)')
+        plt.text(.9, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
+        plt.title(sim_title+'\n'+region_names[region]+': '+str(years[t]))
+        if t==0:
+            return img
+
+    # First frame
+    img = plot_one_frame(0)
+    plt.colorbar(img)
+
+    # Function to update figure with the given frame
+    def animate(t):
+        print 'Frame ' + str(t+1) + ' of ' + str(time.size)
+        ax.cla()
+        plot_one_frame(t)
+
+    # Call this for each frame
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
+    writer = animation.FFMpegWriter(bitrate=2000, fps=2)
+    anim.save(mov_name, writer=writer)
 
     
     
