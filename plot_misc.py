@@ -24,13 +24,95 @@ from calculus import area_average
 from timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
 
 
+# Helper function to split temperature and salinity in the given region (set by mask) into bins, to get the volume in m^3 of each bin. The arrays can be time-dependent if you want. You can set the bounds of the bins, but they must be at least as permissive as the bounds of the data in that region.
+def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmin=None, tmax=None, smin=None, smax=None):
+
+    if len(mask.shape)==2:
+        # Get 3D version of 2D mask
+        mask = mask_2d_to_3d(mask, grid)
+    if time_dependent:
+        num_time = time.size
+    else:
+        num_time = 1
+
+    # Inner function to get min and max values in region
+    def get_vmin_vmax (data):
+        vmin = np.amax(data)
+        vmax = np.amin(data)
+        for t in range(num_time):
+            if time_dependent:
+                data_tmp = data[t,:]
+            else:
+                data_tmp = data
+            vmin = min(vmin, np.amin(data_tmp[mask]))
+            vmax = max(vmax, np.amax(data_tmp[mask]))
+        return [vmin, vmax]
+    print 'Calculating bounds'
+    temp_bounds = get_vmin_vmax(temp)
+    salt_bounds = get_vmin_vmax(salt)
+    if tmin is not None:
+        if tmin > temp_bounds[0]:
+            print 'Error (ts_binning): tmin is too high'
+            sys.exit()
+        temp_bounds[0] = tmin
+    if tmax is not None:
+        if tmax < temp_bounds[-1]:
+            print 'Error (ts_binning): tmax is too low'
+            sys.exit()
+        temp_bounds[1] = tmax
+    if smin is not None:
+        if smin > salt_bounds[0]:
+            print 'Error (ts_binning): smin is too high'
+            sys.exit()
+        salt_bounds[0] = smin
+    if smax is not None:
+        if smax < salt_bounds[-1]:
+            print 'Error (ts_binning): smax is too low'
+            sys.exit()
+        salt_bounds[1] = smax            
+
+    # Set up bins
+    def set_bins (bounds):
+        eps = (bounds[1]-bounds[0])*1e-3
+        edges = np.linspace(bounds[0]-eps, bounds[1]+eps, num=num_bins+1)
+        centres = 0.5*(edges[:-1] + edges[1:])
+        return edges, centres
+    temp_edges, temp_centres = set_bins(temp_bounds)
+    salt_edges, salt_centres = set_bins(salt_bounds)
+    if time_dependent:
+        volume = np.zeros([num_time, num_bins, num_bins])
+    else:
+        volume = np.zeros([num_bins, num_bins])
+
+    # Now categorise the values
+    print 'Binning T and S'
+    for t in range(num_time):
+        if time_dependent:
+            print '...time index '+str(t+1)+' of '+str(num_time)
+            temp_tmp = temp[t,:]
+            salt_tmp = salt[t,:]
+        else:
+            temp_tmp = temp
+            salt_tmp = salt
+        for temp_val, salt_val, grid_val in itertools.izip(temp_tmp[mask], salt_tmp[mask], grid.dV[mask]):
+            temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
+            salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
+            if time_dependent:
+                volume[t, temp_index, salt_index] += grid_val
+            else:
+                volume[temp_index, salt_index] += grid_val
+    # Mask bins with zero volume
+    volume = np.ma.masked_where(volume==0, volume)
+    return volume, temp_centres, salt_centres, temp_edges, salt_edges           
+
+
 # Create a temperature vs salinity distribution plot. Temperature and salinity are split into NxN bins (default N=1000) and the colour of each bin shows the log of the volume of water masses in that bin.
 
 # Arguments:
 # file_path: path to NetCDF file containing the variable THETA and/or SALT. You can specify a second file for the second variable in second_file_path if needed.
 
 # Optional keyword arguments:
-# option: 'fris' (only plot water masses in FRIS cavity; default), 'cavities' (only plot water masses in all ice shelf cavities), or 'all' (plot water masses from all parts of the model domain).
+# region: region key to plot (following constants.py); can also end with _cavity (eg fris_cavity) or be 'all' or 'cavities'
 # grid: a Grid object OR path to a grid directory OR path to a NetCDF file containing the grid variables. If you specify nothing, the grid will be read from file_path.
 # time_index, t_start, t_end, time_average: as in function read_netcdf. You must either define time_index or set time_average=True, so it collapses to a single record.
 # second_file_path: path to NetCDF file containing the variable THETA or SALT, if they are not both present in file_path
@@ -41,11 +123,11 @@ from timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
 # fig_name: as in function finished_plot
 
 # Suggested bounds for WSK simulation:
-# option='fris': smin=34.2
+# option='fris_cavity': smin=34.2
 # option='cavities': smin=33.5, tmax=1, num_bins=2000
 # option='all': smin=33, tmax=1.5, num_bins=2000
 
-def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
+def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -67,62 +149,15 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
     temp = read_data('THETA')
     salt = read_data('SALT')
 
-    # Select the points we care about
-    if option == 'fris':
-        # Select all points in the FRIS cavity
-        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_ice_mask(shelf='fris'), grid)
-    elif option == 'cavities':
-        # Select all points in ice shelf cavities
-        loc_index = (grid.hfac > 0)*xy_to_xyz(grid.ice_mask, grid)
-    elif option == 'all':
-        # Select all unmasked points
-        loc_index = grid.hfac > 0
+    if region == 'all':
+        mask = grid.hfac > 0
+    elif region == 'cavities':
+        mask = grid.ice_mask
     else:
-        print 'Error (plot_misc): invalid option ' + option
-        sys.exit()
+        mask = grid.get_region_mask(region)
 
-    # Inner function to set up bins for a given variable (temp or salt)
-    def set_bins (data):
-        # Find the bounds on the data at the points we care about
-        vmin = np.amin(data[loc_index])
-        vmax = np.amax(data[loc_index])
-        # Choose a small epsilon to add/subtract from the boundaries
-        # This way nothing will be at the edge of a beginning/end bin
-        eps = (vmax-vmin)*1e-3
-        # Calculate boundaries of bins
-        bins = np.linspace(vmin-eps, vmax+eps, num=num_bins)
-        # Now calculate the centres of bins for plotting
-        centres = 0.5*(bins[:-1] + bins[1:])
-        return bins, centres
-    # Call this function for each variable
-    temp_bins, temp_centres = set_bins(temp)
-    salt_bins, salt_centres = set_bins(salt)
-    # Now set up a 2D array to increment with volume of water masses
-    volume = np.zeros([temp_centres.size, salt_centres.size])
-
-    # Loop over all cells to increment volume
-    # This can't really be vectorised unfortunately
-    fris_mask = grid.get_ice_mask(shelf='fris')
-    for i in range(grid.nx):
-        for j in range(grid.ny):
-            if option=='fris' and not fris_mask[j,i]:
-                # Disregard all points not in FRIS cavity
-                continue
-            if option=='cavities' and not grid.ice_mask[j,i]:
-                # Disregard all points not in ice shelf cavities
-                continue            
-            for k in range(grid.nz):
-                if grid.hfac[k,j,i] == 0:
-                    # Disregard all masked points
-                    continue
-                # If we're still here, it's a point we care about
-                # Figure out which bins it falls into
-                temp_index = np.nonzero(temp_bins > temp[k,j,i])[0][0] - 1
-                salt_index = np.nonzero(salt_bins > salt[k,j,i])[0][0] - 1
-                # Increment volume array
-                volume[temp_index, salt_index] += grid.dV[k,j,i]
-    # Mask bins with zero volume
-    volume = np.ma.masked_where(volume==0, volume)
+    # Make the bins
+    volume, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, num_bins=num_bins)
 
     # Find the volume bounds for plotting
     min_vol = np.log(np.amin(volume))
@@ -140,10 +175,14 @@ def ts_distribution_plot (file_path, option='fris', grid=None, time_index=None, 
         smax = salt_bins[-1]
     # Construct the title
     title = 'Water masses'
-    if option=='fris':
-        title += ' in FRIS cavity'
-    elif option=='cavities':
+    if region == 'all':
+        pass
+    elif region == 'cavities':
         title += ' in ice shelf cavities'
+    elif region.endswith('cavity'):
+        title += ' in ' + region_names[region[:region.index('_cavity')]]
+    else:
+        title += ' in ' + region_names[region]
     if date_string != '':
         title += ', ' + date_string
 
@@ -707,49 +746,10 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
     # Get years if needed
     if isinstance(time[0], datetime.datetime):
         time = np.array([t.year for t in time])
-
-    if mask is None:
-        mask = grid.get_region_mask(region)
-    if len(mask.shape)==2:
-        # Get 3D version of 2D mask
-        mask = mask_2d_to_3d(mask, grid)
     num_years = time.size
 
-    # Inner function to get min and max values in region
-    def get_vmin_vmax (data):
-        vmin = np.amax(data)
-        vmax = np.amin(data)
-        for t in range(num_years):
-            data_tmp = data[t,:]
-            vmin = min(vmin, np.amin(data_tmp[mask]))
-            vmax = max(vmax, np.amax(data_tmp[mask]))
-        return [vmin, vmax]
-    print 'Calculating bounds'
-    temp_bounds = get_vmin_vmax(temp)
-    salt_bounds = get_vmin_vmax(salt)
-
-    # Set up bins
-    def set_bins (bounds):
-        eps = (bounds[1]-bounds[0])*1e-3
-        edges = np.linspace(bounds[0]-eps, bounds[1]+eps, num=num_bins+1)
-        centres = 0.5*(edges[:-1] + edges[1:])
-        return edges, centres
-    temp_edges, temp_centres = set_bins(temp_bounds)
-    salt_edges, salt_centres = set_bins(salt_bounds)
-    volume = np.zeros([num_years, num_bins, num_bins])
-
-    # Now loop over years and categorise the values
-    print 'Binning T and S'
-    for t in range(num_years):
-        print '...'+str(int(time[t]))
-        temp_year = temp[t,:]
-        salt_year = salt[t,:]
-        for temp_val, salt_val, grid_val in itertools.izip(temp_year[mask], salt_year[mask], grid.dV[mask]):
-            temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
-            salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
-            volume[t, temp_index, salt_index] += grid_val
-    # Mask bins with zero volume
-    volume = np.ma.masked_where(volume==0, volume)
+    volume, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, time_dependent=True, num_bins=num_bins)
+    
     # Calculate potential density of bins
     salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
     rho = potential_density('MDJWF', salt_2d, temp_2d)

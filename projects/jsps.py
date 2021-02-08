@@ -20,7 +20,7 @@ from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_m
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds
-from ..plot_misc import hovmoller_plot, ts_animation
+from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density
@@ -1605,6 +1605,52 @@ def ts_animation_pace_shelf (precompute_file, grid_path, region='amundsen_shelf'
     temp = read_netcdf(precompute_file, 'THETA')
     salt = read_netcdf(precompute_file, 'SALT')
     ts_animation(temp, salt, time, grid, region, sim_title, mov_name=fig_dir+mov_name)
+
+
+# Plot a T/S diagram of the change in volume between the beginning and end of the simulation (ensemble mean).
+def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_years=10, num_bins=1000, sim_title='PACE ensemble mean', fig_name=None):
+
+    grid = Grid(grid_path)
+    mask = mask_2d_to_3d(grid.get_region_mask(region), grid)
+    print 'Reading precomputed T and S'
+    temp = read_netcdf(precompute_file, 'THETA')
+    salt = read_netcdf(precompute_file, 'SALT')
+    temp_start = np.mean(temp[:num_years,:], axis=0)
+    salt_start = np.mean(salt[:num_years,:], axis=0)
+    temp_end = np.mean(temp[-num_years:,:], axis=0)
+    salt_end = np.mean(salt[-num_years:,:], axis=0)
+
+    # Get bounds for both time periods together
+    def get_vmin_vmax (data1, data2):
+        vmin = min(np.amin(data1[mask]), np.amin(data2[mask]))
+        vmax = max(np.amax(data1[mask]), np.amax(data2[mask]))
+        return [vmin, vmax]
+    [tmin, tmax] = get_vmin_vmax(temp_start, temp_end)
+    [smin, smax] = get_vmin_vmax(salt_start, salt_end)
+
+    # Get the binned volume for both time periods, on the same bins
+    volume_start, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp_salt, salt_start, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+    volume_end = ts_binning(temp_end, salt_end, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)[0]
+    volume_diff = volume_end - volume_start
+
+    # Get density contours
+    salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
+    rho = potential_density('MDJWF', salt_2d, temp_2d)
+    rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
+
+    # Plot the change in volume
+    cmap, vmin, vmax = set_colours(volume_diff, ctype='plusminus')
+    fig, ax = plt.subplots(figsize=(8,6))
+    img = ax.pcolormesh(salt_edges, temp_edges, volume_diff, vmin=vmin, vmax=vmax, cmap=cmap)
+    plt.colorbar(img)
+    ax.contour(salt_centres, temp_centres, rho, rho_lev, colors='black', linestyles='dotted')
+    plt.xlabel('Salinity (psu)')
+    plt.ylabel('Temperature ('+deg_string+'C)')
+    plt.text(.9, .6, r'change in volume (m$^3$)', ha='center', rotation=-90, transform=fig.transFigure)
+    plt.title(sim_title+', last 10y minus first 10y\n'+region_names[region])
+    finished_plot(fig, fig_name=fig_name)
+    
+        
     
                           
     
