@@ -1629,9 +1629,11 @@ def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_y
     [smin, smax] = get_vmin_vmax(salt_start, salt_end)
 
     # Get the binned volume for both time periods, on the same bins
-    volume_start, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp_salt, salt_start, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+    volume_start, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp_start, salt_start, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
     volume_end = ts_binning(temp_end, salt_end, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)[0]
     volume_diff = volume_end - volume_start
+    # Take log multiplied by sign
+    volume_diff = np.sign(volume_diff)*np.log(np.abs(volume_diff))
 
     # Get density contours
     salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
@@ -1639,14 +1641,16 @@ def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_y
     rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
 
     # Plot the change in volume
+    print 'Plotting'
     cmap, vmin, vmax = set_colours(volume_diff, ctype='plusminus')
     fig, ax = plt.subplots(figsize=(8,6))
     img = ax.pcolormesh(salt_edges, temp_edges, volume_diff, vmin=vmin, vmax=vmax, cmap=cmap)
     plt.colorbar(img)
     ax.contour(salt_centres, temp_centres, rho, rho_lev, colors='black', linestyles='dotted')
+    ax.set_xlim([33.5, 34.74])
     plt.xlabel('Salinity (psu)')
     plt.ylabel('Temperature ('+deg_string+'C)')
-    plt.text(.9, .6, r'change in volume (m$^3$)', ha='center', rotation=-90, transform=fig.transFigure)
+    plt.text(.9, .6, r'log of change in volume', ha='center', rotation=-90, transform=fig.transFigure)
     plt.title(sim_title+', last 10y minus first 10y\n'+region_names[region])
     finished_plot(fig, fig_name=fig_name)
     
