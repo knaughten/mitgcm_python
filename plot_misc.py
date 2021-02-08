@@ -771,10 +771,10 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
         smax = salt_edges[-1]
     if rho_lev is None:
         rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
-        
+
     print 'Plotting'
     fig, ax = plt.subplots(figsize=(8,6))
-    
+
     # Inner function to plot one frame
     def plot_one_frame (t):
         img = ax.pcolormesh(salt_edges, temp_edges, np.log(volume[t,:]), vmin=min_vol, vmax=max_vol)
@@ -789,7 +789,7 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
         plt.title(sim_title+'\n'+region_names[region]+': '+str(int(time[t])))
         if t==0:
             return img
-    
+
     # First frame
     img = plot_one_frame(0)
     plt.colorbar(img)
@@ -802,7 +802,6 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
 
     # Call this for each frame
     anim = animation.FuncAnimation(fig, func=animate, frames=range(num_years))
-    #writer = animation.FFMpegWriter(bitrate=2000, fps=2)
     anim.save(mov_name, bitrate=2000, fps=2)
 
     
