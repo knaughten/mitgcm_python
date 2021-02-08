@@ -17,7 +17,7 @@ from plot_utils.windows import finished_plot, set_panels
 from plot_utils.colours import get_extend, set_colours
 from plot_1d import timeseries_multi_plot
 from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average, mask_2d_to_3d
-from diagnostics import tfreeze
+from diagnostics import tfreeze, potential_density
 from constants import deg_string, rignot_melt, region_bounds, region_names
 from interpolation import interp_bilinear
 from calculus import area_average
