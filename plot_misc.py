@@ -700,15 +700,19 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
 
 
 # Create an animated T/S diagram of the given annually-averaged temperature and salinity fields for each year, in the given region.
-def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mask=None, plot_tfreeze=False, rho_lev=None, mov_name=None):
+def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, mask=None, plot_tfreeze=False, rho_lev=None, mov_name=None):
 
     import matplotlib.animation as animation
+
+    # Get years if needed
+    if isinstance(time[0], datetime.datetime):
+        time = np.array([t.year for t in time])
 
     if mask is None:
         mask = grid.get_region_mask(region)
     if len(mask.shape)==2:
         # Get 3D version of 2D mask
-        mask_2d_to_3d(mask, grid)
+        mask = mask_2d_to_3d(mask, grid)
     num_years = time.size
 
     # Inner function to get min and max values in region
@@ -717,11 +721,12 @@ def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mas
         vmax = np.amin(data)
         for t in range(num_years):
             data_tmp = data[t,:]
-            vmin = min(vmin, np.amin(data[mask]))
-            vmax = max(vmax, np.amax(data[mask]))
-        return vmin, vmax
-    tmin, tmax = get_vmin_vmax(temp)
-    smin, smax = get_vmin_vmax(salt)
+            vmin = min(vmin, np.amin(data_tmp[mask]))
+            vmax = max(vmax, np.amax(data_tmp[mask]))
+        return [vmin, vmax]
+    print 'Calculating bounds'
+    temp_bounds = get_vmin_vmax(temp)
+    salt_bounds = get_vmin_vmax(salt)
 
     # Set up bins
     def set_bins (bounds):
@@ -729,15 +734,17 @@ def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mas
         edges = np.linspace(bounds[0]-eps, bounds[1]+eps, num=num_bins+1)
         centres = 0.5*(edges[:-1] + edges[1:])
         return edges, centres
-    temp_edges, temp_centres = set_bins([tmin, tmax])
-    salt_edges, salt_centres = set_bins([smin, smax])
+    temp_edges, temp_centres = set_bins(temp_bounds)
+    salt_edges, salt_centres = set_bins(salt_bounds)
     volume = np.zeros([num_years, num_bins, num_bins])
 
     # Now loop over years and categorise the values
+    print 'Binning T and S'
     for t in range(num_years):
+        print '...'+str(int(time[t]))
         temp_year = temp[t,:]
         salt_year = salt[t,:]
-        for temp_val, salt_val, grid_val in itertools.izip(temp[mask], salt[mask], grid.dV[mask]):
+        for temp_val, salt_val, grid_val in itertools.izip(temp_year[mask], salt_year[mask], grid.dV[mask]):
             temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
             salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
             volume[t, temp_index, salt_index] += grid_val
@@ -754,9 +761,18 @@ def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mas
     # Set up some parameters
     min_vol = np.log(np.amin(volume))
     max_vol = np.log(np.amax(volume))
+    if tmin is None:
+        tmin = temp_edges[0]
+    if tmax is None:
+        tmax = temp_edges[-1]
+    if smin is None:
+        smin = salt_edges[0]
+    if smax is None:
+        smax = salt_edges[-1]
     if rho_lev is None:
         rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
-    # Initialise plot
+        
+    print 'Plotting'
     fig, ax = plt.subplots(figsize=(8,6))
     
     # Inner function to plot one frame
@@ -765,30 +781,32 @@ def ts_animation (temp, salt, years, grid, region, sim_title, num_bins=1000, mas
         ax.contour(salt_centres, temp_centres, rho, rho_lev, colors='black', linestyles='dotted')
         if plot_tfreeze:
             ax.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
-        ax.grid(True)
-        ax.set_xlim([smin, salt_edges[-1]])
-        ax.set_ylim([temp_edges[0], temp_edges[-1]])
+        ax.set_xlim([smin, smax])
+        ax.set_ylim([tmin, tmax])
         plt.xlabel('Salinity (psu)')
         plt.ylabel('Temperature ('+deg_string+'C)')
         plt.text(.9, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
-        plt.title(sim_title+'\n'+region_names[region]+': '+str(years[t]))
+        plt.title(sim_title+'\n'+region_names[region]+': '+str(int(time[t])))
         if t==0:
             return img
-
+    
     # First frame
     img = plot_one_frame(0)
     plt.colorbar(img)
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t+1) + ' of ' + str(time.size)
+        print 'Frame ' + str(t+1) + ' of ' + str(num_years)
         ax.cla()
         plot_one_frame(t)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
-    writer = animation.FFMpegWriter(bitrate=2000, fps=2)
-    anim.save(mov_name, writer=writer)
+    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_years))
+    #writer = animation.FFMpegWriter(bitrate=2000, fps=2)
+    anim.save(mov_name, bitrate=2000, fps=2)
+
+    
+        
 
     
     

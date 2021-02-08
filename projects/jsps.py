@@ -1596,13 +1596,15 @@ def plot_ohc_adv (sim_dir, timeseries_file='timeseries_ohc.nc', smooth=0, base_y
 
 
 # Create an animated T/S diagram of the precomputed ensemble mean conditions on the continental shelf, over the 20th century. 
-def ts_animation_pace_shelf (precompute_file, grid_path, region='amundsen_shelf', sim_title='PACE ensemble mean', mov_name='ts_diagram.mp4'):    
+def ts_animation_pace_shelf (precompute_file, grid_path, region='amundsen_shelf', sim_title='PACE ensemble mean', fig_dir='./', mov_name='ts_diagram.mp4'):    
 
+    fig_dir = real_dir(fig_dir)
     grid = Grid(grid_path)
     time = read_netcdf(precompute_file, 'time')  # In years, not Date objects
+    print 'Reading precomputed T and S'
     temp = read_netcdf(precompute_file, 'THETA')
     salt = read_netcdf(precompute_file, 'SALT')
-    ts_animation(temp, salt, time, grid, region, sim_title, mov_name=mov_name)
+    ts_animation(temp, salt, time, grid, region, sim_title, mov_name=fig_dir+mov_name)
     
                           
     
