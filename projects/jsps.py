@@ -1586,13 +1586,13 @@ def plot_ohc_adv (sim_dir, region='inner_amundsen_shelf', timeseries_file='times
     print 'Sum of dOHC_adv: '+str(np.sum(dohc_adv_smooth))
 
     # Plot
-    timeseries_multi_plot(time_smooth, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf']+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_adv.png')
+    timeseries_multi_plot(time_smooth, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names[region]+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_adv.png')
 
     # Now plot the residual
     residual = dohc_smooth-dohc_adv_smooth
     r, p = pearsonr(dohc_smooth, residual)
     print 'Sum of residual: '+str(np.sum(residual))
-    timeseries_multi_plot(time_smooth, [dohc_smooth, residual], ['Total', 'Residual'], ['blue', 'green'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names['inner_amundsen_shelf']+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_residual.png')
+    timeseries_multi_plot(time_smooth, [dohc_smooth, residual], ['Total', 'Residual'], ['blue', 'green'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names[region]+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_residual.png')
 
 
 # Create an animated T/S diagram of the precomputed ensemble mean conditions on the continental shelf, over the 20th century. 
