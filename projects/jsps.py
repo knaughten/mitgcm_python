@@ -19,7 +19,7 @@ from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -1653,6 +1653,82 @@ def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_y
     plt.text(.9, .6, r'log of change in volume', ha='center', rotation=-90, transform=fig.transFigure)
     plt.title(sim_title+', last 10y minus first 10y\n'+region_names[region])
     finished_plot(fig, fig_name=fig_name)
+
+
+# Look at all the heat budget terms in one simulation, below the given depth in the given region.
+def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=24, fig_name=None):
+
+    var = ['ADVx_TH', 'ADVr_TH', 'DFxE_TH', 'DFrE_TH', 'DFrI_TH', 'KPPg_TH', 'oceQsw', 'total', 'TOTTTEND']
+    titles = ['advection_xy', 'advection_z', 'diffusion_xy', 'diffusion_z_explicit', 'diffusion_z_implicit', 'kpp', 'shortwave', 'total', 'tendency']
+    num_var = len(var)
+    file_paths = segment_file_paths(output_dir)
+    num_time_total = len(file_paths)*12
+    data_int = np.empty([num_var, num_time_total])
+    
+    grid = Grid(file_paths[0])
+    mask = mask_2d_to_3d(grid.get_region_mask(region), grid, zmax=z0)
+    z_edges_3d = z_to_xyz(grid.z_edges, grid)
+    dA_3d = xy_to_xyz(grid.dA, grid)
+    swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
+    swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
+    rhoConst = 1028.5
+
+    time = None
+    for n in range(len(file_paths)):
+        print 'Processing ' + file_paths[n]
+        time_tmp = netcdf_time(file_paths[n])
+        if time is None:
+            time = time_tmp
+        else:
+            time = np.concatenate((time, time_tmp), axis=0)
+        for v in range(num_var):
+            print '...'+titles[v]
+            if var[v] == 'total':
+                # Sum of all previous entries
+                data_int[v, n*12:(n+1)*12] = np.sum(data_int[:,n*12:(n+1)*12], axis=0)
+            else:
+                # Read the variable
+                data = read_netcdf(file_paths[n], var[v])
+                if var[v] in ['ADVx_TH', 'DFxE_TH']:
+                    # There is a second component
+                    data_x = data
+                    data_y = read_netcdf(file_paths[n], var[v].replace('x', 'y'))
+                # Loop over timesteps
+                for t in range(num_time):
+                    if var[v] in ['ADVx_TH', 'DFxE_TH']:
+                        # Get x and y fluxes
+                        data_tmp = np.ma.zeros(data_x.shape[1:])
+                        data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
+                    elif var[v] in ['ADVr_TH', 'DFrE_TH', 'DFrI_TH', 'KPPg_TH']:
+                        # Get z fluxes
+                        data_tmp = np.ma.zeros(data.shape[1:])
+                        data_tmp[:-1,:] = data[t,1:,:] - data[t,:-1,:]
+                    elif var[v] == 'oceQsw':
+                        # Get penetration of SW radiation
+                        data_tmp = xy_to_xyz(data[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                    elif var[v] == 'TOTTTEND':
+                        # Get tendency in correct units
+                        data_tmp = data[t,:]/sec_per_day*grid.dV
+                    # Mask everywhere outside region
+                    data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+                    # Sum over all cells
+                    data_int[v, n*12+t] = np.sum(data_tmp)
+
+    # Smooth
+    # Start with a dummy variable so we get time trimmed to the right size
+    tmp, time_smoothed = moving_average(np.zeros(time.size), smooth, time=time)
+    data_smoothed = np.empty([num_var, time_smoothed.size])
+    for v in range(num_var):
+        data_smoothed[v,:] = moving_average(data_int[v,:], smooth)
+
+    # Plot
+    timeseries_multi_plot(time_smoothed, [data_smoothed[v,:] for v in range(num_var)], titles, default_colours(num_var), title='Heat budget in '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'C m$^3$/s', fig_name=fig_name)
+                    
+                
+                
+                    
+        
+    
     
         
     
