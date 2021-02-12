@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp, pearsonr
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -1664,7 +1664,7 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
     file_paths = segment_file_paths(output_dir)
     num_time_total = len(file_paths)*12
     data_int = np.empty([num_var, num_time_total])
-    
+
     grid = Grid(file_paths[0])
     mask = mask_2d_to_3d(grid.get_region_mask(region), grid, zmax=z0)
     z_edges_3d = z_to_xyz(grid.z_edges, grid)
@@ -1677,6 +1677,7 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
     for n in range(len(file_paths)):
         print 'Processing ' + file_paths[n]
         time_tmp = netcdf_time(file_paths[n])
+        num_time = time_tmp.size
         if time is None:
             time = time_tmp
         else:
@@ -1723,9 +1724,7 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
 
     # Plot
     timeseries_multi_plot(time_smoothed, [data_smoothed[v,:] for v in range(num_var)], titles, default_colours(num_var), title='Heat budget in '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'C m$^3$/s', fig_name=fig_name)
-                    
-                
-                
+
                     
         
     
