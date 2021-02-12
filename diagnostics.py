@@ -240,7 +240,9 @@ def rotate_vector (u, v, grid, point0, point1, option='both', time_dependent=Fal
     # Find angle between east and the transect (intersecting at point0)
     [lon0, lat0] = point0
     [lon1, lat1] = point1
-    angle = np.arctan2(lat1-lat0, lon1-lon0)
+    x = np.cos(lat1)*np.sin(lon1-lon0)
+    y = np.cos(lat0)*np.sin(lat1) - np.sin(lat0)*np.cos(lat1)*np.cos(lon1-lon0)
+    angle = np.arctan2(y, x)
 
     # Interpolate u and v to the tracer grid
     u_t = interp_grid(u, grid, 'u', 't', time_dependent=time_dependent)
