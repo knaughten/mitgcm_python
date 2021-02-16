@@ -1736,25 +1736,32 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
 
 
 # Plot how the correlation between d/dt OHC and the advective component changes depending on the threshold depth.
-def ohc_adv_correlation_vs_depth (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_ohc_full.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_name=None):
+def ohc_adv_correlation_vs_depth (sim_dir, timeseries_file='timeseries_ohc_full.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_name=None):
 
+    regions = ['amundsen_shelf', 'inner_amundsen_shelf']
+    colours = ['red', 'blue']
+    num_regions = len(regions)
     depths = np.arange(200,700+100,100)
     num_depths = depths.size
-    correlation = np.empty(num_depths)
-    num_ens = len(sim_dir)
+    correlation = np.empty(num_regions, num_depths)
+    num_ens = len(sim_dir)    
 
-    # Loop over depths
-    for k in range(num_depths):
-        time_smooth, dohc_smooth, dohc_adv_smooth = read_process_ohc(sim_dir, region=region, timeseries_file=timeseries_file, smooth=smooth, depth=depths[k], base_year_start=base_year_start, base_year_end=base_year_end)
-        r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
-        correlation[k] = r
+    # Loop over regions
+    for n in range(num_regions):
+        # Loop over depths
+        for k in range(num_depths):
+            time_smooth, dohc_smooth, dohc_adv_smooth = read_process_ohc(sim_dir, region=regions[n], timeseries_file=timeseries_file, smooth=smooth, depth=depths[k], base_year_start=base_year_start, base_year_end=base_year_end)
+            r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
+            correlation[n,k] = r
 
     fig, ax = plt.subplots()
-    ax.plot(depths, correlation, '-', linewidth=1.5)
+    for n in range(num_regions):
+        ax.plot(depths, correlation[n,:], '-', linewidth=1.5, color=colours[n], label=regions[n])
+    ax.legend()
     ax.grid(True)
-    plt.xlabel('Cutoff depth (m)', fontsize=16)
-    plt.ylabel('Correlation', fontsize=16)
-    plt.title('Correlation between d/dt OHC and the advective contribution in '+region_names[region], fontsize=18)
+    plt.xlabel('Cutoff depth (m)')
+    plt.ylabel('Correlation')
+    plt.title('Correlation between d/dt OHC and the advective contribution')
     finished_plot(fig, fig_name=fig_name)
 
     
