@@ -1549,16 +1549,14 @@ def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, e
     ncfile.close()
 
 
-# Plot the ensemble mean rate of change of ocean heat content below 300 m in the inner shelf, and the contribution from horizontal advection.
-def plot_ohc_adv (sim_dir, region='inner_amundsen_shelf', timeseries_file='timeseries_ohc.nc', smooth=0, base_year_start=1920, base_year_end=1949, fig_dir='./'):
+# Helper function to read and process OHC terms
+def read_process_ohc (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_full.nc', smooth=24, depth=300, base_year_start=1920, base_year_end=1949):
 
     num_ens = len(sim_dir)
-    fig_dir = real_dir(fig_dir)
-
     for n in range(num_ens):
         file_path = real_dir(sim_dir[n]) + 'output/' + timeseries_file
-        ohc_tmp = read_netcdf(file_path, region+'_ohc_below_300m')
-        dohc_adv_tmp = read_netcdf(file_path, region+'_dohc_adv_below_300m')
+        ohc_tmp = read_netcdf(file_path, region+'_ohc_below_'+str(depth)+'m')
+        dohc_adv_tmp = read_netcdf(file_path, region+'_dohc_adv_below_'+str(depth)+'m')
         if n==0:
             # Read the time axis and initialise the arrays
             time = netcdf_time(file_path, monthly=False)
@@ -1580,6 +1578,17 @@ def plot_ohc_adv (sim_dir, region='inner_amundsen_shelf', timeseries_file='times
     # Smooth
     dohc_smooth, time_smooth = moving_average(dohc, smooth, time=time)
     dohc_adv_smooth = moving_average(dohc_adv, smooth)
+
+    return time_smooth, dohc_smooth, dohc_adv_smooth
+
+
+# Plot the ensemble mean rate of change of ocean heat content below 300 m in the inner shelf, and the contribution from horizontal advection.
+def plot_ohc_adv (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_ohc.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_dir='./'):
+
+    fig_dir = real_dir(fig_dir)
+
+    time_smooth, dohc_smooth, dohc_adv_smooth = read_process_ohc(sim_dir, region=region, timeseries_file=timeseries_file, smooth=smooth, depth=300, base_year_start=base_year_start, base_year_end=base_year_end)
+    
     # Get the correlation coefficient between the two timeseries
     r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
     print 'Sum of dOHC: '+str(np.sum(dohc_smooth))
@@ -1724,6 +1733,31 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
 
     # Plot
     timeseries_multi_plot(time_smoothed, [data_smoothed[v,:] for v in range(num_var)], titles, default_colours(num_var), title='Heat budget in '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'C m$^3$/s', fig_name=fig_name)
+
+
+# Plot how the correlation between d/dt OHC and the advective component changes depending on the threshold depth.
+def ohc_adv_correlation_vs_depth (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_ohc_full.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_name=None):
+
+    depths = np.arange(200,700+100,100)
+    num_depths = depths.size
+    correlation = np.empty(num_depths)
+    num_ens = len(sim_dir)
+
+    # Loop over depths
+    for k in range(num_depths):
+        time_smooth, dohc_smooth, dohc_adv_smooth = read_process_ohc(sim_dir, region=region, timeseries_file=timeseries_file, smooth=smooth, depth=depths[k], base_year_start=base_year_start, base_year_end=base_year_end)
+        r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
+        correlation[k] = r
+
+    fig, ax = plt.subplots()
+    ax.plot(depths, correlation, '-', linewidth=1.5)
+    ax.grid(True)
+    plt.xlabel('Cutoff depth (m)', fontsize=16)
+    plt.ylabel('Correlation', fontsize=16)
+    plt.title('Correlation between d/dt OHC and the advective contribution in '+region_names[region], fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
+
+    
 
                     
         
