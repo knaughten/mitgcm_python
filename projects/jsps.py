@@ -1743,7 +1743,7 @@ def ohc_adv_correlation_vs_depth (sim_dir, timeseries_file='timeseries_ohc_full.
     num_regions = len(regions)
     depths = np.arange(200,700+100,100)
     num_depths = depths.size
-    correlation = np.empty(num_regions, num_depths)
+    correlation = np.empty([num_regions, num_depths])
     num_ens = len(sim_dir)    
 
     # Loop over regions
