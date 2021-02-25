@@ -2022,7 +2022,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
-    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'tas_scenarios.pdf', dpi=300)
         
     
 # Plot time-averaged historical melt rates versus Moholdt observations.
