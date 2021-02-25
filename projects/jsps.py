@@ -1764,8 +1764,18 @@ def ohc_adv_correlation_vs_depth (sim_dir, timeseries_file='timeseries_ohc_full.
     plt.title('Correlation between d/dt OHC and the advective contribution')
     finished_plot(fig, fig_name=fig_name)
 
-    
 
+# Compare the trend in OHC to the time-averaged anomaly of dOHC_adv
+# Compare the individual members, the trend of the mean, and the mean of individual trends
+def compare_ohc_trends (sim_dir, region='amundsen_shelf', depth=400, timeseries_file='timeseries_ohc_full.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_dir='./'):
+
+    # Get trend and anomaly in each member
+    # Get mean of trends and mean of anomalies
+    # Get trend and anomaly of ensemble mean
+    # Plot like a bar chart but with stars/points
+
+    
+    
                     
         
     

@@ -2563,7 +2563,7 @@ def plot_shelf_freshening (base_dir='./', fig_dir='./'):
         if n == 0:
             time = np.array([t.year-time_tmp[0].year for t in time_tmp])
 
-    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the\nSouthern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False, fig_name=fig_dir+'freshening.png')
+    timeseries_multi_plot(time, data, sim_names_plot, sim_colours, title='Volume-averaged salinity on the\nSouthern Weddell Sea continental shelf', units='psu', legend_outside=False, dates=False, fig_name=fig_dir+'freshening.pdf', dpi=300)
 
 
 # Calculate the historical simulation mass loss from the major Eastern Weddell ice shelves. Argument is the time-averaged historical file.
