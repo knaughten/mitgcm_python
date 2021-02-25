@@ -147,7 +147,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
                 ax.plot(time, datas[i], '-', color=colours[i], label=labels[i], linewidth=linewidth, linestyle=linestyles[i], alpha=alphas[i])
         ax.set_xlim(start_time, end_time)
 
-    ax.grid(True)
+    ax.grid(linestyle='dotted')
     if crosses_zero:
         # Add a line at 0
         ax.axhline(color='black', linestyle='dashed')

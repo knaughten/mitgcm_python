@@ -2016,7 +2016,7 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
     plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
     plt.ylabel(deg_string+'C', fontsize=14)
     plt.xlabel('Year', fontsize=14)
-    ax.grid(True)
+    ax.grid(linestyle='dotted')
     ax.set_xlim([1850, 2100])
     ax.set_yticks(np.arange(8+1))
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
