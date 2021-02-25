@@ -1586,7 +1586,7 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
         ax.axis('equal')
         # Shade open ocean
         img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, zoom_fris=True, pster=True, title=titles[i], contour_shelf=False)
-        plt.text(0, 1, abc[i], weight='bold', ha='left', va='bottom', fontsize=18)
+        plt.text(0, 1, abc[i], weight='bold', ha='left', va='bottom', fontsize=18, transform=ax.transAxes)
         if i==0:
             # Plot outline of compass
             ax.plot(compass_lon_x, compass_lon_y, color='black')
