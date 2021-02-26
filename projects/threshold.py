@@ -1527,7 +1527,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
     for t in range(spinup_time):
         time[t] = datetime.datetime(time[t].year-2910+1850,time[t].month,1)
 
-    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_year=split_year, smooth=12, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True)
+    fig, axs = hovmoller_ts_plot(temp, salt, time, grid, t_contours=[t0], date_since_start=True, start=spinup_time, split_year=split_year, smooth=12, ctype='centered', t0=t0, s0=s0, title=title, figsize=(10,6), return_fig=True, ab_inside=True, rasterized=True)
     for ax in [axs[0], axs[2]]:
         for year in [0, threshold_year]: #, 150]:
             ax.axvline(year, linestyle='dashed', color='black', linewidth=1)
@@ -1539,7 +1539,7 @@ def plot_final_hovmoller (sim_key='abIO', base_dir='./', fig_dir='./'):
         axs[0].text(threshold_year+2, -50, 'Stage 2', color='black', ha='left', va='top', fontsize=14)
     elif sim_key == '1pIO':
         axs[0].text(threshold_year-1, -50, 'Stage 2', color='black', rotation=-90, ha='right', va='top', fontsize=14)
-    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'hovmoller_'+sim_key+'.pdf', dpi=300)
 
 
 # Plot the basic parts of the schematic.

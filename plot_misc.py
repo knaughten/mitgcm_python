@@ -217,7 +217,7 @@ def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t
 # monthly: as in netcdf_time
 # contours: list of values to contour in black over top
 
-def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, start=0, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None, start_t=None, end_t=None):
+def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, zmin=None, zmax=None, monthly=True, contours=None, date_since_start=False, start=0, val0=None, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=(14,5), dpi=None, start_t=None, end_t=None, rasterized=False):
 
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -269,7 +269,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
         fig, ax = plt.subplots(figsize=figsize)
 
     # Plot the data
-    img = ax.pcolormesh(time_edges, grid.z_edges, np.transpose(data), cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(time_edges, grid.z_edges, np.transpose(data), cmap=cmap, vmin=vmin, vmax=vmax, rasterized=rasterized)
     if contours is not None:
         # Overlay contours
         # Need time at the centres of each index
@@ -309,7 +309,7 @@ def hovmoller_plot (data, time, grid, smooth=0, ax=None, make_cbar=True, ctype='
 
 
 # Creates a double Hovmoller plot with temperature on the top and salinity on the bottom.
-def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_year=None, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False):
+def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_year=None, tmin=None, tmax=None, smin=None, smax=None, zmin=None, zmax=None, monthly=True, t_contours=None, s_contours=None, title=None, date_since_start=False, start=0, t0=None, s0=None, ctype='basic', loc_string='', fig_name=None, figsize=(12,7), dpi=None, return_fig=False, ab_inside=False, rasterized=False):
 
     # Set panels
     fig, gs, cax_t, cax_s = set_panels('2x1C2', figsize=figsize)
@@ -343,13 +343,19 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_year=None, tmin=N
     vmax = [tmax, smax]
     val0 = [t0, s0]
     contours = [t_contours, s_contours]
-    titles = ['a) Temperature ('+deg_string+'C)', 'b) Salinity (psu)']
+    if ab_inside:
+        titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
+        ab = ['a', 'b']
+    else:
+        titles = ['a) Temperature ('+deg_string+'C)', 'b) Salinity (psu)']
     cax = [cax_t, cax_s]
     axs = []
     for i in range(2):
         ax = plt.subplot(gs[i,0])
         # Make the plot
-        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i], end_t=split_year)
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title=titles[i], date_since_start=date_since_start, start=start, val0=val0[i], end_t=split_year, rasterized=rasterized)
+        if ab_inside:
+            plt.text(0.01, 0.98, ab[i], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
         # Add a colourbar
         extend = get_extend(vmin=vmin[i], vmax=vmax[i])
         cbar = plt.colorbar(img, cax=cax[i], extend=extend)
@@ -364,7 +370,7 @@ def hovmoller_ts_plot (temp, salt, time, grid, smooth=0, split_year=None, tmin=N
         if split_year is not None:
             # Now make another plot beside
             ax2 = plt.subplot(gs[i,1])
-            img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax2, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title='', date_since_start=date_since_start, start=start, val0=val0[i], start_t=split_year)
+            img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax2, make_cbar=False, vmin=vmin[i], vmax=vmax[i], zmin=zmin, zmax=zmax, monthly=monthly, contours=contours[i], ctype=ctype, title='', date_since_start=date_since_start, start=start, val0=val0[i], start_t=split_year, rasterized=rasterized)
             ax2.set_yticklabels([])
             ax2.set_ylabel('')
             if i==0:
