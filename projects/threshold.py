@@ -1465,7 +1465,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             ax.set_yticks(ticks[v][m])
             if m==0:
                 ax.set_title(titles[v], fontsize=18)
-                plt.text(0.01, 0.98, abc[n], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
+                plt.text(0.01, 0.98, abc[v], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
                 ax.set_ylabel(units[v], fontsize=13)
                 ax.set_xlim([time[0][0], split_year])
             else:
