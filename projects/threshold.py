@@ -2346,7 +2346,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     units = [deg_string+'C', 'psu']
     num_vars = len(units)
     fig, gs = set_panels('PS111_3x2C0')
-    loc_titles = [r'$\bf{a}$ Ronne Depression', r'$\bf{b}$ Berkner Bank', r'$\bf{c}$ Filchner Trough']
+    loc_titles = [r'$\bf{a}$  Ronne Depression', r'$\bf{b}$  Berkner Bank', r'$\bf{c}$  Filchner Trough']
     ytitle = [0.89, 0.59, 0.295]
     loc_labels = ['a', 'b', 'c']
     loc_labels_x = [0.04, 0.09, 0.13]
