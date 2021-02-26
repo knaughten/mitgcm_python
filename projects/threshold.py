@@ -1461,7 +1461,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                     ax.axvline(threshold_year[n], color=sim_colours[n], linestyle='dashed', linewidth=1)
                 else:
                     ax.axvline(150, color='black', linestyle='dashed', linewidth=1)
-            ax.grid(True)
+            ax.grid(linestyle='dotted')
             ax.set_yticks(ticks[v][m])
             if m==0:
                 ax.set_title(titles[v], fontsize=18)
