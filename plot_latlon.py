@@ -88,7 +88,8 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
             # Shade land and ice shelves in grey
             shade_land_ice(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask, ice_mask=ice_mask)
     # Plot the data    
-    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax, linewidth=0)
+    img.set_edgecolor('face')
     if include_shelf and contour_shelf:
         # Contour ice shelf front
         contour_iceshelf_front(ax, grid, pster=pster)

@@ -2845,7 +2845,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 ax.plot(lat_front[n], fris_mean[t], '*', color=colours[t], markersize=13, markeredgecolor='black')
                 if t==0:
                     plt.text(lat_front[n], fris_mean[t], 'FRIS mean', ha='right', va='center', fontsize=12)'''
-        ax.grid(True)
+        ax.grid(linestyle='dotted')
         ax.set_title(titles[n], fontsize=16)
         plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
         ax.set_ylabel(r'kg/m$^3$-1000', fontsize=12)

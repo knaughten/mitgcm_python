@@ -115,7 +115,8 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
         print 'Error (shade_mask): invalid colour ' + colour
         sys.exit()
     # Add to plot        
-    ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]))
+    img = ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]), linewidth=0)
+    img.set_edgecolor('face')
 
     
 def shade_land (ax, grid, gtype='t', pster=False, land_mask=None):
