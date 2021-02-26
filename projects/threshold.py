@@ -1720,10 +1720,10 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     # Read boundary nodes
     x_bdry, y_bdry = read_ua_bdry(base_files[0])
 
-    # Read ocean temperature averaged over the last year
-    grid = Grid(final_ocean_file)
+    grid = Grid(base_dir+grid_path) #final_ocean_file)
     x_ocean, y_ocean = polar_stereo(grid.lon_2d, grid.lat_2d)
-    '''ocean_temp = mask_3d(read_netcdf(final_ocean_file, 'THETA', time_average=True), grid)
+    '''# Read ocean temperature averaged over the last year
+    ocean_temp = mask_3d(read_netcdf(final_ocean_file, 'THETA', time_average=True), grid)
     # Get maximum in water column and mask open ocean
     ocean_tmax = mask_except_ice(np.amax(ocean_temp, axis=0), grid)'''
     # Now prepare to contour the coastline
