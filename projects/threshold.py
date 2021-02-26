@@ -1651,7 +1651,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], include_shelf=False, title=titles[i])
-        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
+        plt.text(0.01, 0.98, ab[i], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
         cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal', extend=extend[i])
         if i==1:
             # Add degree signs to ticks
@@ -2690,7 +2690,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                 ax.set_title(titles[p], fontsize=18)
-                plt.text(0.01, 0.98, abcdef[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
+                plt.text(0.01, 0.98, abcdef[n*3+p], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
                 # Colourbar on each side
                 if p==0:
                     cbar = plt.colorbar(img, cax=cax[n][0])
