@@ -1742,7 +1742,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
             img = ua_plot('reg', data[v][t], x, y, x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[2*v+t], vmax=vmax[2*v+t], zoom_fris=True, title=sim_titles[t], titlesize=16, rasterized=True)
-            plt.text(0.01, 0.98, abcd[2*v+t], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
+            plt.text(0.01, 0.98, abcd[2*v+t], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
             # Contour grounding lines
             for n in range(2):
                 if v==0 and n==0:
