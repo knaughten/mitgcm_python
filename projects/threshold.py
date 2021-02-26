@@ -2690,7 +2690,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                 ax.set_title(titles[p], fontsize=18)
-                plt.text(0.01, 0.98, abcdef[n*3+p], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
+                plt.text(0.01, 0.98, abcdef[n*3+p], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
                 # Colourbar on each side
                 if p==0:
                     cbar = plt.colorbar(img, cax=cax[n][0])
