@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import matplotlib
 matplotlib.use('TkAgg')
+matplotlib.rcParams['pdf.fonttype'] = 'truetype'
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 import itertools
@@ -1547,7 +1548,6 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
 
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
-    matplotlib.rcParams['pdf.fonttype'] = 'truetype'
 
     titles = ['Historical', 'Stage 1', 'Stage 2']
     abc = ['a', 'b', 'c']
