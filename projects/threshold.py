@@ -1651,7 +1651,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], include_shelf=False, title=titles[i])
-        plt.text(0.01, 0.98, ab[i], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
+        plt.text(0.01, 0.98, ab[i], weight='bold', ha='left', va='top', fontsize=18, transform=ax.transAxes)
         cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal', extend=extend[i])
         if i==1:
             # Add degree signs to ticks
@@ -2071,7 +2071,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
         ax = plt.subplot(gs[0,n])
         ax.axis('equal')
         img = latlon_plot(data[n], grid, ax=ax, ctype='ismr', make_cbar=False, vmin=vmin, vmax=vmax, change_points=change_points, title=title[n], pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
+        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=18, transform=ax.transAxes)
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Ice shelf melt rates (m/y)', fontsize=20)
     finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png', dpi=300)
