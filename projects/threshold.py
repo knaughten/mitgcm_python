@@ -2372,6 +2372,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
                 plt.ylabel('depth (m)')
             else:
                 ax.set_yticklabels([])
+            ax.set_ylim([None, 0])
         plt.text(0.5, ytitle[l], loc_titles[l], fontsize=20, transform=fig.transFigure, ha='center', va='center')
     # Main title
     plt.text(0.6, 0.95, u'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
