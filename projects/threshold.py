@@ -1667,10 +1667,11 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     var_names = ['h', 'velb']
-    var_titles = ['a) Change in ice shelf thickness (m)', 'b) Change in grounded ice speed (m/y)']
+    var_titles = ['Change in ice shelf thickness (m)', 'Change in grounded ice speed (m/y)']
     mask = ['grounded', 'floating']
     years = [75, 200]
     sim_titles = ['Stage 1 (year 75)', 'Stage 2 (year 200)']
+    abcd = ['a', 'b', 'c', 'd']
     suptitle = 'Ice sheet changes: abrupt-4xCO2 minus piControl'
     vmin = [-80, -500, -10, -200]
     vmax = [80, 500, 10, 200]
@@ -1707,11 +1708,11 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
     # Read grounding line data
     xGL = []
     yGL = []
-    for year in years:
+    for n in range(len(years)): #year in years:
         xGL_year = []
         yGL_year = []
         for fname in gl_files:
-            xGL_tmp, yGL_tmp = check_read_gl(fname, year*12-1)
+            xGL_tmp, yGL_tmp = check_read_gl(fname, n) #year*12-1)
             xGL_year.append(xGL_tmp)
             yGL_year.append(yGL_tmp)
         xGL.append(xGL_year)
@@ -1740,7 +1741,8 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
         for t in range(num_years):
             ax = plt.subplot(gs[v,t])
             ax.axis('equal')
-            img = ua_plot('reg', data[v][t], x, y, x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[2*v+t], vmax=vmax[2*v+t], zoom_fris=True, title=sim_titles[t], titlesize=16)
+            img = ua_plot('reg', data[v][t], x, y, x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype=ctype[v], vmin=vmin[2*v+t], vmax=vmax[2*v+t], zoom_fris=True, title=sim_titles[t], titlesize=16, rasterized=True)
+            plt.text(0.01, 0.98, abcd[2*v+t], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
             # Contour grounding lines
             for n in range(2):
                 if v==0 and n==0:
@@ -1760,7 +1762,7 @@ def plot_icesheet_changes (base_dir='./', fig_dir='./'):
             cbar = plt.colorbar(img, cax=cax[2*v+t], extend='both')
         plt.text(0.5, 0.45+0.47*(1-v), var_titles[v], fontsize=20, transform=fig.transFigure, ha='center', va='top')
     plt.suptitle(suptitle, fontsize=22)
-    finished_plot(fig, fig_name=fig_dir+'icesheet_changes.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'icesheet_changes.pdf', dpi=300)
 
 
 # Plot density timeseries for supplementary.

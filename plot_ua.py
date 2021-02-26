@@ -29,7 +29,7 @@ from constants import ua_titles
 # xGL, yGL: grounding line coordinates to overlay
 # x_bdry, y_bdry: coordinates of boundary nodes, to clip the data interpolated onto a regular mesh
 
-def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=None, y_bdry=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None):
+def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=None, y_bdry=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None, rasterized=False):
     
     import matplotlib
     matplotlib.use('TkAgg')
@@ -86,7 +86,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
         if clip:
             # Draw the outline of the domain
             ax.add_patch(bdry)
-        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax)
+        img = ax.pcolormesh(x, y, data, cmap=cmap, vmin=vmin, vmax=vmax, rasterized=rasterized)
     if make_cbar:
         # Add a colourbar
         if option == 'tri':
