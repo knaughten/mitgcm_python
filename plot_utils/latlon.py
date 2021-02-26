@@ -101,7 +101,7 @@ def cell_boundaries (data, grid, gtype='t', extrapolate=True, pster=False):
 # Shade various masks on the plot: just the land mask, the land and ice shelves, or the ocean. Default is to shade in grey, can also do white.
 # shade_mask is the helper function; shade_land and shade_land_ice are the APIs.
 
-def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
+def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey', rasterized=False):
 
     # Properly mask all the False values, so that only True values are unmasked
     mask_plot = np.ma.masked_where(np.invert(mask), mask)
@@ -115,28 +115,28 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey'):
         print 'Error (shade_mask): invalid colour ' + colour
         sys.exit()
     # Add to plot        
-    img = ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]), linewidth=0)
+    img = ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]), linewidth=0, rasterized=rasterized)
     img.set_edgecolor('face')
 
     
-def shade_land (ax, grid, gtype='t', pster=False, land_mask=None):
+def shade_land (ax, grid, gtype='t', pster=False, land_mask=None, rasterized=False):
     if land_mask is None:
         land_mask = grid.get_land_mask(gtype=gtype)
-    shade_mask(ax, land_mask, grid, gtype=gtype, pster=pster)
+    shade_mask(ax, land_mask, grid, gtype=gtype, pster=pster, rasterized=rasterized)
 
     
-def shade_land_ice (ax, grid, gtype='t', pster=False, land_mask=None, ice_mask=None):
+def shade_land_ice (ax, grid, gtype='t', pster=False, land_mask=None, ice_mask=None, rasterized=False):
     if land_mask is None:
         land_mask = grid.get_land_mask(gtype=gtype)
     if ice_mask is None:
         ice_mask = grid.get_ice_mask(gtype=gtype)
-    shade_mask(ax, land_mask+ice_mask, grid, gtype=gtype, pster=pster)
+    shade_mask(ax, land_mask+ice_mask, grid, gtype=gtype, pster=pster, rasterized=rasterized)
 
 
-def clear_ocean (ax, grid, gtype='t', pster=False, land_mask=None):
+def clear_ocean (ax, grid, gtype='t', pster=False, land_mask=None, rasterized=False):
     if land_mask is None:
         land_mask = grid.get_land_mask(gtype=gtype)
-    shade_mask(ax, np.invert(land_mask), grid, gtype=gtype, pster=pster, colour='white')
+    shade_mask(ax, np.invert(land_mask), grid, gtype=gtype, pster=pster, colour='white', rasterized=rasterized)
 
 
 # Fill the background of the plot with grey.

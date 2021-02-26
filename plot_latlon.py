@@ -50,7 +50,7 @@ from calculus import vertical_average
 # land_mask, ice_mask: alternate land and ice masks to use for shading (useful for coupled simulations)
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, land_mask=None, ice_mask=None, figsize=(8,6), dpi=None, contour_shelf=True):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, land_mask=None, ice_mask=None, figsize=(8,6), dpi=None, contour_shelf=True, rasterized=False):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -79,16 +79,16 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         # Shade the background in grey
         shade_background(ax)
         # Clear the ocean back to white
-        clear_ocean(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask)
+        clear_ocean(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask, rasterized=rasterized)
     else:
         if include_shelf:
             # Shade land in grey
-            shade_land(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask)
+            shade_land(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask, rasterized=rasterized)
         else:
             # Shade land and ice shelves in grey
-            shade_land_ice(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask, ice_mask=ice_mask)
+            shade_land_ice(ax, grid, gtype=gtype, pster=pster, land_mask=land_mask, ice_mask=ice_mask, rasterized=rasterized)
     # Plot the data    
-    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax, linewidth=0)
+    img = ax.pcolormesh(x, y, data_plot, cmap=cmap, norm=norm, vmin=vmin, vmax=vmax, linewidth=0, rasterized=rasterized)
     img.set_edgecolor('face')
     if include_shelf and contour_shelf:
         # Contour ice shelf front

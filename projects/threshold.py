@@ -2891,7 +2891,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
     # Add map in top left showing transects
     ax = fig.add_axes([0.01, 0.82, 0.23, 0.17])
     empty_data = mask_land_ice(np.ones([grid.ny, grid.nx]), grid)-100
-    latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4.5e5, ymin=1.2e5, ymax=1.75e6, ctype='plusminus', vmin=-300)
+    latlon_plot(empty_data, grid, pster=True, ax=ax, make_cbar=False, xmin=-1.6e6, xmax=-4.5e5, ymin=1.2e5, ymax=1.75e6, ctype='plusminus', vmin=-300, rasterized=True)
     for n in range(2):
         x_trans, y_trans = polar_stereo(lon_trans[n], lat_trans[n])
         ax.plot(x_trans, y_trans, color='red')
