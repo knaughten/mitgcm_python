@@ -1585,7 +1585,7 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
         ax = plt.subplot(gs[0,i])
         ax.axis('equal')
         # Shade open ocean
-        img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, zoom_fris=True, pster=True, title=titles[i], contour_shelf=False)
+        img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, zoom_fris=True, pster=True, title=titles[i], contour_shelf=False, rasterized=True)
         plt.text(0, 1, abc[i], weight='bold', ha='left', va='bottom', fontsize=18, transform=ax.transAxes)
         if i==0:
             # Plot outline of compass
@@ -1604,9 +1604,9 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             ax2.axis('equal')
             data2 = np.ma.masked_where(np.invert(ocean_mask==1), np.ones(ocean_mask.shape))
             # Shade the grounded ice in grey
-            ax2.pcolormesh(x, y, np.ma.masked_where(np.invert(grounded_mask), grounded_mask.astype(float)), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]))
+            ax2.pcolormesh(x, y, np.ma.masked_where(np.invert(grounded_mask), grounded_mask.astype(float)), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]), rasterized=True)
             # Shade the open ocean in light blue
-            ax2.pcolormesh(x, y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu')(170)]))
+            ax2.pcolormesh(x, y, data2, cmap=cl.ListedColormap([plt.get_cmap('RdBu')(170)]), rasterized=True)
             # Now overlay the limits in a red box
             ax2.plot([xmin, xmax, xmax, xmin, xmin], [ymax, ymax, ymin, ymin, ymax], color='red')
             ax2.set_xticks([])
@@ -1622,7 +1622,7 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
             ax2.set_xticks([])
             ax2.set_yticks([])
             ax2.text(0.02, 0.98, captions[i], fontsize=13, transform=ax.transAxes, ha='left', va='top')
-    finished_plot(fig, fig_name=fig_dir+'schematic_base.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'schematic_base.pdf', dpi=300)
 
 
 # Make a 2x1 plot showing the katabatic scaling factor and rotation angle.
