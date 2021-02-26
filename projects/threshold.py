@@ -1873,7 +1873,8 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
     var_names = [['adv_plus_corr', 'sws_shelf_salt_dif', 'sws_shelf_salt_sfc', 'sws_shelf_salt_tend'], ['sws_shelf_seaice_melt', 'sws_shelf_seaice_freeze', 'sws_shelf_pmepr', 'total_fw']]
     var_titles = [['Advection', 'Diffusion', 'Surface flux', 'Total'], ['Sea ice\nmelting', 'Sea ice\nfreezing', 'Precipitation\n- evaporation\n+ runoff', 'Total']]
     colours = [['red', 'blue', 'DarkViolet', 'DimGrey'], ['DeepPink', 'DodgerBlue', 'green', 'DimGrey']]
-    plot_titles = ['a) Salt fluxes (all depths)', 'b) Surface freshwater fluxes']
+    plot_titles = ['Salt fluxes (all depths)', 'Surface freshwater fluxes']
+    ab = ['a', 'b']
     units = [r'10$^5$ psu m$^3$/s', r'10$^3$ m$^3$/s']
     num_plots = len(var_names)
     smooth = 11
@@ -1928,6 +1929,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.plot(time_spinup_smoothed, data_spinup_smoothed, color=colours[n][v], linewidth=1.75)
         #ax.grid(True)
         ax.set_title(plot_titles[n], fontsize=18)
+        plt.text(0, 1, ab[n], weight='bold', ha='left', va='top', fontsize=18, transform=ax.transAxes)
         ax.set_ylabel(units[n], fontsize=13)
         ax.set_xlim([time[0], time[-1]])
         if n==1:
