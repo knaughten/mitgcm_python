@@ -1642,7 +1642,8 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     data = [scale, rotate]
     ctype = ['ratio', 'plusminus']
     cax = [cax1, cax2]
-    titles = ['a) Wind scaling factor', 'b) Wind rotation angle']
+    titles = ['Wind scaling factor', 'Wind rotation angle']
+    ab = ['a', 'b']
     ticks = [np.arange(0.5, 2.5+0.5, 0.5), np.arange(-90, 90+30, 30)]
     vmin = [None, -90]
     vmax = [None, 90]
@@ -1650,6 +1651,7 @@ def plot_katabatic_correction (base_dir='./', input_dir='/work/n02/n02/shared/ba
     for i in range(2):
         ax = plt.subplot(gs[0,i])
         img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[i], vmin=vmin[i], vmax=vmax[i], include_shelf=False, title=titles[i])
+        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
         cbar = plt.colorbar(img, cax=cax[i], ticks=ticks[i], orientation='horizontal', extend=extend[i])
         if i==1:
             # Add degree signs to ticks
@@ -2063,11 +2065,13 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
 
     fig, gs, cax = set_panels('1x2C1', figsize=(9, 4.5))
     data = [ismr, ismr_obs_interp]
-    title = [u'a) ÚaMITgcm', 'b) Moholdt et al. (2014)']
+    title = [u'ÚaMITgcm', 'Moholdt et al. (2014)']
+    ab = ['a', 'b']
     for n in range(2):
         ax = plt.subplot(gs[0,n])
         ax.axis('equal')
         img = latlon_plot(data[n], grid, ax=ax, ctype='ismr', make_cbar=False, vmin=vmin, vmax=vmax, change_points=change_points, title=title[n], pster=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Ice shelf melt rates (m/y)', fontsize=20)
     finished_plot(fig, fig_name=fig_dir+'ismr_vs_obs.png', dpi=300)
@@ -2342,7 +2346,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     units = [deg_string+'C', 'psu']
     num_vars = len(units)
     fig, gs = set_panels('PS111_3x2C0')
-    loc_titles = ['a) Ronne Depression', 'b) Berkner Bank', 'c) Filchner Trough']
+    loc_titles = [r'$\bf{a}$ Ronne Depression', r'$\bf{b}$ Berkner Bank', r'$\bf{c}$ Filchner Trough']
     ytitle = [0.89, 0.59, 0.295]
     loc_labels = ['a', 'b', 'c']
     loc_labels_x = [0.04, 0.09, 0.13]
@@ -2358,7 +2362,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
             # Plot observations in thick black
             ax.plot(obs_data[v][l,:], obs_depth, color='black', linewidth=3)
             ax.set_xlim([vmin[v], vmax[v]])
-            ax.grid(True)
+            ax.grid(linestyle='dashed')
             plt.title(titles[v], fontsize=16)
             if l == num_loc-1:
                 plt.xlabel(units[v])
@@ -2593,8 +2597,9 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
     bdry = ['E', 'N']
     year_start = 1979
     year_end = 2014
-    var_titles = ['(a) Temperature ('+deg_string+'C)', '(b) Salinity (psu)']
+    var_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)']
     bdry_titles = [' at eastern boundary (30'+deg_string+'E)', ' at northern boundary (61'+deg_string+'S)']
+    abcdef = ['a', 'b', 'c', 'd', 'e', 'f']
     bdry_dim = ['yzt', 'xzt']
     obcs_dir = real_dir(obcs_dir)
     woa_dir = real_dir(woa_dir)
@@ -2685,6 +2690,7 @@ def ukesm_obcs_vs_woa (obcs_dir, woa_dir, grid_dir, fig_dir='./'):
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
                 ax.set_title(titles[p], fontsize=18)
+                plt.text(0.01, 0.98, abcdef[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
                 # Colourbar on each side
                 if p==0:
                     cbar = plt.colorbar(img, cax=cax[n][0])
