@@ -1547,6 +1547,7 @@ def plot_schematic (base_dir='./', fig_dir='./', bedmap_file='/work/n02/n02/kaig
 
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
     import matplotlib.colors as cl
+    matplotlib.rcParams['pdf.fonttype'] = 'path'
 
     titles = ['Historical', 'Stage 1', 'Stage 2']
     abc = ['a', 'b', 'c']
