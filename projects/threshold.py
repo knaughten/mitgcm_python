@@ -1483,10 +1483,10 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                     ax.set_title('Extension', fontsize=14)
             if m==0 and v==1:
                 # Add Stage 1 and Stage 2 text
-                plt.text(2, -1.75, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-                plt.text(2, -1.62, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-                plt.text(threshold_year[1]-2, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='right', va='top', fontsize=13)
-                plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
+                plt.text(2, -1.74, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+                plt.text(2, -1.61, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
+                plt.text(threshold_year[1]-2, -1.49, 'Stage 2', color=sim_colours[1], rotation=-90, ha='right', va='top', fontsize=13)
+                plt.text(threshold_year[2]+2, -1.61, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
             if m==0 and v==2:
                 ax.legend(loc='lower center', bbox_to_anchor=(0.7,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
             ax_split.append(ax)
