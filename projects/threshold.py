@@ -1375,7 +1375,8 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     sim_colours = ['black', 'blue', 'red']
     var_names = ['fris_max_psi', 'fris_temp', 'fris_massloss']
     smooth = [11, 0, 11]
-    titles = ['a) Circulation strength in FRIS cavity', 'b) Average temperature in FRIS cavity', 'c) Basal mass loss from FRIS']
+    titles = ['Circulation strength in FRIS cavity', 'Average temperature in FRIS cavity', 'Basal mass loss from FRIS']
+    abc = ['a', 'b', 'c']
     units = ['Sv', deg_string+'C', 'Gt/y']
     num_sims = len(sim_numbers)
     num_vars = len(var_names)
@@ -1464,6 +1465,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             ax.set_yticks(ticks[v][m])
             if m==0:
                 ax.set_title(titles[v], fontsize=18)
+                plt.text(0.01, 0.98, abc[n], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
                 ax.set_ylabel(units[v], fontsize=13)
                 ax.set_xlim([time[0][0], split_year])
             else:
@@ -1481,9 +1483,9 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
                     ax.set_title('Extension', fontsize=14)
             if m==0 and v==1:
                 # Add Stage 1 and Stage 2 text
-                plt.text(2, -1.62, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
-                plt.text(2, -1.49, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
-                plt.text(threshold_year[1]-2, -1.49, 'Stage 2', color=sim_colours[1], rotation=-90, ha='right', va='top', fontsize=13)
+                plt.text(2, -1.75, 'Stage 1', color=sim_colours[1], ha='left', va='top', fontsize=13)
+                plt.text(2, -1.62, 'Stage 1', color=sim_colours[2], ha='left', va='top', fontsize=13)
+                plt.text(threshold_year[1]-2, -1.62, 'Stage 2', color=sim_colours[1], rotation=-90, ha='right', va='top', fontsize=13)
                 plt.text(threshold_year[2]+2, -1.49, 'Stage 2', color=sim_colours[2], ha='left', va='top', fontsize=13)
             if m==0 and v==2:
                 ax.legend(loc='lower center', bbox_to_anchor=(0.7,-0.5), ncol=num_sims+1, fontsize=14, columnspacing=1)
@@ -1493,7 +1495,7 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
             if v==2 and y0 in [ticks[v][0][0], ticks[v][0][-1]]:
                 continue
             ax_split[0].annotate('', xy=(split_year, y0), xytext=(split_year, y0), xycoords=ax_split[1].transData, textcoords=ax_split[0].transData, arrowprops=dict(color='black', arrowstyle='-', linestyle='dotted'))
-    finished_plot(fig, fig_name=fig_dir+'timeseries.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'timeseries.pdf', dpi=300)
 
 
 # Make a fancy Hovmoller plot of the Filchner Trough for the given simulation.
