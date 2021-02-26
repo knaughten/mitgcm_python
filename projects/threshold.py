@@ -1929,7 +1929,7 @@ def plot_salt_budget_timeseries (base_dir='./', fig_dir='./'):
             ax.plot(time_spinup_smoothed, data_spinup_smoothed, color=colours[n][v], linewidth=1.75)
         #ax.grid(True)
         ax.set_title(plot_titles[n], fontsize=18)
-        plt.text(0, 1, ab[n], weight='bold', ha='left', va='top', fontsize=18, transform=ax.transAxes)
+        plt.text(0.02, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=16, transform=ax.transAxes)
         ax.set_ylabel(units[n], fontsize=13)
         ax.set_xlim([time[0], time[-1]])
         if n==1:
