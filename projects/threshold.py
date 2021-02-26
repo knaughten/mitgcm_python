@@ -2775,7 +2775,8 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
     num_periods = 3
     labels = ['piControl', 'Stage 1', 'Stage 2']
     colours = ['black', 'blue', 'red']
-    titles = ['a) Ronne Depression', 'b) Filchner Trough']
+    titles = ['Ronne Depression', 'Filchner Trough']
+    ab = ['a', 'b']
     point_lat = [[-78, -76, -74.8], [-80, -74.1]]
     point_labels = [['1', '2', '3'], ['4', '5']]
     base_dir = real_dir(base_dir)
@@ -2846,6 +2847,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                     plt.text(lat_front[n], fris_mean[t], 'FRIS mean', ha='right', va='center', fontsize=12)'''
         ax.grid(True)
         ax.set_title(titles[n], fontsize=16)
+        plt.text(0.01, 0.98, ab[n], weight='bold', ha='left', va='top', fontsize=14, transform=ax.transAxes)
         ax.set_ylabel(r'kg/m$^3$-1000', fontsize=12)
         ax.set_xlim([lat_trans[n][0], lat_trans[n][-1]])
         ax.set_ylim([ymin, ymax])
@@ -2907,7 +2909,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 va='top'
             plt.text(x_val+2e4, y_val-1e4, point_labels[n][m], ha='left', va=va, fontsize=10, color='black')
     plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'density_transects.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'density_transects.pdf', dpi=300)
 
 
 
