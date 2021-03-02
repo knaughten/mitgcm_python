@@ -1585,6 +1585,7 @@ def read_process_ohc (sim_dir, region='amundsen_shelf', option='d/dt', timeserie
         # Need time in seconds
         time_sec = np.array([(t-time[0]).total_seconds() for t in time])
         # Remove spinup
+        time_sec = time_sec[t_start:]
         ohc = ohc[t_start:]
         dohc_adv = dohc_adv[t_start:]
         ohc_trend = linregress(time_sec, ohc)
