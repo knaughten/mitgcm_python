@@ -1588,7 +1588,7 @@ def read_process_ohc (sim_dir, region='amundsen_shelf', option='d/dt', timeserie
         time_sec = time_sec[t_start:]
         ohc = ohc[t_start:]
         dohc_adv = dohc_adv[t_start:]
-        ohc_trend = linregress(time_sec, ohc)
+        ohc_trend = linregress(time_sec, ohc)[0]
         # Now take average value of dohc_adv
         dohc_adv_avg = np.mean(dohc_adv)
         return ohc_trend, dohc_adv_avg
@@ -1778,7 +1778,7 @@ def ohc_adv_correlation_vs_depth (sim_dir, timeseries_file='timeseries_ohc_full.
 
 
 # Compare the trend in OHC to the time-averaged anomaly of dOHC_adv
-# Compare the individual members, the trend of the mean, and the mean of individual trends
+# Compare the individual members and the ensemble mean.
 def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_ohc_full.nc', depth=300, base_year_start=1920, base_year_end=1949, fig_name=None):
 
     num_ens = len(sim_dir)
@@ -1793,22 +1793,21 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='times
     # Get mean of trends and mean of anomalies
     ohc_trend.append(np.mean(ohc_trend))
     dohc_adv_anom.append(np.mean(dohc_adv_anom))
-    # Get trend and anomaly of ensemble mean
-    trend_of_mean, anom_of_mean = read_process_ohc(sim_dir, region=region, option='trend', timeseries_file=timeseries_file, depth=depth, base_year_start=base_year_start, base_year_end=base_year_end)
-    ohc_trend.append(trend_of_mean)
-    dohc_adv_anom.append(anom_of_mean)
+    # Calculate percent explained by advection
+    adv_percent = dohc_adv_anom[-1]/ohc_trend[-1]*100
+    print 'Horizontal advection can explain '+str(adv_percent)+'% of OHC trend (ensemble mean)'
 
     # Plot
-    index = -1*np.arange(num_ens+2)
-    sim_labels = ['PACE '+str(n+1).zfill(2) for n in range(num_ens)] + ['Mean of trends', 'Trend of mean']
-    fig, ax = plt.subplot(6, 8)
+    index = -1*np.arange(num_ens+1)
+    sim_labels = ['PACE '+str(n+1).zfill(2) for n in range(num_ens)] + ['Mean']
+    fig, ax = plt.subplots(figsize=(6,8))
     ax.plot(ohc_trend, index, '*', color='blue', markersize=10, label='Trend in ocean heat content')
-    ax.plot(dohc_adv_anom, index, '*', color='red', markersize=10, label='Mean anomaly in horizontal advective contribution')
-    plt.xlabel('GJ/s')
+    ax.plot(dohc_adv_anom, index, '*', color='red', markersize=10, label='Mean anomaly in horizontal advection')
     ax.set_yticks(index)
     ax.set_yticklabels(sim_labels)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.5), ncol=1)        
+    ax.legend(loc='lower center', ncol=2, bbox_to_anchor=(0.5,-0.13))        
     ax.grid(linestyle='dashed')
+    plt.xlabel('GJ/s')
     plt.title(region_names[region]+' below '+str(depth)+'m')
     finished_plot(fig, fig_name=fig_name)                    
         
