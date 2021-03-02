@@ -1788,7 +1788,7 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', depth=400, timeseries_
     ohc_trend.append(np.mean(ohc_trend))
     dohc_adv_anom.append(np.mean(dohc_adv_anom))
     # Get trend and anomaly of ensemble mean
-    trend_of_mean, anom_of_mean = read_process_ohc(sim_dir, region=region, option='trend', timeseries_file=timeseries_file, smooth=smooth, depth=depth, base_year_start=base_year_start, base_year_end=base_year_end)[1:])
+    trend_of_mean, anom_of_mean = read_process_ohc(sim_dir, region=region, option='trend', timeseries_file=timeseries_file, smooth=smooth, depth=depth, base_year_start=base_year_start, base_year_end=base_year_end)[1:]
     ohc_trend.append(trend_of_mean)
     dohc_adv_anom.append(anom_of_mean)
 
