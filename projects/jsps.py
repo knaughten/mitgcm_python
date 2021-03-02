@@ -1550,7 +1550,7 @@ def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, e
 
 
 # Helper function to read and process OHC terms
-def read_process_ohc (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_full.nc', smooth=24, depth=300, base_year_start=1920, base_year_end=1949):
+def read_process_ohc (sim_dir, region='amundsen_shelf', option='d/dt', timeseries_file='timeseries_full.nc', smooth=24, depth=300, base_year_start=1920, base_year_end=1949):
 
     num_ens = len(sim_dir)
     for n in range(num_ens):
@@ -1573,8 +1573,14 @@ def read_process_ohc (sim_dir, region='amundsen_shelf', timeseries_file='timeser
     # Subtract 1920-1949 mean from advective convergence
     t_start, t_end = index_period(time, base_year_start, base_year_end)
     dohc_adv -= np.mean(dohc_adv[t_start:t_end])
-    # Differentiate OHC
-    dohc = time_derivative(ohc, time)
+    if option == 'd/dt':
+        # Differentiate OHC
+        dohc = time_derivative(ohc, time)
+    elif option == 'trend':
+        # Get trend in OHC
+        # Need time in seconds
+        time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+        dohc = linregress(time_sec, ohc)
     # Smooth
     dohc_smooth, time_smooth = moving_average(dohc, smooth, time=time)
     dohc_adv_smooth = moving_average(dohc_adv, smooth)
@@ -1767,16 +1773,38 @@ def ohc_adv_correlation_vs_depth (sim_dir, timeseries_file='timeseries_ohc_full.
 
 # Compare the trend in OHC to the time-averaged anomaly of dOHC_adv
 # Compare the individual members, the trend of the mean, and the mean of individual trends
-def compare_ohc_trends (sim_dir, region='amundsen_shelf', depth=400, timeseries_file='timeseries_ohc_full.nc', smooth=24, base_year_start=1920, base_year_end=1949, fig_dir='./'):
+def compare_ohc_trends (sim_dir, region='amundsen_shelf', depth=400, timeseries_file='timeseries_ohc_full.nc', smooth=24, depth=300, base_year_start=1920, base_year_end=1949, fig_name=None):
+
+    num_ens = len(sim_dir)
 
     # Get trend and anomaly in each member
+    ohc_trend = []
+    dohc_adv_anom = []
+    for d in sim_dir:
+        ohc, dohc_adv = read_process_ohc([d], region=region, option='trend', timeseries_file=timeseries_file, smooth=smooth, depth=depth, base_year_start=base_year_start, base_year_end=base_year_end)[1:]
+        ohc_trend.append(ohc)
+        dohc_adv_anom.append(dohc_adv)
     # Get mean of trends and mean of anomalies
+    ohc_trend.append(np.mean(ohc_trend))
+    dohc_adv_anom.append(np.mean(dohc_adv_anom))
     # Get trend and anomaly of ensemble mean
-    # Plot like a bar chart but with stars/points
+    trend_of_mean, anom_of_mean = read_process_ohc(sim_dir, region=region, option='trend', timeseries_file=timeseries_file, smooth=smooth, depth=depth, base_year_start=base_year_start, base_year_end=base_year_end)[1:])
+    ohc_trend.append(trend_of_mean)
+    dohc_adv_anom.append(anom_of_mean)
 
-    
-    
-                    
+    # Plot
+    index = -1*np.arange(num_ens+2)
+    sim_labels = ['PACE '+str(n+1).zfill(2) for n in range(num_ens)] + ['Mean of trends', 'Trend of mean']
+    fig, ax = plt.subplot(6, 8)
+    ax.plot(ohc_trend, index, '*', color='blue', markersize=10, label='Trend in ocean heat content')
+    ax.plot(dohc_adv_anom, index, '*', color='red', markersize=10, label='Anomaly from horizontal advection')
+    plt.xlabel('GJ/s')
+    ax.set_yticks(index)
+    ax.set_yticklabels(sim_labels)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.5), ncol=1)        
+    ax.grid(linestyle='dashed')
+    plt.title(region_names[region]+' below '+str(depth)+'m')
+    finished_plot(fig, fig_name=fig_name)                    
         
     
     
