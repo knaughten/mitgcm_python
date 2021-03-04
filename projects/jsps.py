@@ -1813,7 +1813,7 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='times
 
 
 # Plot timeseries of the standard deviation across the ensemble of the given set of variables.
-def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseries.nc', year_start=1920, fig_name=None):
+def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseries.nc', start_year=1920, fig_name=None):
 
     num_ens = len(sim_dir)
     if var_type == 'ismr':
@@ -1901,6 +1901,52 @@ def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_fil
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data[v])
         print flag[v]+': '+str(slope)+' members/y, p='+str(p_value)
         make_timeseries_plot(time, data[v], title=titles[v], fig_name=fig_name[v])
+
+
+# Make a Hovmoller plot of the ensemble mean and standard deviation of the given variable (temperature or salinity) at the given region.
+def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, hovmoller_file='hovmoller.nc', fig_name=None):
+
+    num_ens = len(sim_dir)
+    var_name = region+'_'+var
+    grid = Grid(grid_path)
+    if var == 'temp':
+        suptitle = 'Temperature ('+deg_string+'C)'
+    elif var == 'salt':
+        suptitle = 'Salinity (psu)'
+    suptitle += ' at '+region_names[region]
+
+    # Read data
+    data = None
+    for n in range(num_ens):
+        file_path = real_dir(sim_dir[n])+'output/'+hovmoller_file
+        time_tmp = netcdf_time(file_path)
+        data_tmp = read_netcdf(file_path, var_name)
+        if data is None:
+            data = np.empty([num_ens, time_tmp.size])
+            time = time_tmp
+        data[n,:] = data_tmp
+    # Calculate mean and standard deviation
+    data_mean = np.mean(data, axis=0)
+    data_std = np.std(data, axis=0)
+
+    # Plot
+    fig, gs, cax_1, cax_2 = set_panels('2x1C2', figsize=(12,7))
+    data = [data_mean, data_std]
+    titles = ['Ensemble mean', 'Ensemble standard deviation']
+    cax = [cax_1, cax_2]
+    for i in range(2):
+        ax = plt.subplot(gs[i,0])
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, title=titles[i])
+        cbar = plt.colorbar(img, cax=cax[i])
+        if i == 0:
+            ax.set_xticklabels([])
+        else:
+            ax.set_xlabel('Year', fontsize=14)
+            ax.set_ylabel('')
+    plt.suptitle(suptitle, fontsize=22)
+    finished_plot(fig, fig_name=fig_name)
+
+    
     
     
             
