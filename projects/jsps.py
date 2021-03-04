@@ -1889,7 +1889,7 @@ def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_fil
     # Calculate trends and plot
     data = [num_warm, num_cold]
     titles = ['# members warmer than '+str(cutoff_warm)+deg_string+'C\n'+region_names[region]+' below 500m', '# members colder than '+str(cutoff_cold)+deg_string+'C\n'+region_names[region]+' below 500m']
-    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in ['warm', 'cold']
+    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in ['warm', 'cold']]
     for v in range(2):
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data[v])
         print titles[v]+': '+str(slope)+' members/y, p='+str(p_value)
