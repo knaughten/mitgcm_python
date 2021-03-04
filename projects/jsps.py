@@ -1845,7 +1845,7 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
             file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
             time_tmp = netcdf_time(file_path)
             data_tmp = read_netcdf(real_dir(sim_dir[n])+'output/'+timeseries_file, var)
-            data_tmp, time_tmp = moving_average(data_tmp, time=time_tmp)
+            data_tmp, time_tmp = moving_average(data_tmp, smooth, time=time_tmp)
             if data_var is None:
                 data_var = np.empty([num_ens, data_tmp.size])
                 time = time_tmp
@@ -1853,11 +1853,49 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
         # Now calculate and save the standard deviation across ensemble members
         data_std.append(np.std(data_var, axis=0))
 
+    # Calculate trends in the standard deviation timeseries
+    for v in range(len(var_names)):
+        slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data_std[v])
+        print var_names[v]+': '+str(slope)+' '+units+'/y, p='+str(p_value)
+
     # Plot
     timeseries_multi_plot(time, data_std, labels, default_colours(len(var_names)), title=title, units=units, fig_name=fig_name)
 
+
+# Plot timeseries of the number of ensemble members which are unusually warm (in the top x% for all members and all years) and unusually cold (in the bottom x%) where x is a percentile between 0 and 100.
+def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_file='timeseries.nc', smooth=24, percentile=25, fig_dir='./'):
+
+    num_ens = len(sim_dir)
+    var_name = region+'_temp_below_500m'
+    fig_dir = real_dir(fig_dir)
+
+    temp = None
+    for n in range(num_ens):
+        # Read and smooth data
+        file_path = sim_dir[n]+'output/'+timeseries_file
+        time_tmp = netcdf_time(file_path)
+        temp_tmp = read_netcdf(file_path, var_name)
+        temp_tmp, time_tmp = moving_average(temp_tmp, smooth, time=time_tmp)
+        if temp is None:
+            temp = np.empty([num_ens, time_tmp.size])
+            time = time_tmp
+        temp[n,:] = temp_tmp
+
+    cutoff_warm = np.percentile(temp, 100-percentile)
+    cutoff_cold = np.percentile(temp, percentile)
+    num_warm = np.sum((temp > cutoff_warm).astype(float), axis=0)
+    num_cold = np.sum((temp < cutoff_cold).astype(float), axis=0)
+
+    # Calculate trends and plot
+    data = [num_warm, num_cold]
+    titles = ['# members warmer than '+str(cutoff_warm)+deg_string+'C\n'+region_names[region]+' below 500m', '# members colder than '+str(cutoff_cold)+deg_string+'C\n'+region_names[region]+' below 500m']
+    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in ['warm', 'cold']
+    for v in range(2):
+        slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data[v])
+        print titles[v]+': '+str(slope)+' members/y, p='+str(p_value)
+        make_timeseries_plot(time, data[v], title=titles[v], fig_name=fig_dir+fig_name[v])
     
-        
+    
             
 
     
