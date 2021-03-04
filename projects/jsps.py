@@ -16,7 +16,7 @@ from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, 
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
-from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot
+from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw
@@ -1813,7 +1813,7 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='times
 
 
 # Plot timeseries of the standard deviation across the ensemble of the given set of variables.
-def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseries.nc', fig_name=None):
+def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseries.nc', year_start=1920, fig_name=None):
 
     num_ens = len(sim_dir)
     if var_type == 'ismr':
@@ -1846,6 +1846,9 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
             time_tmp = netcdf_time(file_path)
             data_tmp = read_netcdf(real_dir(sim_dir[n])+'output/'+timeseries_file, var)
             data_tmp, time_tmp = moving_average(data_tmp, smooth, time=time_tmp)
+            t_start = index_year_start(time_tmp, start_year)
+            data_tmp = data_tmp[t_start:]
+            time_tmp = time_tmp[t_start:]
             if data_var is None:
                 data_var = np.empty([num_ens, data_tmp.size])
                 time = time_tmp
@@ -1863,7 +1866,7 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
 
 
 # Plot timeseries of the number of ensemble members which are unusually warm (in the top x% for all members and all years) and unusually cold (in the bottom x%) where x is a percentile between 0 and 100.
-def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_file='timeseries.nc', smooth=24, percentile=25, fig_dir='./'):
+def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_file='timeseries.nc', smooth=24, percentile=25, start_year=1920, fig_dir='./'):
 
     num_ens = len(sim_dir)
     var_name = region+'_temp_below_500m'
@@ -1872,10 +1875,13 @@ def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_fil
     temp = None
     for n in range(num_ens):
         # Read and smooth data
-        file_path = sim_dir[n]+'output/'+timeseries_file
+        file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
         time_tmp = netcdf_time(file_path)
         temp_tmp = read_netcdf(file_path, var_name)
         temp_tmp, time_tmp = moving_average(temp_tmp, smooth, time=time_tmp)
+        t_start = index_year_start(time_tmp, start_year)
+        temp_tmp = temp_tmp[t_start:]
+        time_tmp = time_tmp[t_start:]
         if temp is None:
             temp = np.empty([num_ens, time_tmp.size])
             time = time_tmp
@@ -1888,12 +1894,13 @@ def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_fil
 
     # Calculate trends and plot
     data = [num_warm, num_cold]
-    titles = ['# members warmer than '+str(cutoff_warm)+deg_string+'C\n'+region_names[region]+' below 500m', '# members colder than '+str(cutoff_cold)+deg_string+'C\n'+region_names[region]+' below 500m']
-    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in ['warm', 'cold']]
+    titles = ['# members warmer than '+round_to_decimals(cutoff_warm,3)+deg_string+'C\n'+region_names[region]+' below 500m', '# members colder than '+round_to_decimals(cutoff_cold,3)+deg_string+'C\n'+region_names[region]+' below 500m']
+    flag = ['warm', 'cold']
+    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in flag]
     for v in range(2):
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data[v])
-        print titles[v]+': '+str(slope)+' members/y, p='+str(p_value)
-        make_timeseries_plot(time, data[v], title=titles[v], fig_name=fig_dir+fig_name[v])
+        print flag[v]+': '+str(slope)+' members/y, p='+str(p_value)
+        make_timeseries_plot(time, data[v], title=titles[v], fig_name=fig_name[v])
     
     
             
