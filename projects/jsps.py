@@ -1904,7 +1904,7 @@ def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_fil
 
 
 # Make a Hovmoller plot of the ensemble mean and standard deviation of the given variable (temperature or salinity) at the given region.
-def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, hovmoller_file='hovmoller.nc', fig_name=None):
+def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, start_year=1920, hovmoller_file='hovmoller.nc', fig_name=None):
 
     num_ens = len(sim_dir)
     var_name = region+'_'+var
@@ -1922,12 +1922,13 @@ def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, hovmoller_fi
         time_tmp = netcdf_time(file_path)
         data_tmp = read_netcdf(file_path, var_name)
         if data is None:
-            data = np.empty([num_ens, time_tmp.size])
+            data = np.ma.empty([num_ens, data_tmp.shape[0], data_tmp.shape[1]])
             time = time_tmp
+            t_start = index_year_start(time, start_year)
         data[n,:] = data_tmp
     # Calculate mean and standard deviation
-    data_mean = np.mean(data, axis=0)
-    data_std = np.std(data, axis=0)
+    data_mean = np.ma.mean(data, axis=0)
+    data_std = np.ma.std(data, axis=0)
 
     # Plot
     fig, gs, cax_1, cax_2 = set_panels('2x1C2', figsize=(12,7))
@@ -1936,7 +1937,7 @@ def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, hovmoller_fi
     cax = [cax_1, cax_2]
     for i in range(2):
         ax = plt.subplot(gs[i,0])
-        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, title=titles[i])
+        img = hovmoller_plot(data[i], time, grid, smooth=smooth, ax=ax, make_cbar=False, title=titles[i], start_t=time[t_start])
         cbar = plt.colorbar(img, cax=cax[i])
         if i == 0:
             ax.set_xticklabels([])
