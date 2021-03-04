@@ -1809,7 +1809,58 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='times
     ax.grid(linestyle='dashed')
     plt.xlabel('GJ/s')
     plt.title(region_names[region]+' below '+str(depth)+'m')
-    finished_plot(fig, fig_name=fig_name)                    
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Plot timeseries of the standard deviation across the ensemble of the given set of variables.
+def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseries.nc', fig_name=None):
+
+    num_ens = len(sim_dir)
+    if var_type == 'ismr':
+        var_names = ['getz_melting', 'dotson_crosson_melting', 'thwaites_melting', 'pig_melting', 'cosgrove_melting', 'abbot_melting', 'venable_melting']
+        labels = ['Getz', 'Dotson & Crosson', 'Thwaites', 'PIG', 'Cosgrove', 'Abbot', 'Venable']
+        title = 'Standard deviation in ice shelf melt rates'
+        units = 'm/y'
+    elif var_type == 'temp':
+        var_names = ['inner_amundsen_shelf_temp_below_500m', 'pine_island_bay_temp_below_500m', 'dotson_bay_temp_below_500m']
+        labels = ['Inner shelf', 'Pine Island Bay', 'front of Dotson']
+        title = 'Standard deviation in temperature below 500m'
+        units = deg_string + 'C'
+    elif var_type == 'salt':
+        var_names = ['inner_amundsen_shelf_salt_below_500m', 'pine_island_bay_salt_below_500m', 'dotson_bay_salt_below_500m']
+        labels = ['Inner shelf', 'Pine Island Bay', 'front of Dotson']
+        title = 'Standard deviation in salinity below 500m'
+        units = 'psu'
+    elif var_type == 'wind':
+        var_names = ['amundsen_shelf_break_uwind_avg']
+        labels = ['Shelf break']
+        title = 'Standard deviation in zonal wind'
+        units = 'm/s'
+
+    data_std = []
+    for var in var_names:
+        data_var = None
+        for n in range(num_ens):
+            # Read and smooth the data
+            file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
+            time_tmp = netcdf_time(file_path)
+            data_tmp = read_netcdf(real_dir(sim_dir[n])+'output/'+timeseries_file, var)
+            data_tmp, time_tmp = moving_average(data_tmp, time=time_tmp)
+            if data_var is None:
+                data_var = np.empty([num_ens, data_tmp.size])
+                time = time_tmp
+            data_var[n,:] = data_tmp
+        # Now calculate and save the standard deviation across ensemble members
+        data_std.append(np.std(data_var, axis=0))
+
+    # Plot
+    timeseries_multi_plot(time, data_std, labels, default_colours(len(var_names)), title=title, units=units, fig_name=fig_name)
+
+    
+        
+            
+
+    
         
     
     
