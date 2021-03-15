@@ -1957,7 +1957,7 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
     num_var = len(fnames)
     ctype = ['plusminus', 'plusminus', 'plusminus', 'plusminus', 'plusminus', 'ratio', 'plusminus']
     titles = [r'$\bf{a}$. Temperature ('+deg_string+'C)', r'$\bf{b}$. Humidity (10$^{-3}$ kg/kg)', r'$\bf{c}$. Precipitation (10$^{-9}$ m/s)', r'$\bf{d}$. SW radiation (W/m$^2$)', r'$\bf{e}$. LW radiation (W/m$^2$)', r'$\bf{f}$. Wind scaling factor (1)', r'$\bf{g}$. Wind rotation angle ($^{\circ}$)']
-    factor = [1, 1e3, 1e9, 1, 1, 1, rad2deg]
+    factor = [1, 1e3, 1e9, -1, -1, 1, rad2deg]
 
     grid = Grid(grid_dir)
     data = []
