@@ -255,16 +255,17 @@ def set_panels (key, figsize=None):
         cax = fig.add_axes([0.5, 0.8, 0.23, 0.02])
     elif key == '2x4-1C7':
         # 7 plots arranged in 2 rows and 4 columns, with an empty space at the top left for the title, and a colourbar for each plot
-        gs = plt.gridSpec(2,4)
-        gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.02, hspace=0.1)
+        gs = plt.GridSpec(2,4)
+        gs.update(left=0.05, right=0.99, bottom=0.1, top=0.95, wspace=0.02, hspace=0.4)
         cax_all = []
-        x0 = [0.05, 0.28, 0.51, 0.74]
-        y0 = [0.55, 0.05]
-        for i in range(4):
-            for j in range(2):
+        x0 = [0.0675, 0.305, 0.54, 0.7775]
+        y0 = [0.56, 0.04]
+        for j in range(2):
+            for i in range(4):
                 if i==0 and j==0:
                     continue
-                cax_all.append(fig.add_axes([x0[i], y0[j], 0.21, 0.4]))
+                cax = fig.add_axes([x0[i], y0[j], 0.2, 0.02])
+                cax_all.append(cax)
     else:
         print 'Error (set_panels): no entry for key ' + key
         sys.exit()

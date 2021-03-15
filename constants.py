@@ -20,6 +20,7 @@ sec_per_year = 365.25*sec_per_day
 months_per_year = 12
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
+rad2deg = 1./deg2rad
 # Radius of Earth
 rEarth = 6.371e6
 # Celsius to Kelvins intercept

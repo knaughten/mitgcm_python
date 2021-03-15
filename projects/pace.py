@@ -19,7 +19,7 @@ from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -1956,20 +1956,34 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
     fnames = ['atemp_offset_PAS', 'aqh_offset_PAS', 'precip_offset_PAS', 'swdown_offset_PAS', 'lwdown_offset_PAS', 'katabatic_scale_PAS_90W', 'katabatic_rotate_PAS_90W']
     num_var = len(fnames)
     ctype = ['plusminus', 'plusminus', 'plusminus', 'plusminus', 'plusminus', 'ratio', 'plusminus']
-    titles = ['Temperature ('+deg_string+'C)', 'Specific humidity (kg/kg)', 'Precipitation (m/s)', r'Incoming shortwave radiation (W/m$^2$)', r'Incoming longwave radiation (W/m$^2$)', 'Wind scaling factor (1)', 'Wind rotation angle ('+deg_string[0]+')']
+    titles = [r'$\bf{a}$ Temperature ('+deg_string+'C)', r'$\bf{b}$ Humidity (10$^{-3}$ kg/kg)', r'$\bf{c}$ Precipitation (10$^{-9}$ m/s)', r'$\bf{d}$ SW radiation (W/m$^2$)', r'$\bf{e}$ LW radiation (W/m$^2$)', r'$\bf{f}$ Wind scaling factor (1)', r'$\bf{g}$ Wind rotation angle ($^{\circ}$)']
+    factor = [1, 1e3, 1e9, 1, 1, 1, rad2deg]
 
     grid = Grid(grid_dir)
     data = []
     for n in range(num_var):
-        data.append(read_binary(input_dir+fnames[n], [grid.nx, grid.ny], 'xy', prec=64))
+        data_tmp = read_binary(input_dir+fnames[n], [grid.nx, grid.ny], 'xy', prec=64)
+        data_tmp = mask_land_ice(data_tmp, grid)*factor[n]
+        data.append(data_tmp)
 
-    fig, gs, cax = set_windows('2x4-1C7')
+    fig, gs, cax = set_panels('2x4-1C7')
     for n in range(num_var):
         ax = plt.subplot(gs[(n+1)/4, (n+1)%4])
-        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n])
+        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n], titlesize=14)
         cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
-    plt.text(0.105, 0.95, 'Bias correction fields\nfor PACE forcing', ha='center', va='top', fontsize=24)
-    finished_plot(fig, fig_name=fig_dir+'bias_corrections.png')
+        reduce_cbar_labels(cbar)
+        if n == 3:
+            # Reduce label size
+            for tick in ax.xaxis.get_major_ticks():
+                tick.label.set_fontsize(8)
+            for tick in ax.yaxis.get_major_ticks():
+                tick.label.set_fontsize(8)
+        else:
+            # Remove ticks from all panels except bottom left
+            ax.set_xticks([])
+            ax.set_yticks([])
+    plt.text(0.15, 0.85, 'Bias correction\nfields for\nPACE forcing', transform=fig.transFigure, ha='center', va='top', fontsize=18)
+    finished_plot(fig, fig_name=fig_dir+'bias_corrections.png', dpi=300)
     
 
     
