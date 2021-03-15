@@ -259,7 +259,7 @@ def set_panels (key, figsize=None):
         gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.02, hspace=0.1)
         cax_all = []
         x0 = [0.05, 0.28, 0.51, 0.74]
-        y0 = [0.55, 0.05]:
+        y0 = [0.55, 0.05]
         for i in range(4):
             for j in range(2):
                 if i==0 and j==0:
