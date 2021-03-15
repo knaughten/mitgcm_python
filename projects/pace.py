@@ -1971,7 +1971,8 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
         ax = plt.subplot(gs[(n+1)/4, (n+1)%4])
         img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n], titlesize=13)
         cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
-        reduce_cbar_labels(cbar)
+        alternate = n==5
+        reduce_cbar_labels(cbar, alternate=alternate)
         if n == 3:
             # Reduce label size
             for tick in ax.xaxis.get_major_ticks():
