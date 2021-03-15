@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ##################################################################
-# Weddell Sea threshold paper
+# Weddell Sea 2-timescale (threshold) paper
 ##################################################################
 
 import os

@@ -1,5 +1,5 @@
 ##################################################################
-# JSPS Amundsen Sea simulations
+# PACE paper from JSPS Amundsen Sea simulations
 ##################################################################
 
 import numpy as np
@@ -1946,6 +1946,31 @@ def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, start_year=1
             ax.set_ylabel('')
     plt.suptitle(suptitle, fontsize=22)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Plot all the bias correction fields used for PACE forcing variables.
+def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
+
+    input_dir = real_dir(input_dir)
+    fig_dir = real_dir(fig_dir)
+    fnames = ['atemp_offset_PAS', 'aqh_offset_PAS', 'precip_offset_PAS', 'swdown_offset_PAS', 'lwdown_offset_PAS', 'katabatic_scale_PAS_90W', 'katabatic_rotate_PAS_90W']
+    num_var = len(fnames)
+    ctype = ['plusminus', 'plusminus', 'plusminus', 'plusminus', 'plusminus', 'ratio', 'plusminus']
+    titles = ['Temperature ('+deg_string+'C)', 'Specific humidity (kg/kg)', 'Precipitation (m/s)', r'Incoming shortwave radiation (W/m$^2$)', r'Incoming longwave radiation (W/m$^2$)', 'Wind scaling factor (1)', 'Wind rotation angle ('+deg_string[0]+')']
+
+    grid = Grid(grid_dir)
+    data = []
+    for n in range(num_var):
+        data.append(read_binary(input_dir+fnames[n], [grid.nx, grid.ny], 'xy', prec=64))
+
+    fig, gs, cax = set_windows('2x4-1C7')
+    for n in range(num_var):
+        ax = plt.subplot(gs[(n+1)/4, (n+1)%4])
+        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n])
+        cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
+    plt.text(0.105, 0.95, 'Bias correction fields\nfor PACE forcing', ha='center', va='top', fontsize=24)
+    finished_plot(fig, fig_name=fig_dir+'bias_corrections.png')
+    
 
     
     
