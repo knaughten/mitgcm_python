@@ -1956,7 +1956,7 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
     fnames = ['atemp_offset_PAS', 'aqh_offset_PAS', 'precip_offset_PAS', 'swdown_offset_PAS', 'lwdown_offset_PAS', 'katabatic_scale_PAS_90W', 'katabatic_rotate_PAS_90W']
     num_var = len(fnames)
     ctype = ['plusminus', 'plusminus', 'plusminus', 'plusminus', 'plusminus', 'ratio', 'plusminus']
-    titles = [r'$\bf{a}$ Temperature ('+deg_string+'C)', r'$\bf{b}$ Humidity (10$^{-3}$ kg/kg)', r'$\bf{c}$ Precipitation (10$^{-9}$ m/s)', r'$\bf{d}$ SW radiation (W/m$^2$)', r'$\bf{e}$ LW radiation (W/m$^2$)', r'$\bf{f}$ Wind scaling factor (1)', r'$\bf{g}$ Wind rotation angle ($^{\circ}$)']
+    titles = [r'$\bf{a}$. Temperature ('+deg_string+'C)', r'$\bf{b}$. Humidity (10$^{-3}$ kg/kg)', r'$\bf{c}$. Precipitation (10$^{-9}$ m/s)', r'$\bf{d}$. SW radiation (W/m$^2$)', r'$\bf{e}$. LW radiation (W/m$^2$)', r'$\bf{f}$. Wind scaling factor (1)', r'$\bf{g}$. Wind rotation angle ($^{\circ}$)']
     factor = [1, 1e3, 1e9, 1, 1, 1, rad2deg]
 
     grid = Grid(grid_dir)
@@ -1969,7 +1969,7 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
     fig, gs, cax = set_panels('2x4-1C7')
     for n in range(num_var):
         ax = plt.subplot(gs[(n+1)/4, (n+1)%4])
-        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n], titlesize=14)
+        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n], titlesize=13)
         cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
         reduce_cbar_labels(cbar)
         if n == 3:

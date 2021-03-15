@@ -256,9 +256,9 @@ def set_panels (key, figsize=None):
     elif key == '2x4-1C7':
         # 7 plots arranged in 2 rows and 4 columns, with an empty space at the top left for the title, and a colourbar for each plot
         gs = plt.GridSpec(2,4)
-        gs.update(left=0.05, right=0.99, bottom=0.1, top=0.95, wspace=0.02, hspace=0.4)
+        gs.update(left=0.04, right=0.995, bottom=0.1, top=0.95, wspace=0.02, hspace=0.4)
         cax_all = []
-        x0 = [0.0675, 0.305, 0.54, 0.7775]
+        x0 = [0.06, 0.3, 0.54, 0.7775]
         y0 = [0.56, 0.04]
         for j in range(2):
             for i in range(4):
