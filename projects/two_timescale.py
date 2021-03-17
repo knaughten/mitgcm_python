@@ -2852,6 +2852,8 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
     for n in range(2):
         ax = plt.subplot(gs[n,0])
         for t in range(num_periods):
+            if (n==0 and t==2) or (n==1 and t==1):
+                continue
             ax.plot(lat_trans[n], transects[t][n], color=colours[t], linewidth=1.75, label=labels[t])
             '''if n==0:
                 ax.plot(lat_front[n], fris_mean[t], '*', color=colours[t], markersize=13, markeredgecolor='black')
@@ -2888,7 +2890,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 i1, i2, c1, c2 = interp_slice_helper(lat_trans[n], point_lat[n][m])
                 point_val = c1*transects[t][n][i1] + c2*transects[t][n][i2]
                 ax.plot(point_lat[n][m], point_val, 'o', color=colours[t], markersize=7, markeredgecolor=colours[t])
-                if (n==0 and t==1) or (n==1 and t==0):
+                if t==0: #(n==0 and t==1) or (n==1 and t==0):
                     if n==1 and m==1:
                         ha = 'right'
                     else:
@@ -2921,7 +2923,7 @@ def plot_density_transects (precompute_file, base_dir='./', fig_dir='./'):
                 va='top'
             plt.text(x_val+2e4, y_val-1e4, point_labels[n][m], ha='left', va=va, fontsize=10, color='black')
     plt.text(0.28, 0.98, 'Transects of bottom density,\nabrupt-4xCO2', ha='left', va='top', fontsize=20, transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'density_transects.pdf', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'density_transects.pdf', dpi=300)
 
 
 
