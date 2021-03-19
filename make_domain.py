@@ -164,7 +164,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     mask = np.flipud(np.fromfile(mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
 
     if np.amax(lat_b) > -61:
-        print 'Extending bathymetry slightly past 60S'
+        print 'Extending bathymetry past 60S'
         # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts in the splines near 60S.
         bathy = extend_into_mask(bathy, missing_val=bedmap_missing_val, num_iters=5)
 
@@ -416,6 +416,12 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         omask = mask_box(omask, lon_2d, lat_2d, xmin=-65.5, xmax=-63.5, ymin=-81.8, ymax=-81.6) 
         # Turn the Baudouin Ice Shelf into land so there are no ice shelves on the open boundaries
         omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=24)
+    elif key == 'SO-WISE-GYRE':
+        # SO-WISE (gyre configuration)
+        # Block out everything west of South America
+        omask = mask_box(omask, lon_2d, lat_2d, xmin=-85.0, xmax=-70.0, ymin=-50.0, ymax=-30.0)
+        # Fill in everything deeper than 6000 m
+        bathy[bathy<-6000] = -6000
     elif key == 'WSS':
         # Small Weddell Sea domain used for coupling
         # Block out everything west of the peninsula
@@ -475,6 +481,8 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         index = (imask==0)*(num_valid_neighbours==4)
         imask[index] = 1
         draft[index] = 0.25*(draft_w+draft_e+draft_s+draft_n)[index]
+    else:
+        raise Exception("Key not found. No edits have been applied") 
         
     # Make the other fields consistent with this new mask
     index = omask == 0
