@@ -913,7 +913,10 @@ def set_parameters (var):
         elif var.endswith('melting'):
             region = var[:var.index('_melting')]
             title = 'Mean melt rate of '
-        title += region_names[region]
+        if region == 'all':
+            title += 'all ice shelves in domain'
+        else:
+            title += region_names[region]
     elif var.endswith('_temp') or var.endswith('_salt') or var.endswith('_density') or var.endswith('_age') or var.endswith('_tminustf'):
         option = 'avg_3d'
         title = 'Volume-averaged '
@@ -1265,6 +1268,16 @@ def set_parameters (var):
         z_deep = None
         z0 = [z_deep, z_shallow]
         title = 'Average temperature below '+str(-z_shallow)+'m in '+region_names[region]
+        units = deg_string+'C'
+    elif '_temp_btw_' in var:
+        option = 'avg_btw_z0'
+        var_name = 'THETA'
+        region = var[:var.index('_temp_btw')]
+        z_vals = var[len(region+'_temp_btw_'):-1]
+        z_shallow = -1*int(z_vals[:z_vals.index('_')])
+        z_deep = -1*int(z_vals[z_vals.index('_')+1:])
+        z0 = [z_deep, z_shallow]
+        title = 'Average temperature between '+str(-z_shallow)+'-'+str(-z_deep)+'m in '+region_names[region]
         units = deg_string+'C'
     elif '_salt_below_' in var:
         option = 'avg_btw_z0'
