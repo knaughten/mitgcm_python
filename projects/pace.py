@@ -1985,6 +1985,127 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
             ax.set_yticks([])
     plt.text(0.15, 0.85, 'Bias correction\nfields for\nPACE forcing', transform=fig.transFigure, ha='center', va='top', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'bias_corrections.png', dpi=300)
+
+
+# Plot ensemble mean, spread, and trend for winds, temperature, and ice shelf melting.
+def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    
+    num_ens = 10  # TODO: update to 20 when finished
+    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_400_700m', 'all_massloss']
+    var_titles = ['Zonal wind over shelf break', 'Temperature (400-700m) on continental shelf', 'Total basal mass loss from ice shelves']
+    var_units = ['m/s', deg_string+'C', 'Gt/y']
+    num_var = len(var_names)
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
+    year_start_pace = 1920
+    year_start_era5 = 1979
+    year_end = 2013
+    smooth = 24
+
+    # Read all the data and take 2-year running means
+    pace_data = None
+    pace_mean = None
+    era5_data = None
+    for n in range(num_ens+1):
+        file_path = sim_dir[n] + timeseries_file
+        time_tmp = netcdf_time(file_path, monthly=False)  # It is actually monthly but this keyword would otherwise trigger a 1-month correction which we don't want
+        if n == num_ens:
+            year_start = year_start_era5
+        else:
+            year_end = year_end_pace
+        t0 = index_year_start(time_tmp, year_start)
+        tf = index_year_end(time_tmp, year_end)
+        # Trim
+        time_tmp = time_tmp[t0:tf]
+        if n == num_ens:
+            tf = index_year_end(time_tmp, year_end)
+        for v in range(num_var):
+            data_tmp = read_netcdf(file_path, var_names[v])
+            data_tmp = data_tmp[t0:tf]
+            data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
+            if pace_data is None:
+                # Set up master array
+                num_time = time_smooth.size
+                pace_data = np.empty([num_var, num_ens, num_time])
+                pace_mean = np.empty([num_var, num_time])
+                pace_time = time_smooth
+            if n < num_ens:
+                # This is a PACE ensemble member
+                pace_data[v,n,:] = data_smooth
+                if n == num_ens - 1:
+                    # Also save PACE ensemble mean
+                    pace_mean[v,:] = np.mean(pace_data[v,:,:], axis=-2)
+            elif n == num_ens:
+                # This is ERA5
+                if era5_data is None:
+                    num_time = time_smooth.size
+                    era5_data = np.empty([num_var, num_time])
+                    era5_time = time_smooth
+                era5_data[v,:] = data_smooth
+
+    # Calculate trend of ensemble mean for each variable
+    slopes = []
+    intercepts = []
+    r2 = []
+    # Get time in decades
+    time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
+    time_decades = time_sec/(365*sec_per_day*10)
+    for v in range(num_var):
+        slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_mean[v,:])
+        slopes.append(slope)
+        intercepts.append(intercept)
+        r2.append(r_value**2)
+        print '\n'+var_names[v]
+        print 'Trend of mean:'
+        print 'Slope = '+str(slope)
+        print 'r^2 = '+str(r_value**2)
+        print 'p = '+str(p_value)
+        # Now do some checking
+        slope_members = []        
+        for n in range(num_ens):
+            slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_data[v,n,:])
+            slope_members.append(slope)
+        print 'Mean of trend = '+str(np.mean(slope_members))
+        t_val, p_val = ttest_1samp(slope_members, 0)
+        print 'p-value for ensemble trends = ' + str(p_val)
+
+    # Set up plot
+    fig = plt.figure(figsize=(16,5))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.04, right=0.98, bottom=0.1, top=0.85, wspace=0.05)
+    for v in range(num_var):
+        # Plot ensemble members in thinner transparent blue
+        for n in range(num_ens):
+            ax.plot_date(pace_time, pace_data[v,n,:], color='blue', label='PACE ensemble', linewidth=1, alpha=0.5)
+        # Plot ensemble mean in thicker solid blue, but make sure it will be on above ERA5 at the end
+        ax.plot_date(pace_time, pace_mean[v,:], color='blue', label='PACE mean', linewidth=2, zorder=(num_ens+1))
+        # Plot ERA5 in thicker solid red
+        ax.plot_date(era5_time, era5_data[v,:], color='red', label='ERA5', linewidth=2, zorder=(num_ens))
+        # Plot trend in thin black on top
+        trend_vals = slopes[v]*time_decades + intercepts[v]
+        ax.plot_date(pace_time, trend_vals, color='black', linewidth=1, zorder=(num_ens+2))
+        # Print trend and r^2
+        plt.text(0.02, 0.98, round_to_decimals(slopes[v],3)+' '+var_units+'/decade\n'+r'r$^2$='+round_to_decimals(r2[v],3), ha='left', va='top', fontsize=14, transform=ax.transAxes)
+        if v==1:
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=3, fontsize=14)
+        ax.set_xlim([year_start, year_end+1])
+        ax.grid(linestyle='dotted')
+        plt.ylabel(var_units[v], fontsize=14)
+        if v==0:
+            plt.xlabel('Year', fontsize=14)
+        plt.title(var_titles[v], fontsize=18)
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png')
+        
+        
+                
+        
+    
+    
+    
+
+    
     
 
     
