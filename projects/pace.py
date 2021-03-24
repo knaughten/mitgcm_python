@@ -2147,7 +2147,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
     year_start = 1920
     smooth = 24
-    max_cutoff = 0
+    max_cutoff = 0.5
     num_cutoff = 50
 
     time = None
