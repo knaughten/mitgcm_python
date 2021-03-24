@@ -2199,9 +2199,9 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     mean_trends = np.mean(all_trends, axis=0)
 
     # Plot
-    fig = plt.figure(figsize=(12,5))
+    fig = plt.figure(figsize=(10,4))
     gs = plt.GridSpec(1,2)
-    gs.update(left=0.07, right=0.98, bottom=0.1, top=0.85, wspace=0.15)
+    gs.update(left=0.08, right=0.98, bottom=0.12, top=0.84, wspace=0.16)
     # Cutoff temperature vs trends (individual and mean)
     ax = plt.subplot(gs[0,0])
     for n in range(num_ens):
@@ -2210,7 +2210,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
     plt.xlabel('Cutoff temperature ('+deg_string+'C)', fontsize=12)
     plt.ylabel(deg_string+'C/decade', fontsize=12)
-    plt.title('Trend: ensemble members (colours), mean (black)', fontsize=16)
+    plt.title(r'$\bf{a}$. Trends (colours) and ensemble mean (black)', fontsize=14)
     ax.grid(linestyle='dotted')
     # Cutoff temperature vs significance
     ax = plt.subplot(gs[0,1])
@@ -2218,9 +2218,9 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
     # Add dashed line at 95% threshold    
     plt.ylabel('%', fontsize=12)
-    plt.title('Significance of ensemble mean trend', fontsize=16)
+    plt.title(r'$\bf{b}$. Significance of ensemble trend', fontsize=14)
     ax.grid(linestyle='dotted')
-    plt.suptitle('Sensitivity of temperature trend on shelf (400-700m) to convection', fontsize=20)
+    plt.suptitle('Sensitivity of temperature trend on shelf (400-700m) to convection', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'temp_trend_vs_cutoff.png', dpi=300)
 
                 
