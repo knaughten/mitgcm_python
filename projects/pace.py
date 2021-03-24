@@ -2106,6 +2106,125 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         plt.title(var_titles[v], fontsize=15)
     finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
+
+# Calculate the mean trend and ensemble significance for a whole bunch of variables.
+def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
+
+    num_ens = 10  # TODO: update to 20 when finished
+    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_400_700m', 'pine_island_bay_temp_btw_400_700m', 'dotson_bay_temp_btw_400_700m', 'amundsen_shelf_salt_btw_400_700m', 'pine_island_bay_salt_btw_400_700m', 'dotson_bay_salt_btw_400_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
+    units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
+    num_var = len(var_names)
+    base_dir = real_dir(base_dir)
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    year_start = 1920
+    smooth = 24
+
+    time = None
+    for v in range(num_var):
+        trends = []
+        for n in range(num_ens):
+            # Read data
+            file_path = sim_dir[n] + timeseries_file
+            if time is None:
+                time_tmp = netcdf_time(file_path, monthly=False)
+                t0 = index_year_start(time_tmp, year_start)
+                time_tmp = time[t0:]
+            data_tmp = read_netcdf(file_path, var_names[v])[t0:]
+            # Smooth
+            if time is None:
+                data, time = moving_average(data_tmp, smooth, time=time_tmp)
+                # Get time in decades
+                time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
+                time_decades = time_sec/(365*sec_per_day*10)
+            else:
+                data = moving_average(data_tmp, smooth)
+            # Calculate trend
+            slope, intercept, r_value, p_value, std_err = linregress(time_decades, data)
+            trends.append(slope)
+        # Calculate significance
+        p_val = ttest_1samp(slope, 0)[1]
+        sig = (1-p_val)*100
+        print var_names[v]+': trend='+str(np.mean(slope))+' '+units[v]+'/decade, significance='+str(sig)
+
+
+# Plot sensitivity of temperature trend to convection.
+def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.nc', fig_dir='./'):
+
+    num_ens = 10  # TODO: Update to 20
+    var_name = 'amundsen_shelf_temp_btw_400_700m'
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    year_start = 1920
+    smooth = 24
+    max_cutoff = 0
+    num_cutoff = 50
+
+    time = None
+    temp = None
+    for n in range(num_ens):
+        # Read data
+        file_path = sim_dir[n] + timeseries_file
+        if time is None:
+            time_tmp = netcdf_time(file_path, monthly=False)
+            t0 = index_year_start(time_tmp, year_start)
+            time_tmp = time_tmp[t0:]
+        temp_tmp = read_netcdf(file_path, var_name)[t0:]
+        # Smooth
+        if time is None:
+            temp_smooth, time = moving_average(temp_tmp, smooth, time=time_tmp)
+            num_time = time.size
+            temp = np.empty([num_ens, num_time])
+            temp[n,:] = temp_smooth
+            # Get time in decades
+            time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+            time_decades = time_sec/(365*sec_per_day*10)
+        else:
+            temp[n,:] = moving_average(temp_tmp, smooth)
+
+    # Get range of cutoff temperatures
+    cutoff_temp = np.linspace(np.amin(temp), max_cutoff, num=num_cutoff)
+    # Calculate trends and significance for each cutoff
+    all_trends = np.empty([num_ens, num_cutoff])
+    sig = np.empty(num_cutoff)
+    for m in range(num_cutoff):
+        # Calculate trend for each ensemble member
+        for n in range(num_ens):
+            # Extract values where temperature exceeds this cutoff
+            index = temp[n,:] > cutoff_temp[m]
+            all_trends[n,m] = linregress(time_decades[index], temp[n,index])[0]
+        # Now calculate significance of ensemble
+        p_val = ttest_1samp(all_trends[:,m], 0)[1]
+        sig[m] = (1-p_val)*100
+    mean_trends = np.mean(all_trends, axis=0)
+
+    # Plot
+    fig = plt.figure(figsize=(12,5))
+    gs = plt.GridSpec(1,2)
+    gs.update(left=0.07, right=0.98, bottom=0.1, top=0.85, wspace=0.15)
+    # Cutoff temperature vs trends (individual and mean)
+    ax = plt.subplot(gs[0,0])
+    for n in range(num_ens):
+        ax.plot(cutoff_temp, all_trends[n,:], linewidth=1)
+    ax.plot(cutoff_temp, mean_trends, linewidth=2, color='black')
+    ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
+    plt.xlabel('Cutoff temperature ('+deg_string+'C)', fontsize=12)
+    plt.ylabel(deg_string+'C/decade', fontsize=12)
+    plt.title('Trend: ensemble members (colours), mean (black)', fontsize=16)
+    ax.grid(linestyle='dotted')
+    # Cutoff temperature vs significance
+    ax = plt.subplot(gs[0,1])
+    ax.plot(cutoff_temp, sig, linewidth=2, color='black')
+    ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
+    # Add dashed line at 95% threshold    
+    plt.ylabel('%', fontsize=12)
+    plt.title('Significance of ensemble mean trend', fontsize=16)
+    ax.grid(linestyle='dotted')
+    plt.suptitle('Sensitivity of temperature trend on shelf (400-700m) to convection', fontsize=20)
+    finished_plot(fig, fig_name=fig_dir+'temp_trend_vs_cutoff.png', dpi=300)
+
+                
+
         
                 
         
