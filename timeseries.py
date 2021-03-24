@@ -1278,7 +1278,7 @@ def set_parameters (var):
         z_deep = -1*int(z_vals[z_vals.index('_')+1:])
         z0 = [z_deep, z_shallow]
         title = 'Average temperature between '+str(-z_shallow)+'-'+str(-z_deep)+'m in '+region_names[region]
-        units = deg_string+'C'
+        units = deg_string+'C'        
     elif '_salt_below_' in var:
         option = 'avg_btw_z0'
         var_name = 'SALT'
@@ -1287,6 +1287,16 @@ def set_parameters (var):
         z_deep = None
         z0 = [z_deep, z_shallow]
         title = 'Average salinity below '+str(-z_shallow)+'m in '+region_names[region]
+        units = 'psu'
+    elif '_salt_btw_' in var:
+        option = 'avg_btw_z0'
+        var_name = 'SALT'
+        region = var[:var.index('_salt_btw')]
+        z_vals = var[len(region+'_salt_btw_'):-1]
+        z_shallow = -1*int(z_vals[:z_vals.index('_')])
+        z_deep = -1*int(z_vals[z_vals.index('_')+1:])
+        z0 = [z_deep, z_shallow]
+        title = 'Average salinity between '+str(-z_shallow)+'-'+str(-z_deep)+'m in '+region_names[region]
         units = 'psu'
     elif var.endswith('_thermocline'):
         option = 'max_gradient_depth'
