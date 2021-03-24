@@ -1996,9 +1996,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     num_ens = 10  # TODO: update to 20 when finished
     var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_400_700m', 'all_massloss']
     var_titles = ['Zonal wind over shelf break', 'Temperature (400-700m) on continental shelf', 'Total basal mass loss from ice shelves']
-    var_units = ['m/s', deg_string+'C', 'Gt/y']
+    var_units = [' m/s', deg_string+'C', ' Gt/y']
     num_var = len(var_names)
-    sim_dir = [base_dir+'PAS_PACE'+str(n+1)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
     year_start_pace = 1920
     year_start_era5 = 1979
     year_end = 2013
@@ -2014,13 +2014,10 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         if n == num_ens:
             year_start = year_start_era5
         else:
-            year_end = year_end_pace
-        t0 = index_year_start(time_tmp, year_start)
-        tf = index_year_end(time_tmp, year_end)
+            year_start = year_start_pace
+        t0, tf = index_period(time_tmp, year_start, year_end)
         # Trim
         time_tmp = time_tmp[t0:tf]
-        if n == num_ens:
-            tf = index_year_end(time_tmp, year_end)
         for v in range(num_var):
             data_tmp = read_netcdf(file_path, var_names[v])
             data_tmp = data_tmp[t0:tf]
@@ -2074,29 +2071,41 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     # Set up plot
     fig = plt.figure(figsize=(16,5))
     gs = plt.GridSpec(1,3)
-    gs.update(left=0.04, right=0.98, bottom=0.1, top=0.85, wspace=0.05)
+    gs.update(left=0.04, right=0.98, bottom=0.18, top=0.9, wspace=0.18)
     for v in range(num_var):
-        # Plot ensemble members in thinner transparent blue
+        ax = plt.subplot(gs[0,v])
+        if v==0:
+            # Add line at 0
+            ax.axhline(color='black', linewidth=0.5)
+        # Plot ensemble members in thinner light blue
+        labels = ['PACE ensemble'] + [None for n in range(num_ens-1)]
         for n in range(num_ens):
-            ax.plot_date(pace_time, pace_data[v,n,:], color='blue', label='PACE ensemble', linewidth=1, alpha=0.5)
+            ax.plot_date(pace_time, pace_data[v,n,:], '-', color='DodgerBlue', label=labels[n], linewidth=1, alpha=0.5)
         # Plot ensemble mean in thicker solid blue, but make sure it will be on above ERA5 at the end
-        ax.plot_date(pace_time, pace_mean[v,:], color='blue', label='PACE mean', linewidth=2, zorder=(num_ens+1))
+        ax.plot_date(pace_time, pace_mean[v,:], '-', color='blue', label='PACE mean', linewidth=2, zorder=(num_ens+1))
         # Plot ERA5 in thicker solid red
-        ax.plot_date(era5_time, era5_data[v,:], color='red', label='ERA5', linewidth=2, zorder=(num_ens))
+        ax.plot_date(era5_time, era5_data[v,:], '-', color='red', label='ERA5', linewidth=1.5, zorder=(num_ens))
         # Plot trend in thin black on top
         trend_vals = slopes[v]*time_decades + intercepts[v]
-        ax.plot_date(pace_time, trend_vals, color='black', linewidth=1, zorder=(num_ens+2))
+        ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
         # Print trend and r^2
-        plt.text(0.02, 0.98, round_to_decimals(slopes[v],3)+' '+var_units+'/decade\n'+r'r$^2$='+round_to_decimals(r2[v],3), ha='left', va='top', fontsize=14, transform=ax.transAxes)
+        if v==2:
+            trend_str = round_to_decimals(slopes[v],1)
+        else:
+            trend_str = round_to_decimals(slopes[v],3)
+        plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/decade', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         if v==1:
-            ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.5), ncol=3, fontsize=14)
-        ax.set_xlim([year_start, year_end+1])
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.23), ncol=3, fontsize=12)
+        ax.set_xlim([pace_time[0], pace_time[-1]])
+        ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])
+        for label in ax.get_xticklabels()[1::2]:
+            label.set_visible(False)
         ax.grid(linestyle='dotted')
-        plt.ylabel(var_units[v], fontsize=14)
+        plt.ylabel(var_units[v], fontsize=12)
         if v==0:
-            plt.xlabel('Year', fontsize=14)
-        plt.title(var_titles[v], fontsize=18)
-    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png')
+            plt.xlabel('Year', fontsize=12)
+        plt.title(var_titles[v], fontsize=16)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
         
         
                 
