@@ -1992,10 +1992,10 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    
+
     num_ens = 10  # TODO: update to 20 when finished
     var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_400_700m', 'all_massloss']
-    var_titles = ['Zonal wind over shelf break', 'Temperature (400-700m) on continental shelf', 'Total basal mass loss from ice shelves']
+    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (400-700m)', r'$\bf{c}$. Total basal mass loss from ice shelves']
     var_units = [' m/s', deg_string+'C', ' Gt/y']
     num_var = len(var_names)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
@@ -2069,11 +2069,11 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         print 'p-value for ensemble trends = ' + str(p_val)
 
     # Set up plot
-    fig = plt.figure(figsize=(16,5))
-    gs = plt.GridSpec(1,3)
-    gs.update(left=0.04, right=0.98, bottom=0.18, top=0.9, wspace=0.18)
+    fig = plt.figure(figsize=(5,12))
+    gs = plt.GridSpec(3,1)
+    gs.update(left=0.14, right=0.98, bottom=0.08, top=0.97, hspace=0.25)
     for v in range(num_var):
-        ax = plt.subplot(gs[0,v])
+        ax = plt.subplot(gs[v,0])
         if v==0:
             # Add line at 0
             ax.axhline(color='black', linewidth=0.5)
@@ -2094,19 +2094,18 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         else:
             trend_str = round_to_decimals(slopes[v],3)
         plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/decade', ha='left', va='top', fontsize=12, transform=ax.transAxes)
-        if v==1:
-            ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.23), ncol=3, fontsize=12)
         ax.set_xlim([pace_time[0], pace_time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])
         for label in ax.get_xticklabels()[1::2]:
             label.set_visible(False)
         ax.grid(linestyle='dotted')
         plt.ylabel(var_units[v], fontsize=12)
-        if v==0:
+        if v==2:
             plt.xlabel('Year', fontsize=12)
-        plt.title(var_titles[v], fontsize=16)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.43,-0.33), ncol=3, fontsize=12)
+        plt.title(var_titles[v], fontsize=15)
     finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
-        
+
         
                 
         
