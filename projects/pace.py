@@ -1994,9 +1994,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     fig_dir = real_dir(fig_dir)
 
     num_ens = 10  # TODO: update to 20 when finished
-    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_400_700m', 'all_massloss']
-    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (400-700m)', r'$\bf{c}$. Total basal mass loss from ice shelves']
-    var_units = [' m/s', deg_string+'C', ' Gt/y']
+    var_names = ['all_massloss', 'amundsen_shelf_temp_btw_400_700m', 'amundsen_shelf_salt_btw_400_700m']
+    var_titles = [r'$\bf{a}$. Total basal mass loss from ice shelves', r'$\bf{b}$. Temperature on shelf (400-700m)', r'$\bf{c}$. Salinity on shelf (400-700m)']
+    var_units = [' Gt/y', deg_string+'C', ' psu']
     num_var = len(var_names)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
     year_start_pace = 1920
@@ -2042,10 +2042,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
                     era5_time = time_smooth
                 era5_data[v,:] = data_smooth
 
-    # Calculate trend of ensemble mean for each variable
+    # Calculate mean trend for each variable (equivalent to trend of mean, but check this)
     slopes = []
     intercepts = []
-    r2 = []
     # Get time in decades
     time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
     time_decades = time_sec/(365*sec_per_day*10)
@@ -2053,20 +2052,14 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_mean[v,:])
         slopes.append(slope)
         intercepts.append(intercept)
-        r2.append(r_value**2)
         print '\n'+var_names[v]
-        print 'Trend of mean:'
-        print 'Slope = '+str(slope)
-        print 'r^2 = '+str(r_value**2)
-        print 'p = '+str(p_value)
+        print 'Trend of mean = '+str(slope)
         # Now do some checking
         slope_members = []        
         for n in range(num_ens):
             slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_data[v,n,:])
             slope_members.append(slope)
         print 'Mean of trend = '+str(np.mean(slope_members))
-        t_val, p_val = ttest_1samp(slope_members, 0)
-        print 'p-value for ensemble trends = ' + str(p_val)
 
     # Set up plot
     fig = plt.figure(figsize=(5,12))
@@ -2074,9 +2067,6 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     gs.update(left=0.14, right=0.98, bottom=0.08, top=0.97, hspace=0.25)
     for v in range(num_var):
         ax = plt.subplot(gs[v,0])
-        if v==0:
-            # Add line at 0
-            ax.axhline(color='black', linewidth=0.5)
         # Plot ensemble members in thinner light blue
         labels = ['PACE ensemble'] + [None for n in range(num_ens-1)]
         for n in range(num_ens):
