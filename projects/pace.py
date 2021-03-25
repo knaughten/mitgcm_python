@@ -9,10 +9,12 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import datetime
 from scipy.stats import linregress, ttest_1samp, pearsonr
+from scipy.io import loadmat
+import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -25,6 +27,7 @@ from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density
 from ..calculus import time_derivative
+from ..interpolation import interp_reg_xy
 
 
 # Global variables
@@ -2212,6 +2215,95 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     ax.grid(linestyle='dotted')
     plt.suptitle('Sensitivity of temperature trend on shelf (400-700m) to convection', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'temp_trend_vs_cutoff.png', dpi=300)
+
+
+# Helper function to find the years with observations in Pierre's climatology
+def years_with_obs (obs_dir):
+
+    file_head = 'ASEctd_griddedMean'
+    file_tail = '.mat'
+    obs_years = []
+    for fname in os.listdir(obs_dir):
+        if fname.startswith(file_head) and fname.endswith(file_tail) and not (fname == file_head+file_tail):
+            # This is a file with 1 year of data. Extract the year
+            year = int(fname[len(file_head):-len(file_tail)])
+            obs_years.append(year)
+    obs_years.sort()
+    return obs_years
+
+
+# Plot a lat-lon map of the maximum temperature below 200m depth, in Pierre's climatology, the model, and the difference.
+def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
+
+    obs_dir = real_dir(obs_dir)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    output_dir = base_dir + 'PAS_ERA5/output/'
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    obs_file = obs_dir + 'ASEctd_griddedMean.mat'
+    obs_years = years_with_obs(obs_dir)
+
+    # Average model output over the summer months in years with observations
+    # (December the previous year to March the current year)
+    print 'Reading model output'
+    model_temp = np.zeros([grid.nz, grid.ny, grid.nx])
+    ndays = 0
+    for year in obs_years:
+        print '...'+str(year)
+        for curr_year, curr_month in zip([year-1]+[year]*3, [12, 1, 2, 3]):
+            file_path = output_dir + str(curr_year) + '01/MITgcm/output.nc'
+            model_temp += read_netcdf(file_path, 'THETA', time_index=curr_month-1)
+            ndays += days_per_month(curr_month, curr_year)
+    model_temp /= ndays
+    model_temp = mask_3d(model_temp, grid)
+    # Find depth maximum temperature
+    model_tmax = np.amax(model_temp, axis=0)
+
+    # Read Pierre's mean file
+    f = loadmat(obs_file)
+    obs_lon = np.squeeze(f['lonvec'])
+    obs_lat = np.squeeze(f['latvec'])
+    obs_temp = f['PTmean']
+    # Convert NaNs into mask
+    obs_temp = np.ma.masked_where(np.isnan(obs_temp), obs_temp)
+    # Find depth maximum temperature
+    obs_tmax = np.amax(obs_temp, axis=-1)  
+    # Interpolate to MITgcm grid
+    obs_tmax = interp_reg_xy(obs_lon, obs_lat, obs_tmax, grid.lon_1d, grid.lat_1d)
+    obs_tmax = mask_3d(obs_tmax, grid)
+
+    # Get min and max values within bounds of observation region
+    xmin = np.amin(obs_lon)
+    xmax = np.amax(obs_lon)
+    ymin = np.amin(obs_lat)
+    ymax = np.amax(obs_lat)
+    vmin_model, vmax_model = var_min_max(model_tmax, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    vmin_abs = min(vmin_model, np.amin(obs_tmax))
+    vmax_abs = max(vmax_model, np.amax(obs_tmax))
+
+    # Plot the model, obs, and difference
+    fig = plt.figure(figsize=(10,4))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.05, right=0.99, bottom=0.1, top=0.85, wspace=0.02)
+    cax_abs = fig.add_axes([0.05, 0.05, 0.3, 0.02])
+    cax_diff = fig.add_axes([0.69, 0.05, 0.3, 0.02])
+    data = [model_tmax, obs_tmax, model_tmax-obs_tmax]
+    vmin = [vmin_abs, vmin_abs, None]
+    vmax = [vmax_abs, vmax_abs, None]
+    ctype = ['parula', 'parula', 'plusminus']
+    cax = [None, cax_abs, cax_diff]
+    title = ['MITgcm', 'Observations', 'Difference']
+    for n in range(3):
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title[n])
+        if cax[n] is not None:
+            cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
+    finished_plot(fig) #, fig_name=fig_dir+'tmax_model_obs.png', dpi=300)
+    
+    
+    
+    
 
                 
 
