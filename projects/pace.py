@@ -2398,7 +2398,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
             ax.vline(offset, color='black', linewidth=0.5)
             labels = ax.get_xticklabels()
             for l in range(len(labels)):
-                if float(labels[l]) > offset):
+                if float(labels[l]) > offset:
                     labels[l] = str(float(labels[l])-offset)
             ax.set_xticklabels(labels)
             if r == 0:
