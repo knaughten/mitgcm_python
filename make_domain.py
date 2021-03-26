@@ -420,7 +420,13 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         # SO-WISE (gyre configuration)
         # Block out everything west of South America
         omask = mask_box(omask, lon_2d, lat_2d, xmin=-85.0, xmax=-70.0, ymin=-50.0, ymax=-30.0)
-        # Fill in everything deeper than 6000 m
+        # Close a disconnected region in the Falkland Islands
+        omask = mask_box(omask, lon_2d, lat_2d, xmin=-60.4, xmax=-58.9, ymin=-52.1, ymax=-51.2)
+        # Close disconnected regions in South America
+        boxes = [[-65.1, -63.9, -43.0, -42.3],[-65.6, -64.6, -40.8, -39.9],[-72.4, -68.6, -54.5, -51.8]] 
+        for box in boxes:
+            omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
+        # Fill in everything deeper than 6000 m (e.g. South Sandwich Trench)
         bathy[bathy<-6000] = -6000
     elif key == 'WSS':
         # Small Weddell Sea domain used for coupling
