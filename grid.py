@@ -1036,6 +1036,53 @@ class PACEGrid:
             print 'Error (get_lon_lat): invalid dim ' + str(dim)
             sys.exit()
 
+
+# Read and process the grid from Pierre's observation climatology file. Pass an open Matlab file handle.
+def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
+
+    lon = np.squeeze(f['lonvec'])
+    lat = np.squeeze(f['latvec'])
+    depth = np.squeeze(f['depthvec'])
+    
+    nx = obs_lon.size
+    ny = obs_lat.size
+    nz = depth.size
+    shape = [ny, nx, nz]
+
+    # Calculate area
+    # First need dlon and dlat
+    def calc_diff (A):
+        edges = np.empty(A.size+1)
+        edges[1:-1] = 0.5*(edges[:-1] + edges[1:])
+        edges[0] = 2*edges[1] - edges[2]
+        edges[-1] = 2*edges[-2] - edges[-3]
+        return edges[1:] - edges[:-1]
+    dlon = calc_diff(lon)
+    dlat = calc_diff(lat)
+    # Make them 2D in the opposite order to usual (because Matlab)
+    dlat, dlon = np.meshgrid([dlat, dlon])
+    # Also 2D lat-lon arrays
+    lat, lon = np.meshgrid([lat, lon])
+    # Get Cartesian differences
+    dx = rEarth*np.cos(lat*deg2rad)*dlon*deg2rad
+    dy = rEarth*dlat*deg2rad
+    dA = dx*dy
+
+    if xy_dim == 1:
+        lon = lon[:,0]
+        lat = lat[0,:]
+    if xy_dim == 3:
+        lon = xy_to_xyz(lon, shape)
+        lat = xy_to_xyz(lat, shape)
+    if dA_dim == 3:
+        dA = xy_to_xyz(dA, shape)
+    if z_dim == 3:
+        depth = z_to_xyz(depth, shape)
+
+    return lon, lat, depth, dA
+
+        
+
         
         
 

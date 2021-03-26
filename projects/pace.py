@@ -14,7 +14,7 @@ import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, choose_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -2235,6 +2235,13 @@ def years_with_obs (obs_dir):
 # Plot a lat-lon map of the maximum temperature below 200m depth, in Pierre's climatology, the model, and the difference.
 def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
 
+    # TODO:
+    # Calculate separately a 1979-2019 ERA5 summertime climatology of model
+    # No longer need helper function, but could save it for later cast plot
+    # Don't interpolate data to MITgcm grid, but overlay land mask and ice shelf fronts
+    # Could plot difference on Pierre's grid?
+    # Could also come back to this later...does it show anything the casts don't?
+
     obs_dir = real_dir(obs_dir)
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
@@ -2243,6 +2250,7 @@ def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
     grid = Grid(grid_path)
     obs_file = obs_dir + 'ASEctd_griddedMean.mat'
     obs_years = years_with_obs(obs_dir)
+    z0 = -200
 
     # Average model output over the summer months in years with observations
     # (December the previous year to March the current year)
@@ -2253,25 +2261,29 @@ def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
         print '...'+str(year)
         for curr_year, curr_month in zip([year-1]+[year]*3, [12, 1, 2, 3]):
             file_path = output_dir + str(curr_year) + '01/MITgcm/output.nc'
-            model_temp += read_netcdf(file_path, 'THETA', time_index=curr_month-1)
-            ndays += days_per_month(curr_month, curr_year)
+            ndays_curr = days_per_month(curr_month, curr_year)
+            model_temp += read_netcdf(file_path, 'THETA', time_index=curr_month-1)*ndays_curr
+            ndays += ndays_curr
     model_temp /= ndays
+    # Get maximum temperature below 200m
+    model_z_3d = z_to_xyz(grid.z, grid)
     model_temp = mask_3d(model_temp, grid)
-    # Find depth maximum temperature
+    model_temp = np.ma.masked_where(model_z_3d >= z0, model_temp)
     model_tmax = np.amax(model_temp, axis=0)
 
     # Read Pierre's mean file
+    print 'Reading observations'
     f = loadmat(obs_file)
     obs_lon = np.squeeze(f['lonvec'])
     obs_lat = np.squeeze(f['latvec'])
-    obs_temp = f['PTmean']
+    obs_depth = np.squeeze(f['depthvec'])
+    obs_temp = np.transpose(f['PTmean'])
     # Convert NaNs into mask
     obs_temp = np.ma.masked_where(np.isnan(obs_temp), obs_temp)
-    # Find depth maximum temperature
-    obs_tmax = np.amax(obs_temp, axis=-1)  
-    # Interpolate to MITgcm grid
-    obs_tmax = interp_reg_xy(obs_lon, obs_lat, obs_tmax, grid.lon_1d, grid.lat_1d)
-    obs_tmax = mask_3d(obs_tmax, grid)
+    # Find maximum temperature below 200m
+    obs_z_3d = z_to_xyz(obs_depth, [obs_lat.size, obs_lon.size])
+    obs_temp = np.ma.masked_where(obs_z_3d >= z0, obs_temp)
+    obs_tmax = np.transpose(np.amax(obs_temp, axis=0))
 
     # Get min and max values within bounds of observation region
     xmin = np.amin(obs_lon)
@@ -2283,6 +2295,7 @@ def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
     vmax_abs = max(vmax_model, np.amax(obs_tmax))
 
     # Plot the model, obs, and difference
+    print 'Plotting'
     fig = plt.figure(figsize=(10,4))
     gs = plt.GridSpec(1,3)
     gs.update(left=0.05, right=0.99, bottom=0.1, top=0.85, wspace=0.02)
@@ -2300,6 +2313,112 @@ def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
         if cax[n] is not None:
             cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
     finished_plot(fig) #, fig_name=fig_dir+'tmax_model_obs.png', dpi=300)
+
+
+# Make a 3x2 plot showing temperature and salinity casts in 3 regions, comparing ERA5-forced output to Pierre's climatology.
+def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
+
+    obs_dir = real_dir(obs_dir)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    model_file = base_dir + 'PAS_ERA5/output/hovmoller.nc'
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    obs_file_head = obs_dir + 'ASEctd_griddedMean'
+    obs_file_tail = '.mat'
+    obs_years = years_with_obs(obs_dir)
+    num_years = len(obs_years)
+    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+    region_titles = ['a) Shelf break trough', 'b) Pine Island Bay', 'c) Dotson front']
+    num_regions = len(regions)
+    model_var = ['temp', 'salt']
+    obs_var = ['PTmean', 'Smean']
+    var_titles = ['Temperature', 'Salinity']
+    var_units = [deg_string+'C', 'psu']
+    num_var = len(model_var)
+    model_start_year = 1947
+    model_end_year = 2019
+    model_num_time = (model_end_year-model_start_year+1)*months_per_year
+
+    # Read precomputed Hovmollers from file
+    model_hov = np.empty([num_regions, num_var, model_num_time, grid.nz])
+    for r in range(num_regions):
+        for v in range(num_var):
+            model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
+    # For each of the years with observations, average over December (previous year) to March
+    model_data = np.empty([num_regions, num_var, num_years, grid.nz])
+    for t in range(num_years):
+        # Find time index of that January
+        t_jan = (obs_years[t]-model_start_year)*months_per_year
+        # Weight with days per month
+        ndays = np.array([days_per_month(m,y) for y,m in zip([obs_years[t]-1]+[obs_years[t]]*3, [12,1,2,3])])
+        model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+3,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
+
+    # Now read observations
+    obs_data = None
+    for t in range(num_years):
+        f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
+        if obs_data is None:
+            # This is the first year: read the grid and set up array
+            obs_lon, obs_lat, obs_depth, obs_dA = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
+            obs_data = np.empty([num_regions, num_var, num_years, obs_depth.size])
+        for v in range(num_var):
+            # Read 3D temp or salinity
+            obs_var_3d = np.transpose(f[obs_var[v]])
+            obs_var_3d = np.ma.masked_where(np.isnan(obs_var_3d), obs_var_3d)
+            for r in range(num_regions):
+                # Area-average over the given region
+                [xmin, xmax, ymin, ymax] = region_bounds[regions[r]]
+                # Make a mask which is 1 only within these bounds where there is data
+                mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)
+                mask = xy_to_xyz(mask, [obs_lat.size, obs_lon.size, obs_depth.size]).astype(float)
+                mask[obs_var_3d.mask] = 0
+                obs_data[r,v,t,:] = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
+
+    # Plot
+    fig = plt.figure(figsize=(7,12))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.08, right=0.98, bottom=0.1, top=0.9, wspace=0.02)
+    for r in range(num_regions):
+        for v in range(num_var):
+            ax = plt.subplot(gs[r,v])
+            ax.grid(linestyle='dotted')
+            # Plot each year of observations in thin grey, and each year of model output in thin light blue
+            for t in range(num_years):
+                ax.plot(obs_data[r,v,t,:], obs_depth*1e-3, color='Grey', linewidth=1, label=('Observations (years)' if t==0 else None))
+                ax.plot(model_data[r,v,t,:], grid.z*1e-3, color='DodgerBlue', linewidth=1, label=('Model (years)' if t==0 else None))
+            # Plot observational mea in thick black, and model mean in thick blue
+            ax.plot(np.mean(obs_data[r,v,:,:], axis=-2), obs_depth*1e-3, color='black', linewidth=2, label='Observations (time-mean)')
+            ax.plot(np.mean(model_data[r,v,:,:], axis=-2), grid.z*1e-3, color='blue', linewidth=2, label='Model (time-mean)')
+            # Now plot standard deviations with an offset
+            offset = np.ceil(max(np.amax(obs_data[r,v,:]), np.amax(model_data[r,v,:]))*10)/10.
+            ax.plot(np.std(obs_data[r,v,:,:], axis=-2)+offset, obs_depth*1e-3, color='black', linewidth=2, linestyle='dotted', label='Observations (standard deviation)')
+            ax.plot(np.std(model_data[r,v,:,:], axis=-2)+offset, grid.z*1e-3, color='blue', linewidth=2, linestyle='dotted', label='Model (standard deviation)')
+            # Manually split the x-axis at the offset by drawing a line and overwriting the labels
+            ax.vline(offset, color='black', linewidth=0.5)
+            labels = ax.get_xticklabels()
+            for l in range(len(labels)):
+                if float(labels[l]) > offset):
+                    labels[l] = str(float(labels[l])-offset)
+            ax.set_xticklabels(labels)
+            if r == 0:
+                if v == 0:
+                    plt.ylabel('Depth (km)', fontsize=12)
+                plt.xlabel(var_units[v], fontsize=12)
+            plt.title(var_titles[v], fontsize=14)
+        plt.text(0.5, 0.95-0.3*r, region_titles[r], ha='center', va='center', fontsize=18, transform=fig.transFigure)
+    plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.5), ncol=2, fontsize=12)
+    finished_plot(fig) #, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
+                    
+            
+                        
+                
+                
+            
+
+    
+
+    
     
     
     
