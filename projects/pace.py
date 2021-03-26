@@ -2345,14 +2345,14 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     for r in range(num_regions):
         for v in range(num_var):
             model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
-    # For each of the years with observations, average over December (previous year) to March
+    # For each of the years with observations, average over January-February
     model_data = np.empty([num_regions, num_var, num_years, grid.nz])
     for t in range(num_years):
         # Find time index of that January
         t_jan = (obs_years[t]-model_start_year)*months_per_year
         # Weight with days per month
-        ndays = np.array([days_per_month(m,y) for y,m in zip([obs_years[t]-1]+[obs_years[t]]*3, [12,1,2,3])])
-        model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+3,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
+        ndays = np.array([days_per_month(m+1,obs_years[t]) for m in range(2)])
+        model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
 
     # Now read observations
     obs_data = None
