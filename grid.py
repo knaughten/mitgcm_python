@@ -905,7 +905,7 @@ def dA_from_latlon (lon, lat, periodic=False, return_edges=False):
         # Extrapolate the longitude boundaries
         lon_edges_w = 2*lon_edges_mid[:,0] - lon_edges_mid[:,1]
         lon_edges_e = 2*lon_edges_mid[:,-1] - lon_edges_mid[:,-2]
-        lon_edges = np.concatenate((lon_edges_w, lon_edges_mid, lon_edges_e), axis=1)
+        lon_edges = np.concatenate((lon_edges_w[:,None], lon_edges_mid, lon_edges_e[:,None]), axis=1)
     dlon = lon_edges[:,1:] - lon_edges[:,:-1] 
     # Latitude
     lat_edges_mid = 0.5*(lat[:-1,:] + lat[1:,:])
@@ -1043,34 +1043,17 @@ def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
     lon = np.squeeze(f['lonvec'])
     lat = np.squeeze(f['latvec'])
     depth = np.squeeze(f['depthvec'])
-    
-    nx = obs_lon.size
-    ny = obs_lat.size
+
+    nx = lon.size
+    ny = lat.size
     nz = depth.size
     shape = [ny, nx, nz]
 
     # Calculate area
-    # First need dlon and dlat
-    def calc_diff (A):
-        edges = np.empty(A.size+1)
-        edges[1:-1] = 0.5*(edges[:-1] + edges[1:])
-        edges[0] = 2*edges[1] - edges[2]
-        edges[-1] = 2*edges[-2] - edges[-3]
-        return edges[1:] - edges[:-1]
-    dlon = calc_diff(lon)
-    dlat = calc_diff(lat)
-    # Make them 2D in the opposite order to usual (because Matlab)
-    dlat, dlon = np.meshgrid([dlat, dlon])
-    # Also 2D lat-lon arrays
-    lat, lon = np.meshgrid([lat, lon])
-    # Get Cartesian differences
-    dx = rEarth*np.cos(lat*deg2rad)*dlon*deg2rad
-    dy = rEarth*dlat*deg2rad
-    dA = dx*dy
+    dA = np.transpose(dA_from_latlon(lon, lat))
 
-    if xy_dim == 1:
-        lon = lon[:,0]
-        lat = lat[0,:]
+    if xy_dim > 1:
+        lat, lon = np.meshgrid(lat, lon)
     if xy_dim == 3:
         lon = xy_to_xyz(lon, shape)
         lat = xy_to_xyz(lat, shape)
