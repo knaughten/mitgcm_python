@@ -905,7 +905,7 @@ def dA_from_latlon (lon, lat, periodic=False, return_edges=False):
         # Extrapolate the longitude boundaries
         lon_edges_w = 2*lon_edges_mid[:,0] - lon_edges_mid[:,1]
         lon_edges_e = 2*lon_edges_mid[:,-1] - lon_edges_mid[:,-2]
-        lon_edges = np.concatenate((lon_edges_w, lon_edges_mid, lon_edges_e), axis=1)
+        lon_edges = np.concatenate((lon_edges_w[:,None], lon_edges_mid, lon_edges_e[:,None]), axis=1)
     dlon = lon_edges[:,1:] - lon_edges[:,:-1] 
     # Latitude
     lat_edges_mid = 0.5*(lat[:-1,:] + lat[1:,:])
@@ -1035,6 +1035,36 @@ class PACEGrid:
         else:
             print 'Error (get_lon_lat): invalid dim ' + str(dim)
             sys.exit()
+
+
+# Read and process the grid from Pierre's observation climatology file. Pass an open Matlab file handle.
+def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
+
+    lon = np.squeeze(f['lonvec'])
+    lat = np.squeeze(f['latvec'])
+    depth = np.squeeze(f['depthvec'])
+
+    nx = lon.size
+    ny = lat.size
+    nz = depth.size
+    shape = [ny, nx, nz]
+
+    # Calculate area
+    dA = np.transpose(dA_from_latlon(lon, lat))
+
+    if xy_dim > 1:
+        lat, lon = np.meshgrid(lat, lon)
+    if xy_dim == 3:
+        lon = xy_to_xyz(lon, shape)
+        lat = xy_to_xyz(lat, shape)
+    if dA_dim == 3:
+        dA = xy_to_xyz(dA, shape)
+    if z_dim == 3:
+        depth = z_to_xyz(depth, shape)
+
+    return lon, lat, depth, dA
+
+        
 
         
         

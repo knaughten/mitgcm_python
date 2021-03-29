@@ -426,6 +426,12 @@ def edit_mask (nc_in, nc_out, key='WSK'):
         boxes = [[-65.1, -63.9, -43.0, -42.3],[-65.6, -64.6, -40.8, -39.9],[-72.4, -68.6, -54.5, -51.8]] 
         for box in boxes:
             omask = mask_box(omask, lon_2d, lat_2d, xmin=box[0], xmax=box[1], ymin=box[2], ymax=box[3])
+        # Turn a few small, isolated ice shelves into land, fill a few other small shelves
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmax=-80, ymin=-75)
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-65.1, xmax=-63.4, ymin=-81.8, ymax=-81.7)
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=-36.0, xmax=-34.0, ymin=-78.2, ymax=-77.4)
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=45.0, xmax=60.0, ymin=-69.0, ymax=-66.0)
+        omask = mask_iceshelf_box(omask, imask, lon_2d, lat_2d, xmin=80.0, xmax=90.0, ymin=-68.0, ymax=-66.0)
         # Fill in everything deeper than 6000 m (e.g. South Sandwich Trench)
         bathy[bathy<-6000] = -6000
     elif key == 'WSS':
