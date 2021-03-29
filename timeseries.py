@@ -951,7 +951,7 @@ def set_parameters (var):
         # Extract depth range
         z_vals = var[len(region+'_'+result+'_btw_'):-1]
         z_shallow = -1*int(z_vals[:z_vals.index('_')])
-        z_deep = -1*int(z_vals[:z_vals.index('_')+1:])
+        z_deep = -1*int(z_vals[z_vals.index('_')+1:])
         z0 = [z_deep, z_shallow]
         title += ' between '+str(-z_shallow)+'-'+str(-z_deep)+'m'
         if mass_balance:
