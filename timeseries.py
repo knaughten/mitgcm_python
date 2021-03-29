@@ -40,7 +40,7 @@ def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_inde
     if z0 is not None:
         [z_deep, z_shallow] = z0
         # Mask out regions where the ice base is outside this depth range
-        mask[grid.draft < z_deep] = False
+        mask[grid.draft <= z_deep] = False
         mask[grid.draft > z_shallow] = False
 
     # Read ice shelf melt rate and convert to m/y
