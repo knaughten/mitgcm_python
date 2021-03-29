@@ -26,16 +26,22 @@ from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_
 # result: 'massloss' (default) calculates the total mass loss in Gt/y. 'melting' calculates the area-averaged melt rate in m/y.
 # time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
+# z0: optional list of length 2 containing deep and shallow bounds for depth ranges of ice shelf base to consider (negative, in metres).
 
 # Output:
 # If time_index is set, or time_average=True: single value containing mass loss or average melt rate
 # Otherwise: 1D array containing timeseries of mass loss or average melt rate
 # If mass_balance=True: two values/arrays will be returned, with the positive and negative components.
 
-def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
+def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False, z0=None):
 
     # Choose the appropriate mask
     mask = grid.get_ice_mask(shelf=shelf)
+    if z0 is not None:
+        [z_deep, z_shallow] = z0
+        # Mask out regions where the ice base is outside this depth range
+        mask[grid.draft < z_deep] = False
+        mask[grid.draft > z_shallow] = False
 
     # Read ice shelf melt rate and convert to m/y
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
@@ -702,9 +708,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     for fname in file_path:
         if option == 'ismr':
             if mass_balance:
-                melt_tmp, freeze_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average)
+                melt_tmp, freeze_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average, z0=z0)
             else:
-                values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average)
+                values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average, z0=z0)
         elif option == 'max':
             values_tmp = timeseries_max(fname, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, mask=mask, time_average=time_average)
         elif option == 'avg_sfc':
@@ -917,6 +923,39 @@ def set_parameters (var):
             title += 'all ice shelves in domain'
         else:
             title += region_names[region]
+    elif 'mass_balance_btw' in var or 'massloss_btw' in var or 'melting_btw' in var:
+        option = 'ismr'
+        var_name = 'SHIfwFlx'
+        mass_balance = 'mass_balance_btw' in var
+        if 'melting_btw' in var:
+            result = 'melting'
+            units = 'm/y'
+        else:
+            result = 'massloss'
+            units = 'Gt/y'
+            if mass_balance:
+                # Temporarily overwrite result for string convenience
+                result = 'mass_balance'
+        # Extract name of ice shelf
+        region = var[:var.index('_'+result+'_btw')]
+        if 'mass_balance_btw' in var:
+            title = 'Basal mass balance of '
+        elif 'melting_btw' in var:
+            title = 'Mean melt rate of '
+        else:
+            title = 'Basal mass loss from '
+        if region == 'all':
+            title += 'all ice shelves in domain'
+        else:
+            title += region_names[region]
+        # Extract depth range
+        z_vals = var[len(region+'_'+result+'_btw_'):-1]
+        z_shallow = -1*int(z_vals[:z_vals.index('_')])
+        z_deep = -1*int(z_vals[:z_vals.index('_')+1:])
+        z0 = [z_deep, z_shallow]
+        title += ' between '+str(-z_shallow)+'-'+str(-z_deep)+'m'
+        if mass_balance:
+            result = 'massloss'
     elif var.endswith('_temp') or var.endswith('_salt') or var.endswith('_density') or var.endswith('_age') or var.endswith('_tminustf'):
         option = 'avg_3d'
         title = 'Volume-averaged '

@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp, pearsonr
 from scipy.io import loadmat
 import os
 
-from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon
+from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d
 from ..plot_utils.colours import set_colours, choose_n_colours
@@ -2368,7 +2368,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
             # This is the first year: read the grid and set up array
             obs_lon, obs_lat, obs_depth, obs_dA = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
             # Get MITgcm's ice mask on this grid
-            obs_ice_mask = np.transpose(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat))
+            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
             obs_ice_mask[obs_ice_mask < 0.5] = 0
             obs_ice_mask[obs_ice_mask >= 0.5] = 1
             obs_ice_mask = obs_ice_mask.astype(bool)
