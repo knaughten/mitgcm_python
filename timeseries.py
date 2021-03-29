@@ -67,6 +67,8 @@ def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_inde
         melt = np.zeros(num_time)
         for t in range(num_time):
             melt[t] = total_melt(ismr[t,:], mask, grid, result=result)
+        # Mask out any NaNs (can happen when no cells fall within the given depth range during a coupled run)
+        melt = np.ma.masked_where(np.isnan(melt), melt)
         return melt
 
 
