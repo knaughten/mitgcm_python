@@ -2521,27 +2521,27 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
         obs_date.append(datetime.date(obs_years[t],2,1))
 
     # Plot
-fig = plt.figure(figsize=(7,7))
-gs = plt.GridSpec(2,1)
-gs.update(left=0.1, right=0.98, bottom=0.15, top=0.95, hspace=0.25)
-for n in range(num_regions):
-    ax = plt.subplot(gs[n,0])
-    ax.grid(linestyle='dotted')
-    for k in range(num_depths):
-        # Plot model timeseries
-        ax.plot_date(time, model_temp[n,k,:], '-', color=depth_colours[k], linewidth=1, label='Model'+depth_titles[k])
-    for k in range(num_depths):  # Second loop so we get the right legend order
-        # Plot observations as points on top
-        ax.plot_date(obs_date, obs_temp[n,k,:], 'o', color=depth_colours[k], markersize=4, label='Observations'+depth_titles[k])
-    ax.set_xlim([time[0], time[-1]])
-    ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
-    plt.title(region_titles[n], fontsize=16)
-    if n==0:
-        plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
-    if n==num_regions-1:
-        plt.xlabel('Year', fontsize=12)        
-ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
-finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
+    fig = plt.figure(figsize=(7,7))
+    gs = plt.GridSpec(2,1)
+    gs.update(left=0.1, right=0.98, bottom=0.15, top=0.95, hspace=0.25)
+    for n in range(num_regions):
+        ax = plt.subplot(gs[n,0])
+        ax.grid(linestyle='dotted')
+        for k in range(num_depths):
+            # Plot model timeseries
+            ax.plot_date(time, model_temp[n,k,:], '-', color=depth_colours[k], linewidth=1, label='Model'+depth_titles[k])
+        for k in range(num_depths):  # Second loop so we get the right legend order
+            # Plot observations as points on top
+            ax.plot_date(obs_date, obs_temp[n,k,:], 'o', color=depth_colours[k], markersize=4, label='Observations'+depth_titles[k])
+        ax.set_xlim([time[0], time[-1]])
+        ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
+        plt.title(region_titles[n], fontsize=16)
+        if n==0:
+            plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+        if n==num_regions-1:
+            plt.xlabel('Year', fontsize=12)        
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
+    finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
     
