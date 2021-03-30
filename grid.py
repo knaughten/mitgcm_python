@@ -1051,8 +1051,8 @@ def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
 
     # Calculate differentials
     dA = np.transpose(dA_from_latlon(lon, lat))
-    z_edges = np.concatenate((np.array([0]), 0.5*(depth[:-1]+depth[1:]), 2*depth[-1]-depth[-2]))
-    dz = z_edges[1:] - z_edges[:-1]
+    z_edges = np.concatenate((np.array([0]), 0.5*(depth[:-1]+depth[1:]), np.array([2*depth[-1]-depth[-2]])))
+    dz = z_edges[:-1] - z_edges[1:]
     dV = xy_to_xyz(dA, shape)*z_to_xyz(dz, shape)
 
     if xy_dim > 1:

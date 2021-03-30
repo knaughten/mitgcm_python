@@ -2463,6 +2463,10 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     obs_num_years = len(obs_years)
     regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
     region_titles = [r'$\bf{a}$. Shelf break trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    depth_key = ['btw_200_700m', 'below_700m']
+    depth_titles = [' (200-700m)', ' (below 700m)']
+    num_depths = len(depth_key)
+    depth_colours = ['blue', 'red']
     num_regions = len(regions)
     start_year = 1979
     smooth = 24
@@ -2476,65 +2480,68 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     t0 = index_year_start(time_tmp, start_year)
     time_tmp = time_tmp[t0:]
     for n in range(num_regions):
-        temp_tmp = read_netcdf(model_file, regions[n]+'_temp_btw_200_700m')[t0:]
-        temp_smooth, time_smooth = moving_average(temp_tmp, smooth, time=time_tmp)
-        if model_temp is None:
-            model_temp = np.empty([num_regions, temp_smooth.size])
-            time = time_smooth
-        model_temp[n,:] = temp_smooth
+        for k in range(num_depths):
+            temp_tmp = read_netcdf(model_file, regions[n]+'_temp_'+depth_key[k])[t0:]
+            temp_smooth, time_smooth = moving_average(temp_tmp, smooth, time=time_tmp)
+            if model_temp is None:
+                model_temp = np.empty([num_regions, num_depths, temp_smooth.size])
+                time = time_smooth
+            model_temp[n,k,:] = temp_smooth
 
-    # Read observations for each year: mean and standard deviation averaged over each region
+    # Read observations for each year, averaged over each region
     print 'Reading observations'
-    obs_temp_mean = None
-    obs_temp_std = None
-    obs_mid_date = []
-    obs_date_err = []
+    obs_temp = None
+    obs_date = []
     for t in range(obs_num_years):
         print '...'+str(obs_years[t])
-        f = loadmat(obs_file_head+str(obs_years[t]
-        )+obs_file_tail)
-        if obs_data is None:
+        f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
+        if obs_temp is None:
             # This is the first year: read the grid and set up array
             obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=3, z_dim=3)
             # Get MITgcm's ice mask on this grid
-            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
+            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon[0,:], obs_lat[0,:])
             obs_ice_mask[obs_ice_mask < 0.5] = 0
             obs_ice_mask[obs_ice_mask >= 0.5] = 1
-            obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[0], obs_lon.shape[1], obs_lon.shape[2]])
-            obs_temp_mean = np.empty([num_regions, obs_num_years])
-            obs_temp_std = np.empty([num_regions, obs_num_years])
-        # Read 3D temperature: mean and std
-        obs_temp_mean_3d = np.transpose(f['PTmean'])
-        obs_std_mean_3d = np.transpose(f['PTstd'])
+            obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[2], obs_lon.shape[1], obs_lon.shape[0]])
+            obs_temp = np.ma.empty([num_regions, num_depths, obs_num_years])
+        # Read 3D temperature
+        obs_temp_3d = np.transpose(f['PTmean'])
+        obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_mean_3d), obs_temp_mean_3d)
         for n in range(num_regions):
             # Volume-average over the given region and depth bounds, excluding cavities and regions with no data
             [xmin, xmax, ymin, ymax] = region_bounds[regions[n]]
-            mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*(obs_depth >= z_deep)*(obs_depth <= z_shallow)*obs_np.invert(obs_ice_mask)
+            mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
             mask = mask.astype(float)
-            mask[obs_temp_mean_3d.mask] = 0
-            obs_temp_mean[n,t] = np.sum(obs_temp_mean_3d*obs_dV*mask)/np.sum(obs_dV*mask)
-            obs_temp_std[n,t] = np.sum(obs_temp_std_3d*obs_dV*mask)/np.sum(obs_dV*mask)
-        # Also save the time range: from mid-December (previous year) to mid-March
-        start_date = datetime.date(obs_num_years[t]-1,12,15)
-        end_date = datetime.date(obs_num_years[t],3,15)
-        obs_mid_date.append(start_date + (end_date-start_date)/2)
-        obs_date_err.append((end_date-start_date)/2)
+            mask[obs_temp_3d.mask] = 0
+            masks = [mask*(obs_depth >= z_deep)*(obs_depth <= z_shallow), mask*(obs_depth < z_deep)]
+            for k in range(num_depths):
+                if np.count_nonzero(masks[k])==0:
+                    # There are no data points for this region in this year.
+                    obs_temp[n,k,t] = np.ma.masked
+                else:
+                    obs_temp[n,k,t] = np.sum(obs_temp_3d*obs_dV*masks[k])/np.sum(obs_dV*masks[k])
+        # Assume the date is 1 February
+        obs_date.append(datetime.date(obs_years[t],2,1))
 
     # Plot
-    fig, gx = set_panels('3x1C0')
+    fig = plt.figure(figsize=(8,9))
+    gs = plt.GridSpec(3,1)
+    gs.update(left=0.08, right=0.98, bottom=0.12, top=0.95, hspace=0.25)
     for n in range(num_regions):
         ax = plt.subplot(gs[n,0])
         ax.grid(linestyle='dotted')
-        # Plot model timeseries
-        ax.plot_date(time, model_temp[n,:], color='blue', linewidth=1.5, label='Model')
-        # Plot observations as x-y error bars on top
-        ax.errorbar(obs_mid_date, obs_temp_mean[n,:], xerr=obs_date_err, yerr=obs_temp_std[n,:], color='black', linewidth=1, fmt='none', capsize=4, label='Observations')
-        plt.title(region_titles[n], fontsize=18)
+        for k in range(num_depths):
+            # Plot model timeseries
+            ax.plot_date(time, model_temp[n,:], '-', color=depth_colours[k], linewidth=1.5, label='Model'+depth_titles[k])
+            # Plot observations as stars on top
+            ax.plot_date(obs_date, obs_temp[n,:], '*', color=depth_colours[k], markersize=5, label='Observations'+depth_titles[k])
+        ax.set_xlim([time[0], time[-1]])
+        plt.title(region_titles[n], fontsize=16)
         if n==0:
-            plt.ylabel(deg_string+'C', fontsize=14)
-        if n==len(shelf)-1:
-            plt.xlabel('Year', fontsize=14)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=2, fontsize=12)
+            plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+        if n==num_regions-1:
+            plt.xlabel('Year', fontsize=12)        
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.5), ncol=2, fontsize=12)
     finished_plot(fig) #, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
