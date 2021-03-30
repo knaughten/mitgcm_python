@@ -2461,32 +2461,29 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     obs_file_tail = '.mat'
     obs_years = years_with_obs(obs_dir)
     obs_num_years = len(obs_years)
-    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_titles = [r'$\bf{a}$. Shelf break trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    regions = ['pine_island_bay', 'dotson_bay']
+    region_titles = [r'$\bf{a}$. Pine Island Bay', r'$\bf{b}$. Dotson front']
     depth_key = ['btw_200_700m', 'below_700m']
     depth_titles = [' (200-700m)', ' (below 700m)']
     num_depths = len(depth_key)
     depth_colours = ['blue', 'red']
     num_regions = len(regions)
     start_year = 1979
-    smooth = 24
     z_shallow = -200
     z_deep = -700
 
     # Read model timeseries
     print 'Reading model timeseries'
     model_temp = None
-    time_tmp = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
-    t0 = index_year_start(time_tmp, start_year)
-    time_tmp = time_tmp[t0:]
+    time = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
+    t0 = index_year_start(time, start_year)
+    time = time[t0:]
     for n in range(num_regions):
         for k in range(num_depths):
             temp_tmp = read_netcdf(model_file, regions[n]+'_temp_'+depth_key[k])[t0:]
-            temp_smooth, time_smooth = moving_average(temp_tmp, smooth, time=time_tmp)
             if model_temp is None:
-                model_temp = np.empty([num_regions, num_depths, temp_smooth.size])
-                time = time_smooth
-            model_temp[n,k,:] = temp_smooth
+                model_temp = np.empty([num_regions, num_depths, temp_tmp.size])
+            model_temp[n,k,:] = temp_tmp
 
     # Read observations for each year, averaged over each region
     print 'Reading observations'
@@ -2506,7 +2503,7 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
             obs_temp = np.ma.empty([num_regions, num_depths, obs_num_years])
         # Read 3D temperature
         obs_temp_3d = np.transpose(f['PTmean'])
-        obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_mean_3d), obs_temp_mean_3d)
+        obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_3d), obs_temp_3d)
         for n in range(num_regions):
             # Volume-average over the given region and depth bounds, excluding cavities and regions with no data
             [xmin, xmax, ymin, ymax] = region_bounds[regions[n]]
@@ -2524,25 +2521,27 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
         obs_date.append(datetime.date(obs_years[t],2,1))
 
     # Plot
-    fig = plt.figure(figsize=(8,9))
-    gs = plt.GridSpec(3,1)
-    gs.update(left=0.08, right=0.98, bottom=0.12, top=0.95, hspace=0.25)
-    for n in range(num_regions):
-        ax = plt.subplot(gs[n,0])
-        ax.grid(linestyle='dotted')
-        for k in range(num_depths):
-            # Plot model timeseries
-            ax.plot_date(time, model_temp[n,:], '-', color=depth_colours[k], linewidth=1.5, label='Model'+depth_titles[k])
-            # Plot observations as stars on top
-            ax.plot_date(obs_date, obs_temp[n,:], '*', color=depth_colours[k], markersize=5, label='Observations'+depth_titles[k])
-        ax.set_xlim([time[0], time[-1]])
-        plt.title(region_titles[n], fontsize=16)
-        if n==0:
-            plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
-        if n==num_regions-1:
-            plt.xlabel('Year', fontsize=12)        
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.5), ncol=2, fontsize=12)
-    finished_plot(fig) #, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
+fig = plt.figure(figsize=(7,7))
+gs = plt.GridSpec(2,1)
+gs.update(left=0.1, right=0.98, bottom=0.15, top=0.95, hspace=0.25)
+for n in range(num_regions):
+    ax = plt.subplot(gs[n,0])
+    ax.grid(linestyle='dotted')
+    for k in range(num_depths):
+        # Plot model timeseries
+        ax.plot_date(time, model_temp[n,k,:], '-', color=depth_colours[k], linewidth=1, label='Model'+depth_titles[k])
+    for k in range(num_depths):  # Second loop so we get the right legend order
+        # Plot observations as points on top
+        ax.plot_date(obs_date, obs_temp[n,k,:], 'o', color=depth_colours[k], markersize=4, label='Observations'+depth_titles[k])
+    ax.set_xlim([time[0], time[-1]])
+    ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
+    plt.title(region_titles[n], fontsize=16)
+    if n==0:
+        plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+    if n==num_regions-1:
+        plt.xlabel('Year', fontsize=12)        
+ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
+finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
     
