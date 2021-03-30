@@ -2366,7 +2366,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
         f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
         if obs_data is None:
             # This is the first year: read the grid and set up array
-            obs_lon, obs_lat, obs_depth, obs_dA = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
+            obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
             # Get MITgcm's ice mask on this grid
             obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
             obs_ice_mask[obs_ice_mask < 0.5] = 0
@@ -2446,6 +2446,99 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
             plt.title('std', fontsize=12)        
         plt.text(0.5, 0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
+
+
+# Make a 3-panel timeseries plot showing ERA5-forced temperature (200-700m) in the three regions, with Pierre's obs as translucent bars on top.
+def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
+
+    obs_dir = real_dir(obs_dir)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    model_file = base_dir + 'PAS_ERA5/output/timeseries.nc'
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    obs_file_head = obs_dir + 'ASEctd_griddedMean'
+    obs_file_tail = '.mat'
+    obs_years = years_with_obs(obs_dir)
+    obs_num_years = len(obs_years)
+    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+    region_titles = [r'$\bf{a}$. Shelf break trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    num_regions = len(regions)
+    start_year = 1979
+    smooth = 24
+    z_shallow = -200
+    z_deep = -700
+
+    # Read model timeseries
+    print 'Reading model timeseries'
+    model_temp = None
+    time_tmp = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
+    t0 = index_year_start(time_tmp, start_year)
+    time_tmp = time_tmp[t0:]
+    for n in range(num_regions):
+        temp_tmp = read_netcdf(model_file, regions[n]+'_temp_btw_200_700m')[t0:]
+        temp_smooth, time_smooth = moving_average(temp_tmp, smooth, time=time_tmp)
+        if model_temp is None:
+            model_temp = np.empty([num_regions, temp_smooth.size])
+            time = time_smooth
+        model_temp[n,:] = temp_smooth
+
+    # Read observations for each year: mean and standard deviation averaged over each region
+    print 'Reading observations'
+    obs_temp_mean = None
+    obs_temp_std = None
+    obs_mid_date = []
+    obs_date_err = []
+    for t in range(obs_num_years):
+        print '...'+str(obs_years[t])
+        f = loadmat(obs_file_head+str(obs_years[t]
+        )+obs_file_tail)
+        if obs_data is None:
+            # This is the first year: read the grid and set up array
+            obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=3, z_dim=3)
+            # Get MITgcm's ice mask on this grid
+            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
+            obs_ice_mask[obs_ice_mask < 0.5] = 0
+            obs_ice_mask[obs_ice_mask >= 0.5] = 1
+            obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[0], obs_lon.shape[1], obs_lon.shape[2]])
+            obs_temp_mean = np.empty([num_regions, obs_num_years])
+            obs_temp_std = np.empty([num_regions, obs_num_years])
+        # Read 3D temperature: mean and std
+        obs_temp_mean_3d = np.transpose(f['PTmean'])
+        obs_std_mean_3d = np.transpose(f['PTstd'])
+        for n in range(num_regions):
+            # Volume-average over the given region and depth bounds, excluding cavities and regions with no data
+            [xmin, xmax, ymin, ymax] = region_bounds[regions[n]]
+            mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*(obs_depth >= z_deep)*(obs_depth <= z_shallow)*obs_np.invert(obs_ice_mask)
+            mask = mask.astype(float)
+            mask[obs_temp_mean_3d.mask] = 0
+            obs_temp_mean[n,t] = np.sum(obs_temp_mean_3d*obs_dV*mask)/np.sum(obs_dV*mask)
+            obs_temp_std[n,t] = np.sum(obs_temp_std_3d*obs_dV*mask)/np.sum(obs_dV*mask)
+        # Also save the time range: from mid-December (previous year) to mid-March
+        start_date = datetime.date(obs_num_years[t]-1,12,15)
+        end_date = datetime.date(obs_num_years[t],3,15)
+        obs_mid_date.append(start_date + (end_date-start_date)/2)
+        obs_date_err.append((end_date-start_date)/2)
+
+    # Plot
+    fig, gx = set_panels('3x1C0')
+    for n in range(num_regions):
+        ax = plt.subplot(gs[n,0])
+        ax.grid(linestyle='dotted')
+        # Plot model timeseries
+        ax.plot_date(time, model_temp[n,:], color='blue', linewidth=1.5, label='Model')
+        # Plot observations as x-y error bars on top
+        ax.errorbar(obs_mid_date, obs_temp_mean[n,:], xerr=obs_date_err, yerr=obs_temp_std[n,:], color='black', linewidth=1, fmt='none', capsize=4, label='Observations')
+        plt.title(region_titles[n], fontsize=18)
+        if n==0:
+            plt.ylabel(deg_string+'C', fontsize=14)
+        if n==len(shelf)-1:
+            plt.xlabel('Year', fontsize=14)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.1), ncol=2, fontsize=12)
+    finished_plot(fig) #, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
+    
+         
+    
                     
             
                         
