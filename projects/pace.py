@@ -470,48 +470,6 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     finished_plot(fig, fig_name='addmass.png')
 
 
-# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top.
-def plot_ismr_timeseries_obs (timeseries_file, start_year=1979, fig_name=None):
-
-    # Could do: option for ensemble with mean on top
-
-    shelf = ['pig', 'dotson', 'getz']
-    obs = [pig_melt_years, dotson_melt_years, getz_melt_years]
-    obs_month = 2  # Assume all obs in February
-
-    # Read data and trim the spinup
-    time = netcdf_time(timeseries_file, monthly=False)
-    for t in range(time.size):
-        if time[t].year == start_year:
-            t0 = t
-            break
-    time = time[t0:]
-    model_melt = []
-    for s in shelf:
-        model_melt.append(read_netcdf(timeseries_file, s+'_massloss')[t0:])
-
-    # Set up the plot
-    fig, gs = set_panels('3x1C0')
-    gs.update(bottom=0.05, top=0.9)
-    for n in range(len(shelf)):
-        ax = plt.subplot(gs[n,0])
-        # Plot the model timeseries
-        ax.plot_date(time, model_melt[n], '-', color='blue')
-        # Loop over observational years and plot the range
-        num_obs = len(obs[n]['year'])
-        for t in range(num_obs):
-            obs_date = datetime.date(obs[n]['year'][t], obs_month, 1)
-            ax.errorbar(obs_date, obs[n]['melt'][t], yerr=obs[n]['err'][t], fmt='none', color='red', capsize=4)
-        ax.grid(True)
-        ax.set_title(region_names[shelf[n]], fontsize=18)
-        if n == 0:
-            ax.set_ylabel('Gt/y', fontsize=14)
-        if n != len(shelf)-1:
-            ax.set_xticklabels([])
-    plt.suptitle('Ice shelf mass loss compared to observations', fontsize=24)
-    finished_plot(fig, fig_name=fig_name)
-
-
 # Determine the most spiky, least spiky, and medium ensemble members (from the first 10) based on their PIG and Dotson melt rates.
 def order_ensemble_std (base_dir='./'):
 
@@ -2448,7 +2406,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
 
 
-# Make a 3-panel timeseries plot showing ERA5-forced temperature (200-700m) in the three regions, with Pierre's obs as translucent bars on top.
+# Make a 2-panel timeseries plot showing ERA5-forced temperature (200-700m) in Pine Island Bay and Dotson, with Pierre's obs as markers on top.
 def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
 
     obs_dir = real_dir(obs_dir)
@@ -2544,7 +2502,47 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
-    
+# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top.
+def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    model_file = base_dir + 'PAS_ERA5/output/timeseries.nc'
+    start_year = 1979
+    shelf = ['pig', 'dotson', 'getz']
+    shelf_titles = [r'$\bf{a}$. Pine Island Ice Shelf', r'$\bf{b}$. Dotson Ice Shelf', r'$\bf{c}$. Getz Ice Shelf']
+    num_shelf = len(shelf)
+    obs = [pig_melt_years, dotson_melt_years, getz_melt_years]
+
+    # Read data and trim the spinup
+    time = netcdf_time(model_file, monthly=False)
+    t0 = index_year_start(time, start_year)
+    time = time[t0:]
+    model_melt = np.empty([num_shelves, time.size])
+    for n in range(num_shelves):
+        model_melt[n,:] = read_netcdf(timeseries_file, s+'_massloss')[t0:]
+
+    # Set up the plot
+    fig = plt.figure(figsize=(8,9))
+    gs = plt.GridSpec(left=0.1, right=0.93, bottom=0.12, top=0.95, hspace=0.25)
+    for n in range(num_shelves):
+        ax = plt.subplot(gs[n,0])
+        # Plot the model timeseries
+        ax.plot_date(time, model_melt[n,:], '-', color='blue', label='Model')
+        # Loop over observational years and plot the range
+        num_obs = len(obs[n]['year'])
+        for t in range(num_obs):
+            # Plot all observations on 1 Feb
+            obs_date = datetime.date(obs[n]['year'][t], 2, 1)
+            ax.errorbar(obs_date, obs[n]['melt'][t], yerr=obs[n]['err'][t], fmt='none', color='black', capsize=4, label=('Observations' if t==0 else None))
+        ax.grid(True)
+        ax.set_title(region_names[shelf[n]], fontsize=16)
+        if n == 0:
+            ax.set_ylabel('Ice shelf basal mass loss (Gt/y)', fontsize=12)
+        if n == num_shelves-1:
+            ax.set_xlabel('Year', fontsize=12)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
+    finished_plot(fig) #, fig_name=fig_dir+'ismr_timeseries_obs.png', dpi=300)
                     
             
                         
