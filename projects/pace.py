@@ -2552,10 +2552,8 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
 # Helper function to construct the NSDIC file name for the given year and month.
 def nsidc_fname (year, month):
 
-    fname = 'seaice_conc_monthly_sh_'
-    if year < 1987 or (year == 1987 and month < 8):
-        fname += '_n07_'
-    elif year < 1992:
+    fname = 'seaice_conc_monthly_sh'
+    if year < 1992:
         fname += '_f08_'
     elif year < 1995 or (year == 1995 and month < 10):
         fname += '_f11_'
@@ -2576,7 +2574,7 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
     model_dir = base_dir + 'PAS_ERA5/output/'
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
-    start_year = 1979
+    start_year = 1988
     end_year = 2019
     season_months = [[12, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]]
     season_titles = ['DJF', 'MAM', 'JJA', 'SON']
@@ -2585,6 +2583,7 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
     [vmin, vmax] = [0, 1]
 
     # Read and seasonally average model output
+    print 'Reading model output'
     model_aice = np.zeros([num_seasons, grid.ny, grid.nx])
     ndays_int = np.zeros(num_seasons)
     for year in range(start_year, end_year+1):
@@ -2599,24 +2598,27 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
     model_aice = mask_land_ice(model_aice, grid, time_dependent=True)
 
     # Read and seasonally average NSIDC data
+    print 'Reading NSIDC obs'
     nsidc_aice = None
     ndays_int = np.zeros(num_seasons)
     for year in range(start_year, end_year+1):
+        print '...'+str(year)
         for n in range(num_seasons):
             for month in season_months[n]:
+                if year == 1988 and month == 1:
+                    # Missing data for this month
+                    continue
                 file_path = nsidc_dir + nsidc_fname(year, month)
                 if nsidc_aice is None:
                     # Read grid and set up the master array
                     nsidc_lon = read_netcdf(file_path, 'longitude')
                     nsidc_lat = read_netcdf(file_path, 'latitude')
-                    nsidc_land_mask = np.squeeze(read_netcdf(file_path, 'stdev_of_seaice_conc_monthly_cdr').mask)
-                    nsidc_aice = np.zeros([num_seasons, nsidc_lat.shape[0], nsidc_lat.shape[1]])
+                    nsidc_aice = np.ma.zeros([num_seasons, nsidc_lat.shape[0], nsidc_lat.shape[1]])
                 nsidc_aice_tmp = np.squeeze(read_netcdf(file_path, 'seaice_conc_monthly_cdr'))
                 ndays = days_per_month(month, year)
                 nsidc_aice[n,:] += nsidc_aice_tmp*ndays
                 ndays_int[n] += ndays
     nsidc_aice /= ndays_int[:,None,None]
-    nsidc_aice = np.ma.masked_where(nsidc_land_mask[None,:,:], nsidc_aice)
 
     # Plot
     fig = plt.figure(figsize=(7,12))
@@ -2629,19 +2631,26 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         img = latlon_plot(model_aice[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
         if n == 0:
             ax.set_title('Model', fontsize=14)
+        ax.set_xticks([])
+        ax.set_yticks([])
         # Plot obs
         ax = plt.subplot(gs[n,1])
         shade_background(ax)
-        ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax)
+        ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
         if n == 0:
             ax.set_title('Observations', fontsize=14)
+        ax.set_xticks([])
+        ax.set_yticks([])
         # Season name on left
-        plt.text(0.19, 0.85-0.25*season, season_titles[n], fontsize=14, ha='right', va='center', transform=fig.transFigure)
+        plt.text(0.19, 0.85-0.25*n, season_titles[n], fontsize=14, ha='right', va='center', transform=fig.transFigure)
         # Colourbar below
         if n == num_seasons - 1:
             cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
-    finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png')
-            
+    plt.suptitle('Sea ice concentration ('+str(start_year)+'-'+str(end_year)+')', fontsize=18)
+    finished_plot(fig) #, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
+
     
     
     
