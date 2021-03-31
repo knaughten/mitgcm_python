@@ -1964,6 +1964,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     year_start_pace = 1920
     year_start_era5 = 1979
     year_end = 2013
+    base_period = 30*months_per_year
     smooth = 24
 
     # Read all the data and take 2-year running means
@@ -2023,6 +2024,13 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
             slope_members.append(slope)
         print 'Mean of trend = '+str(np.mean(slope_members))
 
+    # Calculate mean and standard deviation over first 30 years (across all ensemble members) for each variable
+    base_mean = []
+    base_std = []
+    for v in range(num_var):
+        base_mean.append(np.mean(pace_data[v,:,:base_period]))
+        base_std.append(np.std(pace_data[v,:,:base_period]))    
+
     # Set up plot
     fig = plt.figure(figsize=(5,12))
     gs = plt.GridSpec(3,1)
@@ -2056,7 +2064,13 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
             plt.xlabel('Year', fontsize=12)
             ax.legend(loc='lower center', bbox_to_anchor=(0.43,-0.33), ncol=3, fontsize=12)
         plt.title(var_titles[v], fontsize=15)
-    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
+        # Now add second y-axis showing difference in standard deviations from the mean
+        limits = ax.get_ylim()
+        std_limits = [(l-base_mean[v])/base_std[v] for l in limits]
+        ax2 = ax.twinx()
+        ax2.set_ylim(std_limits)
+        ax2.set_ylabel('anomaly in standard deviations', fontsize=12)
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
@@ -2218,7 +2232,8 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     model_num_time = (model_end_year-model_year0+1)*months_per_year
     model_years = np.arange(model_start_year, model_end_year+1)
     model_num_years = model_years.size
-    obs_smooth = 25
+    obs_smooth = 51
+    obs_smooth_below = -100
 
     # Read precomputed Hovmollers from file
     print 'Reading model output'
@@ -2262,8 +2277,10 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
                 mask = xy_to_xyz(mask, [obs_lat.size, obs_lon.size, obs_depth.size]).astype(float)
                 mask[obs_var_3d.mask] = 0
                 obs_profile = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
-                # Smooth with 25-m moving average (the data points are close enough to 1m spacing)
-                obs_profile = moving_average(obs_profile, obs_smooth, keep_edges=True)
+                # Make a smoothed version and overwrite with it below 100m depth
+                obs_profile_smoothed = moving_average(obs_profile, obs_smooth, keep_edges=True)
+                index = obs_depth < obs_smooth_below
+                obs_profile[index] = obs_profile_smoothed[index]
                 obs_data[r,v,t,:] = obs_profile
 
     # Calculate time-mean and standard deviation from each source
