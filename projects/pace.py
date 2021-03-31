@@ -2032,11 +2032,12 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         base_std.append(np.std(pace_data[v,:,:base_period]))    
 
     # Set up plot
-    fig = plt.figure(figsize=(5,12))
+    fig = plt.figure(figsize=(5.5,12))
     gs = plt.GridSpec(3,1)
-    gs.update(left=0.14, right=0.98, bottom=0.08, top=0.97, hspace=0.25)
+    gs.update(left=0.14, right=0.86, bottom=0.08, top=0.97, hspace=0.25)
     for v in range(num_var):
         ax = plt.subplot(gs[v,0])
+        ax.tick_params(direction='in')
         # Plot ensemble members in thinner light blue
         labels = ['PACE ensemble'] + [None for n in range(num_ens-1)]
         for n in range(num_ens):
@@ -2062,15 +2063,17 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         plt.ylabel(var_units[v], fontsize=12)
         if v==2:
             plt.xlabel('Year', fontsize=12)
-            ax.legend(loc='lower center', bbox_to_anchor=(0.43,-0.33), ncol=3, fontsize=12)
+            ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.33), ncol=3, fontsize=12)
         plt.title(var_titles[v], fontsize=15)
         # Now add second y-axis showing difference in standard deviations from the mean
         limits = ax.get_ylim()
         std_limits = [(l-base_mean[v])/base_std[v] for l in limits]
         ax2 = ax.twinx()
+        ax2.tick_params(direction='in')
         ax2.set_ylim(std_limits)
-        ax2.set_ylabel('anomaly in standard deviations', fontsize=12)
-    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
+        if v==0:
+            ax2.set_ylabel('anomaly in standard deviations', fontsize=12)    
+    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
