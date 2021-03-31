@@ -2063,7 +2063,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 
     num_ens = 10  # TODO: update to 20 when finished
-    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_400_700m', 'pine_island_bay_temp_btw_400_700m', 'dotson_bay_temp_btw_400_700m', 'amundsen_shelf_salt_btw_400_700m', 'pine_island_bay_salt_btw_400_700m', 'dotson_bay_salt_btw_400_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
+    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
     units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
     num_var = len(var_names)
     base_dir = real_dir(base_dir)
@@ -2109,7 +2109,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
     year_start = 1920
     smooth = 24
-    max_cutoff = 0.5
+    max_cutoff = -0.2
     num_cutoff = 50
 
     time = None
@@ -2191,89 +2191,6 @@ def years_with_obs (obs_dir):
     return obs_years
 
 
-# Plot a lat-lon map of the maximum temperature below 200m depth, in Pierre's climatology, the model, and the difference.
-def plot_tmax_model_obs (obs_dir, base_dir='./', fig_dir='./'):
-
-    # TODO:
-    # Calculate separately a 1979-2019 ERA5 summertime climatology of model
-    # No longer need helper function, but could save it for later cast plot
-    # Don't interpolate data to MITgcm grid, but overlay land mask and ice shelf fronts
-    # Could plot difference on Pierre's grid?
-    # Could also come back to this later...does it show anything the casts don't?
-
-    obs_dir = real_dir(obs_dir)
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-    output_dir = base_dir + 'PAS_ERA5/output/'
-    grid_path = base_dir + 'PAS_grid/'
-    grid = Grid(grid_path)
-    obs_file = obs_dir + 'ASEctd_griddedMean.mat'
-    obs_years = years_with_obs(obs_dir)
-    z0 = -200
-
-    # Average model output over the summer months in years with observations
-    # (December the previous year to March the current year)
-    print 'Reading model output'
-    model_temp = np.zeros([grid.nz, grid.ny, grid.nx])
-    ndays = 0
-    for year in obs_years:
-        print '...'+str(year)
-        for curr_year, curr_month in zip([year-1]+[year]*3, [12, 1, 2, 3]):
-            file_path = output_dir + str(curr_year) + '01/MITgcm/output.nc'
-            ndays_curr = days_per_month(curr_month, curr_year)
-            model_temp += read_netcdf(file_path, 'THETA', time_index=curr_month-1)*ndays_curr
-            ndays += ndays_curr
-    model_temp /= ndays
-    # Get maximum temperature below 200m
-    model_z_3d = z_to_xyz(grid.z, grid)
-    model_temp = mask_3d(model_temp, grid)
-    model_temp = np.ma.masked_where(model_z_3d >= z0, model_temp)
-    model_tmax = np.amax(model_temp, axis=0)
-
-    # Read Pierre's mean file
-    print 'Reading observations'
-    f = loadmat(obs_file)
-    obs_lon = np.squeeze(f['lonvec'])
-    obs_lat = np.squeeze(f['latvec'])
-    obs_depth = np.squeeze(f['depthvec'])
-    obs_temp = np.transpose(f['PTmean'])
-    # Convert NaNs into mask
-    obs_temp = np.ma.masked_where(np.isnan(obs_temp), obs_temp)
-    # Find maximum temperature below 200m
-    obs_z_3d = z_to_xyz(obs_depth, [obs_lat.size, obs_lon.size])
-    obs_temp = np.ma.masked_where(obs_z_3d >= z0, obs_temp)
-    obs_tmax = np.transpose(np.amax(obs_temp, axis=0))
-
-    # Get min and max values within bounds of observation region
-    xmin = np.amin(obs_lon)
-    xmax = np.amax(obs_lon)
-    ymin = np.amin(obs_lat)
-    ymax = np.amax(obs_lat)
-    vmin_model, vmax_model = var_min_max(model_tmax, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    vmin_abs = min(vmin_model, np.amin(obs_tmax))
-    vmax_abs = max(vmax_model, np.amax(obs_tmax))
-
-    # Plot the model, obs, and difference
-    print 'Plotting'
-    fig = plt.figure(figsize=(10,4))
-    gs = plt.GridSpec(1,3)
-    gs.update(left=0.05, right=0.99, bottom=0.1, top=0.85, wspace=0.02)
-    cax_abs = fig.add_axes([0.05, 0.05, 0.3, 0.02])
-    cax_diff = fig.add_axes([0.69, 0.05, 0.3, 0.02])
-    data = [model_tmax, obs_tmax, model_tmax-obs_tmax]
-    vmin = [vmin_abs, vmin_abs, None]
-    vmax = [vmax_abs, vmax_abs, None]
-    ctype = ['parula', 'parula', 'plusminus']
-    cax = [None, cax_abs, cax_diff]
-    title = ['MITgcm', 'Observations', 'Difference']
-    for n in range(3):
-        ax = plt.subplot(gs[0,n])
-        img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=title[n])
-        if cax[n] is not None:
-            cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
-    finished_plot(fig) #, fig_name=fig_dir+'tmax_model_obs.png', dpi=300)
-
-
 # Make a 3x2 plot showing temperature and salinity casts in 3 regions, comparing ERA5-forced output to Pierre's climatology.
 def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
 
@@ -2301,6 +2218,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     model_num_time = (model_end_year-model_year0+1)*months_per_year
     model_years = np.arange(model_start_year, model_end_year+1)
     model_num_years = model_years.size
+    obs_smooth = 25
 
     # Read precomputed Hovmollers from file
     print 'Reading model output'
@@ -2343,7 +2261,10 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
                 mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
                 mask = xy_to_xyz(mask, [obs_lat.size, obs_lon.size, obs_depth.size]).astype(float)
                 mask[obs_var_3d.mask] = 0
-                obs_data[r,v,t,:] = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
+                obs_profile = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
+                # Smooth with 25-m moving average (the data points are close enough to 1m spacing)
+                obs_profile = moving_average(obs_profile, obs_smooth, keep_edges=True)
+                obs_data[r,v,t,:] = obs_profile
 
     # Calculate time-mean and standard deviation from each source
     model_mean = np.mean(model_data, axis=-2)
