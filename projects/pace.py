@@ -1956,9 +1956,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     fig_dir = real_dir(fig_dir)
 
     num_ens = 10  # TODO: update to 20 when finished
-    var_names = ['all_massloss', 'amundsen_shelf_temp_btw_400_700m', 'amundsen_shelf_salt_btw_400_700m']
-    var_titles = [r'$\bf{a}$. Total basal mass loss from ice shelves', r'$\bf{b}$. Temperature on shelf (400-700m)', r'$\bf{c}$. Salinity on shelf (400-700m)']
-    var_units = [' Gt/y', deg_string+'C', ' psu']
+    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'all_massloss']
+    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Total basal mass loss from ice shelves']
+    var_units = [' m/s', deg_string+'C', ' Gt/y']
     num_var = len(var_names)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
     year_start_pace = 1920
@@ -2103,7 +2103,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.nc', fig_dir='./'):
 
     num_ens = 10  # TODO: Update to 20
-    var_name = 'amundsen_shelf_temp_btw_400_700m'
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
@@ -2172,7 +2172,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     plt.ylabel('%', fontsize=12)
     plt.title(r'$\bf{b}$. Significance of ensemble trend', fontsize=14)
     ax.grid(linestyle='dotted')
-    plt.suptitle('Sensitivity of temperature trend on shelf (400-700m) to convection', fontsize=18)
+    plt.suptitle('Sensitivity of temperature trend on shelf (200-700m) to convection', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'temp_trend_vs_cutoff.png', dpi=300)
 
 
@@ -2613,22 +2613,24 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
                     # Read grid and set up the master array
                     nsidc_lon = read_netcdf(file_path, 'longitude')
                     nsidc_lat = read_netcdf(file_path, 'latitude')
+                    # Mask outside the MITgcm region, with a little bit of leeway so there's no gaps
+                    mask = np.invert((nsidc_lon >= xmin-1)*(nsidc_lon <= xmax+1)*(nsidc_lat >= ymin-1)*(nsidc_lat <= ymax+1))
                     nsidc_aice = np.ma.zeros([num_seasons, nsidc_lat.shape[0], nsidc_lat.shape[1]])
-                nsidc_aice_tmp = np.squeeze(read_netcdf(file_path, 'seaice_conc_monthly_cdr'))
+                nsidc_aice_tmp = np.ma.masked_where(mask, np.squeeze(read_netcdf(file_path, 'seaice_conc_monthly_cdr')))
                 ndays = days_per_month(month, year)
                 nsidc_aice[n,:] += nsidc_aice_tmp*ndays
                 ndays_int[n] += ndays
     nsidc_aice /= ndays_int[:,None,None]
 
     # Plot
-    fig = plt.figure(figsize=(7,12))
+    fig = plt.figure(figsize=(6,8))
     gs = plt.GridSpec(4,2)
-    gs.update(left=0.2, right=0.99, bottom=0.05, top=0.9, hspace=0.02, wspace=0.02)
-    cax = fig.add_axes([0.3, 0.05, 0.4, 0.04])
+    gs.update(left=0.12, right=0.88, bottom=0.08, top=0.9, hspace=0.02, wspace=0.02)
+    cax = fig.add_axes([0.3, 0.03, 0.4, 0.02])
     for n in range(num_seasons):
         # Plot model
         ax = plt.subplot(gs[n,0])
-        img = latlon_plot(model_aice[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        img = latlon_plot(model_aice[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax)
         if n == 0:
             ax.set_title('Model', fontsize=14)
         ax.set_xticks([])
@@ -2644,12 +2646,12 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         ax.set_xticks([])
         ax.set_yticks([])
         # Season name on left
-        plt.text(0.19, 0.85-0.25*n, season_titles[n], fontsize=14, ha='right', va='center', transform=fig.transFigure)
+        plt.text(0.11, 0.815-0.21*n, season_titles[n], fontsize=16, ha='right', va='center', transform=fig.transFigure)
         # Colourbar below
         if n == num_seasons - 1:
             cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
     plt.suptitle('Sea ice concentration ('+str(start_year)+'-'+str(end_year)+')', fontsize=18)
-    finished_plot(fig) #, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
 
     
     
