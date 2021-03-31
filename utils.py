@@ -741,9 +741,10 @@ def moving_average (data, window, time=None, keep_edges=False):
             data_smoothed_full[t_first:t_last,...] = data_smoothed
             for n in range(radius):
                 # Edges at beginning
-                data_smoothed_full[n,...] = np.mean(data_smoothed_full[0:2*n+1,...], axis=0)
+                data_smoothed_full[n,...] = np.mean(data[:2*n+1,...], axis=0)
                 # Edges at end
-                data_smoothed_full[-(n+1),...] = np.mean(data_smoothed_full[-(2*n+1):,...], axis=0)            
+                data_smoothed_full[-(n+1),...] = np.mean(data[-(2*n+1):,...], axis=0)
+            data_smoothed = data_smoothed_full
         else:
             print 'Error (moving_average): have not yet coded keep_edges=False for even windows. Want to figure it out?'
             sys.exit()
