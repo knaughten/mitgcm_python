@@ -2079,7 +2079,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
 def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 
-    num_ens = 10  # TODO: update to 20 when finished
+    num_ens = 20
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
     units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
     num_var = len(var_names)
@@ -2168,9 +2168,9 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     mean_trends = np.mean(all_trends, axis=0)
 
     # Plot
-    fig = plt.figure(figsize=(10,4))
-    gs = plt.GridSpec(1,2)
-    gs.update(left=0.08, right=0.98, bottom=0.12, top=0.84, wspace=0.16)
+    fig = plt.figure(figsize=(7,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.12, right=0.97, bottom=0.12, top=0.8)
     # Cutoff temperature vs trends (individual and mean)
     ax = plt.subplot(gs[0,0])
     for n in range(num_ens):
@@ -2179,17 +2179,17 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
     plt.xlabel('Cutoff temperature ('+deg_string+'C)', fontsize=12)
     plt.ylabel(deg_string+'C/decade', fontsize=12)
-    plt.title(r'$\bf{a}$. Trends (colours) and ensemble mean (black)', fontsize=14)
+    plt.title('Trends (colours) and ensemble mean (black)', fontsize=14)
     ax.grid(linestyle='dotted')
     # Cutoff temperature vs significance
-    ax = plt.subplot(gs[0,1])
+    '''ax = plt.subplot(gs[0,1])
     ax.plot(cutoff_temp, sig, linewidth=2, color='black')
     ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
-    # Add dashed line at 95% threshold    
+    ax.set_ylim([99.99, 100])
     plt.ylabel('%', fontsize=12)
     plt.title(r'$\bf{b}$. Significance of ensemble trend', fontsize=14)
-    ax.grid(linestyle='dotted')
-    plt.suptitle('Sensitivity of temperature trend on shelf (200-700m) to convection', fontsize=18)
+    ax.grid(linestyle='dotted')'''
+    plt.suptitle('Sensitivity of temperature trend on shelf\n(200-700m) to convection', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'temp_trend_vs_cutoff.png', dpi=300)
 
 
