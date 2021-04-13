@@ -14,7 +14,7 @@ import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -1827,44 +1827,6 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
     timeseries_multi_plot(time, data_std, labels, default_colours(len(var_names)), title=title, units=units, fig_name=fig_name)
 
 
-# Plot timeseries of the number of ensemble members which are unusually warm (in the top x% for all members and all years) and unusually cold (in the bottom x%) where x is a percentile between 0 and 100.
-def plot_warm_cold_years (sim_dir, region='inner_amundsen_shelf', timeseries_file='timeseries.nc', smooth=24, percentile=25, start_year=1920, fig_dir='./'):
-
-    num_ens = len(sim_dir)
-    var_name = region+'_temp_below_500m'
-    fig_dir = real_dir(fig_dir)
-
-    temp = None
-    for n in range(num_ens):
-        # Read and smooth data
-        file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
-        time_tmp = netcdf_time(file_path)
-        temp_tmp = read_netcdf(file_path, var_name)
-        temp_tmp, time_tmp = moving_average(temp_tmp, smooth, time=time_tmp)
-        t_start = index_year_start(time_tmp, start_year)
-        temp_tmp = temp_tmp[t_start:]
-        time_tmp = time_tmp[t_start:]
-        if temp is None:
-            temp = np.empty([num_ens, time_tmp.size])
-            time = time_tmp
-        temp[n,:] = temp_tmp
-
-    cutoff_warm = np.percentile(temp, 100-percentile)
-    cutoff_cold = np.percentile(temp, percentile)
-    num_warm = np.sum((temp > cutoff_warm).astype(float), axis=0)
-    num_cold = np.sum((temp < cutoff_cold).astype(float), axis=0)
-
-    # Calculate trends and plot
-    data = [num_warm, num_cold]
-    titles = ['# members warmer than '+round_to_decimals(cutoff_warm,3)+deg_string+'C\n'+region_names[region]+' below 500m', '# members colder than '+round_to_decimals(cutoff_cold,3)+deg_string+'C\n'+region_names[region]+' below 500m']
-    flag = ['warm', 'cold']
-    fig_name = [fig_dir+'timeseries_'+var+'years_'+region+'.png' for var in flag]
-    for v in range(2):
-        slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data[v])
-        print flag[v]+': '+str(slope)+' members/y, p='+str(p_value)
-        make_timeseries_plot(time, data[v], title=titles[v], fig_name=fig_name[v])
-
-
 # Make a Hovmoller plot of the ensemble mean and standard deviation of the given variable (temperature or salinity) at the given region.
 def hovmoller_mean_std (sim_dir, var, region, grid_path, smooth=24, start_year=1920, hovmoller_file='hovmoller.nc', fig_name=None):
 
@@ -2602,6 +2564,74 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
             cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
     plt.suptitle('Sea ice concentration ('+str(start_year)+'-'+str(end_year)+')', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
+
+    
+# Plot timeseries of the number of ensemble members which are unusually warm (in the top 25% for all members and all years) and unusually cold (in the bottom 25%).
+def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    regions = ['pine_island_bay', 'dotson_bay']
+    region_names = ['Pine Island Bay', 'Dotson front']
+    num_regions = len(regions)
+    var_name = '_temp_btw_200_700m'
+    percentile = 25
+    start_year = 1920
+    end_year = 2013
+    time_years = np.arange(start_year, end_year+1)
+    num_years = time_years.size
+
+    temp = np.empty([num_regions, num_ens, num_years])
+    t0 = None
+    for n in range(num_ens):
+        # Read and annually-average data
+        file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
+        if t0 is None:
+            time = netcdf_time(file_path)
+            t0 = index_year_start(time_tmp, start_year)
+        for r in range(num_regions):
+            temp_tmp = read_netcdf(file_path, regions[r]+var_name)[t0:]
+            for t in range(num_years):
+                temp[r,n,t] = average_12_months(temp_tmp, t*12, calendar='noleap')
+
+    # Calculate percentiles and number of cold and warm years
+    num_warm = np.empty([num_regions, num_years])
+    num_cold = np.empty([num_regions, num_years])
+    for r in range(num_regions):
+        cutoff_warm = np.percentile(temp[r,:], 100-percentile)
+        cutoff_cold = np.percentile(temp[r,:], percentile)
+        print regions[r]
+        print 'warm cutoff='+str(cutoff_warm)+' degC'
+        print 'cold cutoff='+str(cutoff_cold)+' degC'
+        num_warm[r,:] = np.sum((temp[r,:] > cutoff_warm).astype(float), axis=0)
+        num_cold[r,:] = np.sum((temp[r,:] < cutoff_cold).astype(float), axis=0)
+        # Calculate trends
+        for data, string in zip([num_warm[r,:], num_cold[r,:]], ['warm', 'cold']):
+            slope, intercept, r_value, p_value, std_err = linregress(time_years, data)
+            print string+' trend: '+str(slope*10)+' members/decade, significance='+str((1-p_value)*100)
+
+    # Plot
+    data_plot = [num_warm, num_cold]
+    titles = ['Chance of warm year', 'Chance of cold year']
+    ytitles = ['# members colder than 25th percentile', '# members warmer than 75th percentile']
+    colours = ['red', 'blue']
+    fig = plt.figure(figsize=(10,4))
+    gs = plt.GridSpec(1,2)
+    gs.update(left=0.08, right=0.98, bottom=0.2, top=0.9, wspace=0.1)
+    for n in range(2):
+        ax = plt.subplots(gs[n,0])
+        for r in range(num_regions):
+            ax.plot(time_years, data_plot[n][r,:], color=colours[r], linewidth=1.5, label=region_names[r])
+        ax.set_xlim([start_year, end_year])
+        plt.xlabel('Year', fontsize=12)
+        plt.ylabel(ytitles[n], fontsize=12)
+        plt.title(titles[n], fontsize=14)
+        ax.grid(linestyle='dotted')
+    ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.33), ncol=2, fontsize=12)
+    finished_plot(fig) #, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
+    
 
     
     
