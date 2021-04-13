@@ -2573,64 +2573,60 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
     fig_dir = real_dir(fig_dir)
     num_ens = 20
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
-    regions = ['pine_island_bay', 'dotson_bay']
-    region_names = ['Pine Island Bay', 'Dotson front']
-    num_regions = len(regions)
-    var_name = '_temp_btw_200_700m'
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
     percentile = 25
     start_year = 1920
     end_year = 2013
     time_years = np.arange(start_year, end_year+1)
     num_years = time_years.size
 
-    temp = np.empty([num_regions, num_ens, num_years])
+    temp = np.empty([num_ens, num_years])
     t0 = None
     for n in range(num_ens):
         # Read and annually-average data
-        file_path = real_dir(sim_dir[n])+'output/'+timeseries_file
+        file_path = real_dir(sim_dir[n])+timeseries_file
         if t0 is None:
-            time = netcdf_time(file_path)
-            t0 = index_year_start(time_tmp, start_year)
-        for r in range(num_regions):
-            temp_tmp = read_netcdf(file_path, regions[r]+var_name)[t0:]
-            for t in range(num_years):
-                temp[r,n,t] = average_12_months(temp_tmp, t*12, calendar='noleap')
+            time = netcdf_time(file_path, monthly=False)
+            t0 = index_year_start(time, start_year)
+        temp_tmp = read_netcdf(file_path, var_name)[t0:]
+        for t in range(num_years):
+            temp[n,t] = average_12_months(temp_tmp, t*12, calendar='noleap')
 
     # Calculate percentiles and number of cold and warm years
-    num_warm = np.empty([num_regions, num_years])
-    num_cold = np.empty([num_regions, num_years])
-    for r in range(num_regions):
-        cutoff_warm = np.percentile(temp[r,:], 100-percentile)
-        cutoff_cold = np.percentile(temp[r,:], percentile)
-        print regions[r]
-        print 'warm cutoff='+str(cutoff_warm)+' degC'
-        print 'cold cutoff='+str(cutoff_cold)+' degC'
-        num_warm[r,:] = np.sum((temp[r,:] > cutoff_warm).astype(float), axis=0)
-        num_cold[r,:] = np.sum((temp[r,:] < cutoff_cold).astype(float), axis=0)
-        # Calculate trends
-        for data, string in zip([num_warm[r,:], num_cold[r,:]], ['warm', 'cold']):
-            slope, intercept, r_value, p_value, std_err = linregress(time_years, data)
-            print string+' trend: '+str(slope*10)+' members/decade, significance='+str((1-p_value)*100)
+    cutoff_warm = np.percentile(temp, 100-percentile)
+    cutoff_cold = np.percentile(temp, percentile)
+    print 'warm cutoff='+str(cutoff_warm)+' degC'
+    print 'cold cutoff='+str(cutoff_cold)+' degC'
+    num_warm = np.sum((temp > cutoff_warm).astype(float), axis=0)
+    num_cold = np.sum((temp < cutoff_cold).astype(float), axis=0)
+    # Calculate trends
+    for data, string in zip([num_warm, num_cold], ['warm', 'cold']):
+        slope, intercept, r_value, p_value, std_err = linregress(time_years, data)
+        print string+' trend: '+str(slope*10)+' members/decade, significance='+str((1-p_value)*100)
 
     # Plot
-    data_plot = [num_warm, num_cold]
-    titles = ['Chance of warm year', 'Chance of cold year']
-    ytitles = ['# members colder than 25th percentile', '# members warmer than 75th percentile']
-    colours = ['red', 'blue']
-    fig = plt.figure(figsize=(10,4))
-    gs = plt.GridSpec(1,2)
-    gs.update(left=0.08, right=0.98, bottom=0.2, top=0.9, wspace=0.1)
+    data_plot = [num_cold, num_warm]
+    titles = [r'$\bf{a}$. Chance of cold year', r'$\bf{b}$. Chance of warm year']
+    ytitles = ['# members colder than\n25$^{\mathrm{th}}$ percentile', '# members warmer than\n75$^{\mathrm{th}}$ percentile']
+    fig = plt.figure(figsize=(6,7))
+    gs = plt.GridSpec(2,1)
+    gs.update(left=0.15, right=0.9, bottom=0.08, top=0.95, hspace=0.25)
     for n in range(2):
-        ax = plt.subplots(gs[n,0])
-        for r in range(num_regions):
-            ax.plot(time_years, data_plot[n][r,:], color=colours[r], linewidth=1.5, label=region_names[r])
+        ax = plt.subplot(gs[n,0])
+        ax.bar(time_years, data_plot[n])
         ax.set_xlim([start_year, end_year])
-        plt.xlabel('Year', fontsize=12)
+        ax.set_ylim([0, num_ens])
+        ax.set_yticks(np.arange(0, num_ens+5, 5))
+        if n==1:
+            plt.xlabel('Year', fontsize=12)
         plt.ylabel(ytitles[n], fontsize=12)
-        plt.title(titles[n], fontsize=14)
+        plt.title(titles[n], fontsize=16)
         ax.grid(linestyle='dotted')
-    ax.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.33), ncol=2, fontsize=12)
-    finished_plot(fig) #, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
+        ax2 = ax.twinx()
+        ax2.set_ylim([0, 100])
+        ax2.set_yticks(np.arange(0, 125, 25))
+        ax2.set_ylabel('%', fontsize=12)
+    finished_plot(fig, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
     
 
     
