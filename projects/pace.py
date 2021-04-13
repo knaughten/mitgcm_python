@@ -1955,7 +1955,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    num_ens = 10  # TODO: update to 20 when finished
+    num_ens = 20
     var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'all_massloss']
     var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Total basal mass loss from ice shelves']
     var_units = [' m/s', deg_string+'C', ' Gt/y']
@@ -2119,7 +2119,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 # Plot sensitivity of temperature trend to convection.
 def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.nc', fig_dir='./'):
 
-    num_ens = 10  # TODO: Update to 20
+    num_ens = 20
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
