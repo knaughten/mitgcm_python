@@ -14,7 +14,7 @@ import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
@@ -2079,41 +2079,50 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
 def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 
-    num_ens = 20
-    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
-    units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
-    num_var = len(var_names)
-    base_dir = real_dir(base_dir)
-    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
-    year_start = 1920
-    smooth = 24
+num_ens = 20
+var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
+units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
+num_var = len(var_names)
+base_dir = real_dir(base_dir)
+sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+year_start = 1920
+base_year_end = 1949
+smooth = 24
 
-    time = None
-    for v in range(num_var):
-        trends = []
-        for n in range(num_ens):
-            # Read data
-            file_path = sim_dir[n] + timeseries_file
-            if time is None:
-                time_tmp = netcdf_time(file_path, monthly=False)
-                t0 = index_year_start(time_tmp, year_start)
-                time_tmp = time[t0:]
-            data_tmp = read_netcdf(file_path, var_names[v])[t0:]
-            # Smooth
-            if time is None:
-                data, time = moving_average(data_tmp, smooth, time=time_tmp)
-                # Get time in decades
-                time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
-                time_decades = time_sec/(365*sec_per_day*10)
-            else:
-                data = moving_average(data_tmp, smooth)
-            # Calculate trend
-            slope, intercept, r_value, p_value, std_err = linregress(time_decades, data)
-            trends.append(slope)
-        # Calculate significance
-        p_val = ttest_1samp(slope, 0)[1]
-        sig = (1-p_val)*100
-        print var_names[v]+': trend='+str(np.mean(slope))+' '+units[v]+'/decade, significance='+str(sig)
+time = None
+for v in range(num_var):
+    trends = []
+    for n in range(num_ens):
+        # Read data
+        file_path = sim_dir[n] + timeseries_file
+        if time is None:
+            time_tmp = netcdf_time(file_path, monthly=False)
+            t0 = index_year_start(time_tmp, year_start)
+            time_tmp = time_tmp[t0:]
+            t_base = index_year_end(time_tmp, base_year_end)
+        data_tmp = read_netcdf(file_path, var_names[v])[t0:]
+        if var_names[v].endswith('massloss'):
+            # Get mean value over baseline period
+            data_base_mean = np.mean(data_tmp[:t_base])
+        # Smooth
+        if time is None:
+            data, time = moving_average(data_tmp, smooth, time=time_tmp)
+            # Get time in decades
+            time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+            time_decades = time_sec/(365*sec_per_day*10)
+        else:
+            data = moving_average(data_tmp, smooth)
+        if var_names[v].endswith('massloss'):
+            # Convert to percent of baseline value
+            data = data/data_base_mean*100
+            units[v] = '%'
+        # Calculate trend
+        slope, intercept, r_value, p_value, std_err = linregress(time_decades, data)
+        trends.append(slope)
+    # Calculate significance
+    p_val = ttest_1samp(trends, 0)[1]
+    sig = (1-p_val)*100
+    print var_names[v]+': trend='+str(np.mean(slope))+' '+units[v]+'/decade, significance='+str(sig)
 
 
 # Plot sensitivity of temperature trend to convection.
