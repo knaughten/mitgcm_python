@@ -1188,7 +1188,21 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         data_save = np.empty([num_years, num_pts])
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
-            data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
+            if var_name == 'advection_3d':
+                data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', time_average=True, return_info=True)
+                data_y = read_netcdf(file_paths[t], 'ADVy_TH', time_average=True)
+                data_z = read_netcdf(file_paths[t], 'ADVr_TH', time_average=True)
+                data = np.ma.zeros(data_x.shape)
+                data[:-1,:-1,:-1] = data_x[:-1,:-1,:-1] - data_x[:-1,:-1,1:] + data_y[:-1,:-1,:-1] - data_y[:-1,1:,:-1] + data_z[1:,:-1,:-1] - data_z[:-1,:-1,:-1]
+                long_name = 'net advection of heat'
+            elif var_name == 'diffusion_kpp':
+                data1, long_name, units = read_netcdf(file_paths[t], 'DFrI_TH', time_average=True, return_info=True)
+                data2 = read_netcdf(file_paths[t], 'KPPg_TH', time_average=True)
+                data = np.ma.zeros(data1.shape)
+                data[:-1,:] = data1[1:,:] - data1[:-1,:] + data2[1:,:] - data2[:-1,:]
+                long_name = 'net vertical implicit diffusion and KPP transport of heat'
+            else:
+                data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
                 print 'Error (make_trend_file): wrong dimension for this variable.'
                 sys.exit()
@@ -2639,6 +2653,17 @@ def precompute_adv_trend (key, base_dir='./'):
     grid_path = base_dir + 'PAS_grid/'
     var_name = 'ADV'+key+'_TH'
     make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
+
+
+# Precompute trends in heat budget terms across the ensemble.
+def precompute_heat_budget_trend (key, base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    grid_path = base_dir + 'PAS_grid/'
+    for var_name in ['advection_3d', 'diffusion_3d']:
+        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
 
 
 # Plot anomalies in the non-zero heat budget terms for the first ensemble member.
