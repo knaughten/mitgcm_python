@@ -197,6 +197,20 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         data = temp - tfreeze(salt, 0)
+    elif var_name == 'shortwave_penetration':
+        # Get some variables we'll need
+        z_edges_3d = z_to_xyz(grid.z_edges, grid)
+        dA_3d = xy_to_xyz(grid.dA, grid)
+        swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
+        swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
+        # Read shortwave flux at surface
+        data_xy = read_netcdf(file_path, 'oceQsw', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if len(data.shape==3):
+            data_xy = np.expand_dims(data,0)
+        # Loop over timesteps to calculate 3D penetration
+        data = np.ma.empty([data_xy.shape[0], grid.nz, grid.ny, grid.nx])
+        for t in range(data.shape[0]):
+            data[t,:] = xy_to_xyz(data_xy[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if var_name == 'THETA' and option in ['integrate', 'int_btw_z0']:
@@ -393,12 +407,13 @@ def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None
     var_y = var_name.replace('x', 'y')
     data_x = read_netcdf(file_path, var_x, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     data_y = read_netcdf(file_path, var_y, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    if var_name == 'ADVx_TH':
+    # Don't actually need to do this bit because it will become a convergence of fluxes
+    #if var_name == 'ADVx_TH':
         # Need to convert to heat advection relative to freezing point
-        u = read_netcdf(file_path, 'UVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        v = read_netcdf(file_path, 'VVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        grid = Grid(file_path)
-        [data_x, data_y] = adv_heat_wrt_freezing([data_x, data_y], [u, v], grid)
+        #u = read_netcdf(file_path, 'UVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        #v = read_netcdf(file_path, 'VVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        #grid = Grid(file_path)
+        #[data_x, data_y] = adv_heat_wrt_freezing([data_x, data_y], [u, v], grid)
     if len(data_x.shape)==3:
         # Just one timestep; add a dummy time dimension
         data_x = np.expand_dims(data_x,0)
@@ -422,6 +437,28 @@ def timeseries_adv_dif (file_path, var_name, grid, z0, time_index=None, t_start=
         data_tmp = np.ma.zeros(data_x.shape[1:])
         data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
         # Sum over the given region
+        data_tmp = mask_3d(data_tmp, grid)
+        if mask is not None:
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+        timeseries.append(np.sum(data_tmp))
+    return np.array(timeseries)
+
+
+# Calculate the net vertical advection or diffusion into the given 3D region.
+def timeseries_adv_dif_z (file_path, var_name, grid, z0, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        data = np.expand_dims(data,0)
+    if z0 is not None:
+        # Mask out bounds
+        if mask is None:
+            mask = np.ones([grid.ny, grid.nx]).astype(bool)
+        mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
+    timeseries = []
+    for t in range(data.shape[0]):
+        data_tmp = np.ma.zeros(data.shape[1:])
+        data_tmp[:-1,:] = data[t,1:,:] - data[t,:-1,:]
         data_tmp = mask_3d(data_tmp, grid)
         if mask is not None:
             data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
@@ -1374,6 +1411,47 @@ def set_parameters (var):
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Ocean heat content in '+region_names[region]+' below '+str(-z_shallow)+'m'
         units = 'GJ'
+    elif 'advection_heat_xy_below' in var:
+        option = 'adv_dif'
+        var_name = 'ADVx_TH'
+        region = var[:var.index('_advection_heat_xy_below')]
+        z_shallow = -1*int(var[len(region+'_advection_heat_xy_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net horizontal advection of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
+    elif 'advection_heat_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'ADVr_TH'
+        region = var[:var.index('_advection_heat_z_below')]
+        z_shallow = -1*int(var[len(region+'_advection_heat_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical advection of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+    elif 'diffusion_heat_implicit_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'DFrI_TH'
+        region = var[:var.index('_diffusion_heat_implicit_z_below')]
+        z_shallow = -1*int(var[len(region+'_diffusion_heat_implicit_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical implicit diffusion of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+    elif 'kpp_heat_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'KPPg_TH'
+        region = var[:var.index('_kpp_heat_z_below')]
+        z_shallow = -1*int(var[len(region+'_kpp_heat_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical KPP transport of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+    elif 'shortwave_penetration_below' in var:
+        option = 'int_btw_z0'
+        var_name = 'shortwave_penetration'
+        region = var[:var.index('_shortwave_penetration_below')]
+        z_shallow = -1*int(var[len(region+'_shortwave_penetration_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Shortwave penetration of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()

@@ -27,7 +27,7 @@ from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density
-from ..calculus import time_derivative
+from ..calculus import time_derivative, time_integral
 from ..interpolation import interp_reg_xy
 
 
@@ -2652,17 +2652,17 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
     smooth = 24
     z0 = -200
     region = 'amundsen_shelf'
-    output_dir = base_dir+'PACE01/output/'
+    output_dir = base_dir+'PAS_PACE01/output/'
     var = ['ADVx_TH', 'ADVr_TH', 'DFrI_TH', 'KPPg_TH', 'oceQsw', 'total']
-    titles = ['advection_xy', 'advection_z', 'diffusion_z_implicit', 'kpp', 'shortwave', 'total']
     num_var = len(var)
+    titles = ['3D advection', 'Vertical diffusion + KPP', 'Shortwave', 'Total']
 
     segment_dir = [str(year)+'01' for year in range(start_year,end_year+1)]
     file_paths = segment_file_paths(output_dir, segment_dir=segment_dir)
     num_time_total = len(file_paths)*12
     num_time_base = (base_year_end-start_year+1)*12
     data_int = np.empty([num_var, num_time_total])
-    
+
     grid = Grid(grid_path)
     mask = mask_2d_to_3d(grid.get_region_mask(region), grid, zmax=z0)
     z_edges_3d = z_to_xyz(grid.z_edges, grid)
@@ -2710,17 +2710,27 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
                     # Sum over all cells
                     data_int[v, n*12+t] = np.sum(data_tmp)
     # Subtract the mean over the base period
-    data_int -= np.mean(data_int[:,:num_time_base], axis=1)
+    data_mean = np.mean(data_int[:,:num_time_base], axis=1)
+    data_int -= data_mean[:,None]
+    # Time-integrate
+    data_tint = np.empty(data_int.shape)
+    for v in range(num_var):
+        data_tint[v,:] = time_integral(data_int[v,:], time)
 
     # Smooth
     # Start with a dummy variable so we get time trimmed to the right size
     tmp, time_smoothed = moving_average(np.zeros(time.size), smooth, time=time)
     data_smoothed = np.empty([num_var, time_smoothed.size])
     for v in range(num_var):
-        data_smoothed[v,:] = moving_average(data_int[v,:], smooth)
+        data_smoothed[v,:] = moving_average(data_tint[v,:], smooth)
+    # Convert to EJ
+    data_smoothed *= Cp_sw*rhoConst*1e-18
+
+    # Sum the components as needed
+    data_final = [np.sum(data_smoothed[0:2,:], axis=0), np.sum(data_smoothed[2:4,:], axis=0), data_smoothed[4,:], data_smoothed[5,:]]
 
     # Plot
-    timeseries_multi_plot(time_smoothed, [data_smoothed[v,:] for v in range(num_var)], titles, default_colours(num_var), title='Heat budget anomalies in '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'C m$^3$/s', fig_name=fig_name)
+    timeseries_multi_plot(time_smoothed, data_final, titles, default_colours(len(data_final)), title='Time-integrated heat budget anomalies\nin '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'10$^{18} $J', fig_name=fig_name)
 
     
     

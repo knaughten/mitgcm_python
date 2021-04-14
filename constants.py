@@ -11,7 +11,7 @@ rho_fw = 1e3
 # Density of ice (kg/m^3)
 rho_ice = 917.
 # Reference density of seawater (kg/m^3)
-rhoConst = 1035.
+rhoConst = 1028.5
 # Seconds per day
 sec_per_day = 24*60*60.
 # Seconds per year
@@ -169,6 +169,18 @@ rignot_melt = {
     'abbot': [51.8, 19, 1.7, 0.6],
     'venable': [19.4, 2, 6.1, 0.7]
 }
+# Adusumilli 2020 (for time period 1994-2018)
+adusumilli_melt = {
+    'venable': [14.3, 5.5, 5.1, 2.0],
+    'abbot': [37.1, 38.1, 1.5, 1.5],
+    'cosgrove': [2.7, 4.1, 1, 1.5],
+    'pig': [76.6, 8.6, 14.0, 1.6],
+    'thwaites': [81.9, 7.4, 26.7, 2.4],
+    'crosson': [20.9, 4.9, 7.8, 1.8],
+    'dotson': [28.2, 8.5, 5.4, 1.6],
+    'getz': [124.1, 40.9, 4.2, 1.4]
+}
+
 # Jenkins 2018 estimates of Dotson melting (Gt/y)
 dotson_melt_years = {
     'year': [2000, 2006, 2007, 2009, 2011, 2012, 2014, 2016],

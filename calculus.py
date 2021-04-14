@@ -265,7 +265,27 @@ def time_derivative (data, time):
         dt = np.expand_dims(dt,-1)
     ddata_dt = ddata/dt
     # Now pad with zeros at the first time index
-    return np.concatenate((np.expand_dims(np.zeros(ddata_dt[0,...].shape),0), ddata_dt), axis=0)  
+    return np.concatenate((np.expand_dims(np.zeros(ddata_dt[0,...].shape),0), ddata_dt), axis=0)
+
+
+def time_integral (data, time):
+
+    if isinstance(time[0], datetime.datetime):
+        # Get time in seconds
+        time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+        # Get midpoints
+        time_sec_mid = 0.5*(time_sec[:-1] + time_sec[1:])
+        # Extrapolate to edges
+        time_edges = np.concatenate(([2*time_sec_mid[0]-time_sec_mid[1]], time_sec_mid, [2*time_sec_mid[-1]-time_sec_mid[-2]]))
+        # Get difference
+        dt = time_edges[1:] - time_edges[:-1]
+    # Expand the dimensions of dt to match data
+    for n  in range(len(data.shape)-1):
+        dt = np.expand_dims(dt,-1)
+    # Integrate
+    return np.cumsum(data*dt, axis=0)
+        
+    
         
 
     
