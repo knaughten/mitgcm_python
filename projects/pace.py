@@ -2630,13 +2630,14 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
     finished_plot(fig, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
 
 
-# Precompute trends in heat advection across the ensemble. Call for var_name = 'ADVx_TH' and 'ADVy_TH'.
-def precompute_adv_trend (var_name, base_dir='./'):
+# Precompute trends in heat advection across the ensemble. Call for key='x', 'y'
+def precompute_adv_trend (key, base_dir='./'):
 
     base_dir = real_dir(base_dir)
     num_ens = 20
-    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
     grid_path = base_dir + 'PAS_grid/'
+    var_name = 'ADV'+key+'_TH'
     make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
 
     
