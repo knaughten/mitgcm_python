@@ -206,7 +206,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         # Read shortwave flux at surface
         data_xy = read_netcdf(file_path, 'oceQsw', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         if len(data_xy.shape)==3:
-            data_xy = np.expand_dims(data,0)
+            data_xy = np.expand_dims(data_xy,0)
         # Loop over timesteps to calculate 3D penetration
         data = np.ma.empty([data_xy.shape[0], grid.nz, grid.ny, grid.nx])
         for t in range(data.shape[0]):
