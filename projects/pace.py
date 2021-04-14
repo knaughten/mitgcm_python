@@ -2640,6 +2640,89 @@ def precompute_adv_trend (key, base_dir='./'):
     var_name = 'ADV'+key+'_TH'
     make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
 
+
+# Plot anomalies in the non-zero heat budget terms for the first ensemble member.
+def plot_test_heat_budget (base_dir='./', fig_name=None):
+
+    base_dir = real_dir(base_dir)
+    grid_path = base_dir + 'PAS_grid/'
+    start_year = 1920
+    base_year_end = 1949
+    end_year = 2013
+    smooth = 24
+    z0 = -200
+    region = 'amundsen_shelf'
+    output_dir = base_dir+'PACE01/output/'
+    var = ['ADVx_TH', 'ADVr_TH', 'DFrI_TH', 'KPPg_TH', 'oceQsw', 'total']
+    titles = ['advection_xy', 'advection_z', 'diffusion_z_implicit', 'kpp', 'shortwave', 'total']
+    num_var = len(var)
+
+    segment_dir = [str(year)+'01' for year in range(start_year,end_year+1)]
+    file_paths = segment_file_paths(output_dir, segment_dir=segment_dir)
+    num_time_total = len(file_paths)*12
+    num_time_base = (base_year_end-start_year+1)*12
+    data_int = np.empty([num_var, num_time_total])
+    
+    grid = Grid(grid_path)
+    mask = mask_2d_to_3d(grid.get_region_mask(region), grid, zmax=z0)
+    z_edges_3d = z_to_xyz(grid.z_edges, grid)
+    dA_3d = xy_to_xyz(grid.dA, grid)
+    swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
+    swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
+    rhoConst = 1028.5
+
+    time = None
+    for n in range(len(file_paths)):
+        print 'Processing ' + file_paths[n]
+        time_tmp = netcdf_time(file_paths[n])
+        num_time = time_tmp.size
+        if time is None:
+            time = time_tmp
+        else:
+            time = np.concatenate((time, time_tmp), axis=0)
+        for v in range(num_var):
+            print '...'+titles[v]
+            if var[v] == 'total':
+                # Sum of all previous entries
+                data_int[v, n*12:(n+1)*12] = np.sum(data_int[:,n*12:(n+1)*12], axis=0)
+            else:
+                # Read the variable
+                data = read_netcdf(file_paths[n], var[v])
+                if var[v] == 'ADVx_TH':
+                    # There is a second component
+                    data_x = data
+                    data_y = read_netcdf(file_paths[n], var[v].replace('x', 'y'))
+                # Loop over timesteps
+                for t in range(num_time):
+                    if var[v] == 'ADVx_TH':
+                        # Get x and y fluxes
+                        data_tmp = np.ma.zeros(data_x.shape[1:])
+                        data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
+                    elif var[v] in ['ADVr_TH', 'DFrI_TH', 'KPPg_TH']:
+                        # Get z fluxes
+                        data_tmp = np.ma.zeros(data.shape[1:])
+                        data_tmp[:-1,:] = data[t,1:,:] - data[t,:-1,:]
+                    elif var[v] == 'oceQsw':
+                        # Get penetration of SW radiation
+                        data_tmp = xy_to_xyz(data[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                    # Mask everywhere outside region
+                    data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+                    # Sum over all cells
+                    data_int[v, n*12+t] = np.sum(data_tmp)
+    # Subtract the mean over the base period
+    data_int -= np.mean(data_int[:,:num_time_base], axis=1)
+
+    # Smooth
+    # Start with a dummy variable so we get time trimmed to the right size
+    tmp, time_smoothed = moving_average(np.zeros(time.size), smooth, time=time)
+    data_smoothed = np.empty([num_var, time_smoothed.size])
+    for v in range(num_var):
+        data_smoothed[v,:] = moving_average(data_int[v,:], smooth)
+
+    # Plot
+    timeseries_multi_plot(time_smoothed, [data_smoothed[v,:] for v in range(num_var)], titles, default_colours(num_var), title='Heat budget anomalies in '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'C m$^3$/s', fig_name=fig_name)
+
+    
     
     
 
