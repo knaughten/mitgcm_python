@@ -1428,6 +1428,7 @@ def set_parameters (var):
         z0 = [None, z_shallow]
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Net vertical advection of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
     elif 'diffusion_heat_implicit_z_below' in var:
         option = 'adv_dif_z'
         var_name = 'DFrI_TH'
@@ -1436,6 +1437,7 @@ def set_parameters (var):
         z0 = [None, z_shallow]
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Net vertical implicit diffusion of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
     elif 'kpp_heat_z_below' in var:
         option = 'adv_dif_z'
         var_name = 'KPPg_TH'
@@ -1444,6 +1446,7 @@ def set_parameters (var):
         z0 = [None, z_shallow]
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Net vertical KPP transport of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
     elif 'shortwave_penetration_below' in var:
         option = 'int_btw_z0'
         var_name = 'shortwave_penetration'
@@ -1452,6 +1455,7 @@ def set_parameters (var):
         z0 = [None, z_shallow]
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Shortwave penetration of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
