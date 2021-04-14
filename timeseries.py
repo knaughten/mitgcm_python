@@ -718,7 +718,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_btw_z0', 'int_btw_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_z', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_btw_z0', 'int_btw_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -778,6 +778,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_int_sfc(fname, ['oceFWflx', 'SIfwmelt', 'SIfwfrz'], grid, mask=mask, time_average=time_average, operator='subtract')
         elif option == 'adv_dif':
             values_tmp = timeseries_adv_dif(fname, var_name, grid, z0, mask=mask, time_average=time_average)
+        elif option == 'adv_dif_z':
+            values_tmp = timeseries_adv_dif_z(fname, var_name, grid, z0, mask=mask, time_average=time_average)
         elif option == 'adv_dif_bdry':
             values_tmp = timeseries_adv_dif_bdry(fname, var_name, grid, mask, bdry_mask, time_average=time_average)
         elif option == 'res_time':
