@@ -1201,6 +1201,18 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.ma.zeros(data1.shape)
                 data[:-1,:] = data1[1:,:] - data1[:-1,:] + data2[1:,:] - data2[:-1,:]
                 long_name = 'net vertical implicit diffusion and KPP transport of heat'
+            elif var_name == 'ismr':
+                data = convert_ismr(read_netcdf(file_paths[t], 'SHIfwFlx', time_average=True))
+                long_name = 'ice shelf melt rate'
+                units = 'm/y'
+            elif var_name == 'sst':
+                data = read_netcdf(file_paths[t], 'THETA', time_average=True)[0,:]
+                long_name = 'sea surface temperature'
+                units = 'degC'
+            elif var_name == 'sss':
+                data = read_netcdf(file_paths[t], 'SALT', time_average=True)[0,:]
+                long_name = 'sea surface salinity'
+                units = 'psu'
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
@@ -1212,7 +1224,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 [data, tmp] = adv_heat_wrt_freezing([data, None], [u, None], grid)
             elif var_name == 'ADVy_TH':
                 v = read_netcdf(file_paths[t], 'VVEL', time_average=True)
-                [tmp, data] = adv_heat_wrt_freezing([None, data], [None, v], grid)                
+                [tmp, data] = adv_heat_wrt_freezing([None, data], [None, v], grid)
             data_save[t,:] = data[mask]
         # Now calculate the trend at each point
         print 'Calculating trends'
@@ -2656,14 +2668,27 @@ def precompute_adv_trend (key, base_dir='./'):
 
 
 # Precompute trends in heat budget terms across the ensemble.
-def precompute_heat_budget_trend (key, base_dir='./'):
+def precompute_heat_budget_trend (base_dir='./'):
 
     base_dir = real_dir(base_dir)
     num_ens = 20
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
     grid_path = base_dir + 'PAS_grid/'
-    for var_name in ['advection_3d', 'diffusion_3d']:
+    for var_name in ['advection_3d', 'diffusion_kpp']:
+        print 'Processing ' + var_name
         make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
+
+
+# Precompute trends in surface variables across the ensemble.
+def precompute_sfc_trends (base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    grid_path = base_dir + 'PAS_grid/'
+    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss']:
+        print 'Processing ' + var_name
+        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', dim=2)
 
 
 # Plot anomalies in the non-zero heat budget terms for the first ensemble member.
