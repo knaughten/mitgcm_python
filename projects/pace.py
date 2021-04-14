@@ -596,7 +596,7 @@ def all_hovmoller_tiles (sim_dir, hovmoller_file='hovmoller.nc', grid='PAS_grid/
 def read_calc_trends (var, file_path, option, percent=False, year_start=1920, year_end=1949, smooth=24, p0=0.05):
 
     data = read_netcdf(file_path, var)
-    time = netcdf_time(file_path, monthly=False)    
+    time = netcdf_time(file_path, monthly=False)
     if percent:
         # Express as percentage of mean over baseline
         t_start, t_end = index_period(time, year_start, year_end)
@@ -606,9 +606,12 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
     t0 = index_year_start(time, year_start)
     time = time[t0:]
     data = data[t0:]
+    # Get time in decades
+    time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+    time = time_sec/(365*sec_per_day*10)
     if option == 'smooth':
         # 2-year running mean to filter out seasonal cycle
-        data = moving_average(data, smooth)
+        data, time = moving_average(data, smooth, time=time)
     elif option == 'annual':
         # Annual average to filter out seasonal cycle
         # First trim to the nearest complete year
@@ -616,10 +619,8 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
         time = time[:new_size]
         data = data[:new_size]
         time, data = calc_annual_averages(time, data)
-    # Calculate trends per year (monthly output)
-    slope, intercept, r_value, p_value, std_err = linregress(np.arange(data.size)/12., data)
-    # Multiply slope by 10 to get trend per decade
-    slope *= 10
+    # Calculate trends per decade
+    slope, intercept, r_value, p_value, std_err = linregress(time, data)
     sig = p_value < p0
     return slope, sig
 
@@ -2084,7 +2085,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
         # Calculate significance
         p_val = ttest_1samp(trends, 0)[1]
         sig = (1-p_val)*100
-        print var_names[v]+': trend='+str(np.mean(slope))+' '+units[v]+'/decade, significance='+str(sig)
+        print var_names[v]+': trend='+str(np.mean(trends))+' '+units[v]+'/decade, significance='+str(sig)
 
 
 # Plot sensitivity of temperature trend to convection.
@@ -2627,6 +2628,18 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2.set_yticks(np.arange(0, 125, 25))
         ax2.set_ylabel('%', fontsize=12)
     finished_plot(fig, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
+
+
+# Precompute trends in heat advection across the ensemble. Call for var_name = 'ADVx_TH' and 'ADVy_TH'.
+def precompute_adv_trend (var_name, base_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    grid_path = base_dir + 'PAS_grid/'
+    make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
+
+    
     
 
     
