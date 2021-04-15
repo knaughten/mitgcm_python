@@ -2691,6 +2691,16 @@ def precompute_sfc_trends (base_dir='./'):
         make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', dim=2)
 
 
+# Plot trends in surface variables to test which ones are interesting.
+def plot_test_sfc_trends (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss']:
+        trend_region_plots(base_dir+var_name+'_trend.nc', var_name, 'all', grid_dir, fig_dir=fig_dir, dim=2)    
+
+
 # Plot anomalies in the non-zero heat budget terms for the first ensemble member.
 def plot_test_heat_budget (base_dir='./', fig_name=None):
 
