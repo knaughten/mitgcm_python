@@ -297,7 +297,7 @@ def timeseries_int_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=
 
 def timeseries_thermocline (fname, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
 
-    data = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    data = read_netcdf(fname, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if len(data.shape)==3:
         data = np.expand_dims(data,0)
     timeseries = []
