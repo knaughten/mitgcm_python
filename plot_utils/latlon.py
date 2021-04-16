@@ -204,37 +204,70 @@ def prepare_vel (u, v, grid, vel_option='avg', z0=None, time_dependent=False):
 # Overlay vectors (typically velocity). u_vec and v_vec must have already been processed using prepare_vec. You can tune the appearance of the arrows using the keyword arguments chunk (size of block to average velocity vectors over, so the plot isn't too crowded), scale, headwidth, and headlength (all from the quiver function).
 # average_blocks is the helper function, overlay_vectors is the API.
 
-def average_blocks (data, chunk):
+def average_blocks (lon, lat, data_x, data_y, chunk_x, chunk_y, option):
 
     # Check if there is a mask
-    if np.ma.is_masked(data):
+    if np.ma.is_masked(data_x):
         mask = True
     else:
         mask = False
+    if option == 'max':
+        # Get magnitude
+        data_mag = np.sqrt(data_x**2 + data_y**2)
 
     # Figure out dimensions of output array
-    ny_chunks, nx_chunks = np.ceil(np.array(data.shape)/float(chunk)).astype(int)    
-    data_blocked = np.zeros([ny_chunks, nx_chunks])
+    nx_chunks = int(np.ceil(data_x.shape[1]/float(chunk_x)))
+    ny_chunks = int(np.ceil(data_x.shape[0]/float(chunk_y)))
+    lon_blocked = np.zeros([ny_chunks, nx_chunks])
+    lat_blocked = np.zeros([ny_chunks, nx_chunks])
+    data_x_blocked = np.zeros([ny_chunks, nx_chunks])
+    data_y_blocked = np.zeros([ny_chunks, nx_chunks])
     if mask:
-        data_blocked = np.ma.MaskedArray(data_blocked)
+        lon_blocked = np.ma.MaskedArray(lon_blocked)
+        lat_blocked = np.ma.MaskedArray(lat_blocked)
+        data_x_blocked = np.ma.MaskedArray(data_x_blocked)
 
-    # Average over blocks
+    # Average over blocks or select location of maximum magnitude
     for j in range(ny_chunks):
-        start_j = j*chunk
-        end_j = min((j+1)*chunk, data.shape[0])
+        start_j = j*chunk_y
+        end_j = min((j+1)*chunk_y, data_x.shape[0])
         for i in range(nx_chunks):
-            start_i = i*chunk
-            end_i = min((i+1)*chunk, data.shape[1])
-            data_blocked[j,i] = np.mean(data[start_j:end_j, start_i:end_i])
+            start_i = i*chunk_x
+            end_i = min((i+1)*chunk_x, data_x.shape[1])
+            lon_block = lon[start_j:end_j, start_i:end_i]
+            lat_block = lat[start_j:end_j, start_i:end_i]
+            data_x_block = data_x[start_j:end_j, start_i:end_i]
+            data_y_block = data_y[start_j:end_j, start_i:end_i]
+            if option == 'avg':
+                lon_blocked[j,i] = np.mean(lon_block)
+                lat_blocked[j,i] = np.mean(lat_block)
+                data_x_blocked[j,i] = np.mean(data_x_block)
+                data_y_blocked[j,i] = np.mean(data_y_block)
+            elif option == 'max':
+                data_mag_block = data_mag[start_j:end_j, start_i:end_i]
+                if np.count_nonzero(~data_mag_block.mask) == 0:
+                    # Block is entirely masked
+                    lon_blocked[j,i] = np.mean(lon_block)
+                    lat_blocked[j,i] = np.mean(lat_block)
+                    data_x_blocked[j,i] = np.ma.masked
+                    data_y_blocked[j,i] = np.ma.masked
+                else:
+                    [j0, i0] = np.argwhere(data_mag_block==np.amax(data_mag_block))[0]
+                    lon_blocked[j,i] = lon_block[j0, i0]
+                    lat_blocked[j,i] = lat_block[j0, i0]
+                    data_x_blocked[j,i] = data_x_block[j0, i0]
+                    data_y_blocked[j,i] = data_y_block[j0, i0]                
 
-    return data_blocked
+    return lon_blocked, lat_blocked, data_x_blocked, data_y_blocked
 
 
-def overlay_vectors (ax, u_vec, v_vec, grid, chunk=10, scale=0.8, headwidth=6, headlength=7):
+def overlay_vectors (ax, u_vec, v_vec, grid, option='avg', chunk=10, chunk_x=None, chunk_y=None, scale=0.8, headwidth=6, headlength=7):
+
+    if chunk_x is None:
+        chunk_x = chunk
+    if chunk_y is None:
+        chunk_y = chunk
 
     lon, lat = grid.get_lon_lat()
-    lon_plot = average_blocks(lon, chunk)
-    lat_plot = average_blocks(lat, chunk)
-    u_plot = average_blocks(u_vec, chunk)
-    v_plot = average_blocks(v_vec, chunk)
+    lon_plot, lat_plot, u_plot, v_plot = average_blocks(lon, lat, u_vec, v_vec, chunk_x, chunk_y, option)
     ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)

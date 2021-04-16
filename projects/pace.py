@@ -28,7 +28,7 @@ from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral
-from ..interpolation import interp_reg_xy, interp_to_depth
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid
 
 
 # Global variables
@@ -2818,17 +2818,24 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     p0 = 0.05
+    threshold = 50
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V']
+    label_x = [-124, -112.3, -111, -106, -100.4, -100.5, -95, -87]
+    label_y = [-74.5, -74.375, -75.05, -75.1, -75.2, -73.65, -72.9, -73.1]
+    num_labels = len(region_labels)
 
     # Process the x and y components
     def read_component (key):
         # Read the trends
-        trends_3d = read_netcdf(trend_dir+'ADV'+key+'_TH_trend.nc')
+        var_name = 'ADV'+key+'_TH_trend'
+        trends_3d = read_netcdf(trend_dir+var_name+'.nc', var_name)
         # Interpolate to given depth
         trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
         # Calculate mean trend and fill with 0s where not significant        
         mean_trend = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
         mean_trend[p_val > p0] = 0
+        return mean_trend
     advx_trend_ugrid = read_component('x')
     advy_trend_vgrid = read_component('y')
     # Interpolate to tracer grid
@@ -2836,10 +2843,25 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
     # Get magnitude
     magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
+    # Now set vectors to 0 anywhere below the threshold, so we don't have too many arrows
+    index = magnitude_trend < threshold
+    advx_trend = np.ma.masked_where(index, advx_trend)
+    advy_trend = np.ma.masked_where(index, advy_trend)
 
     # Plot
-    fig, ax = latlon_plot(magnitude_trend, grid, ctype='plusminus', title='Trends in horizontal advection of heat at '+str(-z0)+'m', return_fig=True, figsize=(10,6))
-    overlay_vectors(ax, advx_trend, advy_trend, grid)
+    fig = plt.figure(figsize=(9,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.05, right=0.9, bottom=0.05, top=0.9)
+    ax = plt.subplot(gs[0,0])
+    # Plot the magnitude in red (all positive side of plusminus)
+    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (Km$^3$/s per year)', titlesize=18)
+    # Overlay vectors in regions with strongest trends
+    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=3500, headwidth=4, headlength=5)
+    # Add ice shelf labels
+    for n in range(num_labels):
+        plt.text(label_x[n], label_y[n], region_labels[n], fontsize=14, ha='center', va='center', weight='bold', color='blue')
+    cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
+    cbar = plt.colorbar(img, cax=cax)
     finished_plot(fig) #, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
     
     
