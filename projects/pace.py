@@ -2702,7 +2702,7 @@ def precompute_sfc_trends (base_dir='./'):
     num_ens = 20
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
     grid_path = base_dir + 'PAS_grid/'
-    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss', 'EXFatemp', 'EXFpreci', 'EXFaqh', 'wind_speed']:
+    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss', 'EXFatemp', 'EXFpreci', 'EXFaqh', 'wind_speed', 'thermocline']:
         print 'Processing ' + var_name
         make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', dim=2)
 
@@ -2713,7 +2713,7 @@ def plot_test_sfc_trends (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     grid_dir = base_dir + 'PAS_grid/'
-    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss', 'EXFatemp', 'EXFpreci', 'EXFaqh', 'wind_speed']:
+    for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss', 'EXFatemp', 'EXFpreci', 'EXFaqh', 'wind_speed', 'thermocline']:
         trend_region_plots(base_dir+var_name+'_trend.nc', var_name, 'all', grid_dir, fig_dir=fig_dir, dim=2)    
 
 
