@@ -6,7 +6,7 @@ import numpy as np
 import sys
 
 from constants import rho_ice, region_bounds, Cp_sw, Tf_ref
-from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land
+from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land, depth_of_max, mask_3d
 from calculus import area_integral, vertical_integral, indefinite_ns_integral
 from plot_utils.slices import get_transect
 from interpolation import interp_grid
@@ -334,6 +334,20 @@ def adv_heat_wrt_freezing (adv, vel, grid):
             result[n] = adv[n] - Tf_ref*vel[n]*dA[n]
 
     return result
+
+
+# Calculate the thermocline given a 3D temperature field.
+def thermocline (temp, grid):
+
+    if len(temp.shape)==4:
+        print 'Error (thermocline): have not written time-dependent case yet'
+        sys.exit()
+    temp = mask_3d(temp, grid)
+    dtemp_dz = (temp[1:,:,:]-temp[:-1,:,:])/np.abs(grid.z[1:,None,None]-grid.z[:-1,None,None])
+    sfc_mask = np.ma.masked_where(True, dtemp_dz[0,:,:])
+    dtemp_dz = np.ma.concatenate((sfc_mask[None,:,:], dtemp_dz), axis=0)
+    return depth_of_max(dtemp_dz, grid)
+    
     
     
     

@@ -26,7 +26,7 @@ from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_ye
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
-from ..diagnostics import adv_heat_wrt_freezing, potential_density
+from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral
 from ..interpolation import interp_reg_xy
 
@@ -1189,17 +1189,19 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
             if var_name == 'advection_3d':
-                data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', time_average=True, return_info=True)
-                data_y = read_netcdf(file_paths[t], 'ADVy_TH', time_average=True)
-                data_z = read_netcdf(file_paths[t], 'ADVr_TH', time_average=True)
+                data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
+                data_y = read_netcdf(file_paths[t], 'ADVy_TH')
+                data_z = read_netcdf(file_paths[t], 'ADVr_TH')
                 data = np.ma.zeros(data_x.shape)
-                data[:-1,:-1,:-1] = data_x[:-1,:-1,:-1] - data_x[:-1,:-1,1:] + data_y[:-1,:-1,:-1] - data_y[:-1,1:,:-1] + data_z[1:,:-1,:-1] - data_z[:-1,:-1,:-1]
+                data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
+                data = np.mean(data, axis=0)
                 long_name = 'net advection of heat'
             elif var_name == 'diffusion_kpp':
-                data1, long_name, units = read_netcdf(file_paths[t], 'DFrI_TH', time_average=True, return_info=True)
-                data2 = read_netcdf(file_paths[t], 'KPPg_TH', time_average=True)
+                data1, long_name, units = read_netcdf(file_paths[t], 'DFrI_TH', return_info=True)
+                data2 = read_netcdf(file_paths[t], 'KPPg_TH')
                 data = np.ma.zeros(data1.shape)
-                data[:-1,:] = data1[1:,:] - data1[:-1,:] + data2[1:,:] - data2[:-1,:]
+                data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
+                data = np.mean(data, axis=0)
                 long_name = 'net vertical implicit diffusion and KPP transport of heat'
             elif var_name == 'ismr':
                 data = convert_ismr(read_netcdf(file_paths[t], 'SHIfwFlx', time_average=True))
@@ -1214,11 +1216,19 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 long_name = 'sea surface salinity'
                 units = 'psu'
             elif var_name == 'wind_speed':
-                u = read_netcdf(file_paths[t], 'EXFuwind', time_average=True)
-                v = read_netcdf(file_paths[t], 'EXFvwind', time_average=True)
-                data = np.sqrt(u**2 + v**2)
+                # Calculate speed from monthly values, then take the time-mean
+                u = read_netcdf(file_paths[t], 'EXFuwind')
+                v = read_netcdf(file_paths[t], 'EXFvwind')
+                data = np.mean(np.sqrt(u**2 + v**2), axis=0)
                 long_name = 'wind speed'
                 units = 'm/s'
+            elif var_name == 'thermocline':
+                temp = read_netcdf(file_paths[t], 'THETA')
+                num_time = temp.shape[0]
+                data_time = np.ma.empty([num_time, grid.ny, grid.nx])
+                for t in range(num_time):
+                    data_time[t,:] = thermocline(temp[t,:], grid)
+                data = np.mean(data_time, axis=0)            
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:

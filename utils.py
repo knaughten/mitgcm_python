@@ -813,6 +813,26 @@ def average_12_months (data, t0, calendar='standard', year=None):
             year = 1979
         days = np.array([days_per_month(n, year) for n in np.arange(1,12+1)])
     return np.ma.average(data[t0:t0+12,...], axis=0, weights=days)
+
+
+# Calculate the depth of the maximum value of the 3D field at each x-y point.
+def depth_of_max (data, grid, gtype='t'):
+
+    z_3d = z_to_xyz(grid.z, grid)
+    data = mask_3d(data, grid, gtype=gtype)
+    # Calculate the maximum value at each point and tile to make 3D
+    max_val = np.amax(data, axis=0)
+    max_val = xy_to_xyz(max_val, grid)    
+    # Get a mask of 1s and 0s which is 1 in the locations where the value equals the maximum in that water column
+    max_mask = (data==max_val).astype(float)
+    # Make sure there's exactly one such point in each water column
+    if np.amax(np.sum(max_mask, axis=0)) > 1 or np.amin(np.sum(max_mask, axis=0)) < 1:
+        print 'Error (depth_of_max): multiple values for maximum.'
+        sys.exit()
+    # Select z at these points and collapse the vertical dimension
+    return np.sum(z_3d*max_mask, axis=-3)
+
+    
     
 
     
