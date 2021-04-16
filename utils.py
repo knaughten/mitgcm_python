@@ -826,9 +826,15 @@ def depth_of_max (data, grid, gtype='t'):
     # Get a mask of 1s and 0s which is 1 in the locations where the value equals the maximum in that water column
     max_mask = (data==max_val).astype(float)
     # Make sure there's exactly one such point in each water column
-    if np.amax(np.sum(max_mask, axis=0)) > 1 or np.amin(np.sum(max_mask, axis=0)) < 1:
-        print 'Error (depth_of_max): multiple values for maximum.'
-        sys.exit()
+    if np.amax(np.sum(max_mask, axis=0)) > 1:
+        # Loop over any problem points
+        indices = np.argwhere(np.sum(max_mask,axis=0)>1)
+        for index in indices:
+            [j,i] = index
+        # Choose the shallowest one
+        k = np.argmax(max_mask[:,j,i])
+        max_mask[:,j,i] = 0
+        max_mask[k,j,i] = 1
     # Select z at these points and collapse the vertical dimension
     return np.sum(z_3d*max_mask, axis=-3)
 
