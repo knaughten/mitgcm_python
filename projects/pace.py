@@ -1188,7 +1188,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         data_save = np.empty([num_years, num_pts])
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
-            if var_name in == 'advection_3d':
+            if var_name == 'advection_3d':
                 data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
                 data_y = read_netcdf(file_paths[t], 'ADVy_TH')
                 data_z = read_netcdf(file_paths[t], 'ADVr_TH')
