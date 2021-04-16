@@ -18,7 +18,7 @@ from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, 
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
-from ..plot_utils.latlon import shade_background
+from ..plot_utils.latlon import shade_background, overlay_vectors
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
@@ -28,7 +28,7 @@ from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral
-from ..interpolation import interp_reg_xy
+from ..interpolation import interp_reg_xy, interp_to_depth
 
 
 # Global variables
@@ -1188,14 +1188,14 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         data_save = np.empty([num_years, num_pts])
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
-            if var_name == 'advection_3d':
+            if var_name in == 'advection_3d':
                 data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
                 data_y = read_netcdf(file_paths[t], 'ADVy_TH')
                 data_z = read_netcdf(file_paths[t], 'ADVr_TH')
                 data = np.ma.zeros(data_x.shape)
                 data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
                 data = np.mean(data, axis=0)
-                long_name = 'net advection of heat'
+                long_name = 'net advection of heat'                
             elif var_name == 'diffusion_kpp':
                 data1, long_name, units = read_netcdf(file_paths[t], 'DFrI_TH', return_info=True)
                 data2 = read_netcdf(file_paths[t], 'KPPg_TH')
@@ -1228,7 +1228,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data_time = np.ma.empty([num_time, grid.ny, grid.nx])
                 for t in range(num_time):
                     data_time[t,:] = thermocline(temp[t,:], grid)
-                data = np.mean(data_time, axis=0)            
+                data = np.mean(data_time, axis=0)
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
@@ -2807,6 +2807,45 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
 
     # Plot
     timeseries_multi_plot(time_smoothed, data_final, titles, default_colours(len(data_final)), title='Time-integrated heat budget anomalies\nin '+region_names[region]+' below '+str(int(-z0))+'m', units=deg_string+r'10$^{18} $J', fig_name=fig_name)
+
+
+# Plot a map of the trend in horizontal advection of heat at the given depth.
+def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-400):
+
+    base_dir = real_dir(base_dir)
+    trend_dir = real_dir(trend_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    p0 = 0.05
+
+    # Process the x and y components
+    def read_component (key):
+        # Read the trends
+        trends_3d = read_netcdf(trend_dir+'ADV'+key+'_TH_trend.nc')
+        # Interpolate to given depth
+        trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
+        # Calculate mean trend and fill with 0s where not significant        
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend[p_val > p0] = 0
+    advx_trend_ugrid = read_component('x')
+    advy_trend_vgrid = read_component('y')
+    # Interpolate to tracer grid
+    advx_trend = interp_grid(advx_trend_ugrid, grid, 'u', 't')
+    advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
+    # Get magnitude
+    magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
+
+    # Plot
+    fig, ax = latlon_plot(magnitude_trend, grid, ctype='plusminus', title='Trends in horizontal advection of heat at '+str(-z0)+'m', return_fig=True, figsize=(10,6))
+    overlay_vectors(ax, advx_trend, advy_trend, grid)
+    finished_plot(fig) #, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
+    
+    
+
+    
+    
 
     
     
