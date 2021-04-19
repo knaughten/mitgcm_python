@@ -2092,6 +2092,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
     num_var = len(var_names)
     base_dir = real_dir(base_dir)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
+    ctrl_dir = base_dir+'PAS_ctrl/output/'
     year_start = 1920
     base_year_end = 1949
     smooth = 24
@@ -2130,6 +2131,12 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
         p_val = ttest_1samp(trends, 0)[1]
         sig = (1-p_val)*100
         print var_names[v]+': trend='+str(np.mean(trends))+' '+units[v]+'/decade, significance='+str(sig)
+        # Calculate trend in control
+        slope, sig = read_calc_trends(var_names[v], ctrl_dir, 'smooth', p0=0.1)
+        if sig:
+            print '(control: '+str(slope)+' '+units[v]+'/decade)'
+        else:
+            print '(control: none)'
 
 
 # Plot sensitivity of temperature trend to convection.
@@ -2820,10 +2827,10 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     p0 = 0.05
-    threshold = 800
+    threshold = 1500
     region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V']
-    label_x = [-124, -112.3, -111, -106, -100.4, -100.5, -95, -87]
-    label_y = [-74.5, -74.375, -75.05, -75.1, -75.2, -73.65, -72.9, -73.1]
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1]
     num_labels = len(region_labels)
 
     # Process the x and y components
@@ -2844,8 +2851,10 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     advx_trend = interp_grid(advx_trend_ugrid, grid, 'u', 't')
     advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
     # Convert to W/m^2/y
-    advx_trend *= Cp_sw*rhoConst*xy_to_xyz(grid.dx_s)/grid.dV
-    advy_trend *= Cp_sw*rhoConst*xy_to_xyz(grid.dy_s)/grid.dV
+    # Don't worry about divide-by-zero warnings, that's just the land mask where dV=0
+    dV = interp_to_depth(grid.dV, z0, grid)
+    advx_trend *= Cp_sw*rhoConst*grid.dx_s/dV
+    advy_trend *= Cp_sw*rhoConst*grid.dy_w/dV
     # Get magnitude
     magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
     # Now set vectors to 0 anywhere below the threshold, so we don't have too many arrows
@@ -2859,14 +2868,14 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     gs.update(left=0.05, right=0.9, bottom=0.05, top=0.9)
     ax = plt.subplot(gs[0,0])
     # Plot the magnitude in red (all positive side of plusminus)
-    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (Km$^3$/s per year)', titlesize=18)
+    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (W/m$^2$/y)', titlesize=18, vmax=5000)
     # Overlay vectors in regions with strongest trends
-    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=57000, headwidth=4, headlength=5)
+    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e5, headwidth=4, headlength=5)
     # Add ice shelf labels
     for n in range(num_labels):
         plt.text(label_x[n], label_y[n], region_labels[n], fontsize=14, ha='center', va='center', weight='bold', color='blue')
     cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
-    cbar = plt.colorbar(img, cax=cax)
+    cbar = plt.colorbar(img, cax=cax, extend='max')
     finished_plot(fig, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
     
     
