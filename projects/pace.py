@@ -2132,7 +2132,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
         sig = (1-p_val)*100
         print var_names[v]+': trend='+str(np.mean(trends))+' '+units[v]+'/decade, significance='+str(sig)
         # Calculate trend in control
-        slope, sig = read_calc_trends(var_names[v], ctrl_dir, 'smooth', p0=0.1)
+        slope, sig = read_calc_trends(var_names[v], ctrl_dir+timeseries_file, 'smooth', p0=0.1)
         if sig:
             print '(control: '+str(slope)+' '+units[v]+'/decade)'
         else:
@@ -2877,6 +2877,34 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
     cbar = plt.colorbar(img, cax=cax, extend='max')
     finished_plot(fig, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
+
+
+# Plot a map of all the regions used in other figures.
+def plot_region_map (base_dir='./', fig_dir='./'):
+
+    regions = ['amundsen_shelf', 'amundsen_shelf_break', 'amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+    region_labels = ['Shelf', 'Shelf break', 'Shelf break trough', 'Pine Island Bay', 'Dotson front']
+    region_label_x = [-108, -110, -113.5, -102, -112]
+    region_label_y = [-73, -71, -71.5, -74.7, -74]
+    region_colours = ['DodgerBlue','magenta','green','red','blue']
+    [xmin, xmax, ymin, ymax] = [None, None, None, None]
+    grid_path = real_dir(base_dir)+'PAS_grid/'
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(grid_path)
+
+    # Plot an empty map
+    fig, ax = plt.subplots(figsize=(7,5))
+    img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    # Now trace and label the regions
+    for n in range(num_regions):
+        mask = grid.get_region_mask(regions[n])
+        ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
+        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha='center', va='center', color=region_colours[n])
+    plt.title('Regions used in analysis', fontsize=18)
+    plt.tight_layout()
+    finished_plot(fig) #, fig_name=fig_dir+'region_map.png', dpi=300)
+
+    
     
     
 
