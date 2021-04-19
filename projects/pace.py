@@ -22,7 +22,7 @@ from ..plot_utils.latlon import shade_background, overlay_vectors
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -2467,47 +2467,57 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
-# Plot timeseries of mass loss from PIG, Dotson, and Getz for the given simulation, with observational estimates overlaid on top.
+# Plot timeseries of mass loss from PIG and Dotson for the given simulation, with observational estimates overlaid on top; also a bar chart comparing time-mean melt rates with observations for all ice shelves in the domain.
 def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     model_file = base_dir + 'PAS_ERA5/output/timeseries.nc'
     start_year = 1979
-    shelf = ['pig', 'dotson', 'getz']
-    shelf_titles = [r'$\bf{a}$. Pine Island Ice Shelf', r'$\bf{b}$. Dotson Ice Shelf', r'$\bf{c}$. Getz Ice Shelf']
-    num_shelves = len(shelf)
-    obs = [pig_melt_years, dotson_melt_years, getz_melt_years]
+    shelf_ts = ['pig', 'dotson']
+    shelf_ts_titles = [r'$\bf{a}$. Pine Island Ice Shelf', r'$\bf{b}$. Dotson Ice Shelf']
+    num_shelves_ts = len(shelf)
+    obs_ts = [pig_melt_years, dotson_melt_years]
+    shelf_int = ['getz', 'dotson', 'crosson', 'thwaites', 'pig', 'cosgrove', 'abbot', 'venable']
+    num_shelves_int = len(shelf_int)
+    shelf_int_title = r'$\bf{c}$. All ice shelves, 1994-2018 mean'
+    start_year_int = 1994
+    end_year_int = 2018
 
     # Read data and trim the spinup
     time = netcdf_time(model_file, monthly=False)
     t0 = index_year_start(time, start_year)
+    t_start, t_end = index_period(time, start_year_int, end_year_int)
     time = time[t0:]
-    model_melt = np.empty([num_shelves, time.size])
-    for n in range(num_shelves):
-        model_melt[n,:] = read_netcdf(model_file, shelf[n]+'_massloss')[t0:]
+    model_melt_ts = np.empty([num_shelves_ts, time.size])
+    for n in range(num_shelves_ts):
+        model_melt_ts[n,:] = read_netcdf(model_file, shelf_ts[n]+'_massloss')[t0:]
+    # Now read 1994-2018 mean for all ice shelves
+    model_melt_int = np.empty(num_shelves_int)
+    for n in range(num_shelves_int):
+        model_melt_int[n] = np.mean(read_netcdf(model_file, shelf_int[n]+'_melt'
 
     # Set up the plot
     fig = plt.figure(figsize=(8,9))
     gs = plt.GridSpec(3,1)
     gs.update(left=0.1, right=0.98, bottom=0.1, top=0.95, hspace=0.3)
-    for n in range(num_shelves):
+    for n in range(num_shelves_ts):
         ax = plt.subplot(gs[n,0])
         # Plot the model timeseries
-        ax.plot_date(time, model_melt[n,:], '-', color='blue', label='Model')
+        ax.plot_date(time, model_melt_ts[n,:], '-', color='blue', label='Model')
         # Loop over observational years and plot the range
-        num_obs = len(obs[n]['year'])
+        num_obs = len(obs_ts[n]['year'])
         for t in range(num_obs):
             # Plot all observations on 1 Feb
-            obs_date = datetime.date(obs[n]['year'][t], 2, 1)
-            ax.errorbar(obs_date, obs[n]['melt'][t], yerr=obs[n]['err'][t], fmt='none', color='black', capsize=3, label=('Observations' if t==0 else None))
+            obs_date = datetime.date(obs_ts[n]['year'][t], 2, 1)
+            ax.errorbar(obs_date, obs_ts[n]['melt'][t], yerr=obs_ts[n]['err'][t], fmt='none', color='black', capsize=3, label=('Observations' if t==0 else None))
         ax.grid(linestyle='dotted')
         ax.set_xlim([time[0],time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
-        ax.set_title(shelf_titles[n], fontsize=16)
+        ax.set_title(shelf_ts_titles[n], fontsize=16)
         if n == 0:
             ax.set_ylabel('Basal mass loss (Gt/y)', fontsize=14)
-        if n == num_shelves-1:
+        if n == num_shelves_ts-1:
             ax.set_xlabel('Year', fontsize=12)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
     finished_plot(fig, fig_name=fig_dir+'ismr_timeseries_obs.png', dpi=300)
@@ -2529,7 +2539,7 @@ def nsidc_fname (year, month):
     return fname
 
 
-# Plot seasonal averages of sea ice concentration in the ERA5-forced run versus NSIDC observations.
+# Plot seasonal averages of sea ice concentration in the ERA5-forced run versus NSIDC observations, as well as modelled sea ice thickness.
 def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
 
     nsidc_dir = real_dir(nsidc_dir)
@@ -2549,17 +2559,22 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
     # Read and seasonally average model output
     print 'Reading model output'
     model_aice = np.zeros([num_seasons, grid.ny, grid.nx])
+    model_hice = np.zeros([num_seasons, grid.ny, grid.nx])
     ndays_int = np.zeros(num_seasons)
     for year in range(start_year, end_year+1):
         file_path = model_dir + str(year) + '01/MITgcm/output.nc'
         model_aice_tmp = read_netcdf(file_path, 'SIarea')
+        model_hice_tmp = read_netcdf(file_path, 'SIheff')
         for n in range(num_seasons):
             for month in season_months[n]:
                 ndays = days_per_month(month, year)
                 model_aice[n,:] += model_aice_tmp[month-1,:]*ndays
+                model_hice[n,:] += model_hice_tmp[month-1,:]*ndays
                 ndays_int[n] += ndays
     model_aice /= ndays_int[:,None,None]
     model_aice = mask_land_ice(model_aice, grid, time_dependent=True)
+    model_hice /= ndays_int[:,None,None]
+    model_hice = mask_land_ice(model_hice, grid, time_dependent=True)
 
     # Read and seasonally average NSIDC data
     print 'Reading NSIDC obs'
@@ -2587,34 +2602,44 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
     nsidc_aice /= ndays_int[:,None,None]
 
     # Plot
-    fig = plt.figure(figsize=(6,8))
-    gs = plt.GridSpec(4,2)
-    gs.update(left=0.12, right=0.88, bottom=0.08, top=0.9, hspace=0.02, wspace=0.02)
-    cax = fig.add_axes([0.3, 0.03, 0.4, 0.02])
+    fig = plt.figure(figsize=(8,8))
+    gs = plt.GridSpec(4,3)
+    gs.update(left=0.1, right=0.9, bottom=0.08, top=0.87, hspace=0.02, wspace=0.02)
+    cax1 = fig.add_axes([0.14, 0.03, 0.2, 0.02])
+    cax2 = fig.add_axes([0.485, 0.03, 0.3, 0.02])
     for n in range(num_seasons):
-        # Plot model
+        # Plot modelled thickness
         ax = plt.subplot(gs[n,0])
+        img = latlon_plot(model_hice[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmax=3, ctype='plusminus')
+        if n == 0:
+            ax.set_title('Thickness (m)\n(Model)', fontsize=14)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        if n == num_seasons - 1:
+            cbar = plt.colorbar(img, cax=cax1, orientation='horizontal', extend='max', ticks=np.arange(3+1))
+        # Modelled concentration
+        ax = plt.subplot(gs[n,1])
         img = latlon_plot(model_aice[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax)
         if n == 0:
-            ax.set_title('Model', fontsize=14)
+            ax.set_title('Concentration\n(Model)', fontsize=14)
         ax.set_xticks([])
         ax.set_yticks([])
         # Plot obs
-        ax = plt.subplot(gs[n,1])
+        ax = plt.subplot(gs[n,2])
         shade_background(ax)
         ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
         ax.set_xlim([xmin, xmax])
         ax.set_ylim([ymin, ymax])
         if n == 0:
-            ax.set_title('Observations', fontsize=14)
+            ax.set_title('Concentration\n(Observations)', fontsize=14)
         ax.set_xticks([])
         ax.set_yticks([])
         # Season name on left
-        plt.text(0.11, 0.815-0.21*n, season_titles[n], fontsize=16, ha='right', va='center', transform=fig.transFigure)
+        plt.text(0.09, 0.8-0.2*n, season_titles[n], fontsize=16, ha='right', va='center', transform=fig.transFigure)
         # Colourbar below
         if n == num_seasons - 1:
-            cbar = plt.colorbar(img, cax=cax, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
-    plt.suptitle('Sea ice concentration ('+str(start_year)+'-'+str(end_year)+')', fontsize=18)
+            cbar = plt.colorbar(img, cax=cax2, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
+    plt.suptitle('Sea ice, '+str(start_year)+'-'+str(end_year), fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
 
     
