@@ -2245,7 +2245,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     obs_years = years_with_obs(obs_dir)
     obs_num_years = len(obs_years)
     regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_titles = [r'$\bf{a}$. Shelf break trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    region_titles = [r'$\bf{a}$. Western trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
     num_regions = len(regions)
     model_var = ['temp', 'salt']
     obs_var = ['PTmean', 'Smean']
@@ -2882,27 +2882,33 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
 # Plot a map of all the regions used in other figures.
 def plot_region_map (base_dir='./', fig_dir='./'):
 
-    regions = ['amundsen_shelf', 'amundsen_shelf_break', 'amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_labels = ['Shelf', 'Shelf break', 'Shelf break trough', 'Pine Island Bay', 'Dotson front']
-    region_label_x = [-108, -110, -113.5, -102, -112]
-    region_label_y = [-73, -71, -71.5, -74.7, -74]
-    region_colours = ['DodgerBlue','magenta','green','red','blue']
-    [xmin, xmax, ymin, ymax] = [None, None, None, None]
-    grid_path = real_dir(base_dir)+'PAS_grid/'
-    fig_dir = real_dir(fig_dir)
-    grid = Grid(grid_path)
+regions = ['amundsen_shelf', 'amundsen_shelf_break', 'amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+region_labels = ['Shelf', 'Shelf break', 'Western\ntrough', 'Pine\nIsland\nBay', 'Dotson\nfront']
+region_label_x = [-108, -109, -117.2, -105, -112.2]
+region_label_y = [-72.75, -70.5, -71.5, -74, -73.85]
+region_colours = ['DodgerBlue','magenta','green','red','blue']
+[xmin, xmax, ymin, ymax] = [-120, -95, None, -70]
+grid_path = real_dir(base_dir)+'PAS_grid/'
+fig_dir = real_dir(fig_dir)
+grid = Grid(grid_path)
 
-    # Plot an empty map
-    fig, ax = plt.subplots(figsize=(7,5))
-    img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    # Now trace and label the regions
-    for n in range(num_regions):
-        mask = grid.get_region_mask(regions[n])
-        ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
-        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha='center', va='center', color=region_colours[n])
-    plt.title('Regions used in analysis', fontsize=18)
-    plt.tight_layout()
-    finished_plot(fig) #, fig_name=fig_dir+'region_map.png', dpi=300)
+# Plot an empty map
+fig, ax = plt.subplots(figsize=(6,5))
+img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+# Now trace and label the regions
+for n in range(len(regions)):
+    mask = grid.get_region_mask(regions[n])
+    if regions[n] == 'amundsen_shelf':
+        # Remove a few islands etc that we don't want outlined
+        all_bounds = [[-106, -104, -73.5, -72.5], [-104, -103, -74.5, -74], [-111, -110, -74.2, -73]]
+        for bounds in all_bounds:
+            index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
+            mask[index] = 1
+    ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
+    plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha='center', va='center', color=region_colours[n])
+plt.title('Regions used in analysis', fontsize=18)
+plt.tight_layout()
+finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
 
     
     
