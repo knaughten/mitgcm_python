@@ -321,7 +321,7 @@ def timeseries_iso_depth (file_path, var_name, val0, grid, z0=None, mask=None, t
     for t in range(data.shape[0]):
         data_tmp = mask_3d(data[t,:], grid)
         if mask is not None:
-            data_tmp = mask_3d(data_tmp, np.invert(mask))
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
         iso_depth_tmp = depth_of_isoline(data_tmp, grid.z, val0, z0=z0)
         timeseries.append(area_average(iso_depth_tmp, grid))
     return np.array(timeseries)
@@ -1329,11 +1329,11 @@ def set_parameters (var):
         region = var[:var.index('_isotherm')]
         var_tail = var[len(region+'_isotherm_'):]
         if 'below' in var_tail:
-            val0 = var_tail[:var_tail.index('_below')]
-            z0 = -1*int(var_tail[len(val0+'_below_'):-1])
+            val0 = var_tail[:var_tail.index('C_below')]
+            z0 = -1*int(var_tail[len(val0+'C_below_'):-1])
             val0 = float(val0)
         else:
-            val0 = float(var_tail)
+            val0 = float(var_tail[:-1])
             z0 = None
         title = 'Average depth of '+str(val0)+'m isotherm in '+region_names[region]
         units = 'm'            

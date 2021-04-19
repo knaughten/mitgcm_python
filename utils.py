@@ -849,8 +849,10 @@ def depth_of_isoline (data, z, val0, z0=None):
     if z0 is None:
         z0 = 0
     # Get data and depth below each level
-    z_below = np.concatenate((z[1:,:], z[-1,:]), axis=0)
-    data_below = np.concatenate((data[1:,:], data[:-1,:]), axis=0)
+    z_bottom = z[-1,:]
+    z_below = np.ma.concatenate((z[1:,:], z_bottom[None,:]), axis=0)
+    data_bottom = np.ma.masked_where(True, data[-1,:])
+    data_below = np.ma.concatenate((data[1:,:], data_bottom[None,:]), axis=0)
     # Find points where the isoline is crossed, in either direction
     mask1 = (data < val0)*(data_below >= val0)*(z <= z0)
     mask2 = (data >= val0)*(data_below < val0)*(z <= z0)
