@@ -1334,6 +1334,7 @@ def set_parameters (var):
             val0 = float(val0)
         else:
             val0 = float(var_tail)
+            z0 = None
         title = 'Average depth of '+str(val0)+'m isotherm in '+region_names[region]
         units = 'm'            
     elif '_adv_heat_ns' in var:
