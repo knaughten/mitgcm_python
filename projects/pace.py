@@ -22,7 +22,7 @@ from ..plot_utils.latlon import shade_background, overlay_vectors
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -2820,7 +2820,7 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     p0 = 0.05
-    threshold = 50
+    threshold = 800
     region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V']
     label_x = [-124, -112.3, -111, -106, -100.4, -100.5, -95, -87]
     label_y = [-74.5, -74.375, -75.05, -75.1, -75.2, -73.65, -72.9, -73.1]
@@ -2843,6 +2843,9 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     # Interpolate to tracer grid
     advx_trend = interp_grid(advx_trend_ugrid, grid, 'u', 't')
     advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
+    # Convert to W/m^2/y
+    advx_trend *= Cp_sw*rhoConst*xy_to_xyz(grid.dx_s)/grid.dV
+    advy_trend *= Cp_sw*rhoConst*xy_to_xyz(grid.dy_s)/grid.dV
     # Get magnitude
     magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
     # Now set vectors to 0 anywhere below the threshold, so we don't have too many arrows
@@ -2858,7 +2861,7 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     # Plot the magnitude in red (all positive side of plusminus)
     img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (Km$^3$/s per year)', titlesize=18)
     # Overlay vectors in regions with strongest trends
-    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=3500, headwidth=4, headlength=5)
+    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=57000, headwidth=4, headlength=5)
     # Add ice shelf labels
     for n in range(num_labels):
         plt.text(label_x[n], label_y[n], region_labels[n], fontsize=14, ha='center', va='center', weight='bold', color='blue')
