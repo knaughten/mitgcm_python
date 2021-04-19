@@ -2377,7 +2377,7 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     obs_dir = real_dir(obs_dir)
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    model_file = base_dir + 'PAS_ERA5/output/timeseries.nc'
+    model_file = base_dir + 'PAS_ERA5/output/timeseries_final.nc'
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     obs_file_head = obs_dir + 'ASEctd_griddedMean'
@@ -2472,11 +2472,11 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
-    model_file = base_dir + 'PAS_ERA5/output/timeseries.nc'
+    model_file = base_dir + 'PAS_ERA5/output/timeseries_final.nc'
     start_year = 1979
     shelf_ts = ['pig', 'dotson']
     shelf_ts_titles = [r'$\bf{a}$. Pine Island Ice Shelf', r'$\bf{b}$. Dotson Ice Shelf']
-    num_shelves_ts = len(shelf)
+    num_shelves_ts = len(shelf_ts)
     obs_ts = [pig_melt_years, dotson_melt_years]
     shelf_int = ['getz', 'dotson', 'crosson', 'thwaites', 'pig', 'cosgrove', 'abbot', 'venable']
     shelf_int_titles = ['Getz', 'Dotson', 'Crosson', 'Thwaites', 'Pine Island', 'Cosgrove', 'Abbot', 'Venable']
@@ -2506,7 +2506,7 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
     # Set up the plot
     fig = plt.figure(figsize=(8,9))
     gs = plt.GridSpec(3,1)
-    gs.update(left=0.1, right=0.98, bottom=0.1, top=0.95, hspace=0.4)
+    gs.update(left=0.1, right=0.98, bottom=0.1, top=0.96, hspace=0.4)
     for n in range(num_shelves_ts):
         ax = plt.subplot(gs[n,0])
         # Plot the model timeseries
@@ -2521,21 +2521,22 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
         ax.set_xlim([time[0],time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
         ax.set_title(shelf_ts_titles[n], fontsize=16)
-        ax.set_ylabel('Basal mass loss (Gt/y)', fontsize=14)
-        if n == 0:            
-            ax.set_xlabel('Year', fontsize=12)
+        if n == 0:
+            ax.set_ylabel('Basal mass loss (Gt/y)', fontsize=14)
+            ax.legend(fontsize=12)
         else:
-            ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
+            ax.set_xlabel('Year', fontsize=12)        
     # Now plot bar chart of integrated melt
     ax = plt.subplot(gs[2,0])
-    ax.bar(np.arange(num_shelves_int), model_melt_int[n])
+    ax.grid(linestyle='dotted')
+    ax.bar(np.arange(num_shelves_int), model_melt_int)
     for n in range(num_shelves_int):
         ax.errorbar(n, adusumilli_melt[shelf_int[n]][0], yerr=adusumilli_melt[shelf_int[n]][1], fmt='none', color='black', capsize=3)
+    ax.axhline(color='black', linewidth=1)
     ax.set_xticks(np.arange(num_shelves_int))
     ax.set_xticklabels(shelf_int_titles, rotation=90)
-    ax.set_ylabel('Basal mass loss (Gt/y)', fontsize=14)
-    ax.set_title('All ice shelves, 1994-2018 mean', fontsize=16)
-    finished_plot(fig) #, fig_name=fig_dir+'ismr_timeseries_obs.png', dpi=300)
+    ax.set_title(shelf_int_title, fontsize=16)
+    finished_plot(fig, fig_name=fig_dir+'ismr_timeseries_obs.png', dpi=300)
 
 
 # Helper function to construct the NSDIC file name for the given year and month.

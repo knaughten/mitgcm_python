@@ -838,6 +838,45 @@ def depth_of_max (data, grid, gtype='t'):
     # Select z at these points and collapse the vertical dimension
     return np.sum(z_3d*max_mask, axis=-3)
 
+
+# Calculate the shallowest depth of the given isoline, below the given depth z0.
+def depth_of_isoline (data, z, val0, z0=None):
+
+    [nz, ny, nx] = data.shape
+    if len(z.shape) == 1:
+        # Make z 3D
+        z = z_to_xyz(z, [nx, ny, nz])
+    if z0 is None:
+        z0 = 0
+    # Get data and depth below each level
+    z_below = np.concatenate((z[1:,:], z[-1,:]), axis=0)
+    data_below = np.concatenate((data[1:,:], data[:-1,:]), axis=0)
+    # Find points where the isoline is crossed, in either direction
+    mask1 = (data < val0)*(data_below >= val0)*(z <= z0)
+    mask2 = (data >= val0)*(data_below < val0)*(z <= z0)
+    mask = (mask1.astype(bool) + mask2.astype(bool)).astype(float)
+    # Make sure there's at most one point in each water column
+    if np.amax(np.sum(mask, axis=0)) > 1:
+        # Loop over any problem points
+        indices = np.argwhere(np.sum(mask, axis=0)>1)
+        for index in indices:
+            [j,i] = index
+        # Choose the shallowest one
+        k = np.argmax(mask[:,j,i])
+        mask[:,j,i] = 0
+        mask[k,j,i] = 1
+    # Select data and depth at these points and collapse the vertical dimension
+    data_cross = np.sum(data*mask, axis=0)
+    data_below_cross = np.sum(data_below*mask, axis=0)
+    z_cross = np.sum(z*mask, axis=0)
+    z_below_cross = np.sum(z_below*mask, axis=0)
+    # Now interpolate to the given isotherm
+    depth_iso = (z_cross - z_below_cross)/(data_cross - data_below_cross)*(val0 - data_cross) + z_cross
+    # Mask out anywhere where there is no such isotherm
+    depth_iso = np.ma.masked_where(np.sum(mask, axis=0)==0, depth_iso)
+    return depth_iso
+    
+
     
     
 
