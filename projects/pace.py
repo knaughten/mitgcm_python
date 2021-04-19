@@ -2495,8 +2495,13 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
         model_melt_ts[n,:] = read_netcdf(model_file, shelf_ts[n]+'_massloss')[t0:]
     # Now read 1994-2018 mean for all ice shelves
     model_melt_int = np.empty(num_shelves_int)
+    ndays = []
+    for year in range(start_year_int, end_year_int+1):
+        for month in range(12):
+            ndays.append(days_per_month(month+1, year))
+    ndays = np.array(ndays)
     for n in range(num_shelves_int):
-        model_melt_int[n] = np.mean(read_netcdf(model_file, shelf_int[n]+'_massloss')[t_start:t_end])
+        model_melt_int[n] = np.sum(read_netcdf(model_file, shelf_int[n]+'_massloss')[t_start:t_end]*ndays)/np.sum(ndays)
 
     # Set up the plot
     fig = plt.figure(figsize=(8,9))
