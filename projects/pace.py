@@ -1229,6 +1229,8 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 for t in range(num_time):
                     data_time[t,:] = thermocline(temp[t,:], grid)
                 data = np.mean(data_time, axis=0)
+                long_name = 'thermocline depth'
+                units = 'm'
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
@@ -2862,7 +2864,7 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
         plt.text(label_x[n], label_y[n], region_labels[n], fontsize=14, ha='center', va='center', weight='bold', color='blue')
     cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
     cbar = plt.colorbar(img, cax=cax)
-    finished_plot(fig) #, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
     
     
 
