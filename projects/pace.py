@@ -1203,6 +1203,15 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
                 data = np.mean(data, axis=0)
                 long_name = 'net vertical implicit diffusion and KPP transport of heat'
+            elif var_name == 'adv_plus_dif':
+                # Sum of previous two
+                data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
+                data_y = read_netcdf(file_paths[t], 'ADVy_TH')
+                data_z = read_netcdf(file_paths[t], 'ADVr_TH') + read_netcdf(file_paths[t], 'DFrI_TH') + read_netcdf(file_paths[t], 'KPPg_TH')
+                data = np.ma.zeros(data_x.shape)
+                data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
+                data = np.mean(data, axis=0)
+                long_name = 'net advection, diffusion, and KPP transport of heat'                
             elif var_name == 'ismr':
                 data = convert_ismr(read_netcdf(file_paths[t], 'SHIfwFlx', time_average=True))
                 long_name = 'ice shelf melt rate'
@@ -3010,6 +3019,79 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
         ax.set_yticks([])
     plt.suptitle('Trends per century in surface variables', fontsize=18)
     finished_plot(fig, fig_name=fig_dir+'sfc_trends.png', dpi=300)
+
+
+def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    trend_dir = real_dir(trend_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    grid = Grid('PAS_grid/')
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    file_paths = [d + '/output/timeseries_heat_budget.nc' for d in sim_dir]
+    region = 'amundsen_shelf'
+    z0 = 200
+    # List of variable names to sum for each term
+    var_names = [['advection_heat_xy', 'advection_heat_z'], ['diffusion_heat_implicit_z', 'kpp_heat_z'], ['shortwave_penetration']]
+    var_titles = ['3D advection', 'Vertical diffusion + KPP', 'Shortwave penetration', 'Total']
+    colours = ['red', 'blue', 'magenta', 'black']
+    num_var = len(var_titles)
+    factor = 1e-9
+    units = 'EJ'
+    start_year = 1920
+    end_year_base = 1949
+    num_time_base = (end_year_base-start_year+1)*12
+    end_year = 2013
+    smooth = 24
+    trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
+    
+
+    # Read and process timeseries
+    time = netcdf_time(file_paths[n], monthly=False)
+    t0 = index_year_start(time, start_year)
+    time = time[t0:]
+    num_time = time.size
+    data = np.zeros([num_var, num_ens, num_time])
+    for v in range(num_var):
+        if var_titles[v] == 'Total':
+            # Sum of previous terms
+            data[v,:] = np.sum(data[:v,:], axis=0)
+        else:
+            # Loop over ensemble members
+            for n in range(num_ens):
+                # Sum the component variables
+                for var in var_names[v]:
+                    data[v,n,:] = read_netcdf(file_paths[n], region+'_'+var+'_below_'+str(z0)+'m')*factor
+    # Subtract the mean over the base period
+    data_mean = np.mean(data[:,:,:num_time_base], axis=2)
+    data -= data_mean[:,:,None]
+    # Time-integrate
+    data_int = np.empty(data.shape)
+    for v in range(num_var):
+        for n in range(num_ens):
+            data_int[v,n,:] = time_integral(data[v,n,:], time)
+    # Smooth
+    # Start with a dummy variable so we get time trimmed to the right size
+    tmp, time = moving_average(np.zeros(time.size), smooth, time=time)
+    data_smoothed = np.empty([num_var, num_ens, time.size])
+    for v in range(num_var):
+        for n in range(num_ens):
+            data_smoothed[v,n,:] = moving_average(data_int[v,n,:], smooth)
+    # Calculate the ensemble mean and spread for each term
+    timeseries_mean = np.mean(data_smoothed, axis=1)
+    timeseries_min = np.amin(data_smoothed, axis=1)
+    timeseries_max = np.amax(data_smoothed, axis=1)
+    
+                    
+                    
+                
+
+    
+
+    
+        
         
 
     
