@@ -1147,7 +1147,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 
 
 # Calculate the trend at every point in the given region, for the given variable, and all ensemble members. Save to a NetCDF file (3D or 4D depending on whether variable is 2D or 3D).
-def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920):
+def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1949, time_integral_anomaly=False):
 
     num_ens = len(sim_dir)
 
@@ -1244,6 +1244,13 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 v = read_netcdf(file_paths[t], 'VVEL', time_average=True)
                 [tmp, data] = adv_heat_wrt_freezing([None, data], [None, v], grid)
             data_save[t,:] = data[mask]
+        if time_integral_anomaly:
+            # Calculate the anomaly from the base period
+            num_base_years = end_base_year - start_year + 1
+            data_save -= np.mean(data_save[:num_base_years,:], axis=0)
+            # Now time-integrate
+            dt = 365*sec_per_day
+            data_save = np.cumsum(data_save*dt, axis=0)
         # Now calculate the trend at each point
         print 'Calculating trends'
         trends_tmp = np.empty(num_pts)
@@ -1323,7 +1330,7 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
     
     # Now plot trend at every integer longitude within the domain (lat-depth slices)
     for lon0 in lon0_slices:
-        slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png')
+        slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png', hmin=ymin, hmax=ymax, vmin=vmin, vmax=vmax)
 
 
 def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
@@ -2952,6 +2959,7 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
 
 
+# Make a 4x2 plot of ensemble mean trends in 8 surface variables.
 def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
 
     trend_dir = real_dir(trend_dir)
