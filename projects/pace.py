@@ -22,7 +22,7 @@ from ..plot_utils.latlon import shade_background, overlay_vectors
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
@@ -2950,6 +2950,58 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     plt.title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
+
+
+def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
+
+    trend_dir = real_dir(trend_dir)
+    grid_dir = real_dir(grid_dir)
+    fig_dir = real_dir(fig_dir)
+    var_names = ['EXFvwind', 'EXFatemp', 'SIfwfrz', 'SIfwmelt', 'thermocline', 'SIheff', 'sss', 'sst']
+    factor = [1, 1, -1*sec_per_year/rho_fw, sec_per_year/rho_fw, 1, 1, 1, 1]
+    units = ['m/s', deg_string+'C', 'm/y', 'm/y', 'm', 'm', 'psu', deg_string+'C']
+    titles = ['Meridional wind', 'Surface air temperature', 'Sea ice freezing', 'Sea ice melting', 'Thermocline depth', 'Sea ice thickness', 'Sea surface salinity', 'Sea surface temperature']
+    file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
+    num_var = len(var_names)
+    grid = Grid(grid_dir)
+    [xmin, xmax, ymin, ymax] = [-136, -85, None, -70]
+    p0 = 0.05
+
+    # Read the data and calculate mean trend and significance
+    data_plot = np.ma.empty([num_var, grid.ny, grid.nx])
+    for n in range(num_var):
+        trends = read_netcdf(file_paths[n], var_names[n]+'_trend')*10  # Trend per decade
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        # Fill anything below 95% significance with zeros
+        mean_trend[p_val > p0] = 0
+        # Also mask out the ice shelves and land
+        mean_trend = mask_land_ice(mean_trend, grid)
+        data_plot[n,:] = mean_trend
+
+    # Plot
+    fig = plt.figure(figsize=(7,10))
+    gs = plt.GridSpec(2,4)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.9, wspace=0.1, hspace=0.1)
+    x0 = [0.03, 0.95]
+    y0 = [0.8, 0.6, 0.4, 0.2]
+    cax = []
+    for j in range(4):
+        for i in range(2):
+            cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
+            cax.append(cax_tmp)
+    for n in range(num_var):
+        ax = plt.subplot(gs[n/2, n%2])
+        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+'/decade', titlesize=14)
+        cbar = plt.colorbar(img, cax=cax)
+        if n != 0:
+            ax.set_xticks([])
+            ax.set_yticks([])
+    plt.suptitle('Mean trends in surface variables', fontsize=16)
+    finished_plot(fig) #, fig_name=fig_dir+'sfc_trends.png', dpi=300)
+        
+
+    
 
     
     
