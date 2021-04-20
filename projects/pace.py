@@ -1268,7 +1268,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
 
     
 # Make plots from the trend file created above.
-def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive', lon0_slices=[]):
+def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive', lon0_slices=[], vmin=None, vmax=None):
 
     fig_dir = real_dir(fig_dir)
     grid = Grid(grid_dir)
@@ -1304,7 +1304,7 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
 
     if dim == 2:
         # Plot the mean trend that's significant
-        latlon_plot(mean_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=long_name+',\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend.png')
+        latlon_plot(mean_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=vmin, vmax=vmax, title=long_name+',\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend.png')
     else:
         # Select maximum significant trend over depth, and the depth at which this occurs
         if sign == 'positive':
@@ -1318,7 +1318,7 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
         max_trend = np.ma.masked_where(max_trend==0, max_trend)
         max_trend_depth = np.ma.masked_where(max_trend==0, max_trend_depth)
         # Plot both of them
-        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_max.png')
+        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_max.png', vmin=vmin, vmax=vmax)
         latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14, fig_name=fig_dir+var_name+'_trend_depth.png')
     
     # Now plot trend at every integer longitude within the domain (lat-depth slices)
@@ -2957,20 +2957,24 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     trend_dir = real_dir(trend_dir)
     grid_dir = real_dir(grid_dir)
     fig_dir = real_dir(fig_dir)
-    var_names = ['EXFvwind', 'EXFatemp', 'SIfwfrz', 'SIfwmelt', 'thermocline', 'SIheff', 'sss', 'sst']
-    factor = [1, 1, -1*sec_per_year/rho_fw, sec_per_year/rho_fw, 1, 1, 1, 1]
-    units = ['m/s', deg_string+'C', 'm/y', 'm/y', 'm', 'm', 'psu', deg_string+'C']
-    titles = ['Meridional wind', 'Surface air temperature', 'Sea ice freezing', 'Sea ice melting', 'Thermocline depth', 'Sea ice thickness', 'Sea surface salinity', 'Sea surface temperature']
+    var_names = ['EXFvwind', 'EXFatemp', 'SIfwfrz', 'SIfwmelt', 'SIheff', 'oceFWflx', 'sst', 'sss']
+    factor = [1, 1, -1*sec_per_year/rho_fw, sec_per_year/rho_fw, 1, sec_per_year/rho_fw, 1, 1]
+    units = ['m/s', deg_string+'C', 'm/y', 'm/y', 'm', 'm/y', deg_string+'C', 'psu']
+    titles = [r'$\bf{a}$. Meridional wind', r'$\bf{b}$. Surface air temperature', r'$\bf{c}$. Sea ice freezing', r'$\bf{d}$. Sea ice melting', r'$\bf{e}$. Sea ice thickness', r'$\bf{f}$. Surface freshwater flux', r'$\bf{g}$. Sea surface temperature', r'$\bf{h}$. Sea surface salinity']
     file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
+    vmin = [None, None, -2.5, -0.8, -0.75, None, None, None]
+    vmax = [None, None, None, 0.5, None, 2, None, None]
+    ticks = [np.arange(-0.2, 0.2, 0.1), np.arange(1.2, 2.2, 0.2), np.arange(-2, 0.5, 0.5), np.arange(-0.6, 0.6, 0.3), np.arange(-0.6, 0.2, 0.2), np.arange(0, 3, 1), np.arange(0.2, 0.8, 0.2), np.arange(-0.1, 0.2, 0.1)]
+    extend = ['neither', 'neither', 'min', 'both', 'min', 'max', 'neither', 'neither']
     num_var = len(var_names)
     grid = Grid(grid_dir)
-    [xmin, xmax, ymin, ymax] = [-136, -85, None, -70]
+    [xmin, xmax, ymin, ymax] = [-136, -85, None, -68]
     p0 = 0.05
 
     # Read the data and calculate mean trend and significance
     data_plot = np.ma.empty([num_var, grid.ny, grid.nx])
     for n in range(num_var):
-        trends = read_netcdf(file_paths[n], var_names[n]+'_trend')*10  # Trend per decade
+        trends = read_netcdf(file_paths[n], var_names[n]+'_trend')*factor[n]*100  # Trend per century
         mean_trend = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
         # Fill anything below 95% significance with zeros
@@ -2981,10 +2985,10 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
 
     # Plot
     fig = plt.figure(figsize=(7,10))
-    gs = plt.GridSpec(2,4)
-    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.9, wspace=0.1, hspace=0.1)
-    x0 = [0.03, 0.95]
-    y0 = [0.8, 0.6, 0.4, 0.2]
+    gs = plt.GridSpec(4,2)
+    gs.update(left=0.11, right=0.89, bottom=0.02, top=0.915, wspace=0.03, hspace=0.25)
+    x0 = [0.02, 0.91]
+    y0 = [0.745, 0.507, 0.273, 0.04]
     cax = []
     for j in range(4):
         for i in range(2):
@@ -2992,13 +2996,12 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
             cax.append(cax_tmp)
     for n in range(num_var):
         ax = plt.subplot(gs[n/2, n%2])
-        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+'/decade', titlesize=14)
-        cbar = plt.colorbar(img, cax=cax)
-        if n != 0:
-            ax.set_xticks([])
-            ax.set_yticks([])
-    plt.suptitle('Mean trends in surface variables', fontsize=16)
-    finished_plot(fig) #, fig_name=fig_dir+'sfc_trends.png', dpi=300)
+        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n])
+        cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.suptitle('Trends per century in surface variables', fontsize=18)
+    finished_plot(fig, fig_name=fig_dir+'sfc_trends.png', dpi=300)
         
 
     
