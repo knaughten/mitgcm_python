@@ -17,11 +17,12 @@ from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
-from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals
+from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
 from ..plot_utils.latlon import shade_background, overlay_vectors
+from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
-from ..plot_slices import slice_plot
+from ..plot_slices import slice_plot, make_slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
@@ -3027,6 +3028,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'sfc_trends.png', dpi=300)
 
 
+# Plot timeseries of the Amundsen Sea continental shelf heat budget below 200m, as well as slices of 
 def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -3054,12 +3056,15 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
     trend_titles = ['3D advection', 'Vertical diffusion + KPP', 'Sum', 'Temperature']
     num_trends = len(trend_names)
-    file_tail = '_trends.nc'
+    file_tail = '_trends_1member.nc'
     trend_factor = [Cp_sw*rhoConst*100]*3 + [100]
     trend_units = [r'J/m$^3$/century']*3 + [deg_string+'C/century']
     lon0 = -106
     ymax = -73
     p0 = 0.05
+    vmin = [None, None, None, None]
+    vmax = [None, None, None, None]
+    extend = ['neither', 'neither', 'neither', 'neither']
 
     # Read and process timeseries
     time = netcdf_time(file_paths[n], monthly=False)
@@ -3104,22 +3109,46 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         if trend_names[v] != 'THETA':
             # Divide by cell volume
             trends /= grid.dV
-        mean_trend_tmp = np.mean(trends, axis=0)
-        t_val, p_val = ttest_1samp(trends, 0, axis=0)
-        mean_trend_tmp[p_val > p0] = 0
-        mean_trends[v,:] = mean_trend_tmp
+        print 'Warning: Uncomment the next block when all members have finished'
+        mean_trends[v,:] = np.squeeze(trends)
+        #mean_trend_tmp = np.mean(trends, axis=0)
+        #t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        #mean_trend_tmp[p_val > p0] = 0
+        #mean_trends[v,:] = mean_trend_tmp
+    # Now get patches and values along slice
+    values = []
+    for v in range(num_trends):
+        if v == 0:
+            # Make patches
+            patches, values_tmp, lon0, ymin, ymax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above = slice_patches(mean_trends[v,:], grid, lon0=lon0, hmax=ymax, return_bdry=True)
+        else:
+            # Just need values on the same patches
+            values_tmp, vmin_tmp, vmax_tmp = slice_values(mean_trends[v,:], grid, left, right, below, above, ymin, ymax, zmin, zmax, lon0=lon0)
+        values.append(values_tmp)
+        if vmin[v] is None:
+            vmin[v] = vmin_tmp
+        if vmax[v] is None:
+            vmax[v] = vmax_tmp
+    # Want first two panels to have the same colour scale
+    vmin[:2] = min(vmin[0], vmin[1])
+    vmax[:2] = max(vmax[0], vmax[1])
 
     # Plot
     fig = plt.figure(figsize=(7,8))
     gs = plt.GridSpec(3,2)
     gs.update(left=0.1, right=0.9, bottom=0.05, top=0.9, wspace=0.05, hspace=0.2)
     x0 = [0.03, 0.91]
-    y0 = [0.06, 0.4]
+    y0 = [0.4, 0.06]
     cax = []
     for j in range(2):
         for i in range(2):
+            if i==0 and j==0:
+                continue
             cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
             cax.append(cax_tmp)
+    units_x = [None, 0.98, 0.02, 0.98]
+    units_y = [None, 0.48, 0.14, 0.14]
+    units_rot = [None, 90, -90, 90]
     # Plot timeseries across the top two panels
     ax = plt.subplot(gs[0,:])
     ax.grid(linestyle='dotted')
@@ -3135,9 +3164,20 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     ax.set_title('Heat budget for continental shelf below '+str(z0)+'m', fontsize=16)
     ax.legend(loc='best')
     # Plot trend slices in bottom panels
-    # To do
-    #for v in range(num_trends):
-        
+    for v in range(num_trends):
+        ax = plt.subplot(gs[v/2+1, v%2])
+        img = make_slice_plot(patches, values[v], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
+        ax.axhline(-z0, color='black', linestyle='dotted')
+        if v != 0:
+            cbar = plt.colorbar(img, cax=cax[v], extend=extend[v])
+            plt.text(units_x[v], units_y[v], trend_units[v], transform=fig.transFigure, ha='center', va='center', rotation=units_rot[v])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+        ax.set_title(trend_titles[v], fontsize=16)
+    plt.text(0.5, 0.7, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, trans=fig.transFigure, ha='center', va='center')
+    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
     
     
