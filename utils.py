@@ -863,10 +863,10 @@ def depth_of_isoline (data, z, val0, z0=None):
         indices = np.argwhere(np.sum(mask, axis=0)>1)
         for index in indices:
             [j,i] = index
-        # Choose the shallowest one
-        k = np.argmax(mask[:,j,i])
-        mask[:,j,i] = 0
-        mask[k,j,i] = 1
+            # Choose the shallowest one
+            k = np.argmax(mask[:,j,i])
+            mask[:,j,i] = 0
+            mask[k,j,i] = 1
     # Select data and depth at these points and collapse the vertical dimension
     data_cross = np.sum(data*mask, axis=0)
     data_below_cross = np.sum(data_below*mask, axis=0)
