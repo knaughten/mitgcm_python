@@ -244,7 +244,11 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         elif option == 'int_btw_z0':
             # 3D volume integral between the given depths
             data_tmp = apply_mask(data_tmp, np.invert(mask))
-            timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
+            if var_name == 'shortwave_penetration':
+                # Already mass-weighted, so just do a regular sum
+                timeseries.append(np.sum(data_tmp))
+            else:
+                timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
         elif option in ['avg_bottom', 'avg_z0']:
             # 2D area-average
             if option == 'avg_bottom':
