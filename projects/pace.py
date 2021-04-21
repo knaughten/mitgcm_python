@@ -3032,7 +3032,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     fig = plt.figure(figsize=(7,10))
     gs = plt.GridSpec(4,2)
     gs.update(left=0.11, right=0.89, bottom=0.02, top=0.915, wspace=0.03, hspace=0.25)
-    x0 = [0.02, 0.91]
+    x0 = [0.07, 0.91]
     y0 = [0.745, 0.507, 0.273, 0.04]
     cax = []
     for j in range(4):
@@ -3043,6 +3043,8 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
         ax = plt.subplot(gs[n/2, n%2])
         img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n])
         cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
+        if n/2 == 0:
+            cax[n].yaxis.set_ticks_position('left')
         ax.set_xticks([])
         ax.set_yticks([])
     plt.suptitle('Trends per century in surface variables', fontsize=18)
@@ -3075,19 +3077,19 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     num_time_base = (end_year_base-start_year+1)*12
     end_year = 2013
     smooth = 24
-    trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
-    trend_titles = [r'$\bf{b}$. 3D advection', r'$\bf{c}$. Vertical diffusion + KPP', r'$\bf{d}$. Sum', r'$\bf{e}$. Temperature']
+    trend_names = ['advection_3d', 'diffusion_kpp', 'shortwave_pen', 'hb_total']
+    trend_titles = [r'$\bf{b}$. 3D advection', r'$\bf{c}$. Vertical diffusion + KPP', r'$\bf{d}$. Shortwave penetration', r'$\bf{e}$. Total']
     num_trends = len(trend_names)
     file_tail = '_trends_1member.nc'
-    trend_factor = [Cp_sw*rhoConst*1e-7*100]*3 + [100]
-    trend_units = [r'10$^7$J/m$^3$/century']*3 + [deg_string+'C/century']
+    trend_factor = Cp_sw*rhoConst*1e-7*100
+    trend_units = r'10$^7$J/m$^3$/century'
     lon0 = -106
     ymax = -73
     p0 = 0.05
-    vmin = [-4, -4, -1.5, None]
-    vmax = [4, 4, 1.5, None]
-    extend = [None, 'both', 'both', 'neither']
-    ticks = [None, None, None, np.arange(0, 0.8, 0.2)]
+    vmin = [-4, -4, None, -1.5]
+    vmax = [4, 4, 10, 1.5]
+    extend = [None, 'both', 'max', 'both']
+    ticks = [None, np.arange(-4, 6, 2), np.arange(2, 12, 2), np.arange(-1, 2, 1)]
 
     # Read and process timeseries
     time = netcdf_time(file_paths[n], monthly=False)
@@ -3129,18 +3131,14 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
     print 'Warning: Uncomment the next block when all members have finished'
     for v in range(num_trends):
-        if trend_names[v] == 'THETA':
-            trends = read_netcdf(trend_names[v]+'_trend.nc', trend_names[v]+'_trend')*trend_factor[v]
-            mean_trend_tmp = np.mean(trends, axis=0)
-            t_val, p_val = ttest_1samp(trends, 0, axis=0)
-            mean_trend_tmp[p_val > p0] = 0
-            mean_trends[v,:] = mean_trend_tmp
-        else:
-            trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor[v]
-        #if trend_names[v] != 'THETA':
-            # Divide by cell volume
-            trends /= grid.dV
-            mean_trends[v,:] = np.squeeze(trends)
+        trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor
+        # Divide by cell volume
+        trends /= grid.dV
+        mean_trends[v,:] = np.squeeze(trends)
+        #mean_trend_tmp = np.mean(trends, axis=0)
+        #t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        #mean_trend_tmp[p_val > p0] = 0
+        #mean_trends[v,:] = mean_trend_tmp            
     # Now get patches and values along slice
     values = []
     for v in range(num_trends):
@@ -3165,17 +3163,15 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     fig = plt.figure(figsize=(7,9))
     gs = plt.GridSpec(10,2)
     gs.update(left=0.1, right=0.9, bottom=0.02, top=0.95, wspace=0.05, hspace=1.2)
-    x0 = [0.01, 0.91]
-    y0 = [0.33, 0.04]
+    x0 = [0.06, 0.92]
+    y0 = [0.335, 0.04]
     cax = []
     for j in range(2):
         for i in range(2):
             if i==0 and j==0:
                 cax_tmp = None
             else:
-                cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.2])
-                if i == 0:
-                    cax_tmp.yaxis.set_ticks_position('left')
+                cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.2])                
             cax.append(cax_tmp)
     # Plot timeseries across the top two panels
     ax = plt.subplot(gs[:3,:2])
@@ -3197,18 +3193,20 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     for v in range(num_trends):
         ax = plt.subplot(gs[3*(v/2)+4:3*(v/2)+7, v%2])
         img = make_slice_plot(patches, values[v], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
-        ax.axhline(-z0, color='black', linestyle='dashed')
+        ax.axhline(-z0, color='black', linestyle='dashed', linewidth=1)
         if v == 0:
             ax.set_ylabel('Depth (m)', fontsize=12)
         else:
             cbar = plt.colorbar(img, cax=cax[v], extend=extend[v], ticks=ticks[v])
+            if v == 2:
+                cax[v].yaxis.set_ticks_position('left')
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_xlabel('')
             ax.set_ylabel('')
-        plt.text(0.99, 0.005, trend_units[v], transform=ax.transAxes, ha='right', va='bottom', fontsize=10)
         ax.set_title(trend_titles[v], fontsize=14)
-    plt.text(0.5, 0.62, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
+    plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
+    plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
     finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
     
