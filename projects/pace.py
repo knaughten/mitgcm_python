@@ -1176,6 +1176,11 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         trends = np.zeros([num_ens, grid.ny, grid.nx])
     elif dim == 3:
         trends = np.zeros([num_ens, grid.nz, grid.ny, grid.nx])
+    if var_name == 'shortwave_pen':
+        z_edges_3d = z_to_xyz(grid.z_edges, grid)
+        dA_3d = xy_to_xyz(grid.dA, grid)
+        swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
+        swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
 
     # Loop over ensemble member
     for m in range(num_ens):
@@ -1212,7 +1217,23 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.ma.zeros(data_x.shape)
                 data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
                 data = np.mean(data, axis=0)
-                long_name = 'net advection, diffusion, and KPP transport of heat'                
+                long_name = 'net advection, diffusion, and KPP transport of heat'
+            elif var_name == 'shortwave_pen':
+                data_sw = read_netcdf(file_paths[t], 'oceQsw', time_average=True)
+                data = xy_to_xyz(data_sw[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                long_name = 'heat from shortwave penetration'
+                units = 'degC.m^3/s'
+            elif var_name == 'hb_total':
+                # Sum of previous three
+                data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
+                data_y = read_netcdf(file_paths[t], 'ADVy_TH')
+                data_z = read_netcdf(file_paths[t], 'ADVr_TH') + read_netcdf(file_paths[t], 'DFrI_TH') + read_netcdf(file_paths[t], 'KPPg_TH')
+                data = np.ma.zeros(data_x.shape)
+                data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
+                data = np.mean(data, axis=0)
+                data_sw = read_netcdf(file_paths[t], 'oceQsw', time_average=True)
+                data += xy_to_xyz(data_sw[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                long_name = 'total heat budget in interior'                            
             elif var_name == 'ismr':
                 data = convert_ismr(read_netcdf(file_paths[t], 'SHIfwFlx', time_average=True))
                 long_name = 'ice shelf melt rate'
@@ -3031,160 +3052,164 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
 # Plot timeseries of the Amundsen Sea continental shelf heat budget below 200m, as well as slices of 
 def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
 
-base_dir = real_dir(base_dir)
-trend_dir = real_dir(trend_dir)
-fig_dir = real_dir(fig_dir)
-grid_dir = base_dir + 'PAS_grid/'
-grid = Grid('PAS_grid/')
-num_ens = 20
-sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
-file_paths = [d + '/output/timeseries_heat_budget.nc' for d in sim_dir]
-region = 'amundsen_shelf'
-z0 = 200
-# List of variable names to sum for each term
-var_names = [['advection_heat_xy', 'advection_heat_z'], ['diffusion_heat_implicit_z', 'kpp_heat_z'], ['shortwave_penetration']]
-var_titles = ['3D advection', 'Vertical diffusion + KPP', 'Shortwave penetration', 'Total']
-colours = ['red', 'blue', 'magenta', 'black']
-num_var = len(var_titles)
-factor = 1e-15
-units = r'10$^{15}$ GJ'
-start_year = 1920
-end_year_base = 1949
-num_time_base = (end_year_base-start_year+1)*12
-end_year = 2013
-smooth = 24
-trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
-trend_titles = ['3D advection', 'Vertical diffusion + KPP', 'Sum', 'Temperature']
-num_trends = len(trend_names)
-file_tail = '_trends_1member.nc'
-trend_factor = [Cp_sw*rhoConst*100]*3 + [100]
-trend_units = [r'J/m$^3$/century']*3 + [deg_string+'C/century']
-lon0 = -106
-ymax = -73
-p0 = 0.05
-vmin = [-3e7, -3e7, -1e7, None]
-vmax = [3e7, 3e7, 1e7, None]
-extend = [None, 'both', 'both', 'neither']
+    base_dir = real_dir(base_dir)
+    trend_dir = real_dir(trend_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    grid = Grid('PAS_grid/')
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    file_paths = [d + '/output/timeseries_heat_budget.nc' for d in sim_dir]
+    region = 'amundsen_shelf'
+    z0 = 200
+    # List of variable names to sum for each term
+    print 'Warning: add shortwave back when finished'
+    var_names = [['advection_heat_xy', 'advection_heat_z'], ['diffusion_heat_implicit_z', 'kpp_heat_z']] #, ['shortwave_penetration']]
+    var_titles = ['3D advection', 'Vertical diffusion + KPP', 'Total'] #'Shortwave penetration', 'Total']
+    colours = ['red', 'blue', 'black'] #'magenta', 'black']
+    num_var = len(var_titles)
+    factor = 1e-9
+    units = 'EJ'
+    start_year = 1920
+    end_year_base = 1949
+    num_time_base = (end_year_base-start_year+1)*12
+    end_year = 2013
+    smooth = 24
+    trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
+    trend_titles = [r'$\bf{b}$. 3D advection', r'$\bf{c}$. Vertical diffusion + KPP', r'$\bf{d}$. Sum', r'$\bf{e}$. Temperature']
+    num_trends = len(trend_names)
+    file_tail = '_trends_1member.nc'
+    trend_factor = [Cp_sw*rhoConst*1e-7*100]*3 + [100]
+    trend_units = [r'10$^7$J/m$^3$/century']*3 + [deg_string+'C/century']
+    lon0 = -106
+    ymax = -73
+    p0 = 0.05
+    vmin = [-4, -4, -1.5, None]
+    vmax = [4, 4, 1.5, None]
+    extend = [None, 'both', 'both', 'neither']
+    ticks = [None, None, None, np.arange(0, 0.8, 0.2)]
 
-# Read and process timeseries
-time = netcdf_time(file_paths[n], monthly=False)
-t0 = index_year_start(time, start_year)
-time = time[t0:]
-num_time = time.size
-data = np.zeros([num_var, num_ens, num_time])
-for v in range(num_var):
-    if var_titles[v] == 'Total':
-        # Sum of previous terms
-        data[v,:] = np.sum(data[:v,:], axis=0)
-    else:
-        # Loop over ensemble members
-        for n in range(num_ens):
-            # Sum the component variables
-            for var in var_names[v]:
-                data[v,n,:] = read_netcdf(file_paths[n], region+'_'+var+'_below_'+str(z0)+'m')*factor
-# Subtract the mean over the base period
-data_mean = np.mean(data[:,:,:num_time_base], axis=2)
-data -= data_mean[:,:,None]
-# Time-integrate
-data_int = np.empty(data.shape)
-for v in range(num_var):
-    for n in range(num_ens):
-        data_int[v,n,:] = time_integral(data[v,n,:], time)
-# Smooth
-# Start with a dummy variable so we get time trimmed to the right size
-tmp, time = moving_average(np.zeros(time.size), smooth, time=time)
-data_smoothed = np.empty([num_var, num_ens, time.size])
-for v in range(num_var):
-    for n in range(num_ens):
-        data_smoothed[v,n,:] = moving_average(data_int[v,n,:], smooth)
-# Calculate the ensemble mean and spread for each term
-timeseries_mean = np.mean(data_smoothed, axis=1)
-timeseries_min = np.amin(data_smoothed, axis=1)
-timeseries_max = np.amax(data_smoothed, axis=1)
-
-# Read and process 3D trends
-mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
-print 'Warning: Uncomment the next block when all members have finished'
-for v in range(num_trends):
-    if trend_names[v] == 'THETA':
-        trends = read_netcdf(trend_names[v]+'_trend.nc', trend_names[v]+'_trend')*trend_factor[v]
-        mean_trend_tmp = np.mean(trends, axis=0)
-        t_val, p_val = ttest_1samp(trends, 0, axis=0)
-        mean_trend_tmp[p_val > p0] = 0
-        mean_trends[v,:] = mean_trend_tmp
-    else:
-        trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor[v]
-    #if trend_names[v] != 'THETA':
-        # Divide by cell volume
-        trends /= grid.dV
-        mean_trends[v,:] = np.squeeze(trends)
-# Now get patches and values along slice
-values = []
-for v in range(num_trends):
-    if v == 0:
-        # Make patches
-        patches, values_tmp, lon0, ymin, ymax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above = slice_patches(mean_trends[v,:], grid, lon0=lon0, hmax=ymax, return_bdry=True)
-    else:
-        # Just need values on the same patches
-        values_tmp, vmin_tmp, vmax_tmp = slice_values(mean_trends[v,:], grid, left, right, below, above, ymin, ymax, zmin, zmax, lon0=lon0)
-    values.append(values_tmp)
-    if vmin[v] is None:
-        vmin[v] = vmin_tmp
-    if vmax[v] is None:
-        vmax[v] = vmax_tmp
-# Want first two panels to have the same colour scale
-vmin_tmp = min(vmin[0], vmin[1])
-vmax_tmp = max(vmax[0], vmax[1])
-vmin[0] = vmin[1] = vmin_tmp
-vmax[0] = vmax[1] = vmax_tmp
-
-# Plot
-fig = plt.figure(figsize=(7,8))
-gs = plt.GridSpec(3,2)
-gs.update(left=0.1, right=0.9, bottom=0.02, top=0.95, wspace=0.05, hspace=0.3)
-x0 = [0.03, 0.91]
-y0 = [0.4, 0.06]
-cax = []
-for j in range(2):
-    for i in range(2):
-        if i==0 and j==0:
-            cax_tmp = None
+    # Read and process timeseries
+    time = netcdf_time(file_paths[n], monthly=False)
+    t0 = index_year_start(time, start_year)
+    time = time[t0:]
+    num_time = time.size
+    data = np.zeros([num_var, num_ens, num_time])
+    for v in range(num_var):
+        if var_titles[v] == 'Total':
+            # Sum of previous terms
+            data[v,:] = np.sum(data[:v,:], axis=0)
         else:
-            cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
-        cax.append(cax_tmp)
-units_x = [None, 0.98, 0.02, 0.98]
-units_y = [None, 0.48, 0.14, 0.14]
-# Plot timeseries across the top two panels
-ax = plt.subplot(gs[0,:])
-ax.grid(linestyle='dotted')
-ax.axhline(color='black', linewidth=1)
-for v in range(num_var):
-    # Shade ensemble range
-    ax.fill_between(time, timeseries_min[v,:], timeseries_max[v,:], color=colours[v], alpha=0.3)
-    # Plot ensemble mean in solid on top
-    ax.plot_date(time, timeseries_mean[v,:], '-', color=colours[v], label=var_titles[v], linewidth=1.5)
-#ax.set_xticks(np.arange(start_year+10, end_year, 10))
-ax.set_xlabel('Year', fontsize=12)
-ax.set_ylabel(units, fontsize=12)
-ax.set_title('Heat budget for continental shelf below '+str(z0)+'m', fontsize=16)
-ax.legend(loc='best')
-# Plot trend slices in bottom panels
-for v in range(num_trends):
-    ax = plt.subplot(gs[v/2+1, v%2])
-    img = make_slice_plot(patches, values[v], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
-    ax.axhline(-z0, color='black', linestyle='dashed')
-    if v == 0:
-        ax.set_ylabel('Depth (m)', fontsize=12)
-    else:
-        cbar = plt.colorbar(img, cax=cax[v], extend=extend[v])
-        plt.text(units_x[v], units_y[v], trend_units[v], transform=fig.transFigure, ha='center', va='center', rotation=90)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_xlabel('')
-        ax.set_ylabel('')
-    ax.set_title(trend_titles[v], fontsize=14)
-plt.text(0.5, 0.7, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
-finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
+            # Loop over ensemble members
+            for n in range(num_ens):
+                # Sum the component variables
+                for var in var_names[v]:
+                    data[v,n,:] = read_netcdf(file_paths[n], region+'_'+var+'_below_'+str(z0)+'m')*factor
+    # Subtract the mean over the base period
+    data_mean = np.mean(data[:,:,:num_time_base], axis=2)
+    data -= data_mean[:,:,None]
+    # Time-integrate
+    data_int = np.empty(data.shape)
+    for v in range(num_var):
+        for n in range(num_ens):
+            data_int[v,n,:] = time_integral(data[v,n,:], time)
+    # Smooth
+    # Start with a dummy variable so we get time trimmed to the right size
+    tmp, time = moving_average(np.zeros(time.size), smooth, time=time)
+    data_smoothed = np.empty([num_var, num_ens, time.size])
+    for v in range(num_var):
+        for n in range(num_ens):
+            data_smoothed[v,n,:] = moving_average(data_int[v,n,:], smooth)
+    # Calculate the ensemble mean and spread for each term
+    timeseries_mean = np.mean(data_smoothed, axis=1)
+    timeseries_min = np.amin(data_smoothed, axis=1)
+    timeseries_max = np.amax(data_smoothed, axis=1)
+
+    # Read and process 3D trends
+    mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
+    print 'Warning: Uncomment the next block when all members have finished'
+    for v in range(num_trends):
+        if trend_names[v] == 'THETA':
+            trends = read_netcdf(trend_names[v]+'_trend.nc', trend_names[v]+'_trend')*trend_factor[v]
+            mean_trend_tmp = np.mean(trends, axis=0)
+            t_val, p_val = ttest_1samp(trends, 0, axis=0)
+            mean_trend_tmp[p_val > p0] = 0
+            mean_trends[v,:] = mean_trend_tmp
+        else:
+            trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor[v]
+        #if trend_names[v] != 'THETA':
+            # Divide by cell volume
+            trends /= grid.dV
+            mean_trends[v,:] = np.squeeze(trends)
+    # Now get patches and values along slice
+    values = []
+    for v in range(num_trends):
+        if v == 0:
+            # Make patches
+            patches, values_tmp, lon0, ymin, ymax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above = slice_patches(mean_trends[v,:], grid, lon0=lon0, hmax=ymax, return_bdry=True)
+        else:
+            # Just need values on the same patches
+            values_tmp, vmin_tmp, vmax_tmp = slice_values(mean_trends[v,:], grid, left, right, below, above, ymin, ymax, zmin, zmax, lon0=lon0)
+        values.append(values_tmp)
+        if vmin[v] is None:
+            vmin[v] = vmin_tmp
+        if vmax[v] is None:
+            vmax[v] = vmax_tmp
+    # Want first two panels to have the same colour scale
+    vmin_tmp = min(vmin[0], vmin[1])
+    vmax_tmp = max(vmax[0], vmax[1])
+    vmin[0] = vmin[1] = vmin_tmp
+    vmax[0] = vmax[1] = vmax_tmp
+
+    # Plot
+    fig = plt.figure(figsize=(7,9))
+    gs = plt.GridSpec(10,2)
+    gs.update(left=0.1, right=0.9, bottom=0.02, top=0.95, wspace=0.05, hspace=1.2)
+    x0 = [0.01, 0.91]
+    y0 = [0.33, 0.04]
+    cax = []
+    for j in range(2):
+        for i in range(2):
+            if i==0 and j==0:
+                cax_tmp = None
+            else:
+                cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.2])
+                if i == 0:
+                    cax_tmp.yaxis.set_ticks_position('left')
+            cax.append(cax_tmp)
+    # Plot timeseries across the top two panels
+    ax = plt.subplot(gs[:3,:2])
+    ax.grid(linestyle='dotted')
+    ax.axhline(color='black', linewidth=1)
+    for v in range(num_var):
+        if v != num_var-1:
+            # Shade ensemble range
+            ax.fill_between(time, timeseries_min[v,:], timeseries_max[v,:], color=colours[v], alpha=0.3)
+        # Plot ensemble mean in solid on top
+        ax.plot_date(time, timeseries_mean[v,:], '-', color=colours[v], label=var_titles[v], linewidth=1.5)
+    ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2020, 10)])
+    ax.set_xlim([time[0], time[-1]])
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel(units, fontsize=12)
+    ax.set_title(r'$\bf{a}$. Heat budget for continental shelf below '+str(z0)+'m', fontsize=16)
+    ax.legend(loc='upper left')
+    # Plot trend slices in bottom panels
+    for v in range(num_trends):
+        ax = plt.subplot(gs[3*(v/2)+4:3*(v/2)+7, v%2])
+        img = make_slice_plot(patches, values[v], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
+        ax.axhline(-z0, color='black', linestyle='dashed')
+        if v == 0:
+            ax.set_ylabel('Depth (m)', fontsize=12)
+        else:
+            cbar = plt.colorbar(img, cax=cax[v], extend=extend[v], ticks=ticks[v])
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+        plt.text(0.99, 0.005, trend_units[v], transform=ax.transAxes, ha='right', va='bottom', fontsize=10)
+        ax.set_title(trend_titles[v], fontsize=14)
+    plt.text(0.5, 0.62, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
+    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
     
     
