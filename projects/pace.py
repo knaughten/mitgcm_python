@@ -3043,7 +3043,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
         ax = plt.subplot(gs[n/2, n%2])
         img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n])
         cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
-        if n/2 == 0:
+        if n%2 == 0:
             cax[n].yaxis.set_ticks_position('left')
         ax.set_xticks([])
         ax.set_yticks([])
