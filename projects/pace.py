@@ -3136,7 +3136,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     ax.legend(loc='best')
     # Plot trend slices in bottom panels
     # To do
-    for v in range(num_trends):
+    #for v in range(num_trends):
         
     
     
