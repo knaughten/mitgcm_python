@@ -16,6 +16,7 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
+from plot_utils.latlon import shade_background
 from diagnostics import t_minus_tf, density, normal_vector, parallel_vector
 from constants import deg_string
 
@@ -50,6 +51,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
         title += ' from ' + loc_string
     # Plot
     fig, ax = plt.subplots()
+    shade_background(ax)
     # Add patches
     img = plot_slice_patches(ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax, cmap=cmap)
     if contours is not None:

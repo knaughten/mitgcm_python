@@ -1231,6 +1231,12 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.mean(np.sqrt(u**2 + v**2), axis=0)
                 long_name = 'wind speed'
                 units = 'm/s'
+            elif var_name == 'speed':
+                u = read_netcdf(file_paths[t], 'UVEL')
+                v = read_netcdf(file_paths[t], 'VVEL')
+                data = np.mean(np.sqrt(u**2 + v**2), axis=0)
+                long_name = 'speed of ocean velocity'
+                units = 'm/s'
             elif var_name == 'thermocline':
                 temp = read_netcdf(file_paths[t], 'THETA')
                 num_time = temp.shape[0]
@@ -1337,9 +1343,9 @@ def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3
         latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_max.png', vmin=vmin, vmax=vmax)
         latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14, fig_name=fig_dir+var_name+'_trend_depth.png')
     
-    # Now plot trend at every integer longitude within the domain (lat-depth slices)
-    for lon0 in lon0_slices:
-        slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png', hmin=ymin, hmax=ymax, vmin=vmin, vmax=vmax)
+        # Now plot trend at every integer longitude within the domain (lat-depth slices)
+        for lon0 in lon0_slices:
+            slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, hmin=ymin, hmax=ymax, vmin=vmin, vmax=vmax, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png')
 
 
 def trend_sensitivity_to_convection (sim_dir, timeseries_file='timeseries.nc', fig_dir='./'):
@@ -3046,7 +3052,14 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     end_year = 2013
     smooth = 24
     trend_names = ['advection_3d', 'diffusion_kpp', 'adv_plus_dif', 'THETA']
-    
+    trend_titles = ['3D advection', 'Vertical diffusion + KPP', 'Sum', 'Temperature']
+    num_trends = len(trend_names)
+    file_tail = '_trends.nc'
+    trend_factor = [Cp_sw*rhoConst*100]*3 + [100]
+    trend_units = [r'J/m$^3$/century']*3 + [deg_string+'C/century']
+    lon0 = -106
+    ymax = -73
+    p0 = 0.05
 
     # Read and process timeseries
     time = netcdf_time(file_paths[n], monthly=False)
@@ -3083,6 +3096,50 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     timeseries_mean = np.mean(data_smoothed, axis=1)
     timeseries_min = np.amin(data_smoothed, axis=1)
     timeseries_max = np.amax(data_smoothed, axis=1)
+
+    # Read and process 3D trends
+    mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
+    for v in range(num_trends):
+        trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor[v]
+        if trend_names[v] != 'THETA':
+            # Divide by cell volume
+            trends /= grid.dV
+        mean_trend_tmp = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend_tmp[p_val > p0] = 0
+        mean_trends[v,:] = mean_trend_tmp
+
+    # Plot
+    fig = plt.figure(figsize=(7,8))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.9, wspace=0.05, hspace=0.2)
+    x0 = [0.03, 0.91]
+    y0 = [0.06, 0.4]
+    cax = []
+    for j in range(2):
+        for i in range(2):
+            cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
+            cax.append(cax_tmp)
+    # Plot timeseries across the top two panels
+    ax = plt.subplot(gs[0,:])
+    ax.grid(linestyle='dotted')
+    ax.axhline(color='black', linewidth=1)
+    for v in range(num_var):
+        # Shade ensemble range
+        ax.fill_between(time, timeseries_min[v,:], timeseries_max[v,:], color=colours[v], alpha=0.3)
+        # Plot ensemble mean in solid on top
+        ax.plot_date(time, timeseries_mean[v,:], '-', color=colours[v], label=var_titles[v], linewidth=1.5)
+    ax.set_xticks(start_year+10, end_year, 10)
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel(units, fontsize=12)
+    ax.set_title('Heat budget for continental shelf below '+str(z0)+'m', fontsize=16)
+    ax.legend(loc='best')
+    # Plot trend slices in bottom panels
+    # To do
+    for v in range(num_trends):
+        
+    
+    
     
                     
                     
