@@ -1176,7 +1176,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         trends = np.zeros([num_ens, grid.ny, grid.nx])
     elif dim == 3:
         trends = np.zeros([num_ens, grid.nz, grid.ny, grid.nx])
-    if var_name == 'shortwave_pen':
+    if var_name in ['shortwave_pen', 'hb_total']:
         z_edges_3d = z_to_xyz(grid.z_edges, grid)
         dA_3d = xy_to_xyz(grid.dA, grid)
         swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
