@@ -861,7 +861,7 @@ def depth_of_isoline (data, z, val0, z0=None):
     # Find points where the entire water column below z0 is below or above val0
     mask_below = (np.amax(np.ma.masked_where(z > z0, data), axis=0) < val0)
     mask_above = (np.amin(np.ma.masked_where(z > z0, data), axis=0) > val0)
-    if np.count_nonzero(mask_above) > 0:
+    if mask_above.any():
         print 'Error (depth_of_isoline): there are points where the entire water column is above '+str(val0)
         sys.exit()
     # Find the seafloor depth at each point
