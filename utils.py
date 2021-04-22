@@ -885,6 +885,8 @@ def depth_of_isoline (data, z, val0, z0=None):
     # Deal with regions where there is no such isotherm
     # Mask out the land mask
     depth_iso = np.ma.masked_where(land_mask, depth_iso)
+    # Mask out regions shallower than z0
+    depth_iso = np.ma.masked_where(bathy > z0, depth_iso)
     # Set to seafloor depth where the entire water column is below val0
     depth_iso[mask_below] = bathy[mask_below]
     # Mask where the entire water column is above val0
