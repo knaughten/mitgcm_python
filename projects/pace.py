@@ -14,7 +14,7 @@ import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
@@ -2418,116 +2418,127 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
 # Make a 2-panel timeseries plot showing ERA5-forced temperature (200-700m) in Pine Island Bay and Dotson, with Pierre's obs as markers on top.
 def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
 
-    obs_dir = real_dir(obs_dir)
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-    model_file = base_dir + 'PAS_ERA5/output/timeseries_final.nc'
-    grid_path = base_dir + 'PAS_grid/'
-    grid = Grid(grid_path)
-    obs_file_head = obs_dir + 'ASEctd_griddedMean'
-    obs_file_tail = '.mat'
-    obs_years = years_with_obs(obs_dir)
-    obs_num_years = len(obs_years)
-    regions = ['pine_island_bay', 'dotson_bay']
-    region_titles = [r'$\bf{a}$. Pine Island Bay', r'$\bf{b}$. Dotson front']
-    depth_key = ['btw_200_700m', 'below_700m']
-    depth_titles = [' (200-700m)', ' (below 700m)']
-    num_depths = len(depth_key)
-    depth_colours = ['blue', 'red']
-    num_regions = len(regions)
-    iso_vals = [0, 0]
-    iso_head = '_isotherm_'
-    iso_tail = 'C_below_100m'
-    start_year = 1979
-    z_shallow = -200
-    z_deep = -700
-    z0 = -100
+obs_dir = real_dir(obs_dir)
+base_dir = real_dir(base_dir)
+fig_dir = real_dir(fig_dir)
+model_file = base_dir + 'PAS_ERA5/output/timeseries_final.nc'
+grid_path = base_dir + 'PAS_grid/'
+grid = Grid(grid_path)
+obs_file_head = obs_dir + 'ASEctd_griddedMean'
+obs_file_tail = '.mat'
+obs_years = years_with_obs(obs_dir)
+obs_num_years = len(obs_years)
+regions = ['pine_island_bay', 'dotson_bay']
+region_titles = [r'$\bf{a}$. Pine Island Bay', r'$\bf{b}$. Dotson front']
+num_regions = len(regions)
+iso_vals = [0, -1]
+iso_head = '_isotherm_'
+iso_tail = 'C_below_100m'
+iso_titles = ['Depth of '+str(v)+deg_string+'C isotherm (m)' for v in iso_vals]
+iso_colour = 'blue'
+iso_bounds = [[-800, None], [-900, -200]]
+iso_ticks = [np.arange(-750, -350, 50), np.arange(-800, -200, 100)]
+iso_tick_labels = [['', '', '', '600', '550', '500', '450','400'], ['', '700', '600', '500', '400', '300']]
+z_iso = -100
+depth_key = 'below_700m'
+temp_title = 'Temperature ('+deg_string+'C) below 700m'
+temp_colour = 'red'
+temp_bounds = [[None, 3.5], [None, 4.5]]
+temp_ticks = [np.arange(-0.5, 4, 0.5), np.arange(-2, 5, 1)]
+temp_tick_labels = [['-0.5', '0.0', '0.5', '1.0', '', '', '', '', ''], ['-2', '-1', '0', '1', '', '', '']]
+z_deep = -700
+start_year = 1979
 
-    # Read model timeseries
-    print 'Reading model timeseries'
-    model_temp = None
-    time = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
-    t0 = index_year_start(time, start_year)
-    time = time[t0:]
-    for n in range(num_regions):
-        for k in range(num_depths):
-            temp_tmp = read_netcdf(model_file, regions[n]+'_temp_'+depth_key[k])[t0:]
-            if model_temp is None:
-                model_temp = np.empty([num_regions, num_depths, temp_tmp.size])
-            model_temp[n,k,:] = temp_tmp
-    # Now read isotherm depth
-    model_iso = np.empty([num_regions, model_temp.size[-1]])
-    for n in range(num_regions):
-        model_iso[n,:] = read_netcdf(model_file, regions[n]+iso_head+str(iso_vals[n])+iso_tail)[t0:]
+# Read model timeseries
+print 'Reading model timeseries'
+time = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
+t0 = index_year_start(time, start_year)
+time = time[t0:]
+num_time = time.size
+model_iso = np.empty([num_regions, num_time])
+model_temp = np.empty([num_regions, num_time])
+for n in range(num_regions):
+    model_iso[n,:] = read_netcdf(model_file, regions[n]+iso_head+str(iso_vals[n])+iso_tail)[t0:]
+    model_temp[n,:] = read_netcdf(model_file, regions[n]+'_temp_'+depth_key)[t0:]    
 
-    # Read observations for each year, averaged over each region
-    print 'Reading observations'
-    obs_temp = None
-    obs_iso = None
-    obs_date = []
-    for t in range(obs_num_years):
-        print '...'+str(obs_years[t])
-        f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
-        if obs_temp is None:
-            # This is the first year: read the grid and set up array
-            obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=3, z_dim=3)
-            # Get MITgcm's ice mask on this grid
-            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon[0,:], obs_lat[0,:])
-            obs_ice_mask[obs_ice_mask < 0.5] = 0
-            obs_ice_mask[obs_ice_mask >= 0.5] = 1
-            obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[2], obs_lon.shape[1], obs_lon.shape[0]])
-            obs_temp = np.ma.empty([num_regions, num_depths, obs_num_years])
-            obs_iso = np.ma.empty([num_regions, obs_num_years])
-        # Read 3D temperature
-        obs_temp_3d = np.transpose(f['PTmean'])
-        obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_3d), obs_temp_3d)
-        for n in range(num_regions):
-            # Volume-average over the given region and depth bounds, excluding cavities and regions with no data
-            [xmin, xmax, ymin, ymax] = region_bounds[regions[n]]
-            mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
-            mask = mask.astype(float)
-            mask[obs_temp_3d.mask] = 0
-            masks = [mask*(obs_depth >= z_deep)*(obs_depth <= z_shallow), mask*(obs_depth < z_deep)]
-            for k in range(num_depths):
-                if np.count_nonzero(masks[k])==0:
-                    # There are no data points for this region in this year.
-                    obs_temp[n,k,t] = np.ma.masked
-                else:
-                    obs_temp[n,k,t] = np.sum(obs_temp_3d*obs_dV*masks[k])/np.sum(obs_dV*masks[k])
-            # Now calculate the isotherm depths
-            obs_iso_2d = depth_of_isoline(obs_temp_3d, obs_depth, iso_vals[n], z0=z0)
-            # Average over the given region with a 2D mask
-            obs_iso[n,t] = np.sum(obs_iso_2d*mask[0,:])/np.sum(obs_dA*mask[0,:])
-        # Assume the date is 1 February
-        obs_date.append(datetime.date(obs_years[t],2,1))
+# Read observations for each year, averaged over each region
+print 'Reading observations'
+obs_temp = None
+obs_iso = None
+obs_date = []
+for t in range(obs_num_years):
+    print '...'+str(obs_years[t])
+    f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
+    if obs_temp is None:
+        # This is the first year: read the grid and set up array
+        obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=3, z_dim=3)
+        # Get MITgcm's ice mask on this grid
+        obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon[0,:], obs_lat[0,:])
+        obs_ice_mask[obs_ice_mask < 0.5] = 0
+        obs_ice_mask[obs_ice_mask >= 0.5] = 1
+        obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[2], obs_lon.shape[1], obs_lon.shape[0]])
+        obs_temp = np.ma.empty([num_regions, obs_num_years])
+        obs_iso = np.ma.empty([num_regions, obs_num_years])
+    # Read 3D temperature
+    obs_temp_3d = np.transpose(f['PTmean'])
+    obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_3d), obs_temp_3d)
+    for n in range(num_regions):
+        # Get a 3D mask for the given region, excluding cavities
+        [xmin, xmax, ymin, ymax] = region_bounds[regions[n]]
+        mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
+        mask = mask.astype(float)
+        # Calculate isotherm depth
+        mask_2d = np.copy(mask[0,:])
+        obs_iso_2d = depth_of_isoline(obs_temp_3d, obs_depth, iso_vals[n], z0=z_iso)
+        # Mask out anywhere with missing data
+        mask_2d[obs_iso_2d.mask] = 0
+        # Average over the given region
+        if np.count_nonzero(mask_2d)==0:
+            # No data points for this region this year
+            obs_iso[n,t] = np.ma.masked
+        else:
+            obs_iso[n,t] = np.sum(obs_iso_2d*obs_dA*mask_2d)/np.sum(obs_dA*mask_2d)
+        # Calculate deep temperature: volume-average over the given region and depth bounds, excluding regions with no data
+        mask[obs_temp_3d.mask] = 0
+        mask = mask*(obs_depth < z_deep)
+        if np.count_nonzero(mask)==0:
+            obs_temp[n,t] = np.ma.masked
+        else:
+            obs_temp[n,t] = np.sum(obs_temp_3d*obs_dV*mask)/np.sum(obs_dV*mask)
+    # Assume the date is 1 February
+    obs_date.append(datetime.date(obs_years[t],2,1))
 
     # Plot
-    fig = plt.figure(figsize=(7,7))
+    fig = plt.figure(figsize=(7,8))
     gs = plt.GridSpec(2,1)
-    gs.update(left=0.1, right=0.98, bottom=0.15, top=0.95, hspace=0.25)
+    gs.update(left=0.12, right=0.88, bottom=0.06, top=0.9, hspace=0.2)
     for n in range(num_regions):
         ax = plt.subplot(gs[n,0])
         ax.grid(linestyle='dotted')
-        for k in range(num_depths-1):
-            # Plot model timeseries
-            ax.plot_date(time, model_temp[n,k,:], '-', color=depth_colours[k], linewidth=1, label='Model'+depth_titles[k])
-        for k in range(num_depths-1):  # Second loop so we get the right legend order
-            # Plot observations as points on top
-            ax.plot_date(obs_date, obs_temp[n,k,:], 'o', color=depth_colours[k], markersize=4, label='Observations'+depth_titles[k])
+        # Plot isotherm depth
+        ax.plot_date(time, model_iso[n,:], '-', color=iso_colour, linewidth=1)
+        ax.plot_date(obs_date, obs_iso[n,:], 'o', color=iso_colour, markersize=4)
+        ax.set_ylabel(iso_titles[n], color=iso_colour, fontsize=12)
+        ax.tick_params(axis='y', colors=iso_colour)
+        ax.set_ylim(iso_bounds[n])
+        ax.set_yticks(iso_ticks[n])
+        ax.set_yticklabels(iso_tick_labels[n])
         ax.set_xlim([time[0], time[-1]])
-        ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
-        # Now do second y-axis for isotherm depth
-        ax2 = ax.twinx()
-        ax2.plot_date(time, model_iso[n,:], '-', color=depth_colours[-1], linewidth=1, label='Model (isotherm depth)')
-        ax2.plot_date(tobs_date, obs_iso[n,:], 'o', color=depth_colours[-1], markersize=4, label='Observations (isotherm depth)')
-        ax2.set_ylabel('Depth of '+str(iso_vals[n])+deg_string+'C isotherm (m)', fontsize=12)
-        plt.title(region_titles[n], fontsize=16)
-        if n==0:
-            ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=12)
         if n==num_regions-1:
-            ax.set_xlabel('Year', fontsize=12)        
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
-    finished_plot(fig) #, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
+            ax.set_xlabel('Year', fontsize=12)
+        # Plot deep temperature on a second y-axis
+        ax2 = ax.twinx()
+        ax2.plot_date(time, model_temp[n,:], '-', color=temp_colour, linewidth=1)
+        ax2.plot_date(obs_date, obs_temp[n,:], 'o', color=temp_colour, markersize=4)
+        ax2.set_ylabel(temp_title, color=temp_colour, fontsize=12)
+        ax2.tick_params(axis='y', colors=temp_colour)
+        ax2.set_ylim(temp_bounds[n])
+        ax2.set_yticks(temp_ticks[n])
+        ax2.set_yticklabels(temp_tick_labels[n])
+        ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2019,5)])
+        plt.title(region_titles[n], fontsize=15)
+    plt.suptitle('Model (lines) vs observations (points)', fontsize=18)
+    finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
 # Plot timeseries of mass loss from PIG and Dotson for the given simulation, with observational estimates overlaid on top; also a bar chart comparing time-mean melt rates with observations for all ice shelves in the domain.

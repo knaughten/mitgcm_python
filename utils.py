@@ -840,6 +840,7 @@ def depth_of_max (data, grid, gtype='t'):
 
 
 # Calculate the shallowest depth of the given isoline, below the given depth z0.
+# Regions where the entire water column is below the given isoline will be set to the seafloor depth; regions where it is entirely above the isoline will trigger an error.
 def depth_of_isoline (data, z, val0, z0=None):
 
     [nz, ny, nx] = data.shape
@@ -857,6 +858,16 @@ def depth_of_isoline (data, z, val0, z0=None):
     mask1 = (data < val0)*(data_below >= val0)*(z <= z0)
     mask2 = (data >= val0)*(data_below < val0)*(z <= z0)
     mask = (mask1.astype(bool) + mask2.astype(bool)).astype(float)
+    # Find points where the entire water column below z0 is below or above val0
+    mask_below = (np.amax(np.ma.masked_where(z > z0, data), axis=0) < val0)
+    mask_above = (np.amin(np.ma.masked_where(z > z0, data), axis=0) > val0)
+    if np.count_nonzero(mask_above) > 0:
+        print 'Error (depth_of_isoline): there are points where the entire water column is above '+str(val0)
+        sys.exit()
+    # Find the seafloor depth at each point
+    bathy = np.amin(np.ma.masked_where(data.mask, z), axis=0)
+    # And the land mask
+    land_mask = np.sum(np.invert(data.mask), axis=0) == 0
     # Make sure there's at most one point in each water column
     if np.amax(np.sum(mask, axis=0)) > 1:
         # Loop over any problem points
@@ -874,8 +885,11 @@ def depth_of_isoline (data, z, val0, z0=None):
     z_below_cross = np.sum(z_below*mask, axis=0)
     # Now interpolate to the given isotherm
     depth_iso = (z_cross - z_below_cross)/(data_cross - data_below_cross)*(val0 - data_cross) + z_cross
-    # Mask out anywhere where there is no such isotherm
-    depth_iso = np.ma.masked_where(np.sum(mask, axis=0)==0, depth_iso)
+    # Deal with regions where there is no such isotherm
+    # Mask out the land mask
+    depth_iso = np.ma.masked_where(land_mask, depth_iso)
+    # Set to seafloor depth where the entire water column is below val0
+    depth_iso[mask_below] = bathy[mask_below]
     return depth_iso
     
 
