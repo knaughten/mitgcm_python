@@ -2435,9 +2435,13 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     num_depths = len(depth_key)
     depth_colours = ['blue', 'red']
     num_regions = len(regions)
+    iso_vals = [0, 0]
+    iso_head = '_isotherm_'
+    iso_tail = 'C_below_100m'
     start_year = 1979
     z_shallow = -200
     z_deep = -700
+    z0 = -100
 
     # Read model timeseries
     print 'Reading model timeseries'
@@ -2451,10 +2455,15 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
             if model_temp is None:
                 model_temp = np.empty([num_regions, num_depths, temp_tmp.size])
             model_temp[n,k,:] = temp_tmp
+    # Now read isotherm depth
+    model_iso = np.empty([num_regions, model_temp.size[-1]])
+    for n in range(num_regions):
+        model_iso[n,:] = read_netcdf(model_file, regions[n]+iso_head+str(iso_vals[n])+iso_tail)[t0:]
 
     # Read observations for each year, averaged over each region
     print 'Reading observations'
     obs_temp = None
+    obs_iso = None
     obs_date = []
     for t in range(obs_num_years):
         print '...'+str(obs_years[t])
@@ -2468,6 +2477,7 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
             obs_ice_mask[obs_ice_mask >= 0.5] = 1
             obs_ice_mask = xy_to_xyz(obs_ice_mask.astype(bool), [obs_lon.shape[2], obs_lon.shape[1], obs_lon.shape[0]])
             obs_temp = np.ma.empty([num_regions, num_depths, obs_num_years])
+            obs_iso = np.ma.empty([num_regions, obs_num_years])
         # Read 3D temperature
         obs_temp_3d = np.transpose(f['PTmean'])
         obs_temp_3d = np.ma.masked_where(np.isnan(obs_temp_3d), obs_temp_3d)
@@ -2484,6 +2494,10 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
                     obs_temp[n,k,t] = np.ma.masked
                 else:
                     obs_temp[n,k,t] = np.sum(obs_temp_3d*obs_dV*masks[k])/np.sum(obs_dV*masks[k])
+            # Now calculate the isotherm depths
+            obs_iso_2d = depth_of_isoline(obs_temp_3d, obs_depth, iso_vals[n], z0=z0)
+            # Average over the given region with a 2D mask
+            obs_iso[n,t] = np.sum(obs_iso_2d*mask[0,:])/np.sum(obs_dA*mask[0,:])
         # Assume the date is 1 February
         obs_date.append(datetime.date(obs_years[t],2,1))
 
@@ -2494,21 +2508,26 @@ def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
     for n in range(num_regions):
         ax = plt.subplot(gs[n,0])
         ax.grid(linestyle='dotted')
-        for k in range(num_depths):
+        for k in range(num_depths-1):
             # Plot model timeseries
             ax.plot_date(time, model_temp[n,k,:], '-', color=depth_colours[k], linewidth=1, label='Model'+depth_titles[k])
-        for k in range(num_depths):  # Second loop so we get the right legend order
+        for k in range(num_depths-1):  # Second loop so we get the right legend order
             # Plot observations as points on top
             ax.plot_date(obs_date, obs_temp[n,k,:], 'o', color=depth_colours[k], markersize=4, label='Observations'+depth_titles[k])
         ax.set_xlim([time[0], time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
+        # Now do second y-axis for isotherm depth
+        ax2 = ax.twinx()
+        ax2.plot_date(time, model_iso[n,:], '-', color=depth_colours[-1], linewidth=1, label='Model (isotherm depth)')
+        ax2.plot_date(tobs_date, obs_iso[n,:], 'o', color=depth_colours[-1], markersize=4, label='Observations (isotherm depth)')
+        ax2.set_ylabel('Depth of '+str(iso_vals[n])+deg_string+'C isotherm (m)', fontsize=12)
         plt.title(region_titles[n], fontsize=16)
         if n==0:
-            plt.ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+            ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=12)
         if n==num_regions-1:
-            plt.xlabel('Year', fontsize=12)        
+            ax.set_xlabel('Year', fontsize=12)        
     ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.44), ncol=2, fontsize=12)
-    finished_plot(fig, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'temp_timeseries_obs.png', dpi=300)
     
          
 # Plot timeseries of mass loss from PIG and Dotson for the given simulation, with observational estimates overlaid on top; also a bar chart comparing time-mean melt rates with observations for all ice shelves in the domain.
@@ -3079,7 +3098,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     trend_names = ['advection_3d', 'diffusion_kpp', 'shortwave_pen', 'hb_total']
     trend_titles = [r'$\bf{b}$. 3D advection', r'$\bf{c}$. Vertical diffusion + KPP', r'$\bf{d}$. Shortwave penetration', r'$\bf{e}$. Total']
     num_trends = len(trend_names)
-    file_tail = '_trends_1member.nc'
+    file_tail = '_trends.nc'
     trend_factor = Cp_sw*rhoConst*1e-7*100
     trend_units = r'10$^7$J/m$^3$/century'
     lon0 = -106
@@ -3128,16 +3147,15 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
 
     # Read and process 3D trends
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
-    print 'Warning: Uncomment the next block when all members have finished'
     for v in range(num_trends):
         trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor
         # Divide by cell volume
         trends /= grid.dV
-        mean_trends[v,:] = np.squeeze(trends)
-        #mean_trend_tmp = np.mean(trends, axis=0)
-        #t_val, p_val = ttest_1samp(trends, 0, axis=0)
-        #mean_trend_tmp[p_val > p0] = 0
-        #mean_trends[v,:] = mean_trend_tmp            
+        # Get mean, and set non-significant trends to zero
+        mean_trend_tmp = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend_tmp[p_val > p0] = 0
+        mean_trends[v,:] = mean_trend_tmp            
     # Now get patches and values along slice
     values = []
     for v in range(num_trends):
