@@ -3065,10 +3065,9 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     region = 'amundsen_shelf'
     z0 = 200
     # List of variable names to sum for each term
-    print 'Warning: add shortwave back when finished'
-    var_names = [['advection_heat_xy', 'advection_heat_z'], ['diffusion_heat_implicit_z', 'kpp_heat_z']] #, ['shortwave_penetration']]
-    var_titles = ['3D advection', 'Vertical diffusion + KPP', 'Total'] #'Shortwave penetration', 'Total']
-    colours = ['red', 'blue', 'black'] #'magenta', 'black']
+    var_names = [['advection_heat_xy', 'advection_heat_z'], ['diffusion_heat_implicit_z', 'kpp_heat_z'], ['shortwave_penetration']]
+    var_titles = ['3D advection', 'Vertical diffusion + KPP', 'Shortwave penetration', 'Total']
+    colours = ['red', 'blue', 'magenta', 'black']
     num_var = len(var_titles)
     factor = 1e-9
     units = 'EJ'
