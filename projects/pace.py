@@ -2022,6 +2022,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     pace_data = None
     pace_mean = None
     era5_data = None
+    pace_percent = None
     for n in range(num_ens+1):
         file_path = sim_dir[n] + timeseries_file
         time_tmp = netcdf_time(file_path, monthly=False)  # It is actually monthly but this keyword would otherwise trigger a 1-month correction which we don't want
@@ -2036,18 +2037,25 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
             data_tmp = read_netcdf(file_path, var_names[v])
             data_tmp = data_tmp[t0:tf]
             data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
+            if v == 2 and n < num_ens:
+                # Also calculate as percent of 1920-1949 mean
+                data_percent_tmp = data_tmp/np.mean(data_tmp[:base_period])*100
+                data_percent_smooth = moving_average(data_percent_tmp, smooth)
             if pace_data is None:
                 # Set up master array
                 num_time = time_smooth.size
                 pace_data = np.empty([num_var, num_ens, num_time])
                 pace_mean = np.empty([num_var, num_time])
                 pace_time = time_smooth
+                pace_percent = np.empty([num_ens, num_time])
             if n < num_ens:
                 # This is a PACE ensemble member
                 pace_data[v,n,:] = data_smooth
                 if n == num_ens - 1:
                     # Also save PACE ensemble mean
                     pace_mean[v,:] = np.mean(pace_data[v,:,:], axis=-2)
+                if v == 2:
+                    pace_percent[n,:] = data_percent_smooth
             elif n == num_ens:
                 # This is ERA5
                 if era5_data is None:
@@ -2074,6 +2082,8 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
             slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_data[v,n,:])
             slope_members.append(slope)
         print 'Mean of trend = '+str(np.mean(slope_members))
+        if v == 2:
+            slope_percent = linregress(time_decades, np.mean(pace_percent, axis=0))[0]
 
     # Calculate mean and standard deviation over first 30 years (across all ensemble members) for each variable
     base_mean = []
@@ -2108,8 +2118,8 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/decade', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         if v==2:
             # Also print the trend in %/decade
-            trend_str_percent = round_to_decimals(slopes[v]/base_mean[v]*100,1)
-            plt.text(0.02, 0.93, '(+'+trend_str_percent+'%/decade)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
+            trend_str_percent = round_to_decimals(slope_percent,1)
+            plt.text(0.02, 0.9, '(+'+trend_str_percent+'%/decade)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         ax.set_xlim([pace_time[0], pace_time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])
         for label in ax.get_xticklabels()[1::2]:
@@ -2128,7 +2138,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2.set_ylim(std_limits)
         if v==0:
             ax2.set_ylabel('anomaly in standard deviations', fontsize=12)    
-    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
@@ -3159,6 +3169,14 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     timeseries_mean = np.mean(data_smoothed, axis=1)
     timeseries_min = np.amin(data_smoothed, axis=1)
     timeseries_max = np.amax(data_smoothed, axis=1)
+    # Calculate the trend and significance of each term
+    time_decades = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*10)
+    for v in range(num_var):
+        all_trends = []
+        for n in range(num_ens):
+            all_trends.append(linregress(time_decades, data_smoothed[v,n,:])[0])
+        p_val = ttest_1samp(all_trends, 0)[1]
+        print var_titles[v] + ': '+str(np.mean(all_trends))+' EJ/decade, significance='+str((1-p_val)*100)+'%'
 
     # Read and process 3D trends
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
