@@ -2080,7 +2080,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     base_std = []
     for v in range(num_var):
         base_mean.append(np.mean(pace_data[v,:,:base_period]))
-        base_std.append(np.std(pace_data[v,:,:base_period]))    
+        base_std.append(np.std(pace_data[v,:,:base_period]))
 
     # Set up plot
     fig = plt.figure(figsize=(5.5,12))
@@ -2100,12 +2100,16 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         # Plot trend in thin black on top
         trend_vals = slopes[v]*time_decades + intercepts[v]
         ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
-        # Print trend and r^2
+        # Print trend
         if v==2:
             trend_str = round_to_decimals(slopes[v],1)
         else:
             trend_str = round_to_decimals(slopes[v],3)
         plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/decade', ha='left', va='top', fontsize=12, transform=ax.transAxes)
+        if v==2:
+            # Also print the trend in %/decade
+            trend_str_percent = round_to_decimals(slopes[v]/base_mean[v]*100,1)
+            plt.text(0.02, 0.93, '(+'+trend_str_percent+'%/decade)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         ax.set_xlim([pace_time[0], pace_time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])
         for label in ax.get_xticklabels()[1::2]:
@@ -2124,7 +2128,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2.set_ylim(std_limits)
         if v==0:
             ax2.set_ylabel('anomaly in standard deviations', fontsize=12)    
-    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
@@ -2740,7 +2744,7 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
     fig_dir = real_dir(fig_dir)
     num_ens = 20
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
-    var_name = 'amundsen_shelf_temp_below_700m' #btw_200_700m'
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
     percentile = 25
     start_year = 1920
     end_year = 2013
@@ -2793,7 +2797,7 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2.set_ylim([0, 100])
         ax2.set_yticks(np.arange(0, 125, 25))
         ax2.set_ylabel('%', fontsize=12)
-    finished_plot(fig) #, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
 
 
 # Precompute trends in heat advection across the ensemble. Call for key='x', 'y'
@@ -3115,10 +3119,10 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     lon0 = -106
     ymax = -73
     p0 = 0.05
-    vmin = [-4, -4, None, -1.5]
-    vmax = [4, 4, 10, 1.5]
+    vmin = [-2, -2, 0, 0]
+    vmax = [2, 2, 10, 1]
     extend = [None, 'both', 'max', 'both']
-    ticks = [None, np.arange(-4, 6, 2), np.arange(2, 12, 2), np.arange(-1, 2, 1)]
+    ticks = [None, np.arange(-2, 3, 1), np.arange(0, 12.5, 2.5), np.arange(0, 1.25, 0.25)]
 
     # Read and process timeseries
     time = netcdf_time(file_paths[n], monthly=False)
@@ -3235,7 +3239,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         ax.set_title(trend_titles[v], fontsize=14)
     plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
-    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
     
     
