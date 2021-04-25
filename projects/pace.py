@@ -2067,11 +2067,11 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     # Calculate mean trend for each variable (equivalent to trend of mean, but check this)
     slopes = []
     intercepts = []
-    # Get time in decades
+    # Get time in centuries
     time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
-    time_decades = time_sec/(365*sec_per_day*10)
+    time_cent = time_sec/(365*sec_per_day*100)
     for v in range(num_var):
-        slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_mean[v,:])
+        slope, intercept, r_value, p_value, std_err = linregress(time_cent, pace_mean[v,:])
         slopes.append(slope)
         intercepts.append(intercept)
         print '\n'+var_names[v]
@@ -2079,11 +2079,11 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         # Now do some checking
         slope_members = []        
         for n in range(num_ens):
-            slope, intercept, r_value, p_value, std_err = linregress(time_decades, pace_data[v,n,:])
+            slope, intercept, r_value, p_value, std_err = linregress(time_cent, pace_data[v,n,:])
             slope_members.append(slope)
         print 'Mean of trend = '+str(np.mean(slope_members))
         if v == 2:
-            slope_percent = linregress(time_decades, np.mean(pace_percent, axis=0))[0]
+            slope_percent = linregress(time_cent, np.mean(pace_percent, axis=0))[0]
 
     # Calculate mean and standard deviation over first 30 years (across all ensemble members) for each variable
     base_mean = []
@@ -2108,18 +2108,18 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         # Plot ERA5 in thicker solid red
         ax.plot_date(era5_time, era5_data[v,:], '-', color='red', label='ERA5', linewidth=1.5, zorder=(num_ens))
         # Plot trend in thin black on top
-        trend_vals = slopes[v]*time_decades + intercepts[v]
+        trend_vals = slopes[v]*time_cent + intercepts[v]
         ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
         # Print trend
         if v==2:
-            trend_str = round_to_decimals(slopes[v],1)
+            trend_str = int(np.round(slopes[v]))
         else:
-            trend_str = round_to_decimals(slopes[v],3)
-        plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/decade', ha='left', va='top', fontsize=12, transform=ax.transAxes)
+            trend_str = round_to_decimals(slopes[v],2)
+        plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/century', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         if v==2:
-            # Also print the trend in %/decade
-            trend_str_percent = round_to_decimals(slope_percent,1)
-            plt.text(0.02, 0.9, '(+'+trend_str_percent+'%/decade)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
+            # Also print the trend in %/century
+            trend_str_percent = int(np.round(slope_percent))
+            plt.text(0.02, 0.9, '(+'+trend_str_percent+'%/century)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         ax.set_xlim([pace_time[0], pace_time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])
         for label in ax.get_xticklabels()[1::2]:
@@ -2226,9 +2226,9 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
             num_time = time.size
             temp = np.empty([num_ens, num_time])
             temp[n,:] = temp_smooth
-            # Get time in decades
+            # Get time in centuries
             time_sec = np.array([(t-time[0]).total_seconds() for t in time])
-            time_decades = time_sec/(365*sec_per_day*10)
+            time_cent = time_sec/(365*sec_per_day*100)
         else:
             temp[n,:] = moving_average(temp_tmp, smooth)
 
@@ -2242,7 +2242,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
         for n in range(num_ens):
             # Extract values where temperature exceeds this cutoff
             index = temp[n,:] > cutoff_temp[m]
-            all_trends[n,m] = linregress(time_decades[index], temp[n,index])[0]
+            all_trends[n,m] = linregress(time_cent[index], temp[n,index])[0]
         # Now calculate significance of ensemble
         p_val = ttest_1samp(all_trends[:,m], 0)[1]
         sig[m] = (1-p_val)*100
@@ -2259,7 +2259,7 @@ def plot_temp_trend_vs_cutoff (base_dir='./', timeseries_file='timeseries_final.
     ax.plot(cutoff_temp, mean_trends, linewidth=2, color='black')
     ax.set_xlim([cutoff_temp[0], cutoff_temp[-1]])
     plt.xlabel('Cutoff temperature ('+deg_string+'C)', fontsize=12)
-    plt.ylabel(deg_string+'C/decade', fontsize=12)
+    plt.ylabel(deg_string+'C/century', fontsize=12)
     plt.title('Trends (colours) and ensemble mean (black)', fontsize=14)
     ax.grid(linestyle='dotted')
     # Cutoff temperature vs significance
@@ -2292,141 +2292,141 @@ def years_with_obs (obs_dir):
 # Make a 3x2 plot showing temperature and salinity casts in 3 regions, comparing ERA5-forced output to Pierre's climatology.
 def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
 
-    obs_dir = real_dir(obs_dir)
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-    model_file = base_dir + 'PAS_ERA5/output/hovmoller.nc'
-    grid_path = base_dir + 'PAS_grid/'
-    grid = Grid(grid_path)
-    obs_file_head = obs_dir + 'ASEctd_griddedMean'
-    obs_file_tail = '.mat'
-    obs_years = years_with_obs(obs_dir)
-    obs_num_years = len(obs_years)
-    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_titles = [r'$\bf{a}$. Western trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
-    num_regions = len(regions)
-    model_var = ['temp', 'salt']
-    obs_var = ['PTmean', 'Smean']
-    var_titles = ['Temperature', 'Salinity']
-    var_units = [deg_string+'C', 'psu']
-    num_var = len(model_var)
-    model_year0 = 1947
-    model_start_year = 1979
-    model_end_year = 2019
-    model_num_time = (model_end_year-model_year0+1)*months_per_year
-    model_years = np.arange(model_start_year, model_end_year+1)
-    model_num_years = model_years.size
-    obs_smooth = 51
-    obs_smooth_below = -100
+obs_dir = real_dir(obs_dir)
+base_dir = real_dir(base_dir)
+fig_dir = real_dir(fig_dir)
+model_file = base_dir + 'PAS_ERA5/output/hovmoller.nc'
+grid_path = base_dir + 'PAS_grid/'
+grid = Grid(grid_path)
+obs_file_head = obs_dir + 'ASEctd_griddedMean'
+obs_file_tail = '.mat'
+obs_years = years_with_obs(obs_dir)
+obs_num_years = len(obs_years)
+regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+region_titles = [r'$\bf{a}$. PITW Trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+num_regions = len(regions)
+model_var = ['temp', 'salt']
+obs_var = ['PTmean', 'Smean']
+var_titles = ['Temperature', 'Salinity']
+var_units = [deg_string+'C', 'psu']
+num_var = len(model_var)
+model_year0 = 1947
+model_start_year = 1979
+model_end_year = 2019
+model_num_time = (model_end_year-model_year0+1)*months_per_year
+model_years = np.arange(model_start_year, model_end_year+1)
+model_num_years = model_years.size
+obs_smooth = 51
+obs_smooth_below = -100
 
-    # Read precomputed Hovmollers from file
-    print 'Reading model output'
-    model_hov = np.ma.empty([num_regions, num_var, model_num_time, grid.nz])
-    for r in range(num_regions):
-        for v in range(num_var):
-            model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
-    # For each of the years with observations, average over January-February
-    model_data = np.ma.empty([num_regions, num_var, model_num_years, grid.nz])
-    for t in range(model_num_years):
-        # Find time index of that January
-        t_jan = (model_years[t]-model_year0)*months_per_year
-        # Weight with days per month
-        ndays = np.array([days_per_month(m+1,model_years[t]) for m in range(2)])
-        model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
+# Read precomputed Hovmollers from file
+print 'Reading model output'
+model_hov = np.ma.empty([num_regions, num_var, model_num_time, grid.nz])
+for r in range(num_regions):
+    for v in range(num_var):
+        model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
+# For each of the years with observations, average over January-February
+model_data = np.ma.empty([num_regions, num_var, model_num_years, grid.nz])
+for t in range(model_num_years):
+    # Find time index of that January
+    t_jan = (model_years[t]-model_year0)*months_per_year
+    # Weight with days per month
+    ndays = np.array([days_per_month(m+1,model_years[t]) for m in range(2)])
+    model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
 
-    # Now read observations
-    print 'Reading observations'
-    obs_data = None
-    for t in range(obs_num_years):
-        print '...'+str(obs_years[t])
-        f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
-        if obs_data is None:
-            # This is the first year: read the grid and set up array
-            obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
-            # Get MITgcm's ice mask on this grid
-            obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
-            obs_ice_mask[obs_ice_mask < 0.5] = 0
-            obs_ice_mask[obs_ice_mask >= 0.5] = 1
-            obs_ice_mask = obs_ice_mask.astype(bool)
-            obs_data = np.ma.empty([num_regions, num_var, obs_num_years, obs_depth.size])
-        for v in range(num_var):
-            # Read 3D temp or salinity
-            obs_var_3d = np.transpose(f[obs_var[v]])
-            obs_var_3d = np.ma.masked_where(np.isnan(obs_var_3d), obs_var_3d)
-            for r in range(num_regions):
-                # Area-average over the given region
-                [xmin, xmax, ymin, ymax] = region_bounds[regions[r]]
-                # Make a mask which is 1 only within these bounds where there is data, and excluding cavities
-                mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
-                mask = xy_to_xyz(mask, [obs_lat.size, obs_lon.size, obs_depth.size]).astype(float)
-                mask[obs_var_3d.mask] = 0
-                obs_profile = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
-                # Make a smoothed version and overwrite with it below 100m depth
-                obs_profile_smoothed = moving_average(obs_profile, obs_smooth, keep_edges=True)
-                index = obs_depth < obs_smooth_below
-                obs_profile[index] = obs_profile_smoothed[index]
-                obs_data[r,v,t,:] = obs_profile
+# Now read observations
+print 'Reading observations'
+obs_data = None
+for t in range(obs_num_years):
+    print '...'+str(obs_years[t])
+    f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
+    if obs_data is None:
+        # This is the first year: read the grid and set up array
+        obs_lon, obs_lat, obs_depth, obs_dA, obs_dV = pierre_obs_grid(f, xy_dim=2, z_dim=1, dA_dim=3)
+        # Get MITgcm's ice mask on this grid
+        obs_ice_mask = interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), obs_lon, obs_lat)
+        obs_ice_mask[obs_ice_mask < 0.5] = 0
+        obs_ice_mask[obs_ice_mask >= 0.5] = 1
+        obs_ice_mask = obs_ice_mask.astype(bool)
+        obs_data = np.ma.empty([num_regions, num_var, obs_num_years, obs_depth.size])
+    for v in range(num_var):
+        # Read 3D temp or salinity
+        obs_var_3d = np.transpose(f[obs_var[v]])
+        obs_var_3d = np.ma.masked_where(np.isnan(obs_var_3d), obs_var_3d)
+        for r in range(num_regions):
+            # Area-average over the given region
+            [xmin, xmax, ymin, ymax] = region_bounds[regions[r]]
+            # Make a mask which is 1 only within these bounds where there is data, and excluding cavities
+            mask = (obs_lon >= xmin)*(obs_lon <= xmax)*(obs_lat >= ymin)*(obs_lat <= ymax)*np.invert(obs_ice_mask)
+            mask = xy_to_xyz(mask, [obs_lat.size, obs_lon.size, obs_depth.size]).astype(float)
+            mask[obs_var_3d.mask] = 0
+            obs_profile = np.sum(obs_var_3d*obs_dA*mask, axis=(1,2))/np.sum(obs_dA*mask, axis=(1,2))
+            # Make a smoothed version and overwrite with it below 100m depth
+            obs_profile_smoothed = moving_average(obs_profile, obs_smooth, keep_edges=True)
+            index = obs_depth < obs_smooth_below
+            obs_profile[index] = obs_profile_smoothed[index]
+            obs_data[r,v,t,:] = obs_profile
 
-    # Calculate time-mean and standard deviation from each source
-    model_mean = np.mean(model_data, axis=-2)
-    obs_mean = np.mean(obs_data, axis=-2)
-    model_std = np.std(model_data, axis=-2)
-    obs_std = np.std(obs_data, axis=-2)
-    # Also make depth positive
-    obs_depth *= -1
-    model_depth = -grid.z
+# Calculate time-mean and standard deviation from each source
+model_mean = np.mean(model_data, axis=-2)
+obs_mean = np.mean(obs_data, axis=-2)
+model_std = np.std(model_data, axis=-2)
+obs_std = np.std(obs_data, axis=-2)
+# Also make depth positive
+obs_depth *= -1
+model_depth = -grid.z
 
-    # Plot
-    fig = plt.figure(figsize=(7,12))
-    gs = plt.GridSpec(3,25)
-    gs.update(left=0.1, right=0.98, bottom=0.12, top=0.93, wspace=0.2, hspace=0.4)
-    for r in range(num_regions):
-        for v in range(num_var):
-            # Choose first 8 panels and merge them (leaving 1 empty between variables)
-            ax = plt.subplot(gs[r,v*13:v*13+8])
-            ax.tick_params(direction='in')
-            ax.grid(linestyle='dotted')
-            # Plot each year of observations in thin grey
-            for t in range(obs_num_years):
-                ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=0.5, label=('Observations (each year)' if t==0 else None))
-            # Plot observational mean in thick black, but make sure it will be second from the top
-            ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)', zorder=obs_num_years+model_num_years)
-            # Plot each year of model output in thin light blue
-            for t in range(model_num_years):
-                ax.plot(model_data[r,v,t,:], model_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year)' if t==0 else None))
-            # Plot model mean in thick blue        
-            ax.plot(model_mean[r,v,:], model_depth, color='blue', linewidth=1.5, label='Model (mean/std)')
-            # Find the deepest unmasked depth where there is data from both model and obs
-            y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean[r,v,:].mask, model_depth)))
-            ax.set_ylim([y_deep,0])
-            if v==0 and r==0:
-                plt.ylabel('Depth (m)', fontsize=12)
-            if v==1:
-                ax.set_yticklabels([])
-            if r == num_regions-1:
-                plt.xlabel(var_units[v], fontsize=12)
-            plt.title(var_titles[v], fontsize=14)
-            if v==1 and r==2:
-                plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.53), ncol=2, fontsize=12)
-            if v==0 and r==2:
-                # Remove the last tick label so it doesn't get too close
-                label = ax.get_xticklabels()[-1]
-                label.set_visible(False)
-            # Now plot standard deviations
-            # Choose next 4 panels and merge them
-            ax2 = plt.subplot(gs[r,v*13+8:v*13+12])
-            ax2.tick_params(direction='in')
-            ax2.grid(linestyle='dotted')
-            ax2.plot(obs_std[r,v,:], obs_depth, color='black', linewidth=1.5)
-            ax2.plot(model_std[r,v,:], model_depth, color='blue', linewidth=1.5)
-            ax2.set_yticklabels([])
-            ax2.set_ylim([y_deep,0])
-            # Overwrite the labels so there are no unnecessary decimals - otherwise you get an overlap of labels at 0
-            xticks = ax2.get_xticks()
-            ax2.set_xticklabels([round_to_decimals(tick,1) for tick in xticks])
-            plt.title('std', fontsize=12)        
-        plt.text(0.5, 0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
+# Plot
+fig = plt.figure(figsize=(7,12))
+gs = plt.GridSpec(3,25)
+gs.update(left=0.1, right=0.98, bottom=0.12, top=0.93, wspace=0.2, hspace=0.4)
+for r in range(num_regions):
+    for v in range(num_var):
+        # Choose first 8 panels and merge them (leaving 1 empty between variables)
+        ax = plt.subplot(gs[r,v*13:v*13+8])
+        ax.tick_params(direction='in')
+        ax.grid(linestyle='dotted')
+        # Plot each year of observations in thin grey
+        for t in range(obs_num_years):
+            ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=0.5, label=('Observations (each year)' if t==0 else None))
+        # Plot observational mean in thick black, but make sure it will be second from the top
+        ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)', zorder=obs_num_years+model_num_years)
+        # Plot each year of model output in thin light blue
+        for t in range(model_num_years):
+            ax.plot(model_data[r,v,t,:], model_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year)' if t==0 else None))
+        # Plot model mean in thick blue        
+        ax.plot(model_mean[r,v,:], model_depth, color='blue', linewidth=1.5, label='Model (mean/std)')
+        # Find the deepest unmasked depth where there is data from both model and obs
+        y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean[r,v,:].mask, model_depth)))
+        ax.set_ylim([y_deep,0])
+        if v==0 and r==0:
+            plt.ylabel('Depth (m)', fontsize=12)
+        if v==1:
+            ax.set_yticklabels([])
+        if r == num_regions-1:
+            plt.xlabel(var_units[v], fontsize=12)
+        plt.title(var_titles[v], fontsize=14)
+        if v==1 and r==2:
+            plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.53), ncol=2, fontsize=12)
+        if v==0 and r==2:
+            # Remove the last tick label so it doesn't get too close
+            label = ax.get_xticklabels()[-1]
+            label.set_visible(False)
+        # Now plot standard deviations
+        # Choose next 4 panels and merge them
+        ax2 = plt.subplot(gs[r,v*13+8:v*13+12])
+        ax2.tick_params(direction='in')
+        ax2.grid(linestyle='dotted')
+        ax2.plot(obs_std[r,v,:], obs_depth, color='black', linewidth=1.5)
+        ax2.plot(model_std[r,v,:], model_depth, color='blue', linewidth=1.5)
+        ax2.set_yticklabels([])
+        ax2.set_ylim([y_deep,0])
+        # Overwrite the labels so there are no unnecessary decimals - otherwise you get an overlap of labels at 0
+        xticks = ax2.get_xticks()
+        ax2.set_xticklabels([round_to_decimals(tick,1) for tick in xticks])
+        plt.title('std', fontsize=12)        
+    plt.text(0.5, 0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
+finished_plot(fig, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
 
 
 # Make a 2-panel timeseries plot showing ERA5-forced temperature (200-700m) in Pine Island Bay and Dotson, with Pierre's obs as markers on top.
@@ -2957,9 +2957,10 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     grid = Grid(grid_path)
     p0 = 0.05
     threshold = 1500
-    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V']
-    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87]
-    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1]
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'PITW', 'PITE', 'PIB', 'BR']
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -114.5, -106, -103.2, -110]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.5, -71.34, -74.75, -73.95]
+    labelsize = [14]*8 + [10]*4
     num_labels = len(region_labels)
 
     # Process the x and y components
@@ -3002,7 +3003,7 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e5, headwidth=4, headlength=5)
     # Add ice shelf labels
     for n in range(num_labels):
-        plt.text(label_x[n], label_y[n], region_labels[n], fontsize=14, ha='center', va='center', weight='bold', color='blue')
+        plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
     cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
     cbar = plt.colorbar(img, cax=cax, extend='max')
     finished_plot(fig, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
@@ -3012,8 +3013,8 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
 def plot_region_map (base_dir='./', fig_dir='./'):
 
     regions = ['amundsen_shelf', 'amundsen_shelf_break', 'amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_labels = ['Shelf', 'Shelf break', 'Western\ntrough', 'Pine\nIsland\nBay', 'Dotson\nfront']
-    region_label_x = [-108, -109, -117.2, -105, -112.2]
+    region_labels = ['Shelf', 'Shelf break', 'PITW\nTrough', 'Pine\nIsland\nBay', 'Dotson\nfront']
+    region_label_x = [-108, -109, -117, -105, -112.2]
     region_label_y = [-72.75, -70.5, -71.5, -74, -73.85]
     region_colours = ['DodgerBlue','magenta','green','red','blue']
     [xmin, xmax, ymin, ymax] = [-120, -95, None, -70]
