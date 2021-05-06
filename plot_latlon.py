@@ -50,7 +50,7 @@ from calculus import vertical_average
 # land_mask, ice_mask: alternate land and ice masks to use for shading (useful for coupled simulations)
 # figsize: (width, height) of figure in inches.
 
-def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, extend=None, label_latlon=True, land_mask=None, ice_mask=None, figsize=(8,6), dpi=None, contour_shelf=True, rasterized=False):
+def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=True, ctype='basic', norm=None, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, pster=False, lon_lines=None, lat_lines=None, fill_gap=True, date_string=None, title=None, titlesize=18, return_fig=False, fig_name=None, change_points=None, val0=None, extend=None, label_latlon=True, land_mask=None, ice_mask=None, figsize=(8,6), dpi=None, contour_shelf=True, rasterized=False):
     
     # Choose what the endpoints of the colourbar should do
     if extend is None:
@@ -65,7 +65,7 @@ def latlon_plot (data, grid, ax=None, gtype='t', include_shelf=True, make_cbar=T
         if vmax is None:
             vmax = vmax_tmp
     # Get colourmap
-    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points)
+    cmap, vmin, vmax = set_colours(data, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, val0=val0)
 
     # Prepare quadrilateral patches
     x, y, data_plot = cell_boundaries(data, grid, gtype=gtype, pster=pster)

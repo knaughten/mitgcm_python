@@ -3066,6 +3066,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
     vmin = [None, None, -2.5, -0.8, -0.75, None, None, None]
     vmax = [None, None, None, 0.5, None, 2, None, None]
+    val0 = [None, 1, None, None, None, None, None, None]
     ticks = [np.arange(-0.2, 0.2, 0.1), np.arange(1.2, 2.2, 0.2), np.arange(-2, 0.5, 0.5), np.arange(-0.6, 0.6, 0.3), np.arange(-0.6, 0.2, 0.2), np.arange(0, 3, 1), np.arange(0.2, 0.8, 0.2), np.arange(-0.1, 0.2, 0.1)]
     extend = ['neither', 'neither', 'min', 'both', 'min', 'max', 'neither', 'neither']
     num_var = len(var_names)
@@ -3098,7 +3099,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
             cax.append(cax_tmp)
     for n in range(num_var):
         ax = plt.subplot(gs[n/2, n%2])
-        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n])
+        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n], val0=val0[n])
         cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
         if n%2 == 0:
             cax[n].yaxis.set_ticks_position('left')
