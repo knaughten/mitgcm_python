@@ -1290,11 +1290,14 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         data_save -= data_mean[None,None,:]
         # Now time-integrate
         dt = 365*sec_per_day
-        data_save = np.cumsum(data_save*dt, axis=1)
+        # Loop over ensemble members, otherwise it's too much memory
+        for m in range(num_ens):
+            data_save[m,:] = np.cumsum(data_save[m,:]*dt, axis=0)
 
     # Now loop over ensemble members again and calculate the trend at each point
+    print 'Calculating trends'
     for m in range(num_ens):
-        print 'Calculating trends'
+        print '...member '+str(m+1)
         trends_tmp = np.empty(num_pts)
         for p in range(num_pts):
             slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[m,:,p])
@@ -1304,7 +1307,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
 
     # Mask master array outside the given region (where it's still zero)
     trends = np.ma.masked_where(trends==0, trends)
-    
+
     # Save to NetCDF - treat ensemble axis as time for convenience
     if dim == 2:
         file_dim = 'xyt'
@@ -2020,11 +2023,10 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     year_start_pace = 1920
     year_start_era5 = 1979
     year_end = 2013
-    base_period = 30*months_per_year
+    base_period = 10*months_per_year
     smooth = 24
     shade_years = [1945, 1970, 1993, 2002]
     shade_years_error = [12, 4, 2, 1]
-    shade_labels = ['PIG ungrounds\n(initial)', 'PIG ungrounds\n(final)', 'PIG\nthinning\nonset', 'Thwaites\nthinning\nonset']
 
     # Read all the data and take 2-year running means
     pace_data = None
@@ -2045,25 +2047,18 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
             data_tmp = read_netcdf(file_path, var_names[v])
             data_tmp = data_tmp[t0:tf]
             data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
-            if v == 2 and n < num_ens:
-                # Also calculate as percent of 1920-1949 mean
-                data_percent_tmp = data_tmp/np.mean(data_tmp[:base_period])*100
-                data_percent_smooth = moving_average(data_percent_tmp, smooth)
             if pace_data is None:
                 # Set up master array
                 num_time = time_smooth.size
                 pace_data = np.empty([num_var, num_ens, num_time])
                 pace_mean = np.empty([num_var, num_time])
                 pace_time = time_smooth
-                pace_percent = np.empty([num_ens, num_time])
             if n < num_ens:
                 # This is a PACE ensemble member
                 pace_data[v,n,:] = data_smooth
                 if n == num_ens - 1:
                     # Also save PACE ensemble mean
                     pace_mean[v,:] = np.mean(pace_data[v,:,:], axis=-2)
-                if v == 2:
-                    pace_percent[n,:] = data_percent_smooth
             elif n == num_ens:
                 # This is ERA5
                 if era5_data is None:
@@ -2071,6 +2066,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
                     era5_data = np.empty([num_var, num_time])
                     era5_time = time_smooth
                 era5_data[v,:] = data_smooth
+
+    # Calculate basal melting as percent of 1920-1949 mean
+    pace_percent = pace_data[2,:,:]/np.mean(pace_mean[2,:base_period])*100
 
     # Calculate mean trend for each variable (equivalent to trend of mean, but check this)
     slopes = []
@@ -2122,10 +2120,10 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         for t in range(len(shade_years)):
             start_date = datetime.date(shade_years[t]-shade_years_error[t], 1, 1)
             end_date = datetime.date(shade_years[t]+shade_years_error[t], 12, 31)
-            ax.axvspan(start_date, end_date, alpha=0.5, color='black')
+            ax.axvspan(start_date, end_date, alpha=0.1, color='black')
             if v==2:
                 mid_date = datetime.date(shade_years[t], 6, 30)
-                plt.text(mid_date, 100, shade_labels[t], ha='center', va='bottom', fontsize=10)
+                plt.text(start_date, 10, str(t+1), ha='left', va='bottom', fontsize=12, weight='bold')
         # Print trend
         if v==2:
             trend_str = str(int(np.round(slopes[v])))
@@ -2161,14 +2159,13 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
 
     num_ens = 20
-    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg']
-    units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu']
+    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'getz_massloss', 'dotson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'amundsen_shelf_temp_btw_200_700m', 'pine_island_bay_temp_btw_200_700m', 'dotson_bay_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'pine_island_bay_salt_btw_200_700m', 'dotson_bay_salt_btw_200_700m', 'amundsen_shelf_thermocline', 'pine_island_bay_thermocline', 'dotson_bay_thermocline', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss']
+    units = ['m/s', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'Gt/y', 'degC', 'degC', 'degC', 'psu', 'psu', 'psu', 'm', 'm', 'm', 'degC', 'psu', 'Gt/y']
     num_var = len(var_names)
     base_dir = real_dir(base_dir)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)]
     ctrl_dir = base_dir+'PAS_ctrl/output/'
     year_start = 1920
-    base_year_end = 1949
     smooth = 24
 
     time = None
@@ -2181,11 +2178,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
                 time_tmp = netcdf_time(file_path, monthly=False)
                 t0 = index_year_start(time_tmp, year_start)
                 time_tmp = time_tmp[t0:]
-                t_base = index_year_end(time_tmp, base_year_end)
             data_tmp = read_netcdf(file_path, var_names[v])[t0:]
-            if var_names[v].endswith('massloss'):
-                # Get mean value over baseline period
-                data_base_mean = np.mean(data_tmp[:t_base])
             # Smooth
             if time is None:
                 data, time = moving_average(data_tmp, smooth, time=time_tmp)
@@ -2194,10 +2187,6 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
                 time_decades = time_sec/(365*sec_per_day*10)
             else:
                 data = moving_average(data_tmp, smooth)
-            if var_names[v].endswith('massloss'):
-                # Convert to percent of baseline value
-                data = data/data_base_mean*100
-                units[v] = '%'
             # Calculate trend
             slope, intercept, r_value, p_value, std_err = linregress(time_decades, data)
             trends.append(slope)
@@ -2846,7 +2835,7 @@ def precompute_heat_budget_trend (base_dir='./'):
     grid_path = base_dir + 'PAS_grid/'
     for var_name in ['advection_3d', 'diffusion_kpp']:
         print 'Processing ' + var_name
-        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', end_base_year=1929)
+        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
 
 
 # Precompute trends in surface variables across the ensemble.
