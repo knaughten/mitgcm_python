@@ -2112,13 +2112,13 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
         # Print trend
         if v==2:
-            trend_str = int(np.round(slopes[v]))
+            trend_str = str(int(np.round(slopes[v])))
         else:
             trend_str = round_to_decimals(slopes[v],2)
         plt.text(0.02, 0.97, '+'+trend_str+var_units[v]+'/century', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         if v==2:
             # Also print the trend in %/century
-            trend_str_percent = int(np.round(slope_percent))
+            trend_str_percent = str(int(np.round(slope_percent)))
             plt.text(0.02, 0.9, '(+'+trend_str_percent+'%/century)', ha='left', va='top', fontsize=12, transform=ax.transAxes)
         ax.set_xlim([pace_time[0], pace_time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2010+1, 10)])

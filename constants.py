@@ -86,7 +86,8 @@ region_bounds = {
     'ekstrom_jelbart_fimbul': [-10, 7.7, -72, -69],
     'filchner_sill': [-36, -30, -74.7, -74],
     'filchner_trough_cavity': [-44, -38, -81, -76],
-    'amundsen_shelf': [-115, -100, -75.5, -70]
+    'amundsen_shelf': [-115, -100, -75.5, -70],
+    'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -147,7 +148,8 @@ region_names = {
     'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves',
     'filchner_sill': 'Filchner Trough Sill',
     'filchner_trough_cavity': 'Filchner Trough in cavity',
-    'amundsen_shelf': 'Amundsen Sea continental shelf'
+    'amundsen_shelf': 'Amundsen Sea continental shelf',
+    'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove'
 }    
 
 # Resolution of SOSE grid in degrees
