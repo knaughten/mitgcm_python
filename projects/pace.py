@@ -1148,7 +1148,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 
 
 # Calculate the trend at every point in the given region, for the given variable, and all ensemble members. Save to a NetCDF file (3D or 4D depending on whether variable is 2D or 3D).
-def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1949, time_integral_anomaly=False):
+def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1929, time_integral_anomaly=False):
 
     num_ens = len(sim_dir)
 
@@ -1182,6 +1182,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
         swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
 
+    data_save = None
     # Loop over ensemble member
     for m in range(num_ens):
         print 'Processing ' + sim_dir[m]
@@ -1190,8 +1191,9 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         t_start = file_paths.index(sim_dir[m]+'/output/'+str(start_year)+'01/MITgcm/output.nc')
         file_paths = file_paths[t_start:]
         num_years = len(file_paths)
+        if data_save is None:
+            data_save = np.empty([num_ens, num_years, num_pts])
         # Read annually-averaged data at each point in the mask
-        data_save = np.empty([num_years, num_pts])
         for t in range(num_years):
             print '...Reading ' + file_paths[t]
             if var_name == 'advection_3d':
@@ -1280,19 +1282,22 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             elif var_name == 'ADVy_TH':
                 v = read_netcdf(file_paths[t], 'VVEL', time_average=True)
                 [tmp, data] = adv_heat_wrt_freezing([None, data], [None, v], grid)
-            data_save[t,:] = data[mask]
-        if time_integral_anomaly:
-            # Calculate the anomaly from the base period
-            num_base_years = end_base_year - start_year + 1
-            data_save -= np.mean(data_save[:num_base_years,:], axis=0)
-            # Now time-integrate
-            dt = 365*sec_per_day
-            data_save = np.cumsum(data_save*dt, axis=0)
-        # Now calculate the trend at each point
+            data_save[m,t,:] = data[mask]
+    if time_integral_anomaly:
+        # Calculate the anomaly from the base period ensemble mean
+        num_base_years = end_base_year - start_year + 1
+        data_mean = np.mean(data_save[:,:num_base_years,:], axis=(0,1))
+        data_save -= data_mean[None,None,:]
+        # Now time-integrate
+        dt = 365*sec_per_day
+        data_save = np.cumsum(data_save*dt, axis=1)
+
+    # Now loop over ensemble members again and calculate the trend at each point
+    for m in range(num_ens):
         print 'Calculating trends'
         trends_tmp = np.empty(num_pts)
         for p in range(num_pts):
-            slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[:,p])
+            slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[m,:,p])
             trends_tmp[p] = slope
         # Save to master array
         trends[m,mask] = trends_tmp
@@ -2007,8 +2012,8 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     fig_dir = real_dir(fig_dir)
 
     num_ens = 20
-    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'all_massloss']
-    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Total basal mass loss from ice shelves']
+    var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
+    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Basal melt flux from ice shelves']
     var_units = [' m/s', deg_string+'C', ' Gt/y']
     num_var = len(var_names)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
@@ -2017,6 +2022,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     year_end = 2013
     base_period = 30*months_per_year
     smooth = 24
+    shade_years = [1945, 1970, 1993, 2002]
+    shade_years_error = [12, 4, 2, 1]
+    shade_labels = ['PIG ungrounds\n(initial)', 'PIG ungrounds\n(final)', 'PIG\nthinning\nonset', 'Thwaites\nthinning\nonset']
 
     # Read all the data and take 2-year running means
     pace_data = None
@@ -2110,6 +2118,14 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         # Plot trend in thin black on top
         trend_vals = slopes[v]*time_cent + intercepts[v]
         ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
+        # Shade years of glaciological events in light grey
+        for t in range(len(shade_years)):
+            start_date = datetime.date(shade_years[t]-shade_years_error[t], 1, 1)
+            end_date = datetime.date(shade_years[t]+shade_years_error[t], 12, 31)
+            ax.axvspan(start_date, end_date, alpha=0.5, color='black')
+            if v==2:
+                mid_date = datetime.date(shade_years[t], 6, 30)
+                plt.text(mid_date, 100, shade_labels[t], ha='center', va='bottom', fontsize=10)
         # Print trend
         if v==2:
             trend_str = str(int(np.round(slopes[v])))
@@ -2830,7 +2846,7 @@ def precompute_heat_budget_trend (base_dir='./'):
     grid_path = base_dir + 'PAS_grid/'
     for var_name in ['advection_3d', 'diffusion_kpp']:
         print 'Processing ' + var_name
-        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
+        make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', end_base_year=1929)
 
 
 # Precompute trends in surface variables across the ensemble.
@@ -2956,12 +2972,13 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     p0 = 0.05
-    threshold = 1500
-    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'PITW', 'PITE', 'PIB', 'BR']
-    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -114.5, -106, -103.2, -110]
-    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.5, -71.34, -74.75, -73.95]
-    labelsize = [14]*8 + [10]*4
+    threshold = 150
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB', 'BR']
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2, -110]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75, -73.95]
+    labelsize = [14]*8 + [10]*5
     num_labels = len(region_labels)
+    z_shelf = -1000
 
     # Process the x and y components
     def read_component (key):
@@ -2980,11 +2997,11 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     # Interpolate to tracer grid
     advx_trend = interp_grid(advx_trend_ugrid, grid, 'u', 't')
     advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
-    # Convert to W/m^2/y
+    # Convert to kW/m^2/century
     # Don't worry about divide-by-zero warnings, that's just the land mask where dV=0
     dV = interp_to_depth(grid.dV, z0, grid)
-    advx_trend *= Cp_sw*rhoConst*grid.dx_s/dV
-    advy_trend *= Cp_sw*rhoConst*grid.dy_w/dV
+    advx_trend *= Cp_sw*rhoConst*grid.dx_s/dV*1e2*1e-3
+    advy_trend *= Cp_sw*rhoConst*grid.dy_w/dV*1e2*1e-3
     # Get magnitude
     magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
     # Now set vectors to 0 anywhere below the threshold, so we don't have too many arrows
@@ -2998,9 +3015,15 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     gs.update(left=0.05, right=0.9, bottom=0.05, top=0.9)
     ax = plt.subplot(gs[0,0])
     # Plot the magnitude in red (all positive side of plusminus)
-    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (W/m$^2$/y)', titlesize=18, vmax=5000)
+    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (kW/m$^2$/century)', titlesize=18, vmax=500)
+    # Contour shelf break
+    bathy = grid.bathy
+    bathy[grid.lat_2d < -74.2] = 0
+    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
+    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
+    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
     # Overlay vectors in regions with strongest trends
-    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e5, headwidth=4, headlength=5)
+    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
     # Add ice shelf labels
     for n in range(num_labels):
         plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
@@ -3096,7 +3119,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'sfc_trends.png', dpi=300)
 
 
-# Plot timeseries of the Amundsen Sea continental shelf heat budget below 200m, as well as slices of 
+# Plot timeseries of the Amundsen Sea continental shelf heat budget below 200m, as well as slices of each term through 106W.
 def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -3117,7 +3140,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     factor = 1e-9
     units = 'EJ'
     start_year = 1920
-    end_year_base = 1949
+    end_year_base = 1929
     num_time_base = (end_year_base-start_year+1)*12
     end_year = 2013
     smooth = 24
@@ -3151,9 +3174,9 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
                 # Sum the component variables
                 for var in var_names[v]:
                     data[v,n,:] = read_netcdf(file_paths[n], region+'_'+var+'_below_'+str(z0)+'m')*factor
-    # Subtract the mean over the base period
-    data_mean = np.mean(data[:,:,:num_time_base], axis=2)
-    data -= data_mean[:,:,None]
+    # Subtract the ensemble mean over the base period
+    data_mean = np.mean(data[:,:,:num_time_base], axis=(1,2))
+    data -= data_mean[:,None,None]
     # Time-integrate
     data_int = np.empty(data.shape)
     for v in range(num_var):
@@ -3182,7 +3205,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     # Read and process 3D trends
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
     for v in range(num_trends):
-        trends = read_netcdf(trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor
+        trends = read_netcdf(trend_dir+trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor
         # Divide by cell volume
         trends /= grid.dV
         # Get mean, and set non-significant trends to zero
@@ -3236,10 +3259,11 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         ax.plot_date(time, timeseries_mean[v,:], '-', color=colours[v], label=var_titles[v], linewidth=1.5)
     ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1930, 2020, 10)])
     ax.set_xlim([time[0], time[-1]])
+    ax.set_ylim([-400, 950])
     ax.set_xlabel('Year', fontsize=12)
     ax.set_ylabel(units, fontsize=12)
     ax.set_title(r'$\bf{a}$. Heat budget for continental shelf below '+str(z0)+'m', fontsize=16)
-    ax.legend(loc='upper left')
+    ax.legend(loc='upper left', borderpad=0.3)
     # Plot trend slices in bottom panels
     for v in range(num_trends):
         ax = plt.subplot(gs[3*(v/2)+4:3*(v/2)+7, v%2])
