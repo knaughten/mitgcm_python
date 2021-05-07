@@ -18,7 +18,7 @@ from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, 
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
-from ..plot_utils.latlon import shade_background, overlay_vectors
+from ..plot_utils.latlon import shade_mask, overlay_vectors
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
@@ -1150,7 +1150,6 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1929, time_integral_anomaly=False):
 
     num_ens = len(sim_dir)
-
     grid = Grid(grid_dir)
     units = None
     # Construct region mask
@@ -1175,6 +1174,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
         trends = np.zeros([num_ens, grid.ny, grid.nx])
     elif dim == 3:
         trends = np.zeros([num_ens, grid.nz, grid.ny, grid.nx])
+        
     if var_name in ['shortwave_pen', 'hb_total']:
         z_edges_3d = z_to_xyz(grid.z_edges, grid)
         dA_3d = xy_to_xyz(grid.dA, grid)
@@ -1221,7 +1221,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 long_name = 'net advection, diffusion, and KPP transport of heat'
             elif var_name == 'shortwave_pen':
                 data_sw = read_netcdf(file_paths[t], 'oceQsw', time_average=True)
-                data = xy_to_xyz(data_sw[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                data = xy_to_xyz(data_sw, grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
                 long_name = 'heat from shortwave penetration'
                 units = 'degC.m^3/s'
             elif var_name == 'hb_total':
@@ -1233,7 +1233,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
                 data = np.mean(data, axis=0)
                 data_sw = read_netcdf(file_paths[t], 'oceQsw', time_average=True)
-                data += xy_to_xyz(data_sw[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
+                data += xy_to_xyz(data_sw, grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
                 long_name = 'total heat budget in interior'                            
             elif var_name == 'ismr':
                 data = convert_ismr(read_netcdf(file_paths[t], 'SHIfwFlx', time_average=True))
@@ -1303,7 +1303,6 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             trends_tmp[p] = slope
         # Save to master array
         trends[m,mask] = trends_tmp
-
     # Mask master array outside the given region (where it's still zero)
     trends = np.ma.masked_where(trends==0, trends)
 
@@ -2294,7 +2293,7 @@ def years_with_obs (obs_dir):
 
 
 # Make a 3x2 plot showing temperature and salinity casts in 3 regions, comparing ERA5-forced output to Pierre's climatology.
-def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
+def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_climatology/', base_dir='./', fig_dir='./'):
 
     obs_dir = real_dir(obs_dir)
     base_dir = real_dir(base_dir)
@@ -2450,7 +2449,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
 
 
 # Make a 2-panel timeseries plot showing ERA5-forced temperature (200-700m) in Pine Island Bay and Dotson, with Pierre's obs as markers on top.
-def plot_temp_timeseries_obs (obs_dir, base_dir='./', fig_dir='./'):
+def plot_temp_timeseries_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_climatology/', base_dir='./', fig_dir='./'):
 
     obs_dir = real_dir(obs_dir)
     base_dir = real_dir(base_dir)
@@ -2624,22 +2623,22 @@ def plot_ismr_timeseries_obs (base_dir='./', fig_dir='./'):
         for t in range(num_obs):
             # Plot all observations on 1 Feb
             obs_date = datetime.date(obs_ts[n]['year'][t], 2, 1)
-            ax.errorbar(obs_date, obs_ts[n]['melt'][t], yerr=obs_ts[n]['err'][t], fmt='none', color='black', capsize=3, label=('Observations' if t==0 else None))
+            ax.errorbar(obs_date, obs_ts[n]['melt'][t], yerr=obs_ts[n]['err'][t], fmt='none', color='red', capsize=3, label=('Observations' if t==0 else None))
         ax.grid(linestyle='dotted')
         ax.set_xlim([time[0],time[-1]])
         ax.set_xticks([datetime.date(y,1,1) for y in np.arange(1980,2020,5)])
         ax.set_title(shelf_ts_titles[n], fontsize=16)
         if n == 0:
-            ax.set_ylabel('Basal mass loss (Gt/y)', fontsize=14)
+            ax.set_ylabel('Basal melt flux (Gt/y)', fontsize=14)
             ax.legend(fontsize=12)
         else:
             ax.set_xlabel('Year', fontsize=12)        
     # Now plot bar chart of integrated melt
     ax = plt.subplot(gs[2,0])
     ax.grid(linestyle='dotted')
-    ax.bar(np.arange(num_shelves_int), model_melt_int)
+    ax.bar(np.arange(num_shelves_int), model_melt_int, color='DeepSkyBlue')
     for n in range(num_shelves_int):
-        ax.errorbar(n, adusumilli_melt[shelf_int[n]][0], yerr=adusumilli_melt[shelf_int[n]][1], fmt='none', color='black', capsize=3)
+        ax.errorbar(n, adusumilli_melt[shelf_int[n]][0], yerr=adusumilli_melt[shelf_int[n]][1], fmt='none', color='red', capsize=3)
     ax.axhline(color='black', linewidth=1)
     ax.set_xticks(np.arange(num_shelves_int))
     ax.set_xticklabels(shelf_int_titles, rotation=90)
@@ -2664,7 +2663,7 @@ def nsidc_fname (year, month):
 
 
 # Plot seasonal averages of sea ice concentration in the ERA5-forced run versus NSIDC observations, as well as modelled sea ice thickness.
-def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
+def plot_aice_seasonal_obs (nsidc_dir='/data/oceans_input/raw_input_data/seaice/nsidc/', base_dir='./', fig_dir='./'):
 
     nsidc_dir = real_dir(nsidc_dir)
     base_dir = real_dir(base_dir)
@@ -2724,8 +2723,6 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
                 nsidc_aice[n,:] += nsidc_aice_tmp*ndays
                 ndays_int[n] += ndays
     nsidc_aice /= ndays_int[:,None,None]
-    # Interpolate to MITgcm grid so we have the same land mask in the end
-    nsidc_aice_interp = interp_nonreg_xy(nsidc_lon, nsidc_lat, nsidc_aice, grid.lon_2d, grid.lat_2d)
 
     # Plot
     fig = plt.figure(figsize=(8,8))
@@ -2752,11 +2749,11 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         ax.set_yticks([])
         # Plot obs
         ax = plt.subplot(gs[n,2])
-        img = latlon_plot(nsidc_aice_interp[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax)
-        #shade_background(ax)
-        #ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
-        #ax.set_xlim([xmin, xmax])
-        #ax.set_ylim([ymin, ymax])
+        # Use MITgcm land+ice mask in grey (any missing NSIDC points will be in white)
+        shade_mask(ax, grid.land_mask+grid.ice_mask, grid)
+        ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
         if n == 0:
             ax.set_title('Concentration\n(Observations)', fontsize=14)
         ax.set_xticks([])
@@ -2767,7 +2764,7 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         if n == num_seasons - 1:
             cbar = plt.colorbar(img, cax=cax2, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
     plt.suptitle('Sea ice, '+str(start_year)+'-'+str(end_year), fontsize=18)
-    finished_plot(fig) #, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
 
     
 # Plot timeseries of the number of ensemble members which are unusually warm (in the top 25% for all members and all years) and unusually cold (in the bottom 25%).
@@ -3313,7 +3310,24 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         ax.set_title(trend_titles[v], fontsize=14)
     plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
-    finished_plot(fig, fig_name=fig_dir+'heat_budget.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
+
+
+# Plot Hovmollers of temperature in Pine Island Bay for all the ensemble members and ERA5.
+def plot_hovmoller_ensemble (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    grid = Grid('PAS_grid/')
+    num_ens = 20
+    sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    file_paths = [base_dir+d+'/output/hovmoller.nc' for d in sim_dir]
+    var_name = 'pine_island_bay_temp'
+    smooth = 12
+    vmin = -1.5
+    vmax = 1.5
+    contours = [0, 1]
     
     
     
