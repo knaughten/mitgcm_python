@@ -13,6 +13,7 @@ import sys
 # Set up colourmaps of type ctype. Options for ctype are:
 # 'basic': just the 'jet' colourmap
 # 'parula': using the Matlab-type "parula" colourmap rather than jet
+# 'grey': from white to dark grey
 # 'plusminus': a red/blue colour map where 0 is white
 # 'ratio': as above, but 1 is white and the data does not go below 0
 # 'centered': as above, but centered on the given value with white
@@ -212,6 +213,9 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
 
     elif ctype == 'parula':
         return parula_cmap(), vmin, vmax
+
+    elif ctype == 'grey':
+        return plt.get_cmap('Greys'), vmin, vmax
 
     elif ctype == 'plusminus':
         return plusminus_cmap(vmin, vmax, val0), vmin, vmax

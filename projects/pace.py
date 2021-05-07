@@ -14,7 +14,7 @@ import os
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land
 from ..plot_utils.colours import set_colours, choose_n_colours
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
@@ -29,8 +29,7 @@ from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral
-from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid
-
+from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
 
 # Global variables
 file_head_era5 = 'ERA5_'
@@ -2318,9 +2317,14 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     model_year0 = 1947
     model_start_year = 1979
     model_end_year = 2019
+    model_split_year = 2013
     model_num_time = (model_end_year-model_year0+1)*months_per_year
     model_years = np.arange(model_start_year, model_end_year+1)
+    model_num_years1 = model_split_year-model_start_year
+    model_num_years2 = model_end_year-model_split_year+1
     model_num_years = model_years.size
+    model_year_str1 = str(model_start_year)+'-'+str(model_split_year-1)
+    model_year_str2 = str(model_split_year)+'-'+str(model_end_year)
     obs_smooth = 51
     obs_smooth_below = -100
 
@@ -2331,13 +2335,18 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
         for v in range(num_var):
             model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
     # For each of the years with observations, average over January-February
-    model_data = np.ma.empty([num_regions, num_var, model_num_years, grid.nz])
+    model_data1 = np.ma.empty([num_regions, num_var, model_num_years1, grid.nz])
+    model_data2 = np.ma.empty([num_regions, num_var, model_num_years2, grid.nz])
     for t in range(model_num_years):
         # Find time index of that January
         t_jan = (model_years[t]-model_year0)*months_per_year
         # Weight with days per month
         ndays = np.array([days_per_month(m+1,model_years[t]) for m in range(2)])
-        model_data[:,:,t,:] = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
+        model_data = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
+        if model_years[t] < model_split_year:
+            model_data1[:,:,t,:] = model_data
+        else:
+            model_data2[:,:,t-model_num_years1] = model_data
 
     # Now read observations
     print 'Reading observations'
@@ -2373,9 +2382,11 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
                 obs_data[r,v,t,:] = obs_profile
 
     # Calculate time-mean and standard deviation from each source
-    model_mean = np.mean(model_data, axis=-2)
+    model_mean1 = np.mean(model_data1, axis=-2)
+    model_mean2 = np.mean(model_data2, axis=-2)
     obs_mean = np.mean(obs_data, axis=-2)
-    model_std = np.std(model_data, axis=-2)
+    model_std1 = np.std(model_data1, axis=-2)
+    model_std2 = np.std(model_data2, axis=-2)
     obs_std = np.std(obs_data, axis=-2)
     # Also make depth positive
     obs_depth *= -1
@@ -2384,7 +2395,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
     # Plot
     fig = plt.figure(figsize=(7,12))
     gs = plt.GridSpec(3,25)
-    gs.update(left=0.1, right=0.98, bottom=0.12, top=0.93, wspace=0.2, hspace=0.4)
+    gs.update(left=0.1, right=0.98, bottom=0.13, top=0.93, wspace=0.2, hspace=0.4)
     for r in range(num_regions):
         for v in range(num_var):
             # Choose first 8 panels and merge them (leaving 1 empty between variables)
@@ -2394,15 +2405,18 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
             # Plot each year of observations in thin grey
             for t in range(obs_num_years):
                 ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=0.5, label=('Observations (each year)' if t==0 else None))
-            # Plot observational mean in thick black, but make sure it will be second from the top
-            ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)', zorder=obs_num_years+model_num_years)
-            # Plot each year of model output in thin light blue
-            for t in range(model_num_years):
-                ax.plot(model_data[r,v,t,:], model_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year)' if t==0 else None))
-            # Plot model mean in thick blue        
-            ax.plot(model_mean[r,v,:], model_depth, color='blue', linewidth=1.5, label='Model (mean/std)')
+            # Plot each year of model output in thin light blue or red
+            for t in range(model_num_years1):
+                ax.plot(model_data1[r,v,t,:], model_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year, '+model_year_str1+')' if t==0 else None))
+            for t in range(model_num_years2):
+                ax.plot(model_data2[r,v,t,:], model_depth, color='LightCoral', linewidth=0.5, label=('Model (each year, '+model_year_str2+')' if t==0 else None))
+            # Plot observational mean in thick black
+            ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)')
+            # Plot model mean in thick blue or red
+            ax.plot(model_mean1[r,v,:], model_depth, color='blue', linewidth=1.5, label='Model (mean/std, '+model_year_str1+')', zorder=obs_num_years+model_num_years+2)
+            ax.plot(model_mean2[r,v,:], model_depth, color='red', linewidth=1.5, label='Model (mean/std, '+model_year_str2+')', zorder=obs_num_years+model_num_years+1)
             # Find the deepest unmasked depth where there is data from both model and obs
-            y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean[r,v,:].mask, model_depth)))
+            y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean1[r,v,:].mask, model_depth)))
             ax.set_ylim([y_deep,0])
             if v==0 and r==0:
                 plt.ylabel('Depth (m)', fontsize=12)
@@ -2412,7 +2426,7 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
                 plt.xlabel(var_units[v], fontsize=12)
             plt.title(var_titles[v], fontsize=14)
             if v==1 and r==2:
-                plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.53), ncol=2, fontsize=12)
+                plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.62), ncol=2, fontsize=12)
             if v==0 and r==2:
                 # Remove the last tick label so it doesn't get too close
                 label = ax.get_xticklabels()[-1]
@@ -2423,7 +2437,8 @@ def plot_ts_casts_obs (obs_dir, base_dir='./', fig_dir='./'):
             ax2.tick_params(direction='in')
             ax2.grid(linestyle='dotted')
             ax2.plot(obs_std[r,v,:], obs_depth, color='black', linewidth=1.5)
-            ax2.plot(model_std[r,v,:], model_depth, color='blue', linewidth=1.5)
+            ax2.plot(model_std1[r,v,:], model_depth, color='blue', linewidth=1.5)
+            ax2.plot(model_std2[r,v,:], model_depth, color='red', linewidth=1.5)
             ax2.set_yticklabels([])
             ax2.set_ylim([y_deep,0])
             # Overwrite the labels so there are no unnecessary decimals - otherwise you get an overlap of labels at 0
@@ -2709,6 +2724,8 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
                 nsidc_aice[n,:] += nsidc_aice_tmp*ndays
                 ndays_int[n] += ndays
     nsidc_aice /= ndays_int[:,None,None]
+    # Interpolate to MITgcm grid so we have the same land mask in the end
+    nsidc_aice_interp = interp_nonreg_xy(nsidc_lon, nsidc_lat, nsidc_aice, grid.lon_2d, grid.lat_2d)
 
     # Plot
     fig = plt.figure(figsize=(8,8))
@@ -2735,10 +2752,11 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         ax.set_yticks([])
         # Plot obs
         ax = plt.subplot(gs[n,2])
-        shade_background(ax)
-        ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
-        ax.set_xlim([xmin, xmax])
-        ax.set_ylim([ymin, ymax])
+        img = latlon_plot(nsidc_aice_interp[n,:], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=vmin, vmax=vmax)
+        #shade_background(ax)
+        #ax.pcolormesh(nsidc_lon, nsidc_lat, nsidc_aice[n,:], vmin=vmin, vmax=vmax, cmap='jet')
+        #ax.set_xlim([xmin, xmax])
+        #ax.set_ylim([ymin, ymax])
         if n == 0:
             ax.set_title('Concentration\n(Observations)', fontsize=14)
         ax.set_xticks([])
@@ -2749,7 +2767,7 @@ def plot_aice_seasonal_obs (nsidc_dir, base_dir='./', fig_dir='./'):
         if n == num_seasons - 1:
             cbar = plt.colorbar(img, cax=cax2, orientation='horizontal', ticks=np.arange(0, 1.25, 0.25))
     plt.suptitle('Sea ice, '+str(start_year)+'-'+str(end_year), fontsize=18)
-    finished_plot(fig, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'aice_seasonal_obs.png', dpi=300)
 
     
 # Plot timeseries of the number of ensemble members which are unusually warm (in the top 25% for all members and all years) and unusually cold (in the bottom 25%).
@@ -3024,19 +3042,28 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
 # Plot a map of all the regions used in other figures.
 def plot_region_map (base_dir='./', fig_dir='./'):
 
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.colors as cl
+
     regions = ['amundsen_shelf', 'amundsen_shelf_break', 'amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
     region_labels = ['Shelf', 'Shelf break', 'PITW\nTrough', 'Pine\nIsland\nBay', 'Dotson\nfront']
-    region_label_x = [-108, -109, -117, -105, -112.2]
-    region_label_y = [-72.75, -70.5, -71.5, -74, -73.85]
-    region_colours = ['DodgerBlue','magenta','green','red','blue']
+    region_label_x = [-108, -109, -115.15, -105.85, -112.2]
+    region_label_y = [-72.75, -70.5, -71.8, -74, -73.85]
+    region_ha = ['center', 'center', 'right', 'left', 'center']
+    region_colours = ['red', 'Gold', 'black', 'black', 'black']
     [xmin, xmax, ymin, ymax] = [-120, -95, None, -70]
+    transect_x0 = -106
+    transect_ymax = -73
     grid_path = real_dir(base_dir)+'PAS_grid/'
     fig_dir = real_dir(fig_dir)
     grid = Grid(grid_path)
+    bathy = mask_land(grid.bathy, grid)*1e-3
+    bounds = np.concatenate((np.linspace(-4, -2, num=3), np.linspace(-2, -1, num=10), np.linspace(-1, -0.75, num=5), np.linspace(-0.75, -0.5, num=10), np.linspace(-0.5, 0, num=20)))
+    norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
 
-    # Plot an empty map
+    # Plot bathymetry
     fig, ax = plt.subplots(figsize=(6,5))
-    img = latlon_plot(np.ma.masked_where(grid.bathy<=0, grid.bathy), grid, ax=ax, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     # Now trace and label the regions
     for n in range(len(regions)):
         mask = grid.get_region_mask(regions[n])
@@ -3047,8 +3074,22 @@ def plot_region_map (base_dir='./', fig_dir='./'):
                 index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
                 mask[index] = 1
         ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
-        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha='center', va='center', color=region_colours[n])
-    plt.title('Regions used in analysis', fontsize=18)
+        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha=region_ha[n], va='center', color=region_colours[n])
+    # Add transect as dashed line
+    # First find southernmost unmasked point at this longitude
+    i1, i2, c1, c2 = interp_slice_helper(grid.lon_1d, transect_x0)
+    land_mask = grid.land_mask.astype(float)
+    mask_slice = np.ceil(c1*land_mask[:,i1] + c2*land_mask[:,i2])
+    jmin = np.argwhere(mask_slice == 0)[0][0]
+    transect_ymin = grid.lat_1d[jmin]    
+    ax.plot([transect_x0, transect_x0], [transect_ymin, transect_ymax], color='blue', linestyle='dashed')
+    # Add little colourbar for bathymetry
+    cax = inset_axes(ax, "3%", "20%", loc=4)
+    cbar = plt.colorbar(img, cax=cax, ticks=[-2, -1, -0.5, 0])
+    cax.yaxis.set_ticks_position('left')
+    cbar.ax.set_yticklabels(['2', '1', '0.5', '0'])
+    cbar.ax.tick_params(labelsize=10)
+    ax.set_title('Regions used in analysis', fontsize=18)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
 
