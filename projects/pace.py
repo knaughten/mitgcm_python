@@ -26,9 +26,9 @@ from ..plot_slices import slice_plot, make_slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
-from ..postprocess import get_output_files, segment_file_paths
+from ..postprocess import get_output_files, segment_file_paths, set_update_file, set_update_time, set_update_var
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
-from ..calculus import time_derivative, time_integral, vertical_average
+from ..calculus import time_derivative, time_integral, vertical_average, area_average
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
 
 # Global variables
@@ -3494,6 +3494,41 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
                 plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.62), ncol=3, fontsize=12)
         plt.text(0.5,  0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
     finished_plot(fig) #, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
+
+
+def precompute_kpp_hovmoller (output_dir, grid_dir, hovmoller_file='hovmoller_kpp.nc', loc=['pine_island_bay'], segment_dir=None, monthly=True):
+
+    output_dir = real_dir(output_dir)
+    if segment_dir is None and os.path.isfile(hovmoller_file):
+        print 'Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'
+        sys.exit()
+    segment_dir = check_segment_dir(output_dir, segment_dir)
+    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
+    grid = Grid(grid_dir)
+
+    for file_path in file_paths:
+        print 'Processing ' + file_path
+        id = set_update_file(hovmoller_file, grid, 'zt')
+        num_time = set_update_time(id, file_path, monthly=monthly)
+        data1 = read_netcdf(file_path, 'DFrI_TH')
+        data2 = read_netcdF(file_path, 'KPPg_TH')
+        data = np.ma.zeros(data1.shape)
+        data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
+        data = mask_3d(data, grid, time_dependent=True)
+        for l in loc:
+            print '...at ' + l
+            loc_name = region_names[l]
+            mask = grid.get_region_mask(l)
+            data_region = apply_mask(data, np.invert(mask), time_dependent=True, depth_dependent=True)
+            data_region = area_average(data_region, grid, time_dependent=True)
+            set_update_var(id, num_time, data_region, 'zt', l+'_diffusion_kpp', loc_name+' convergence of heat from KPP and implicit vertical diffusion', units='degC.m^3/s')
+
+    # Finished
+    if isinstance(id, nc.Dataset):
+        id.close()
+    elif isinstance(id, NCfile):
+        id.close()
+        
                     
     
                     
