@@ -1147,7 +1147,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
 
 
 # Calculate the trend at every point in the given region, for the given variable, and all ensemble members. Save to a NetCDF file (3D or 4D depending on whether variable is 2D or 3D).
-def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1929, time_integral_anomaly=False):
+def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_base_year=1949, time_integral_anomaly=False):
 
     num_ens = len(sim_dir)
     grid = Grid(grid_dir)
@@ -2021,7 +2021,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     year_start_pace = 1920
     year_start_era5 = 1979
     year_end = 2013
-    base_period = 10*months_per_year
+    base_period = 30*months_per_year
     smooth = 24
     shade_years = [1945, 1970, 1993, 2002]
     shade_years_error = [12, 4, 2, 1]
@@ -2150,7 +2150,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2.set_ylim(std_limits)
         if v==0:
             ax2.set_ylabel('anomaly in standard deviations', fontsize=12)    
-    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=30)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
@@ -3168,7 +3168,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     factor = 1e-9
     units = 'EJ'
     start_year = 1920
-    end_year_base = 1929
+    end_year_base = 1949
     num_time_base = (end_year_base-start_year+1)*12
     end_year = 2013
     smooth = 24
@@ -3182,9 +3182,9 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     ymax = -73
     p0 = 0.05
     vmin = [-2, -2, 0, 0]
-    vmax = [2, 2, 10, 1]
+    vmax = [2, 2, 3, 0.6]
     extend = [None, 'both', 'max', 'both']
-    ticks = [None, np.arange(-2, 3, 1), np.arange(0, 12.5, 2.5), np.arange(0, 1.25, 0.25)]
+    ticks = [None, np.arange(-2, 3, 1), np.arange(0, 4, 1), np.arange(0, 0.8, 0.2)]
 
     # Read and process timeseries
     time = netcdf_time(file_paths[n], monthly=False)
@@ -3233,14 +3233,16 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     # Read and process 3D trends
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
     for v in range(num_trends):
-        trends = read_netcdf(trend_dir+trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor
-        # Divide by cell volume
-        trends /= grid.dV
+        trends = read_netcdf(trend_dir+trend_names[v]+file_tail, trend_names[v]+'_trend')*trend_factor/grid.dV
         # Get mean, and set non-significant trends to zero
         mean_trend_tmp = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
         mean_trend_tmp[p_val > p0] = 0
-        mean_trends[v,:] = mean_trend_tmp            
+        if trend_names[v] == 'shortwave_pen':
+            # Remask so ice shelf cavities are open
+            mean_trend_tmp[mean_trend_tmp.mask] = 0
+            mean_trend_tmp = mask_3d(mean_trend_tmp.data, grid)
+        mean_trends[v,:] = mean_trend_tmp
     # Now get patches and values along slice
     values = []
     for v in range(num_trends):
@@ -3310,8 +3312,8 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         ax.set_title(trend_titles[v], fontsize=14)
     plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
-    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
-
+    finished_plot(fig, fig_name=fig_dir+'heat_budget.png', dpi=300)
+    
 
 # Plot Hovmollers of temperature in Pine Island Bay for all the ensemble members and ERA5.
 def plot_hovmoller_ensemble (base_dir='./', fig_dir='./'):
@@ -3322,14 +3324,165 @@ def plot_hovmoller_ensemble (base_dir='./', fig_dir='./'):
     grid = Grid('PAS_grid/')
     num_ens = 20
     sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
-    file_paths = [base_dir+d+'/output/hovmoller.nc' for d in sim_dir]
+    titles = ['ERA5'] + ['PACE '+str(n+1).zfill(2) for n in range(num_ens)]
+    file_paths = [base_dir+d+'/output/hovmoller1.nc' for d in sim_dir]
     var_name = 'pine_island_bay_temp'
     smooth = 12
     vmin = -1.5
     vmax = 1.5
     contours = [0, 1]
+    start_year = 1920
+    era5_start_year = 1979
+    end_year = 2019
+
+    fig = plt.figure(figsize=(6, 15))
+    gs = plt.GridSpec(num_ens+1,1)
+    gs.update(left=0.07, right=0.87, bottom=0.03, top=0.955, hspace=0.07)
+    cax = fig.add_axes([0.75, 0.96, 0.24, 0.012])
+    # Read the data and plot together
+    for n in range(num_ens+1):
+        ax = plt.subplot(gs[n,0])
+        data = read_netcdf(file_paths[n], var_name)
+        time = netcdf_time(file_paths[n], monthly=False)
+        # Trim the spinup
+        if n == 0:
+            t_start = index_year_start(time, era5_start_year)
+        else:
+            t_start = index_year_start(time, start_year)
+        data = data[t_start:]
+        time = time[t_start:]
+        img = hovmoller_plot(data, time, grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, contours=contours, ctype='plusminus')
+        ax.set_xlim([datetime.date(start_year, 1, 1), datetime.date(end_year, 12, 31)])
+        ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_year, end_year, 10)])
+        if n == 0:
+            ax.set_yticks([0, -500, -1000])
+            ax.set_yticklabels(['0', '0.5', '1'])
+            ax.set_ylabel('')
+        else:
+            ax.set_yticks([])
+            ax.set_yticklabels([])
+            ax.set_ylabel('')
+        if n == 1:        
+            ax.set_ylabel('Depth (km)', fontsize=10)
+        if n != num_ens:
+            ax.set_xticklabels([])
+        ax.set_xlabel('')
+        plt.text(1.01, 0.5, titles[n], ha='left', va='center', transform=ax.transAxes, fontsize=12)
+    plt.suptitle('Temperature ('+deg_string+'C) in Pine Island Bay', fontsize=16, x=0.05, ha='left')
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
+    cax.xaxis.set_ticks_position('top')
+    reduce_cbar_labels(cbar)
+    finished_plot(fig, fig_name='hovmoller_ensemble.png', dpi=300)
+
+
+def temp_trend_profile_test (trend_file='precomputed_trends/THETA_trends.nc', grid_dir='PAS_grid/'):
+
+    grid = Grid(real_dir(grid_dir))
+    regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'dotson_bay', 'cosgrove_cavity', 'pig_cavity', 'thwaites_cavity', 'crosson_cavity', 'dotson_cavity']
+    p0 = 0.05
+
+    trends = read_netcdf(trend_file, 'THETA_trend')*100
+    mean_trend = np.mean(trends, axis=0)
+    t_val, p_val = ttest_1samp(trends, 0, axis=0)
+    mean_trend[p_val > p0] = 0
+
+    for region in regions:
+        if region.endswith('cavity'):
+            region = region[:region.index('_cavity')]
+            mask = grid.get_ice_mask(shelf=region)
+            mask = mask_2d_to_3d(mask, grid)
+            region_name = region_names[region]+' cavity'
+        else:
+            mask = grid.get_region_mask(region, is_3d=True)
+            region_name = region_names[region]
+
+        trend_region = apply_mask(mean_trend, np.invert(mask))
+        trend_profile = area_average(trend_region, grid)
+        fig, ax = plt.subplots()
+        ax.grid(linestyle='dotted')
+        ax.plot(trend_profile, grid.z)
+        plt.xlabel(deg_string+'C/century', fontsize=14)
+        plt.ylabel('Depth (m)', fontsize=14)
+        plt.title(region_name, fontsize=18)        
+        fig.show()      
     
-    
+
+def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    grid = Grid('PAS_grid/')
+    num_ens = 20
+    sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
+    region_titles = [r'$\bf{a}$. PITW Trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    num_regions = len(regions)
+    var = ['temp', 'salt']
+    var_titles = ['Temperature', 'Salinity']
+    var_units = [deg_string+'C', 'psu']
+    num_var = len(var)
+    fnames = ['hovmoller2.nc', 'hovmoller1.nc', 'hovmoller2.nc']
+    start_year = 1920
+    end_year = 2013
+    start_year_era5 = 1979
+    end_year_era5 = 2019
+    period = 30*months_per_year
+
+    pace_data_beg = np.ma.empty([num_ens, num_regions*num_var, grid.nz])
+    pace_data_end = np.ma.empty([num_ens, num_regions*num_var, grid.nz])
+    era5_data = np.ma.empty([num_regions*num_var, grid.nz])
+    era5_t0 = None
+    pace_t0 = None
+    for r in range(num_regions):
+        for v in range(num_var):
+            for n in range(num_ens+1):
+                file_path = sim_dir[n]+'/output/'+fnames[r]
+                data = read_netcdf(file_path, regions[r]+'_'+var[v])
+                if n == 0:
+                    # ERA5: save time-mean
+                    if era5_t0 is None:
+                        era5_time = netcdf_time(file_path, monthly=False)
+                        era5_t0 = index_year_start(era5_time, start_year_era5)
+                    data = data[era5_t0:,:]
+                    era5_data[r*num_var+v,:] = np.mean(data, axis=0)
+                else:
+                    # PACE: save time-mean of first and last 30 y
+                    if pace_t0 is None:
+                        pace_time = netcdf_time(file_path, monthly=False)
+                        pace_t0 = index_year_start(pace_time, start_year)
+                    data = data[pace_t0:,:]
+                    pace_data_beg[n-1,r*num_var+v,:] = np.mean(data[:period,:], axis=0)
+                    pace_data_end[n-1,r*num_var+v,:] = np.mean(data[-period:,:], axis=0)
+    # Now take ensemble mean
+    pace_data_beg = np.mean(pace_data_beg, axis=0)
+    pace_data_end = np.mean(pace_data_end, axis=0)
+
+    all_data = [pace_data_beg, pace_data_end, era5_data]
+    colours = ['blue', 'red', 'black']
+    titles = ['PACE ('+str(start_year)+'-'+str(start_year+30-1)+')', 'PACE ('+str(end_year-30+1)+'-'+str(end_year)+')', 'ERA5 ('+str(start_year_era5)+'-'+str(end_year_era5)+')']
+    fig = plt.figure(figsize=(7,12))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.1, right=0.98, bottom=0.13, top=0.93, wspace=0.2, hspace=0.4)
+    for r in range(num_regions):
+        for v in range(num_var):
+            ax = plt.subplot(gs[r,v])
+            ax.grid(linestyle='dotted')
+            ax.tick_params(direction='in')
+            for i in range(len(all_data)):
+                ax.plot(all_data[i][r*num_var+v,:], grid.z, color=colours[i], linewidth=1, label=(titles[i] if r==0 and v==0 else None))
+            if v==0 and r==0:
+                ax.set_ylabel('Depth (m)', fontsize=12)
+            if v==1:
+                ax.set_yticklabels([])
+            if r == num_regions-1:
+                ax.set_xlabel(var_units[v], fontsize=12)
+            plt.title(var_titles[v], fontsize=14)
+            if v==1 and r==2:
+                plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.62), ncol=3, fontsize=12)
+        plt.text(0.5,  0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
+    finished_plot(fig) #, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
+                    
     
                     
                     
