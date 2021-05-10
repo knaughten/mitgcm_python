@@ -26,7 +26,7 @@ from ..plot_slices import slice_plot, make_slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
-from ..postprocess import get_output_files, segment_file_paths, set_update_file, set_update_time, set_update_var
+from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral, vertical_average, area_average
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
@@ -3503,15 +3503,15 @@ def precompute_kpp_hovmoller (output_dir, grid_dir, hovmoller_file='hovmoller_kp
         print 'Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'
         sys.exit()
     segment_dir = check_segment_dir(output_dir, segment_dir)
-    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
+    file_paths = segment_file_paths(output_dir, segment_dir, 'output.nc')
     grid = Grid(grid_dir)
 
     for file_path in file_paths:
         print 'Processing ' + file_path
-        id = set_update_file(hovmoller_file, grid, 'zt')
+        id = set_update_file(output_dir+hovmoller_file, grid, 'zt')
         num_time = set_update_time(id, file_path, monthly=monthly)
         data1 = read_netcdf(file_path, 'DFrI_TH')
-        data2 = read_netcdF(file_path, 'KPPg_TH')
+        data2 = read_netcdf(file_path, 'KPPg_TH')
         data = np.ma.zeros(data1.shape)
         data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
         data = mask_3d(data, grid, time_dependent=True)
