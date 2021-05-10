@@ -28,7 +28,7 @@ from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, segment_file_paths
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
-from ..calculus import time_derivative, time_integral
+from ..calculus import time_derivative, time_integral, vertical_average
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
 
 # Global variables
@@ -1269,6 +1269,18 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.mean(data_time, axis=0)
                 long_name = 'thermocline depth'
                 units = 'm'
+            elif var_name.startswith('temp_btw') or var_name.startswith('temp_below'):
+                temp, long_name, units = read_netcdf(file_paths[t], 'THETA', time_average=True, return_info=True)
+                if var_name.startswith('temp_btw'):
+                    z_vals = var_name[len('temp_btw_'):-1]
+                    z_shallow = -1*int(z_vals[:z_vals.index('_')])
+                    z_deep = -1*int(z_vals[z_vals.index('_')+1:])
+                elif var_name.startswith('temp_below'):
+                    z_shallow = -1*int(var_name[len('temp_below_'):-1])
+                    z_deep = None
+                mask = mask_2d_to_3d(mask, grid, zmin=z_deep, zmax=z_shallow)
+                temp = apply_mask(temp, np.invert(mask))
+                data = vertical_average(temp, grid)                
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
