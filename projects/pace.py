@@ -1278,8 +1278,8 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 elif var_name.startswith('temp_below'):
                     z_shallow = -1*int(var_name[len('temp_below_'):-1])
                     z_deep = None
-                mask = mask_2d_to_3d(mask, grid, zmin=z_deep, zmax=z_shallow)
-                temp = apply_mask(temp, np.invert(mask))
+                mask_3d = mask_2d_to_3d(mask, grid, zmin=z_deep, zmax=z_shallow)
+                temp = apply_mask(temp, np.invert(mask_3d))
                 data = vertical_average(temp, grid)                
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
