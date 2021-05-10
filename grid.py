@@ -230,6 +230,8 @@ class Grid:
 
         lon, lat = self.get_lon_lat(gtype=gtype)
         mask_new = np.zeros(mask.shape, dtype='bool')
+        if region_name.endswith('_cavity'):
+            region_name = region_name[:region_name.index('_cavity')]
         # Find the bounds on the region (possibly split into 2).
         if region_name in region_split:
             names = [region_name+'1', region_name+'2']
@@ -310,7 +312,7 @@ class Grid:
             ice_mask = np.invert(ice_mask)
         mask = np.invert(land_mask)*np.invert(ice_mask)*(self.bathy >= deep_bound)*(self.bathy <= shallow_bound)
         # Now restrict based on lat-lon bounds
-        mask = self.restrict_mask(mask, region[:region.index('_cavity')], gtype=gtype)
+        mask = self.restrict_mask(mask, region, gtype=gtype)
 
         if include_iceberg and region=='sws_shelf':
             # Add grounded iceberg A23A to the mask
