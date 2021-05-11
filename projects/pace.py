@@ -3418,85 +3418,9 @@ def temp_trend_profile_test (trend_file='precomputed_trends/THETA_trends.nc', gr
         plt.ylabel('Depth (m)', fontsize=14)
         plt.title(region_name, fontsize=18)        
         fig.show()      
-    
-
-def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
-
-    base_dir = real_dir(base_dir)
-    fig_dir = real_dir(fig_dir)
-    grid_dir = base_dir + 'PAS_grid/'
-    grid = Grid('PAS_grid/')
-    num_ens = 20
-    sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
-    regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
-    region_titles = [r'$\bf{a}$. PITW Trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
-    num_regions = len(regions)
-    var = ['temp', 'salt']
-    var_titles = ['Temperature', 'Salinity']
-    var_units = [deg_string+'C', 'psu']
-    num_var = len(var)
-    fnames = ['hovmoller2.nc', 'hovmoller1.nc', 'hovmoller2.nc']
-    start_year = 1920
-    end_year = 2013
-    start_year_era5 = 1979
-    end_year_era5 = 2019
-    period = 30*months_per_year
-
-    pace_data_beg = np.ma.empty([num_ens, num_regions*num_var, grid.nz])
-    pace_data_end = np.ma.empty([num_ens, num_regions*num_var, grid.nz])
-    era5_data = np.ma.empty([num_regions*num_var, grid.nz])
-    era5_t0 = None
-    pace_t0 = None
-    for r in range(num_regions):
-        for v in range(num_var):
-            for n in range(num_ens+1):
-                file_path = sim_dir[n]+'/output/'+fnames[r]
-                data = read_netcdf(file_path, regions[r]+'_'+var[v])
-                if n == 0:
-                    # ERA5: save time-mean
-                    if era5_t0 is None:
-                        era5_time = netcdf_time(file_path, monthly=False)
-                        era5_t0 = index_year_start(era5_time, start_year_era5)
-                    data = data[era5_t0:,:]
-                    era5_data[r*num_var+v,:] = np.mean(data, axis=0)
-                else:
-                    # PACE: save time-mean of first and last 30 y
-                    if pace_t0 is None:
-                        pace_time = netcdf_time(file_path, monthly=False)
-                        pace_t0 = index_year_start(pace_time, start_year)
-                    data = data[pace_t0:,:]
-                    pace_data_beg[n-1,r*num_var+v,:] = np.mean(data[:period,:], axis=0)
-                    pace_data_end[n-1,r*num_var+v,:] = np.mean(data[-period:,:], axis=0)
-    # Now take ensemble mean
-    pace_data_beg = np.mean(pace_data_beg, axis=0)
-    pace_data_end = np.mean(pace_data_end, axis=0)
-
-    all_data = [pace_data_beg, pace_data_end, era5_data]
-    colours = ['blue', 'red', 'black']
-    titles = ['PACE ('+str(start_year)+'-'+str(start_year+30-1)+')', 'PACE ('+str(end_year-30+1)+'-'+str(end_year)+')', 'ERA5 ('+str(start_year_era5)+'-'+str(end_year_era5)+')']
-    fig = plt.figure(figsize=(7,12))
-    gs = plt.GridSpec(3,2)
-    gs.update(left=0.1, right=0.98, bottom=0.13, top=0.93, wspace=0.2, hspace=0.4)
-    for r in range(num_regions):
-        for v in range(num_var):
-            ax = plt.subplot(gs[r,v])
-            ax.grid(linestyle='dotted')
-            ax.tick_params(direction='in')
-            for i in range(len(all_data)):
-                ax.plot(all_data[i][r*num_var+v,:], grid.z, color=colours[i], linewidth=1, label=(titles[i] if r==0 and v==0 else None))
-            if v==0 and r==0:
-                ax.set_ylabel('Depth (m)', fontsize=12)
-            if v==1:
-                ax.set_yticklabels([])
-            if r == num_regions-1:
-                ax.set_xlabel(var_units[v], fontsize=12)
-            plt.title(var_titles[v], fontsize=14)
-            if v==1 and r==2:
-                plt.legend(loc='lower center', bbox_to_anchor=(-0.1, -0.62), ncol=3, fontsize=12)
-        plt.text(0.5,  0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
 
 
+# Precompute Hovmoller files of convergence of heat from advection and diffusion/KPP.
 def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hovmoller_kpp.nc', loc=['pine_island_bay'], segment_dir=None, monthly=True):
 
     output_dir = real_dir(output_dir)
@@ -3538,6 +3462,122 @@ def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hov
         id.close()
     elif isinstance(id, NCfile):
         id.close()
+
+
+def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
+
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    grid = Grid('PAS_grid/')
+    num_ens = 12
+    print 'Warning: remember to update num_ens to 20 when Hovmollers finished'
+    sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'pig_cavity', 'dotson_bay', 'dotson_cavity']
+    num_regions = len(regions)
+    region_titles = [r'$\bf{a}$. Shelf break', r'$\bf{b}$. Shelf', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. PIG cavity', r'$\bf{e}$. Dotson front', r'$\bf{f}$. Dotson cavity']
+    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc', 'hovmoller2.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the 3 files always gets rid of the land mask and I can't seem to fix it...
+    start_year = 1920
+    end_year = 2013
+    num_decades = int((end_year-start_year+1)/10)
+    era5_start_year = 1979
+    smooth = 24
+    p0 = 0.05
+    depth = -grid.z
+    z_deep = 1500
+    z_ticks = np.arange(0, z_deep+250, 250)
+
+    # Read all the Hovmoller data
+    era5_temp = np.ma.empty([num_regions, grid.nz])
+    pace_temp_decades = np.ma.empty([num_regions, num_ens, num_decades, grid.nz])
+    pace_temp_trends = np.ma.empty([num_regions, num_ens, grid.nz])
+    era5_t0 = None
+    pace_t0 = None
+    for n in range(num_ens+1):
+        for r in range(num_regions):
+            file_path = base_dir+sim_dir[n]+'/output/'+hovmoller_file[r]
+            temp = read_netcdf(file_path, regions[r]+'_temp')
+            if n == 0:
+                # ERA5: just save the time-mean
+                # First trim the spinup
+                if era5_t0 is None:
+                    time = netcdf_time(file_path, monthly=False)
+                    era5_t0 = index_year_start(time, era5_start_year)
+                temp = temp[era5_t0:,:]
+                era5_temp[r,:] = np.mean(temp, axis=0)
+            else:
+                # PACE: save the decadal means and the trends in smoothed data
+                if pace_t0 is None:
+                    time = netcdf_time(file_path, monthly=False)
+                    pace_t0 = index_year_start(time, start_year)
+                    # Get time in centuries for trend (note no leap years in PACE)
+                    time = time[pace_t0:]
+                    time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
+                temp = temp[pace_t0:,:]
+                for t in range(num_decades):
+                    pace_temp_decades[r,n-1,t,:] = np.mean(temp[t*10*months_per_year:(t+1)*10*months_per_year,:], axis=0)
+                temp_smoothed, time_smoothed = moving_average(temp, smooth, time=time_cent)
+                # Have to loop over depth values to calculate trends at each depth
+                for k in range(grid.nz):
+                    pace_temp_trends[r,n-1,k] = linregress(time_smoothed, temp_smoothed[:,k])[0]
+    # Now calculate ensemble means
+    pace_temp_decades_mean = np.mean(pace_temp_decades, axis=1)
+    pace_temp_trends_mean = np.mean(pace_temp_trends, axis=1)
+    # Zero out any regions where ensemble trend is not significant
+    t_val, p_val = ttest_1samp(pace_temp_trends, 0, axis=1)
+    pace_temp_trends_mean[p_val > p0] = 0
+    # Now mask out anything that's 0 (will include non-significant regions as well as land mask)
+    pace_temp_trends_mean = np.ma.masked_where(pace_temp_trends_mean==0, pace_temp_trends_mean)
+
+    # Plot (didn't actually end up using ERA5)
+    fig = plt.figure(figsize=(9,12))
+    gs = plt.GridSpec(3,13)
+    gs.update(left=0.08, right=0.95, bottom=0.08, top=0.92, wspace=0.05, hspace=0.4)
+    cmap = plt.get_cmap('jet')  # Also try plasma
+    colours = cmap(np.linspace(0.05, 0.95, num=num_decades))
+    for r in range(num_regions):
+        i_start = 7*(r%2)
+        # Plot temperature profile for each decade
+        ax = plt.subplot(gs[r/2, i_start:i_start+3])
+        ax.tick_params(direction='in')
+        ax.grid(linestyle='dotted')
+        # Plot each decade along the colourmap
+        for t in range(num_decades):
+            ax.plot(pace_temp_decades_mean[r,t,:], depth, color=colours[t], linewidth=1.5)
+        ax.set_title('Temperature ('+deg_string+'C)', fontsize=13)
+        ax.set_ylim([z_deep, 0])
+        ax.set_yticks(z_ticks)
+        if r==0:
+            ax.set_ylabel('Depth (m)', fontsize=11)
+        # Now plot the trends in the PACE ensemble
+        ax = plt.subplot(gs[r/2, i_start+3:i_start+6])
+        ax.tick_params(direction='in')
+        ax.grid(linestyle='dotted')
+        ax.plot(pace_temp_trends_mean[r,:], depth, color='black', linewidth=1.5)
+        ax.set_title('Trend ('+deg_string+'C/century)', fontsize=13)
+        ax.set_yticklabels([])
+        ax.set_ylim([z_deep, 0])
+        plt.text(0.25+0.5*(r%2), 0.965-0.31*(r/2), region_titles[r], fontsize=16, ha='center', va='center', transform=fig.transFigure)
+    print 'Warning: remember to add a few things still'
+    # TODO: add colourbar below
+    # TODO: look at other colourmap options
+    # TODO: plot dashed lines with PIG and Dotson average draft and bathy at front
+    finished_plot(fig)
+    
+        
+        
+                   
+        
+    
+    
+
+    
+                
+            
+
+    
+
+    
         
                     
     
