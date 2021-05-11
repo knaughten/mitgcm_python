@@ -11,6 +11,7 @@ import datetime
 from scipy.stats import linregress, ttest_1samp, pearsonr
 from scipy.io import loadmat
 import os
+import netCDF4 as nc
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
