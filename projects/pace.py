@@ -3497,7 +3497,7 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     finished_plot(fig) #, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
 
 
-def precompute_kpp_hovmoller (output_dir, grid_dir, hovmoller_file='hovmoller_kpp.nc', loc=['pine_island_bay'], segment_dir=None, monthly=True):
+def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hovmoller_kpp.nc', loc=['pine_island_bay'], segment_dir=None, monthly=True):
 
     output_dir = real_dir(output_dir)
     if segment_dir is None and os.path.isfile(hovmoller_file):
@@ -3511,10 +3511,19 @@ def precompute_kpp_hovmoller (output_dir, grid_dir, hovmoller_file='hovmoller_kp
         print 'Processing ' + file_path
         id = set_update_file(output_dir+hovmoller_file, grid, 'zt')
         num_time = set_update_time(id, file_path, monthly=monthly)
-        data1 = read_netcdf(file_path, 'DFrI_TH')
-        data2 = read_netcdf(file_path, 'KPPg_TH')
-        data = np.ma.zeros(data1.shape)
-        data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
+        if var_name == 'diffusion_kpp':
+            title = 'KPP and implicit vertical diffusion'
+            data1 = read_netcdf(file_path, 'DFrI_TH')
+            data2 = read_netcdf(file_path, 'KPPg_TH')
+            data = np.ma.zeros(data1.shape)
+            data[:,:-1,:] = data1[:,1:,:] - data1[:,:-1,:] + data2[:,1:,:] - data2[:,:-1,:]
+        elif var_name == 'advection_3d':
+            title = '3D advection'
+            data_x = read_netcdf(file_path, 'ADVx_TH')
+            data_y = read_netcdf(file_path, 'ADVy_TH')
+            data_z = read_netcdf(file_path, 'ADVr_TH')
+            data = np.ma.zeros(data_x.shape)
+            data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
         data = mask_3d(data, grid, time_dependent=True)
         for l in loc:
             print '...at ' + l
@@ -3522,7 +3531,7 @@ def precompute_kpp_hovmoller (output_dir, grid_dir, hovmoller_file='hovmoller_kp
             mask = grid.get_region_mask(l)
             data_region = apply_mask(data, np.invert(mask), time_dependent=True, depth_dependent=True)
             data_region = area_average(data_region, grid, time_dependent=True)
-            set_update_var(id, num_time, data_region, 'zt', l+'_diffusion_kpp', loc_name+' convergence of heat from KPP and implicit vertical diffusion', units='degC.m^3/s')
+            set_update_var(id, num_time, data_region, 'zt', l+'_'+var_name, loc_name+' convergence of heat from '+title, units='degC.m^3/s')
 
     # Finished
     if isinstance(id, nc.Dataset):
