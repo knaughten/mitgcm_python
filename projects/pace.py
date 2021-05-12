@@ -7,6 +7,7 @@ from itertools import compress, cycle
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.colors as cl
 import datetime
 from scipy.stats import linregress, ttest_1samp, pearsonr
 from scipy.io import loadmat
@@ -16,7 +17,7 @@ import netCDF4 as nc
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land
-from ..plot_utils.colours import set_colours, choose_n_colours
+from ..plot_utils.colours import set_colours, choose_n_colours, truncate_colourmap
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
 from ..plot_utils.latlon import shade_mask, overlay_vectors
@@ -3470,13 +3471,12 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     grid_dir = base_dir + 'PAS_grid/'
     grid = Grid('PAS_grid/')
-    num_ens = 12
-    print 'Warning: remember to update num_ens to 20 when Hovmollers finished'
+    num_ens = 20
     sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
-    regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'pig_cavity', 'dotson_bay', 'dotson_cavity']
+    regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'pig_cavity']
     num_regions = len(regions)
-    region_titles = [r'$\bf{a}$. Shelf break', r'$\bf{b}$. Shelf', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. PIG cavity', r'$\bf{e}$. Dotson front', r'$\bf{f}$. Dotson cavity']
-    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc', 'hovmoller2.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the 3 files always gets rid of the land mask and I can't seem to fix it...
+    region_titles = [r'$\bf{a}$. Shelf break', r'$\bf{b}$. Shelf', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. PIG cavity']
+    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the 3 files always gets rid of the land mask and I can't seem to fix it...
     start_year = 1920
     end_year = 2013
     num_decades = int((end_year-start_year+1)/10)
@@ -3529,12 +3529,22 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     # Now mask out anything that's 0 (will include non-significant regions as well as land mask)
     pace_temp_trends_mean = np.ma.masked_where(pace_temp_trends_mean==0, pace_temp_trends_mean)
 
+    # Get mean ice draft and bathymetry at PIG ice shelf front
+    pig_front_mask = grid.get_icefront_mask(shelf='pig')
+    pig_front_draft = -1*area_average(apply_mask(grid.draft, np.invert(pig_front_mask)), grid)
+    pig_front_bathy = -1*area_average(apply_mask(grid.bathy, np.invert(pig_front_mask)), grid)
+
     # Plot (didn't actually end up using ERA5)
-    fig = plt.figure(figsize=(9,12))
-    gs = plt.GridSpec(3,13)
-    gs.update(left=0.08, right=0.95, bottom=0.08, top=0.92, wspace=0.05, hspace=0.4)
-    cmap = plt.get_cmap('jet')  # Also try plasma
-    colours = cmap(np.linspace(0.05, 0.95, num=num_decades))
+    fig = plt.figure(figsize=(9,9))
+    gs = plt.GridSpec(2,13)
+    gs.update(left=0.08, right=0.95, bottom=0.1, top=0.9, wspace=0.05, hspace=0.4)
+    cmap = truncate_colourmap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
+    print 'Warning: remember to try other colormaps'
+    colours = cmap(np.linspace(0, 1, num=num_decades))
+    norm = cl.Normalise(vmin=start_year, vmax=int(end_year/10)*10)
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    decade_ticks = np.arange(start_year, (int(end_year/10)+1)*10, 10)
     for r in range(num_regions):
         i_start = 7*(r%2)
         # Plot temperature profile for each decade
@@ -3557,11 +3567,12 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
         ax.set_title('Trend ('+deg_string+'C/century)', fontsize=13)
         ax.set_yticklabels([])
         ax.set_ylim([z_deep, 0])
+        if r in [2, 3]:
+            ax.axhline(pig_front_draft, color='black', linestyle='dashed')
+            ax.axhline(pig_front_bathy, color='black', linestyle='dashed')
         plt.text(0.25+0.5*(r%2), 0.965-0.31*(r/2), region_titles[r], fontsize=16, ha='center', va='center', transform=fig.transFigure)
-    print 'Warning: remember to add a few things still'
-    # TODO: add colourbar below
-    # TODO: look at other colourmap options
-    # TODO: plot dashed lines with PIG and Dotson average draft and bathy at front
+    cax = fig.add_axes([0.2, 0.02, 0.6, 0.02])
+    plt.colorbar(sm, cax=cax, ticks=decade_ticks, boundaries=decade_ticks)
     finished_plot(fig)
     
         
