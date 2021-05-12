@@ -3465,6 +3465,7 @@ def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hov
         id.close()
 
 
+# Plot profiles of temperature in four regions, showing the evolution of the PACE ensemble mean each decade as well as the ensemble mean trend at each depth.
 def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -3476,7 +3477,7 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'pig_cavity']
     num_regions = len(regions)
     region_titles = [r'$\bf{a}$. Shelf break', r'$\bf{b}$. Shelf', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. PIG cavity']
-    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the 3 files always gets rid of the land mask and I can't seem to fix it...
+    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the files always gets rid of the land mask and I can't seem to fix it...
     start_year = 1920
     end_year = 2013
     num_decades = int((end_year-start_year+1)/10)
@@ -3537,11 +3538,10 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     # Plot (didn't actually end up using ERA5)
     fig = plt.figure(figsize=(9,9))
     gs = plt.GridSpec(2,13)
-    gs.update(left=0.08, right=0.95, bottom=0.1, top=0.9, wspace=0.05, hspace=0.4)
-    cmap = truncate_colourmap(plt.get_cmap('jet'), minval=0.05, maxval=0.95)
-    print 'Warning: remember to try other colormaps'
+    gs.update(left=0.08, right=0.95, bottom=0.09, top=0.93, wspace=0.05, hspace=0.27)
+    cmap = truncate_colourmap(plt.get_cmap('plasma_r'), minval=0.05, maxval=0.95)
     colours = cmap(np.linspace(0, 1, num=num_decades))
-    norm = cl.Normalise(vmin=start_year, vmax=int(end_year/10)*10)
+    norm = cl.Normalize(vmin=start_year, vmax=int(end_year/10)*10)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     decade_ticks = np.arange(start_year, (int(end_year/10)+1)*10, 10)
@@ -3565,15 +3565,17 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
         ax.grid(linestyle='dotted')
         ax.plot(pace_temp_trends_mean[r,:], depth, color='black', linewidth=1.5)
         ax.set_title('Trend ('+deg_string+'C/century)', fontsize=13)
-        ax.set_yticklabels([])
         ax.set_ylim([z_deep, 0])
+        ax.set_yticks(z_ticks)
+        ax.set_yticklabels([])
         if r in [2, 3]:
             ax.axhline(pig_front_draft, color='black', linestyle='dashed')
             ax.axhline(pig_front_bathy, color='black', linestyle='dashed')
-        plt.text(0.25+0.5*(r%2), 0.965-0.31*(r/2), region_titles[r], fontsize=16, ha='center', va='center', transform=fig.transFigure)
-    cax = fig.add_axes([0.2, 0.02, 0.6, 0.02])
-    plt.colorbar(sm, cax=cax, ticks=decade_ticks, boundaries=decade_ticks)
-    finished_plot(fig)
+        plt.text(0.25+0.5*(r%2), 0.975-0.47*(r/2), region_titles[r], fontsize=16, ha='center', va='center', transform=fig.transFigure)
+    cax = fig.add_axes([0.2, 0.03, 0.6, 0.02])
+    cbar = plt.colorbar(sm, cax=cax, ticks=0.5*(decade_ticks[:-1]+decade_ticks[1:]), boundaries=decade_ticks, orientation='horizontal')
+    cbar.ax.set_xticklabels([str(y)+'s' for y in decade_ticks[:-1]])
+    finished_plot(fig, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
     
         
         
