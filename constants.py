@@ -11,7 +11,7 @@ rho_fw = 1e3
 # Density of ice (kg/m^3)
 rho_ice = 917.
 # Reference density of seawater (kg/m^3)
-rhoConst = 1035.
+rhoConst = 1028.5
 # Seconds per day
 sec_per_day = 24*60*60.
 # Seconds per year
@@ -62,6 +62,7 @@ region_bounds = {
     'dotson_bay': [-114, -110.5, -74.3, -73.5],
     'getz': [-135., -114.7, -75.2, -73.5],
     'dotson': [-114.6, -111.2, -75.3, -74.1],
+    'crosson': [-111.2, -109., -75.4, -74.1],
     'dotson_crosson': [-114.7, -109., -75.4, -74.1],
     'thwaites': [-109., -103., -75.4, -74.6],
     'pig': [-103., -99., -75.4, -74.],
@@ -85,7 +86,8 @@ region_bounds = {
     'ekstrom_jelbart_fimbul': [-10, 7.7, -72, -69],
     'filchner_sill': [-36, -30, -74.7, -74],
     'filchner_trough_cavity': [-44, -38, -81, -76],
-    'amundsen_shelf': [-115, -100, -75.5, -70]
+    'amundsen_shelf': [-115, -100, -75.5, -70],
+    'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -112,9 +114,12 @@ region_names = {
     'ewed': 'Eastern Wedddell ice shelves',
     'getz': 'Getz Ice Shelf',
     'dotson': 'Dotson Ice Shelf',
+    'dotson_cavity': 'Dotson Ice Shelf cavity',
+    'crosson': 'Crosson Ice Shelf',
     'dotson_crosson': 'Dotson and Crosson Ice Shelves',
     'thwaites': 'Thwaites Ice Shelf',
     'pig': 'Pine Island Glacier Ice Shelf',
+    'pig_cavity': 'Pine Island Glacier Ice Shelf cavity',
     'cosgrove': 'Cosgrove Ice Shelf',
     'abbot': 'Abbot Ice Shelf',
     'venable': 'Venable Ice Shelf',
@@ -145,7 +150,8 @@ region_names = {
     'ekstrom_jelbart_fimbul': 'Ekstrom, Jelbart, and Fimbul Ice Shelves',
     'filchner_sill': 'Filchner Trough Sill',
     'filchner_trough_cavity': 'Filchner Trough in cavity',
-    'amundsen_shelf': 'Amundsen Sea continental shelf'
+    'amundsen_shelf': 'Amundsen Sea continental shelf',
+    'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove'
 }    
 
 # Resolution of SOSE grid in degrees
@@ -169,6 +175,18 @@ rignot_melt = {
     'abbot': [51.8, 19, 1.7, 0.6],
     'venable': [19.4, 2, 6.1, 0.7]
 }
+# Adusumilli 2020 (for time period 1994-2018)
+adusumilli_melt = {
+    'venable': [14.3, 5.5, 5.1, 2.0],
+    'abbot': [37.1, 38.1, 1.5, 1.5],
+    'cosgrove': [2.7, 4.1, 1, 1.5],
+    'pig': [76.6, 8.6, 14.0, 1.6],
+    'thwaites': [81.9, 7.4, 26.7, 2.4],
+    'crosson': [20.9, 4.9, 7.8, 1.8],
+    'dotson': [28.2, 8.5, 5.4, 1.6],
+    'getz': [124.1, 40.9, 4.2, 1.4]
+}
+
 # Jenkins 2018 estimates of Dotson melting (Gt/y)
 dotson_melt_years = {
     'year': [2000, 2006, 2007, 2009, 2011, 2012, 2014, 2016],

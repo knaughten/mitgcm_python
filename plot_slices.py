@@ -16,6 +16,7 @@ from plot_utils.windows import set_panels, finished_plot
 from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
 from plot_utils.colours import set_colours, get_extend
 from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
+from plot_utils.latlon import shade_background
 from diagnostics import t_minus_tf, density, normal_vector, parallel_vector
 from constants import deg_string
 
@@ -37,19 +38,23 @@ def get_loc (loc0, lon0=None, lat0=None, point0=None, point1=None):
 
 # Helper function to make a basic slice plot.
 # Reduces duplicated code between slice_plot and slice_plot_diff.
-def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, point0=None, point1=None, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', titlesize=18, date_string=None, fig_name=None):
+def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=None, lat0=None, point0=None, point1=None, ax=None, make_cbar=True, contours=None, data_grid=None, haxis=None, zaxis=None, ctype='basic', extend='neither', title='', titlesize=18, date_string=None, fig_name=None, dpi=None):
 
     # Set colour map
     cmap, vmin, vmax = set_colours(values, ctype=ctype, vmin=vmin, vmax=vmax)
     # Figure out orientation and format slice location
     h_axis, loc_string = get_loc(loc0, lon0=lon0, lat0=lat0, point0=point0, point1=point1)
     # Set up the title
-    if h_axis in ['lat', 'lon']:
-        title += ' at ' + loc_string
-    elif h_axis == 'trans':
-        title += ' from ' + loc_string
+    if title is not None:
+        if h_axis in ['lat', 'lon']:
+            title += ' at ' + loc_string
+        elif h_axis == 'trans':
+            title += ' from ' + loc_string
     # Plot
-    fig, ax = plt.subplots()
+    existing_ax = ax is not None
+    if not existing_ax:
+        fig, ax = plt.subplots()
+    shade_background(ax)
     # Add patches
     img = plot_slice_patches(ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax, cmap=cmap)
     if contours is not None:
@@ -61,13 +66,17 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
     # Make nice axis labels
     slice_axes(ax, h_axis=h_axis)
     # Add a colourbar
-    plt.colorbar(img, extend=extend)
+    if make_cbar:
+        plt.colorbar(img, extend=extend)
     # Add a title
     plt.title(title, fontsize=titlesize)
     if date_string is not None:
         # Add the date in the bottom right corner
         plt.text(.99, .01, date_string, fontsize=14, ha='right', va='bottom', transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_name)
+    if existing_ax:
+        return img
+    else:
+        finished_plot(fig, fig_name=fig_name, dpi=dpi)
 
 
 # Basic slice plot of any variable.

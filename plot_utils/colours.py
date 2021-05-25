@@ -13,6 +13,7 @@ import sys
 # Set up colourmaps of type ctype. Options for ctype are:
 # 'basic': just the 'jet' colourmap
 # 'parula': using the Matlab-type "parula" colourmap rather than jet
+# 'grey': from white to dark grey
 # 'plusminus': a red/blue colour map where 0 is white
 # 'ratio': as above, but 1 is white and the data does not go below 0
 # 'centered': as above, but centered on the given value with white
@@ -34,14 +35,17 @@ def truncate_colourmap (cmap, minval=0.0, maxval=1.0, n=-1):
     return new_cmap
 
 
-def plusminus_cmap (vmin, vmax, reverse=False):
+def plusminus_cmap (vmin, vmax, val0, reverse=False):
 
-    # Truncate the RdBu_r colourmap as needed, so that 0 is white and no unnecessary colours are shown.    
-    if abs(vmin) > vmax:
+    if val0 is None:
+        val0 = 0
+
+    # Truncate the RdBu_r colourmap as needed, so that val0 is white and no unnecessary colours are shown.    
+    if abs(vmin-val0) > vmax-val0:
         min_colour = 0
-        max_colour = 0.5*(1 - vmax/vmin)
+        max_colour = 0.5*(1 - (vmax-val0)/(vmin-val0))
     else:
-        min_colour = 0.5*(1 + vmin/vmax)
+        min_colour = 0.5*(1 + (vmin-val0)/(vmax-val0))
         max_colour = 1
     if reverse:
         cmap = plt.get_cmap('RdBu')
@@ -210,10 +214,13 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
     elif ctype == 'parula':
         return parula_cmap(), vmin, vmax
 
+    elif ctype == 'grey':
+        return plt.get_cmap('Greys'), vmin, vmax
+
     elif ctype == 'plusminus':
-        return plusminus_cmap(vmin, vmax), vmin, vmax
+        return plusminus_cmap(vmin, vmax, val0), vmin, vmax
     elif ctype == 'plusminus_r':
-        return plusminus_cmap(vmin, vmax, reverse=True), vmin, vmax
+        return plusminus_cmap(vmin, vmax, val0, reverse=True), vmin, vmax
 
     elif ctype == 'centered':
         if val0 is None or vmin > val0 or vmax < val0:

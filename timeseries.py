@@ -8,8 +8,8 @@ import datetime
 
 from grid import choose_grid, Grid
 from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land
-from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing
+from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land, depth_of_isoline
+from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing, thermocline
 from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
 from interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
 from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst, Cp_sw
@@ -26,16 +26,22 @@ from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_
 # result: 'massloss' (default) calculates the total mass loss in Gt/y. 'melting' calculates the area-averaged melt rate in m/y.
 # time_index, t_start, t_end, time_average: as in function read_netcdf
 # mass_balance: if True, split into positive (melting) and negative (freezing) terms. Default False.
+# z0: optional list of length 2 containing deep and shallow bounds for depth ranges of ice shelf base to consider (negative, in metres).
 
 # Output:
 # If time_index is set, or time_average=True: single value containing mass loss or average melt rate
 # Otherwise: 1D array containing timeseries of mass loss or average melt rate
 # If mass_balance=True: two values/arrays will be returned, with the positive and negative components.
 
-def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False):
+def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_index=None, t_start=None, t_end=None, time_average=False, mass_balance=False, z0=None):
 
     # Choose the appropriate mask
     mask = grid.get_ice_mask(shelf=shelf)
+    if z0 is not None:
+        [z_deep, z_shallow] = z0
+        # Mask out regions where the ice base is outside this depth range
+        mask[grid.draft <= z_deep] = False
+        mask[grid.draft > z_shallow] = False
 
     # Read ice shelf melt rate and convert to m/y
     ismr = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average))
@@ -61,6 +67,8 @@ def timeseries_ismr (file_path, grid, shelf='fris', result='massloss', time_inde
         melt = np.zeros(num_time)
         for t in range(num_time):
             melt[t] = total_melt(ismr[t,:], mask, grid, result=result)
+        # Mask out any NaNs (can happen when no cells fall within the given depth range during a coupled run)
+        melt = np.ma.masked_where(np.isnan(melt), melt)
         return melt
 
 
@@ -160,7 +168,7 @@ def timeseries_int_sfc (file_path, var_name, grid, gtype='t', time_index=None, t
 
 
 # Integrate the area of the sea surface where the given variable exceeds the given threshold.
-def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
+def timeseries_area_threshold (file_path, var_name, val0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read the data
     data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
@@ -168,7 +176,7 @@ def timeseries_area_threshold (file_path, var_name, threshold, grid, gtype='t', 
         # Just one timestep; add a dummy time dimension
         data = np.expand_dims(data,0)
     # Convert to array of 1s and 0s based on threshold
-    data = (data >= threshold).astype(float)
+    data = (data >= val0).astype(float)
     # Now build the timeseries
     timeseries = []
     for t in range(data.shape[0]):
@@ -189,6 +197,20 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         temp = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         salt = read_netcdf(file_path, 'SALT', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         data = temp - tfreeze(salt, 0)
+    elif var_name == 'shortwave_penetration':
+        # Get some variables we'll need
+        z_edges_3d = z_to_xyz(grid.z_edges, grid)
+        dA_3d = xy_to_xyz(grid.dA, grid)
+        swfrac = 0.62*np.exp(z_edges_3d[:-1,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[:-1,:]/20.)
+        swfrac1 = 0.62*np.exp(z_edges_3d[1:,:]/0.6) + (1-0.62)*np.exp(z_edges_3d[1:,:]/20.)
+        # Read shortwave flux at surface
+        data_xy = read_netcdf(file_path, 'oceQsw', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        if len(data_xy.shape)==2:
+            data_xy = np.expand_dims(data_xy,0)
+        # Loop over timesteps to calculate 3D penetration
+        data = np.ma.empty([data_xy.shape[0], grid.nz, grid.ny, grid.nx])
+        for t in range(data.shape[0]):
+            data[t,:] = xy_to_xyz(data_xy[t,:], grid)*(swfrac-swfrac1)*dA_3d/(rhoConst*Cp_sw)
     else:
         data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     if var_name == 'THETA' and option in ['integrate', 'int_btw_z0']:
@@ -222,7 +244,11 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         elif option == 'int_btw_z0':
             # 3D volume integral between the given depths
             data_tmp = apply_mask(data_tmp, np.invert(mask))
-            timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
+            if var_name == 'shortwave_penetration':
+                # Already mass-weighted, so just do a regular sum
+                timeseries.append(np.sum(data_tmp))
+            else:
+                timeseries.append(volume_integral(data_tmp, grid, gtype=gtype))
         elif option in ['avg_bottom', 'avg_z0']:
             # 2D area-average
             if option == 'avg_bottom':
@@ -271,6 +297,38 @@ def timeseries_int_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=
     if not isinstance(z0, list) or len(z0) != 2:
         print 'Error (timeseries_int_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
     return timeseries_vol_3d('int_btw_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
+
+
+def timeseries_thermocline (file_path, grid, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    data = read_netcdf(file_path, 'THETA', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        data = np.expand_dims(data,0)
+    timeseries = []
+    for t in range(data.shape[0]):
+        # Calculate the thermocline at every point - this will mask the land
+        data_tmp = thermocline(data[t,:], grid)
+        # Apply mask
+        if mask is not None:
+            data_tmp = apply_mask(data_tmp, np.invert(mask))
+        timeseries.append(area_average(data_tmp, grid))
+    return np.array(timeseries)
+
+
+# Find the depth of the shallowest given isotherm, below the given depth z0.
+def timeseries_iso_depth (file_path, var_name, val0, grid, z0=None, mask=None, time_index=None, t_start=None, t_end=None, time_average=False):
+
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        data = np.expand_dims(data,0)
+    timeseries = []
+    for t in range(data.shape[0]):
+        data_tmp = mask_3d(data[t,:], grid)
+        if mask is not None:
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+        iso_depth_tmp = depth_of_isoline(data_tmp, grid.z, val0, z0=z0)
+        timeseries.append(area_average(iso_depth_tmp, grid))
+    return np.array(timeseries)
 
 
 # Read the given 3D variable from the given NetCDF file, and calculate timeseries of its depth-averaged value over a given latitude and longitude.
@@ -385,12 +443,13 @@ def read_data_xy (file_path, var_name, time_index=None, t_start=None, t_end=None
     var_y = var_name.replace('x', 'y')
     data_x = read_netcdf(file_path, var_x, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
     data_y = read_netcdf(file_path, var_y, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    if var_name == 'ADVx_TH':
+    # Don't actually need to do this bit because it will become a convergence of fluxes
+    #if var_name == 'ADVx_TH':
         # Need to convert to heat advection relative to freezing point
-        u = read_netcdf(file_path, 'UVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        v = read_netcdf(file_path, 'VVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-        grid = Grid(file_path)
-        [data_x, data_y] = adv_heat_wrt_freezing([data_x, data_y], [u, v], grid)
+        #u = read_netcdf(file_path, 'UVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        #v = read_netcdf(file_path, 'VVEL',  time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+        #grid = Grid(file_path)
+        #[data_x, data_y] = adv_heat_wrt_freezing([data_x, data_y], [u, v], grid)
     if len(data_x.shape)==3:
         # Just one timestep; add a dummy time dimension
         data_x = np.expand_dims(data_x,0)
@@ -414,6 +473,28 @@ def timeseries_adv_dif (file_path, var_name, grid, z0, time_index=None, t_start=
         data_tmp = np.ma.zeros(data_x.shape[1:])
         data_tmp[:,:-1,:-1] = data_x[t,:,:-1,:-1] - data_x[t,:,:-1,1:] + data_y[t,:,:-1,:-1] - data_y[t,:,1:,:-1]
         # Sum over the given region
+        data_tmp = mask_3d(data_tmp, grid)
+        if mask is not None:
+            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
+        timeseries.append(np.sum(data_tmp))
+    return np.array(timeseries)
+
+
+# Calculate the net vertical advection or diffusion into the given 3D region.
+def timeseries_adv_dif_z (file_path, var_name, grid, z0, time_index=None, t_start=None, t_end=None, time_average=False, mask=None):
+
+    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
+    if len(data.shape)==3:
+        data = np.expand_dims(data,0)
+    if z0 is not None:
+        # Mask out bounds
+        if mask is None:
+            mask = np.ones([grid.ny, grid.nx]).astype(bool)
+        mask = mask_2d_to_3d(mask, grid, zmin=z0[0], zmax=z0[1])
+    timeseries = []
+    for t in range(data.shape[0]):
+        data_tmp = np.ma.zeros(data.shape[1:])
+        data_tmp[:-1,:] = data[t,1:,:] - data[t,:-1,:]
         data_tmp = mask_3d(data_tmp, grid)
         if mask is not None:
             data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
@@ -521,79 +602,6 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
     return np.array(timeseries)
 
 
-# Helper function for timeseries_min_depth and timeseries_iso_depth
-def timeseries_select_depth (option, file_path, var_name, grid, val0=None, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-
-    if option == 'iso' and val0 is None:
-        print 'Error (timeseries_select_depth): must set val0 for option iso'
-        sys.exit()
-
-    data = read_netcdf(file_path, var_name, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-    if len(data.shape)==3:
-        # Just one timestep; add a dummy time dimension
-        data = np.expand_dims(data,0)
-    # Process one time index at a time to save memory
-    timeseries = []
-    for t in range(data.shape[0]):
-        # First mask the land and ice shelves
-        data_tmp = mask_3d(data[t,:], grid, gtype=gtype)
-        if mask is not None:
-            # Also mask outside the given region
-            data_tmp = apply_mask(data_tmp, np.invert(mask), depth_dependent=True)
-        # Area-average
-        data_tmp = area_average(data_tmp, grid)
-        if option == 'min':
-            # Find depth index of minimum
-            k = np.argmin(data_tmp)
-            timeseries.append(grid.z[k])
-        elif option == 'iso':
-            if np.amax(data_tmp) < val0 or np.amin(data_tmp) > val0:
-                # The isotherm doesn't exist here
-                timeseries.append(np.nan)
-            else:
-                # Loop from bottom to top
-                for k in range(grid.nz-1, 0, -1):
-                    if (data_tmp[k] <= val0 and data_tmp[k-1] >= val0) or (data_tmp[k] >= val0 and data_tmp[k-1] <= val0):
-                        # Crosses val0 somewhere between these depth levels
-                        # Interpolate to the intersection                        
-                        timeseries.append((val0-data_tmp[k])*(grid.z[k-1]-grid.z[k])/(data_tmp[k-1]-data_tmp[k]) + grid.z[k])
-                        break
-                # Make sure we found it
-                if len(timeseries) != t+1:
-                    print 'Error (timeseries_select_depth): did not find isotherm'
-                    sys.exit()
-        elif option == 'max_gradient':
-            # Calculate the gradient in the variable over depth
-            ddata_dz = (data_tmp[1:] - data_tmp[:-1])/np.abs(grid.z[1:] - grid.z[:-1])
-            # Find depth index of the maximum value (note - not absolute value)
-            k = np.argmax(ddata_dz)
-            # Remember it's offset by 1
-            timeseries.append(grid.z[k+1])
-        else:
-            print 'Error (timeseries_select_depth): invalid option ' + option
-            sys.exit()
-    timeseries = np.array(timeseries)
-    # Mask the NaNs
-    timeseries = np.ma.masked_where(np.isnan(timeseries), timeseries)
-    return timeseries
-            
-
-
-# Calculate the depth of the minimum of the given variable
-def timeseries_min_depth (file_path, var_name, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-    return timeseries_select_depth('min', file_path, var_name, grid, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-
-
-# Calculate the depth of the given isoline for the given variable (the deepest such isoline, if there are several)
-def timeseries_iso_depth (file_path, var_name, val0, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-    return timeseries_select_depth('iso', file_path, var_name, grid, val0=val0, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-
-
-# Calculate the depth of the maximum gradient of the given variable. Useful for thermoclines, etc.
-def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False):
-    return timeseries_select_depth('max_gradient', file_path, var_name, grid, mask=mask, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
-
-
 # Arguments:
 # file_path: either a single filename or a list of filenames
 
@@ -613,9 +621,6 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 #          'pmepr': calculates total precipitation minus evaporation plus runoff over the given region
 #          'res_time': calculates mean cavity residence time over the given ice shelf cavity
 #          'icefront_max': calculates maximum value over the given ice shelf front (2D or 3D variable)
-#          'min_depth': calculates the depth of the minimum value area-averaged over the given region
-#          'iso_depth': calculates the depth of the given isoline (deepest instance, if there are several) area-averaged over the given region
-#          'max_gradient_depth': calculates the depth of the maximum gradient of the given variable, area-averaged over the given region (eg the thermocline depth - as long as it's warmer underneath because this isn't the maximum absolute value).
 #          'time': just returns the time array
 # grid: as in function read_plot_latlon
 # gtype: as in function read_plot_latlon
@@ -624,7 +629,7 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 # mass_balance, result: as in function timeseries_ismr. Only matters for 'ismr'.
 # var_name: variable name to process. Doesn't matter for 'ismr' or 'wed_gyre_trans'.
 # xmin, xmax, ymin, ymax: as in function var_min_max. Only matters for 'max'.
-# threshold: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
+# val0: as in function timeseries_area_threshold. Only matters for 'area_threshold'.
 # lon0, lat0: point to interpolate to. Only matters for 'point_vavg'.
 # tmin, tmax, smin, smax: as in function timeseries_watermass_volume. Only matters for 'watermass'.
 # point0, point1: endpoints of transect, each in form (lon, lat). Only matters for 'transport_transect' or 'delta_rho'.
@@ -641,16 +646,16 @@ def timeseries_max_gradient_depth (file_path, var_name, grid, mask=None, gtype='
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
 
-    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho'] and var_name is None:
+    if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho', 'thermocline'] and var_name is None:
         print 'Error (calc_timeseries): must specify var_name'
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
         print 'Error (calc_timeseries): must specify lon0 and lat0'
         sys.exit()
-    if option in ['area_threshold', 'iso_depth'] and threshold is None:
-        print 'Error (calc_timeseries): must specify threshold'
+    if option in ['area_threshold', 'iso_depth'] and val0 is None:
+        print 'Error (calc_timeseries): must specify val0'
         sys.exit()
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
         print 'Error (calc_timeseries): must specify point0 and point1'
@@ -673,7 +678,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         grid = choose_grid(grid, file_path[0])
 
     # Set region mask, if needed
-    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_btw_z0', 'int_btw_z0', 'min_depth', 'iso_depth', 'max_gradient_depth', 'max']:
+    if option in ['avg_3d', 'int_3d', 'iceprod', 'avg_sfc', 'int_sfc', 'pmepr', 'adv_dif', 'adv_dif_z', 'adv_dif_bdry', 'avg_bottom', 'avg_z0', 'avg_btw_z0', 'int_btw_z0', 'thermocline', 'iso_depth', 'max']:
         if region == 'all' or region is None:
             mask = None
         elif region == 'fris':
@@ -702,9 +707,9 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
     for fname in file_path:
         if option == 'ismr':
             if mass_balance:
-                melt_tmp, freeze_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average)
+                melt_tmp, freeze_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average, z0=z0)
             else:
-                values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average)
+                values_tmp = timeseries_ismr(fname, grid, shelf=region, mass_balance=mass_balance, result=result, time_average=time_average, z0=z0)
         elif option == 'max':
             values_tmp = timeseries_max(fname, var_name, grid, gtype=gtype, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, mask=mask, time_average=time_average)
         elif option == 'avg_sfc':
@@ -712,7 +717,7 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
         elif option == 'int_sfc':
             values_tmp = timeseries_int_sfc(fname, var_name, grid, gtype=gtype, mask=mask, time_average=time_average)
         elif option == 'area_threshold':
-            values_tmp = timeseries_area_threshold(fname, var_name, threshold, grid, gtype=gtype, time_average=time_average)
+            values_tmp = timeseries_area_threshold(fname, var_name, val0, grid, gtype=gtype, time_average=time_average)
         elif option == 'avg_3d':
             values_tmp = timeseries_avg_3d(fname, var_name, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'int_3d':
@@ -733,6 +738,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_int_sfc(fname, ['oceFWflx', 'SIfwmelt', 'SIfwfrz'], grid, mask=mask, time_average=time_average, operator='subtract')
         elif option == 'adv_dif':
             values_tmp = timeseries_adv_dif(fname, var_name, grid, z0, mask=mask, time_average=time_average)
+        elif option == 'adv_dif_z':
+            values_tmp = timeseries_adv_dif_z(fname, var_name, grid, z0, mask=mask, time_average=time_average)
         elif option == 'adv_dif_bdry':
             values_tmp = timeseries_adv_dif_bdry(fname, var_name, grid, mask, bdry_mask, time_average=time_average)
         elif option == 'res_time':
@@ -749,12 +756,10 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             values_tmp = timeseries_avg_btw_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
         elif option == 'int_btw_z0':
             values_tmp = timeseries_int_btw_z0(fname, var_name, z0, grid, gtype=gtype, mask=mask, rho=rho, time_average=time_average)
-        elif option == 'min_depth':
-            values_tmp = timeseries_min_depth(fname, var_name, grid, mask=mask, time_average=time_average)
+        elif option == 'thermocline':
+            values_tmp = timeseries_thermocline(fname, grid, mask=mask, time_average=time_average)
         elif option == 'iso_depth':
-            values_tmp = timeseries_iso_depth(fname, var_name, threshold, grid, mask=mask, time_average=time_average)
-        elif option == 'max_gradient_depth':
-            values_tmp = timeseries_max_gradient_depth(fname, var_name, grid, mask=mask, time_average=time_average)
+            values_tmp = timeseries_iso_depth(fname, var_name, val0, grid, z0=z0, mask=mask, time_average=time_average)
         if not (option == 'ismr' and mass_balance):
             values_tmp = values_tmp*factor + offset
         time_tmp = netcdf_time(fname, monthly=monthly)
@@ -804,15 +809,15 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, threshold=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, factor=1, offset=0):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, factor=1, offset=0):
 
     if option == 'ismr' and mass_balance:
         print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
         sys.exit()
 
     # Calculate timeseries for each
-    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, factor=factor, offset=offset)
-    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, factor=factor, offset=offset)
+    time_1, values_1 = calc_timeseries(file_path_1, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, val0=val0, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, factor=factor, offset=offset)
+    time_2, values_2 = calc_timeseries(file_path_2, option=option, var_name=var_name, grid=grid, gtype=gtype, region=region, bdry=bdry, mass_balance=mass_balance, result=result, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, val0=val0, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, factor=factor, offset=offset)
     # Find the difference, trimming if needed
     time, values_diff = trim_and_diff(time_1, time_2, values_1, values_2)
     return time, values_diff
@@ -865,8 +870,6 @@ def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', 
 #      'ronne_delta_rho': difference in density between Ronne Depression and Ronne cavity
 #      'ft_sill_delta_rho': difference in density between the onshore and offshore side of the Filchner Trough sill
 #      '*_front_tmax': maximum temperature at the ice shelf front of the given ice shelf
-#      '*_temp_min_depth': depth of temperature minimum averaged over the given region
-#      '*_depth_isotherm_*': depth of the given isotherm (end of string, such as -0.5 or 1.5 or 2) averaged over the given region (beginning of string). If there are multiple such isotherms in the water column, it will choose the deepest one.
 #      '*_uwind_avg': zonal wind averaged over the given region
 #      '*_temp_below_*': temperature volume-averaged below the given depth of the given region, eg pine_island_bay_temp_below_500m
 #      '*_salt_below_*': similar for salinity
@@ -881,7 +884,7 @@ def set_parameters (var):
     bdry = None
     mass_balance = None
     result = None
-    threshold = None
+    val0 = None
     tmin = None
     tmax = None
     smin = None
@@ -917,6 +920,39 @@ def set_parameters (var):
             title += 'all ice shelves in domain'
         else:
             title += region_names[region]
+    elif 'mass_balance_btw' in var or 'massloss_btw' in var or 'melting_btw' in var:
+        option = 'ismr'
+        var_name = 'SHIfwFlx'
+        mass_balance = 'mass_balance_btw' in var
+        if 'melting_btw' in var:
+            result = 'melting'
+            units = 'm/y'
+        else:
+            result = 'massloss'
+            units = 'Gt/y'
+            if mass_balance:
+                # Temporarily overwrite result for string convenience
+                result = 'mass_balance'
+        # Extract name of ice shelf
+        region = var[:var.index('_'+result+'_btw')]
+        if 'mass_balance_btw' in var:
+            title = 'Basal mass balance of '
+        elif 'melting_btw' in var:
+            title = 'Mean melt rate of '
+        else:
+            title = 'Basal mass loss from '
+        if region == 'all':
+            title += 'all ice shelves in domain'
+        else:
+            title += region_names[region]
+        # Extract depth range
+        z_vals = var[len(region+'_'+result+'_btw_'):-1]
+        z_shallow = -1*int(z_vals[:z_vals.index('_')])
+        z_deep = -1*int(z_vals[z_vals.index('_')+1:])
+        z0 = [z_deep, z_shallow]
+        title += ' between '+str(-z_shallow)+'-'+str(-z_deep)+'m'
+        if mass_balance:
+            result = 'massloss'
     elif var.endswith('_temp') or var.endswith('_salt') or var.endswith('_density') or var.endswith('_age') or var.endswith('_tminustf'):
         option = 'avg_3d'
         title = 'Volume-averaged '
@@ -1034,7 +1070,7 @@ def set_parameters (var):
     elif var == 'conv_area':
         option = 'area_threshold'
         var_name = 'MXLDEPTH'
-        threshold = 2000.
+        val0 = 2000.
         title = 'Convective area'
         units = r'million km$^2$'
     elif var == 'wed_gyre_trans':
@@ -1247,19 +1283,6 @@ def set_parameters (var):
         region = var[:var.index('_front_tmax')]
         title = 'Maximum temperature at the ' + region_names[region] + ' front'
         units = deg_string+'C'
-    elif var.endswith('temp_min_depth'):
-        option = 'min_depth'
-        var_name = 'THETA'
-        region = var[:var.index('_temp_min_depth')]
-        title = 'Depth of temperature minimum over ' + region_names[region]
-        units = deg_string+'C'
-    elif '_depth_isotherm_' in var:
-        option = 'iso_depth'
-        var_name = 'THETA'
-        region = var[:var.index('_depth_isotherm')]
-        threshold = float(var[len(region+'_depth_isotherm_'):])
-        title = 'Depth of ' + str(threshold) + deg_string + 'C isotherm in ' + region_names[region]
-        units = deg_string+'C'
     elif '_temp_below_' in var:
         option = 'avg_btw_z0'
         var_name = 'THETA'
@@ -1299,11 +1322,25 @@ def set_parameters (var):
         title = 'Average salinity between '+str(-z_shallow)+'-'+str(-z_deep)+'m in '+region_names[region]
         units = 'psu'
     elif var.endswith('_thermocline'):
-        option = 'max_gradient_depth'
+        option = 'thermocline'
         var_name = 'THETA'
         region = var[:var.index('_thermocline')]
-        title = 'Thermocline depth in '+region_names[region]
+        title = 'Average thermocline depth in '+region_names[region]
         units = 'm'
+    elif 'isotherm' in var:
+        option = 'iso_depth'
+        var_name = 'THETA'
+        region = var[:var.index('_isotherm')]
+        var_tail = var[len(region+'_isotherm_'):]
+        if 'below' in var_tail:
+            val0 = var_tail[:var_tail.index('C_below')]
+            z0 = -1*int(var_tail[len(val0+'C_below_'):-1])
+            val0 = float(val0)
+        else:
+            val0 = float(var_tail[:-1])
+            z0 = None
+        title = 'Average depth of '+str(val0)+deg_string+'C isotherm in '+region_names[region]
+        units = 'm'            
     elif '_adv_heat_ns' in var:
         option = 'int_btw_z0'
         var_name = 'ADVy_TH'
@@ -1333,18 +1370,63 @@ def set_parameters (var):
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Ocean heat content in '+region_names[region]+' below '+str(-z_shallow)+'m'
         units = 'GJ'
+    elif 'advection_heat_xy_below' in var:
+        option = 'adv_dif'
+        var_name = 'ADVx_TH'
+        region = var[:var.index('_advection_heat_xy_below')]
+        z_shallow = -1*int(var[len(region+'_advection_heat_xy_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net horizontal advection of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
+    elif 'advection_heat_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'ADVr_TH'
+        region = var[:var.index('_advection_heat_z_below')]
+        z_shallow = -1*int(var[len(region+'_advection_heat_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical advection of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
+    elif 'diffusion_heat_implicit_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'DFrI_TH'
+        region = var[:var.index('_diffusion_heat_implicit_z_below')]
+        z_shallow = -1*int(var[len(region+'_diffusion_heat_implicit_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical implicit diffusion of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
+    elif 'kpp_heat_z_below' in var:
+        option = 'adv_dif_z'
+        var_name = 'KPPg_TH'
+        region = var[:var.index('_kpp_heat_z_below')]
+        z_shallow = -1*int(var[len(region+'_kpp_heat_z_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Net vertical KPP transport of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
+    elif 'shortwave_penetration_below' in var:
+        option = 'int_btw_z0'
+        var_name = 'shortwave_penetration'
+        region = var[:var.index('_shortwave_penetration_below')]
+        z_shallow = -1*int(var[len(region+'_shortwave_penetration_below_'):-1])
+        z0 = [None, z_shallow]
+        factor = 1e-9*Cp_sw*rhoConst
+        title = 'Shortwave penetration of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
+        units = 'GJ/s'
     else:
         print 'Error (set_parameters): invalid variable ' + var
         sys.exit()
 
-    return option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset
+    return option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, val0, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset
 
 
 # Interface to calc_timeseries for particular timeseries variables, defined in set_parameters.
 def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, monthly=True, rho=None, time_average=False):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, val0, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset = set_parameters(var)
 
     # Calculate timeseries
     if option == 'ismr' and mass_balance:
@@ -1352,7 +1434,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
         time, melt, freeze = calc_timeseries(file_path, option=option, region=region, mass_balance=mass_balance, grid=grid, monthly=monthly, time_average=time_average)
         return time, melt, freeze
     else:
-        time, data = calc_timeseries(file_path, option=option, region=region, bdry=bdry, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, time_average=time_average, factor=factor, offset=offset)
+        time, data = calc_timeseries(file_path, option=option, region=region, bdry=bdry, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, val0=val0, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, time_average=time_average, factor=factor, offset=offset)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data *= 1e-12
@@ -1363,7 +1445,7 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
 def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0=None, lat0=None, monthly=True, rho=None, time_average=False):
 
     # Set parameters (don't care about title or units)
-    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, threshold, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset = set_parameters(var)
+    option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, val0, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset = set_parameters(var)
 
     # Calculate difference timeseries
     if option == 'ismr' and mass_balance:
@@ -1374,7 +1456,7 @@ def calc_special_timeseries_diff (var, file_path_1, file_path_2, grid=None, lon0
         freeze_diff = trim_and_diff(time_1, time_2, freeze_1, freeze_2)[1]
         return time, melt_diff, freeze_diff
     else:
-        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, region=region, bdry=bdry, mass_balance=mass_balance, result=result, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, threshold=threshold, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, time_average=time_average, factor=factor, offset=offset)
+        time, data_diff = calc_timeseries_diff(file_path_1, file_path_2, option=option, var_name=var_name, region=region, bdry=bdry, mass_balance=mass_balance, result=result, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, val0=val0, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, time_average=time_average, factor=factor, offset=offset)
         if var in ['seaice_area', 'conv_area']:
             # Convert from m^2 to million km^2
             data_diff *= 1e-12

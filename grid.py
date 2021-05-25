@@ -230,6 +230,8 @@ class Grid:
 
         lon, lat = self.get_lon_lat(gtype=gtype)
         mask_new = np.zeros(mask.shape, dtype='bool')
+        if region_name.endswith('_cavity'):
+            region_name = region_name[:region_name.index('_cavity')]
         # Find the bounds on the region (possibly split into 2).
         if region_name in region_split:
             names = [region_name+'1', region_name+'2']
@@ -1049,8 +1051,11 @@ def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
     nz = depth.size
     shape = [ny, nx, nz]
 
-    # Calculate area
+    # Calculate differentials
     dA = np.transpose(dA_from_latlon(lon, lat))
+    z_edges = np.concatenate((np.array([0]), 0.5*(depth[:-1]+depth[1:]), np.array([2*depth[-1]-depth[-2]])))
+    dz = z_edges[:-1] - z_edges[1:]
+    dV = xy_to_xyz(dA, shape)*z_to_xyz(dz, shape)
 
     if xy_dim > 1:
         lat, lon = np.meshgrid(lat, lon)
@@ -1062,7 +1067,7 @@ def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
     if z_dim == 3:
         depth = z_to_xyz(depth, shape)
 
-    return lon, lat, depth, dA
+    return lon, lat, depth, dA, dV
 
         
 

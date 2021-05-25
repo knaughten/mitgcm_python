@@ -706,7 +706,7 @@ def trim_titles (titles):
 
 
 # Smooth the given data with a moving average of the given window, and trim and/or shift the time axis too if it's given. The data can be of any number of dimensions; the smoothing will happen on the first dimension.
-def moving_average (data, window, time=None):
+def moving_average (data, window, time=None, keep_edges=False):
 
     if window == 0:
         if time is not None:
@@ -734,7 +734,21 @@ def moving_average (data, window, time=None):
         data_smoothed = (data_cumsum[t_first+radius+1:t_last+radius+1,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius+1)
     else:
         data_smoothed = (data_cumsum[t_first+radius:t_last+radius,...] - data_cumsum[t_first-radius:t_last-radius,...])/(2*radius)
-    if time is not None:
+    if keep_edges:
+        # Add the edges back on, smoothing them as much as we can with smaller windows.
+        if centered:
+            data_smoothed_full = np.ma.empty(data.shape)
+            data_smoothed_full[t_first:t_last,...] = data_smoothed
+            for n in range(radius):
+                # Edges at beginning
+                data_smoothed_full[n,...] = np.mean(data[:2*n+1,...], axis=0)
+                # Edges at end
+                data_smoothed_full[-(n+1),...] = np.mean(data[-(2*n+1):,...], axis=0)
+            data_smoothed = data_smoothed_full
+        else:
+            print 'Error (moving_average): have not yet coded keep_edges=False for even windows. Want to figure it out?'
+            sys.exit()
+    if time is not None and not keep_edges:
         if centered:
             time_trimmed = time[radius:time.size-radius]
         else:
@@ -799,6 +813,88 @@ def average_12_months (data, t0, calendar='standard', year=None):
             year = 1979
         days = np.array([days_per_month(n, year) for n in np.arange(1,12+1)])
     return np.ma.average(data[t0:t0+12,...], axis=0, weights=days)
+
+
+# Calculate the depth of the maximum value of the 3D field at each x-y point.
+def depth_of_max (data, grid, gtype='t'):
+
+    z_3d = z_to_xyz(grid.z, grid)
+    data = mask_3d(data, grid, gtype=gtype)
+    # Calculate the maximum value at each point and tile to make 3D
+    max_val = np.amax(data, axis=0)
+    max_val = xy_to_xyz(max_val, grid)    
+    # Get a mask of 1s and 0s which is 1 in the locations where the value equals the maximum in that water column
+    max_mask = (data==max_val).astype(float)
+    # Make sure there's exactly one such point in each water column
+    if np.amax(np.sum(max_mask, axis=0)) > 1:
+        # Loop over any problem points
+        indices = np.argwhere(np.sum(max_mask,axis=0)>1)
+        for index in indices:
+            [j,i] = index
+        # Choose the shallowest one
+        k = np.argmax(max_mask[:,j,i])
+        max_mask[:,j,i] = 0
+        max_mask[k,j,i] = 1
+    # Select z at these points and collapse the vertical dimension
+    return np.sum(z_3d*max_mask, axis=-3)
+
+
+# Calculate the shallowest depth of the given isoline, below the given depth z0.
+# Regions where the entire water column is below the given isoline will be set to the seafloor depth; regions where it is entirely above the isoline will trigger an error.
+def depth_of_isoline (data, z, val0, z0=None):
+
+    [nz, ny, nx] = data.shape
+    if len(z.shape) == 1:
+        # Make z 3D
+        z = z_to_xyz(z, [nx, ny, nz])
+    if z0 is None:
+        z0 = 0
+    # Get data and depth below each level
+    z_bottom = z[-1,:]
+    z_below = np.ma.concatenate((z[1:,:], z_bottom[None,:]), axis=0)
+    data_bottom = np.ma.masked_where(True, data[-1,:])
+    data_below = np.ma.concatenate((data[1:,:], data_bottom[None,:]), axis=0)
+    # Find points where the isoline is crossed, in either direction
+    mask1 = (data < val0)*(data_below >= val0)*(z <= z0)
+    mask2 = (data >= val0)*(data_below < val0)*(z <= z0)
+    mask = (mask1.astype(bool) + mask2.astype(bool)).astype(float)
+    # Find points where the entire water column below z0 is below or above val0
+    mask_below = (np.amax(np.ma.masked_where(z > z0, data), axis=0) < val0)
+    mask_above = (np.amin(np.ma.masked_where(z > z0, data), axis=0) > val0)
+    # Find the seafloor depth at each point
+    bathy = np.amin(np.ma.masked_where(data.mask, z), axis=0)
+    # And the land mask
+    land_mask = np.sum(np.invert(data.mask), axis=0) == 0
+    # Make sure there's at most one point in each water column
+    if np.amax(np.sum(mask, axis=0)) > 1:
+        # Loop over any problem points
+        indices = np.argwhere(np.sum(mask, axis=0)>1)
+        for index in indices:
+            [j,i] = index
+            # Choose the shallowest one
+            k = np.argmax(mask[:,j,i])
+            mask[:,j,i] = 0
+            mask[k,j,i] = 1
+    # Select data and depth at these points and collapse the vertical dimension
+    data_cross = np.sum(data*mask, axis=0)
+    data_below_cross = np.sum(data_below*mask, axis=0)
+    z_cross = np.sum(z*mask, axis=0)
+    z_below_cross = np.sum(z_below*mask, axis=0)
+    # Now interpolate to the given isotherm
+    depth_iso = (z_cross - z_below_cross)/(data_cross - data_below_cross)*(val0 - data_cross) + z_cross
+    # Deal with regions where there is no such isotherm
+    # Mask out the land mask
+    depth_iso = np.ma.masked_where(land_mask, depth_iso)
+    # Mask out regions shallower than z0
+    depth_iso = np.ma.masked_where(bathy > z0, depth_iso)
+    # Set to seafloor depth where the entire water column is below val0
+    depth_iso[mask_below] = bathy[mask_below]
+    # Mask where the entire water column is above val0
+    depth_iso = np.ma.masked_where(mask_above, depth_iso)
+    return depth_iso
+    
+
+    
     
 
     
