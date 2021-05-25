@@ -508,7 +508,9 @@ def write_netcdf_error_discard_fill2D (data, discard, fill, filename):
     id = nc.Dataset(filename, 'w')
     id.createDimension('Y', data.shape[-2])
     id.createDimension('X', data.shape[-1])
-    id.createVariable(var_name, 'f8', ['Y', 'X'])
+    id.createVariable('data', 'f8', ['Y', 'X'])
+    id.createVariable('discard', 'f8', ['Y', 'X'])
+    id.createVariable('fill', 'f8', ['Y', 'X'])
     id.variables['data'][:] = data
     id.variables['discard'][:] = discard
     id.variables['fill'][:] = fill
