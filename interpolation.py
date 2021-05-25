@@ -449,7 +449,7 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     # Extend all the way into the mask
     discard = source_hfac==0
     fill = np.ones(source_data.shape).astype(bool)
-    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False, grid=grid)
+    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False)
     
     # Interpolate
     if depth_dependent:
