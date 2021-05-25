@@ -323,6 +323,9 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 # Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
 def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal', log=True):
 
+    # import file_io for basic error output
+    import mitgcm_python.file_io as fio
+ 
     # First throw away the points we don't trust
     data[discard] = missing_val
     # Now fill the values we need to fill
@@ -342,10 +345,13 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 if num_missing != num_missing_old:
                     break
             if num_missing == num_missing_old:
+                # If cannot complete discard and fill, write errors out to file (only 2D supported for now) 
                 print 'Error (discard_and_fill): some missing values cannot be filled'
+                if use_3d==False:
+                  print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
+                  fio.write_netcdf_error_discard_fill2D(data, discard, fill, 'error_fill_dump.nc')
                 sys.exit()
     return data
-
 
 # Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
 # If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
@@ -443,7 +449,7 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
     # Extend all the way into the mask
     discard = source_hfac==0
     fill = np.ones(source_data.shape).astype(bool)
-    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False)
+    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False, grid=grid)
     
     # Interpolate
     if depth_dependent:

@@ -502,6 +502,17 @@ def write_netcdf_basic (data, var_name, filename, time_dependent=True, units=Non
     id.variables[var_name][:] = data
     id.close()
 
+# Save a very basic NetCDF file as an error dump from the discard_and_fill function
+def write_netcdf_error_discard_fill2D (data, discard, fill, filename):
+    import netCDF4 as nc
+    id = nc.Dataset(filename, 'w')
+    id.createDimension('Y', data.shape[-2])
+    id.createDimension('X', data.shape[-1])
+    id.createVariable(var_name, 'f8', ['Y', 'X'])
+    id.variables['data'][:] = data
+    id.variables['discard'][:] = discard
+    id.variables['fill'][:] = fill
+    id.close()
 
 # Given a list of output files (chronological, could concatenate to make the entire simulation) and a time index we want relative to the beginning of the simulation (0-indexed), find the individual file that time index falls within, and what that time index is relative to the beginning of that file.
 def find_time_index (file_list, time_index):
