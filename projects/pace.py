@@ -2209,7 +2209,7 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
         # Calculate trend in control
         slope, sig = read_calc_trends(var_names[v], ctrl_dir+timeseries_file, 'smooth', p0=0.1)
         if sig:
-            print '(control: '+str(slope)+' '+units[v]+'/decade)'
+           print '(control: '+str(slope)+' '+units[v]+'/decade)'
         else:
             print '(control: none)'
 
@@ -2417,7 +2417,7 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             ax.grid(linestyle='dotted')
             # Plot each year of observations in thin grey
             for t in range(obs_num_years):
-                ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=0.5, label=('Observations (each year)' if t==0 else None))
+                ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=(1.5 if r==2 and obs_years[t]==2000 else 0.5), label=('Observations (each year)' if t==0 else None))
             # Plot each year of model output in thin light blue or red
             for t in range(model_num_years1):
                 ax.plot(model_data1[r,v,t,:], model_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year, '+model_year_str1+')' if t==0 else None))
@@ -2984,13 +2984,15 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
 # Plot a map of the trend in horizontal advection of heat at the given depth.
 def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-400):
 
+    import matplotlib.patheffects as pthe
+
     base_dir = real_dir(base_dir)
     trend_dir = real_dir(trend_dir)
     fig_dir = real_dir(fig_dir)
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     p0 = 0.05
-    threshold = 150
+    threshold = 125
     region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB', 'BR']
     label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2, -110]
     label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75, -73.95]
@@ -3042,9 +3044,10 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
     # Overlay vectors in regions with strongest trends
     overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
-    # Add ice shelf labels
+    # Add region labels
     for n in range(num_labels):
-        plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
+        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
+        txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
     cax = fig.add_axes([0.93, 0.15, 0.02, 0.65])
     cbar = plt.colorbar(img, cax=cax, extend='max')
     finished_plot(fig, fig_name=fig_dir+'advection_heat_map.png', dpi=300)
@@ -3465,7 +3468,7 @@ def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hov
         id.close()
 
 
-# Plot profiles of temperature in four regions, showing the evolution of the PACE ensemble mean each decade as well as the ensemble mean trend at each depth.
+# Plot profiles of temperature in four regions, showing the evolution of the PACE ensemble mean each decade as well as the ensemble mean trend at each depth (with and without convective periods).
 def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
 
     base_dir = real_dir(base_dir)
@@ -3474,10 +3477,10 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     grid = Grid('PAS_grid/')
     num_ens = 20
     sim_dir = ['PAS_ERA5'] + ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
-    regions = ['amundsen_shelf_break', 'amundsen_shelf', 'pine_island_bay', 'pig_cavity']
+    regions = ['amundsen_shelf', 'amundsen_shelf_break', 'pine_island_bay', 'dotson_bay']
     num_regions = len(regions)
-    region_titles = [r'$\bf{a}$. Shelf break', r'$\bf{b}$. Shelf', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. PIG cavity']
-    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller3.nc']  # I realise this is horrible but merging the files always gets rid of the land mask and I can't seem to fix it...
+    region_titles = [r'$\bf{a}$. Amundsen Sea continental shelf', r'$\bf{b}$. Shelf break', r'$\bf{c}$. Pine Island Bay', r'$\bf{d}$. Dotson front']
+    hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller2.nc']  # I realise this is horrible but merging the files always gets rid of the land mask and I can't seem to fix it...
     start_year = 1920
     end_year = 2013
     num_decades = int((end_year-start_year+1)/10)
@@ -3487,11 +3490,18 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     depth = -grid.z
     z_deep = 1500
     z_ticks = np.arange(0, z_deep+250, 250)
+    regions_iso = ['amundsen_shelf', '', 'pine_island_bay', 'dotson_bay']
+    isotherms = [0.5, None, 0, -1]
+    z0 = [-440, None, -470, -430]
+    var_head_iso = [r + '_isotherm_' for r in regions_iso]
+    var_tail_iso = 'C_below_100m'
+    file_paths_iso = [base_dir+d+'/output/timeseries_isotherm.nc' for d in sim_dir]
 
-    # Read all the Hovmoller data
+    # Read all the data
     era5_temp = np.ma.empty([num_regions, grid.nz])
     pace_temp_decades = np.ma.empty([num_regions, num_ens, num_decades, grid.nz])
     pace_temp_trends = np.ma.empty([num_regions, num_ens, grid.nz])
+    pace_temp_trends_noconv = np.ma.empty([num_regions, num_ens, grid.nz])
     era5_t0 = None
     pace_t0 = None
     for n in range(num_ens+1):
@@ -3521,24 +3531,38 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
                 # Have to loop over depth values to calculate trends at each depth
                 for k in range(grid.nz):
                     pace_temp_trends[r,n-1,k] = linregress(time_smoothed, temp_smoothed[:,k])[0]
-    # Now calculate ensemble means
+                # Now read the isotherm depth and smooth
+                if len(regions_iso[r]) > 0:
+                    iso_depth = read_netcdf(file_paths_iso[n], var_head_iso[r]+str(isotherms[r])+var_tail_iso)[pace_t0:]
+                    iso_depth_smoothed = moving_average(iso_depth, smooth)
+                    # Calculate trend of non-convective periods only
+                    index = iso_depth_smoothed >= z0[r]
+                    for k in range(grid.nz):
+                        temp_lev = temp_smoothed[:,k]
+                        pace_temp_trends_noconv[r,n-1,k] = linregress(time_smoothed[index], temp_lev[index])[0]
+    # Now calculate ensemble means, and mask out any regions where ensemble trend is not significant (as well as the land mask)
     pace_temp_decades_mean = np.mean(pace_temp_decades, axis=1)
-    pace_temp_trends_mean = np.mean(pace_temp_trends, axis=1)
-    # Zero out any regions where ensemble trend is not significant
-    t_val, p_val = ttest_1samp(pace_temp_trends, 0, axis=1)
-    pace_temp_trends_mean[p_val > p0] = 0
-    # Now mask out anything that's 0 (will include non-significant regions as well as land mask)
-    pace_temp_trends_mean = np.ma.masked_where(pace_temp_trends_mean==0, pace_temp_trends_mean)
+    def ensemble_trend (trends):
+        mean_trends = np.mean(trends, axis=1)
+        t_val, p_val = ttest_1samp(trends, 0, axis=1)
+        mean_trends[p_val > p0] = 0
+        mean_trends = np.ma.masked_where(mean_trends==0, mean_trends)
+        return mean_trends
+    pace_temp_trends_mean = ensemble_trend(pace_temp_trends)
+    pace_temp_trends_noconv_mean = ensemble_trend(pace_temp_trends_noconv)
 
-    # Get mean ice draft and bathymetry at PIG ice shelf front
-    pig_front_mask = grid.get_icefront_mask(shelf='pig')
-    pig_front_draft = -1*area_average(apply_mask(grid.draft, np.invert(pig_front_mask)), grid)
-    pig_front_bathy = -1*area_average(apply_mask(grid.bathy, np.invert(pig_front_mask)), grid)
+    # Get mean ice draft and bathymetry at PIG and Dotson ice shelf fronts
+    front_draft = []
+    front_bathy = []
+    for shelf in ['pig', 'dotson']:
+        front_mask = grid.get_icefront_mask(shelf=shelf)
+        front_draft.append(-1*area_average(apply_mask(grid.draft, np.invert(front_mask)), grid))
+        front_bathy.append(-1*area_average(apply_mask(grid.bathy, np.invert(front_mask)), grid))
 
-    # Plot (didn't actually end up using ERA5)
-    fig = plt.figure(figsize=(9,9))
-    gs = plt.GridSpec(2,13)
-    gs.update(left=0.08, right=0.95, bottom=0.09, top=0.93, wspace=0.05, hspace=0.27)
+    # Plot (didn't actually end up using ERA5 or PIG/Dotson ice shelf fronts)
+    fig = plt.figure(figsize=(9,8))
+    gs = plt.GridSpec(8,20)
+    gs.update(left=0.08, right=0.95, bottom=0.1, top=0.91, wspace=0.1, hspace=0.3)
     cmap = truncate_colourmap(plt.get_cmap('plasma_r'), minval=0.05, maxval=0.95)
     colours = cmap(np.linspace(0, 1, num=num_decades))
     norm = cl.Normalize(vmin=start_year, vmax=int(end_year/10)*10)
@@ -3546,41 +3570,140 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     sm.set_array([])
     decade_ticks = np.arange(start_year, (int(end_year/10)+1)*10, 10)
     for r in range(num_regions):
-        i_start = 7*(r%2)
         # Plot temperature profile for each decade
-        ax = plt.subplot(gs[r/2, i_start:i_start+3])
+        if r == 0:
+            ax = plt.subplot(gs[:4,:10])
+        else:
+            i_start = 7*(r-1)
+            ax = plt.subplot(gs[5:,i_start:i_start+3])
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
         # Plot each decade along the colourmap
         for t in range(num_decades):
             ax.plot(pace_temp_decades_mean[r,t,:], depth, color=colours[t], linewidth=1.5)
-        ax.set_title('Temperature ('+deg_string+'C)', fontsize=13)
+        if r==0:
+            ax.set_title('Temperature ('+deg_string+'C)', fontsize=15)
         ax.set_ylim([z_deep, 0])
         ax.set_yticks(z_ticks)
         if r==0:
             ax.set_ylabel('Depth (m)', fontsize=11)
-        # Now plot the trends in the PACE ensemble
-        ax = plt.subplot(gs[r/2, i_start+3:i_start+6])
+        if r > 1:
+            ax.set_yticklabels([])
+        # Now plot the trends in the PACE ensemble, with and without convection
+        if r == 0:
+            ax = plt.subplot(gs[:4,10:])
+        else:
+            ax = plt.subplot(gs[5:,i_start+3:i_start+6])
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
-        ax.plot(pace_temp_trends_mean[r,:], depth, color='black', linewidth=1.5)
-        ax.set_title('Trend ('+deg_string+'C/century)', fontsize=13)
+        ax.plot(pace_temp_trends_mean[r,:], depth, color='black', linewidth=1.5, label=('Trend of full simulation' if r==num_regions-1 else None))
+        if len(regions_iso[r]) > 0:
+            ax.plot(pace_temp_trends_noconv_mean[r,:], depth, color='blue', linewidth=1.5, label=('Trend excluding convective periods' if r==num_regions-1 else None))
+        if r==0:
+            ax.set_title('Trend ('+deg_string+'C/century)', fontsize=15)
         ax.set_ylim([z_deep, 0])
         ax.set_yticks(z_ticks)
         ax.set_yticklabels([])
-        if r in [2, 3]:
-            ax.axhline(pig_front_draft, color='black', linestyle='dashed')
-            ax.axhline(pig_front_bathy, color='black', linestyle='dashed')
-        plt.text(0.25+0.5*(r%2), 0.975-0.47*(r/2), region_titles[r], fontsize=16, ha='center', va='center', transform=fig.transFigure)
-    cax = fig.add_axes([0.2, 0.03, 0.6, 0.02])
+        if r==0:
+            x0 = 0.5
+            y0 = 0.975
+        else:
+            x0 = 0.21+0.31*(r-1)
+            y0 = 0.41
+        plt.text(x0, y0, region_titles[r], fontsize=(20 if r==0 else 15), ha='center', va='center', transform=fig.transFigure)
+        if r==1:
+            plt.text(0.5, 0.45, 'Local variations', fontsize=20, ha='center', va='center', transform=fig.transFigure)
+    ax.legend(loc='lower right', bbox_to_anchor=(1,-0.35), fontsize=11)
+    cax = fig.add_axes([0.02, 0.03, 0.5, 0.02])
     cbar = plt.colorbar(sm, cax=cax, ticks=0.5*(decade_ticks[:-1]+decade_ticks[1:]), boundaries=decade_ticks, orientation='horizontal')
     cbar.ax.set_xticklabels([str(y)+'s' for y in decade_ticks[:-1]])
     finished_plot(fig, fig_name=fig_dir+'ts_casts_changes.png', dpi=300)
     
+
+# Plot the 200-700 m temperature trend in 3 regions, and its sensitivity to excluding convective periods plus a delay of up to 5 years.
+def plot_trends_ex_convection (base_dir='./', fig_dir='./'):
+
+    regions = ['amundsen_shelf', 'pine_island_bay', 'dotson_bay']
+    region_titles = [r'$\bf{a}$. Shelf', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
+    isotherms = [0.5, 0, -1]
+    z0 = [-440, -470, -430]
+    var_head_iso = [r + '_isotherm_' for r in regions]
+    var_tail_iso = 'C_below_100m'
+    var_tail_temp = '_temp_btw_200_700m'
+    num_regions = len(regions)
+    smooth = 24
+    max_delay = 5
+    start_year = 1920
+    num_ens = 20
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    sim_dir = ['PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
+    file_paths_iso = [base_dir+d+'/output/timeseries_isotherm.nc' for d in sim_dir]
+    file_paths_temp = [base_dir+d+'/output/timeseries_final.nc' for d in sim_dir]
+    p0 = 0.01
+
+    # Inner function to calculate mean and flag if it's not significant
+    def calc_mean_sig (trends):
+        p_val = ttest_1samp(trends, 0)[1]
+        if p_val >= p0:
+            print 'Warning: trend not significant at '+str((1-p0)*100)+'% level'
+        return np.mean(trends)
+
+    trends_base_mean = np.empty(num_regions)
+    trends_noconv_mean = np.empty([max_delay+1, num_regions])
+    for r in range(num_regions):
+        trends_base = np.empty(num_ens)
+        trends_noconv = np.empty([max_delay+1, num_ens])
+        for n in range(num_ens):
+            time = netcdf_time(file_paths_iso[n], monthly=False)
+            t0 = index_year_start(time, start_year)
+            time = time[t0:]
+            time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
+            iso_depth = read_netcdf(file_paths_iso[n], var_head_iso[r]+str(isotherms[r])+var_tail_iso)[t0:]
+            temp = read_netcdf(file_paths_temp[n], regions[r]+var_tail_temp)[t0:]
+            iso_depth_smooth, time_smooth = moving_average(iso_depth, smooth, time=time_cent)
+            temp_smooth = moving_average(temp, smooth)
+            # Calculate baseline trend
+            trends_base[n] = linregress(time_smooth, temp_smooth)[0]
+            # Calculate trend with convective periods excluded
+            index = iso_depth_smooth >= z0[r]
+            trends_noconv[0,n] = linregress(time_smooth[index], temp_smooth[index])[0]
+            # Calculate trend with convective periods plus a delay excluded, ranging from 1 to 5 years
+            for y in range(1, max_delay+1):
+                arg = np.argwhere(iso_depth_smooth < z0[r])
+                for t in arg:
+                    temp_smooth[t[0]:t[0]+12*(y+1)] = -999
+                index = temp_smooth != -999
+                trends_noconv[y,n] = linregress(time_smooth[index], temp_smooth[index])[0]
+        # Calculate ensemble mean trends and significance
+        trends_base_mean[r] = calc_mean_sig(trends_base)
+        for y in range(max_delay+1):
+            trends_noconv_mean[y,r] = calc_mean_sig(trends_noconv[y,:])
+        print regions[r] + ': trend decreases by '+str((trends_base_mean[r]-trends_noconv_mean[0,r])/trends_base_mean[r]*100)+'%'
+
+    # Plot
+    fig = plt.figure(figsize=(8,4))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.08, right=0.98, bottom=0.2, top=0.83, wspace=0.1)
+    for r in range(num_regions):
+        ax = plt.subplot(gs[0,r])
+        ax.grid(linestyle='dotted')
+        ax.axhline(trends_base_mean[r], color='black', linestyle='dashed', linewidth=1.5, label=('Trend of full simulation' if r==num_regions-1 else None))
+        ax.plot(np.arange(max_delay+1), trends_noconv_mean[:,r], color='blue', linewidth=1.5, label=('Trend excluding convective periods' if r==num_regions-1 else None))
+        ax.set_title(region_titles[r], fontsize=14)
+        ax.set_xlim([0, max_delay])
+        ax.set_ylim([0, np.amax(trends_base_mean)+0.05])
+        if r==0:
+            ax.set_xlabel('Years excluded\npost-convection', fontsize=11)
+            ax.set_ylabel(deg_string+'C/century', fontsize=11)
+        else:
+            ax.set_yticklabels([])
+        if r==num_regions-1:
+            ax.legend(loc='lower center', bbox_to_anchor=(0,-0.34), fontsize=11)
+    plt.suptitle('Temperature trend (200-700m)', fontsize=16)
+    finished_plot(fig, fig_name=fig_dir+'trends_ex_convection.png', dpi=300)
         
-        
-                   
-        
+
     
     
 
