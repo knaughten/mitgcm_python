@@ -3604,6 +3604,11 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
         ax.set_ylim([z_deep, 0])
         ax.set_yticks(z_ticks)
         ax.set_yticklabels([])
+        # Remove any trailing zeros in tick labels so axis isn't too crowded
+        labels = []
+        for tick in ax.get_xticks():
+            labels.append(round_to_decimals(tick,2))
+        ax.set_xticklabels(labels)
         if r==0:
             x0 = 0.5
             y0 = 0.975
