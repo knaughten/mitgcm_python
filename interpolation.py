@@ -345,11 +345,13 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 if num_missing != num_missing_old:
                     break
             if num_missing == num_missing_old:
-                # If cannot complete discard and fill, write errors out to file (only 2D supported for now) 
+                # If cannot complete discard and fill, write errors out to very basic file 
                 print 'Error (discard_and_fill): some missing values cannot be filled'
-                if use_3d==False:
-                  print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
-                  fio.write_netcdf_error_discard_fill2D(data, discard, fill, 'error_fill_dump.nc')
+                print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
+                fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
+                from IPython import embed; embed()
+                fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
+                fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
                 sys.exit()
     return data
 

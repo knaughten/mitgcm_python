@@ -140,13 +140,10 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
 
     # Fields to interpolate
     fields = ['THETA', 'SALT', 'SIarea', 'SIheff']
-#   fields = ['SIarea', 'SIheff']
     # Flag for 2D or 3D
     dim = [3, 3, 2, 2]
-#   dim = [2, 2]
     # Constant values for ice shelf cavities
     constant_value = [constant_t, constant_s, 0, 0]
-#   constant_value = [0, 0]
     if bsose:
         # Add snow depth
         fields += ['SIhsnow']
