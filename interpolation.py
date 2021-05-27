@@ -349,7 +349,6 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 print 'Error (discard_and_fill): some missing values cannot be filled'
                 print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
                 fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
-                from IPython import embed; embed()
                 fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
                 fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
                 sys.exit()
