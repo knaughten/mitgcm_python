@@ -5,15 +5,19 @@
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import matplotlib.patheffects as pthe
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from mpl_toolkits.basemap import Basemap
 import numpy as np
 import sys
 
 from MITgcmutils import rdmds
 
 from ..grid import Grid
-from ..plot_utils.latlon import cell_boundaries, shade_land, contour_iceshelf_front
+from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.windows import finished_plot
 from ..utils import real_dir, mask_land_ice
+from ..constants import deg_string
 
 
 # Make a cool figure showing eddying SST and sea ice in the Amundsen Sea
@@ -22,7 +26,6 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
     output_dir = real_dir(output_dir)
     grid = Grid(grid_dir)
     seaice_nz = 7
-    pster = False
 
     # Inner function to extract variable from the latest pickup
     def read_var_from_pickup (pickup_head, var0, nz):
@@ -42,22 +45,38 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
         return data_unpick[i]
 
     sst = mask_land_ice(read_var_from_pickup('pickup', 'Theta', grid.nz)[0,:], grid)
-    hice = mask_land_ice(read_var_from_pickup('pickup_seaice', 'siHEFF', seaice_nz), grid)
-    x, y, sst_plot = cell_boundaries(sst, grid, pster=pster)
-    x, y, hice_plot = cell_boundaries(hice, grid, pster=pster)
+    aice = mask_land_ice(read_var_from_pickup('pickup_seaice', 'siAREA', seaice_nz), grid)
+    aice = np.ma.masked_where(aice==0, aice)
+    aice = np.ma.masked_where(sst>-1.5, aice)
+    x, y, sst_plot = cell_boundaries(sst, grid)
+    x, y, aice_plot = cell_boundaries(aice, grid)
+    mask = grid.ice_mask+grid.land_mask
+    x0 = grid.lon_1d[0]
+    x1 = grid.lon_1d[-1]
+    y0 = grid.lat_1d[0]
+    y1 = grid.lat_1d[-1]
 
-    fig, ax = plt.subplots(figsize=(8,6))
-    shade_land(ax, grid)
+    fig = plt.figure(figsize=(8,6))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95)
+    ax = plt.subplot(gs[0,0])
     img1 = ax.pcolormesh(x, y, sst_plot, cmap='inferno')
-    img2 = ax.pcolormesh(x, y, hice_plot, cmap='Blues_r')
-    # Labels? Colourbars?
-    # Cutout showing where we are in Antarctica?
-    contour_iceshelf_front(ax, grid)
+    plt.text(0.7, 0.9, 'Ocean temperature', fontsize=14, transform=fig.transFigure)
+    img2 = ax.pcolormesh(x, y, aice_plot, cmap='Blues_r')
+    plt.text(0.1, 0.3, 'Sea ice', fontsize=14, transform=fig.transFigure)
+    ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('Grey'), linestyles='solid', linewidths=1)
+    plt.text(0.7, 0.15, 'Antarctica', fontsize=14, transform=fig.transFigure)
     ax.set_xticks([])
     ax.set_yticks([])
-    plt.tight_layout()
-    finished_plot(fig)
-            
+    ax2 = inset_axes(ax, "30%", "30%", loc='upper left')
+    map = Basemap()
+    map.drawmapboundary(fill_color='MidnightBlue')
+    map.fillcontinents(color='white', lake_color='white')
+    map.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color='red', latlon=True)
+    txt = plt.text(0.08, 0.9, 'Amundsen Sea', fontsize=16, color='white', transform=fig.transFigure)
+    txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='black')])
+    finished_plot(fig, fig_name='dtp_eddies.png')
+
         
 
     
