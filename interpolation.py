@@ -323,6 +323,9 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 # Given data on a 3D grid (or 2D if you set use_3d=False), throw away any points indicated by the "discard" boolean mask (i.e. fill them with missing_val), and then extrapolate into any points indicated by the "fill" boolean mask (by calling extend_into_mask as many times as needed).
 def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal', log=True):
 
+    # import file_io for basic error output
+    import mitgcm_python.file_io as fio
+ 
     # First throw away the points we don't trust
     data[discard] = missing_val
     # Now fill the values we need to fill
@@ -342,10 +345,14 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 if num_missing != num_missing_old:
                     break
             if num_missing == num_missing_old:
+                # If cannot complete discard and fill, write errors out to very basic file 
                 print 'Error (discard_and_fill): some missing values cannot be filled'
+                print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
+                fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
+                fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
+                fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
                 sys.exit()
     return data
-
 
 # Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
 # If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
