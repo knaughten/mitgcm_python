@@ -16,6 +16,7 @@ from MITgcmutils import rdmds
 from ..grid import Grid
 from ..plot_utils.latlon import cell_boundaries
 from ..plot_utils.windows import finished_plot
+from ..plot_utils.labels import latlon_axes
 from ..utils import real_dir, mask_land_ice
 from ..constants import deg_string
 
@@ -61,13 +62,12 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
     gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95)
     ax = plt.subplot(gs[0,0])
     img1 = ax.pcolormesh(x, y, sst_plot, cmap='inferno')
-    plt.text(0.63, 0.9, 'Ocean temperature', fontsize=18, transform=fig.transFigure)
+    plt.text(0.63, 0.9, 'warm ocean', fontsize=18, transform=fig.transFigure)
     img2 = ax.pcolormesh(x, y, aice_plot, cmap='Blues_r')
-    plt.text(0.1, 0.3, 'Sea ice', fontsize=18, transform=fig.transFigure)
+    plt.text(0.1, 0.3, 'sea ice', fontsize=18, transform=fig.transFigure)
     ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('Grey'), linestyles='solid', linewidths=1)
-    plt.text(0.68, 0.15, 'Antarctica', fontsize=18, transform=fig.transFigure)
-    ax.set_xticks([])
-    ax.set_yticks([])
+    plt.text(0.68, 0.15, 'melting ice sheet', fontsize=18, transform=fig.transFigure)
+    latlon_axes(ax, x, y)
     ax2 = inset_axes(ax, "30%", "30%", loc='upper left')
     map = Basemap()
     map.drawmapboundary(fill_color='MidnightBlue')
