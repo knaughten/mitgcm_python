@@ -64,7 +64,7 @@ def get_polynya_loc (polynya):
         lon0 = -30
         lat0 = -70
     else:
-        print 'Error (get_polynya_loc): please specify a valid polynya.'
+        print('Error (get_polynya_loc): please specify a valid polynya.')
         sys.exit()
     return lon0, lat0
 
@@ -89,7 +89,7 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     # Inner function to plot timeseries on the same axes, plus potentially a difference plot and/or a percent difference plot.
@@ -109,7 +109,7 @@ def prelim_timeseries (base_dir='./', fig_dir='./'):
         if percent_diff is None:
             percent_diff = diff
         if percent_diff and not diff:
-            print "Error (plot_polynya_timeseries): can't make percent difference plot without a difference plot"
+            print("Error (plot_polynya_timeseries): can't make percent difference plot without a difference plot")
             sys.exit()
         if annual:
             monthly_str = ''
@@ -184,7 +184,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     # 2x2 lat-lon plot of polynya masks
@@ -286,7 +286,7 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
     def plot_latlon_5panel (var, title, option='absolute', ctype='basic', include_shelf=True, zoom_fris=False, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend='neither', extend_diff='neither', zoom_shelf_break=False, zoom_ewed=False):
 
         if option not in ['absolute', 'anomaly']:
-            print 'Error (plot_latlon_5panel): invalid option ' + option
+            print(('Error (plot_latlon_5panel): invalid option ' + option))
             sys.exit()
 
         # Get bounds
@@ -462,7 +462,7 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     # Inner function to read vertically averaged temp and salt, and ice shelf melt rate, for each year of the given simulation
@@ -473,7 +473,7 @@ def prelim_peryear (base_dir='./', fig_dir='./'):
         # Loop over years
         for year in range(start_year, end_year+1):
             file_path = directory + file_head + str(year) + file_tail
-            print 'Reading ' + file_path
+            print(('Reading ' + file_path))
             temp.append(mask_land(vertical_average(read_netcdf(file_path, 'THETA', time_index=0), grid),  grid))
             salt.append(mask_land(vertical_average(read_netcdf(file_path, 'SALT', time_index=0), grid), grid))
             ismr.append(convert_ismr(mask_except_ice(read_netcdf(file_path, 'SHIfwFlx', time_index=0), grid)))
@@ -531,7 +531,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     baseline_file = base_dir+case_dir[0]+avg_file
@@ -563,7 +563,7 @@ def prelim_slices (base_dir='./', fig_dir='./'):
             elif option == 'anomaly':
                 read_plot_ts_slice_diff(baseline_file, curr_file, grid=grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, tmin=tmin_diff, tmax=tmax_diff, smin=smin_diff, smax=smax_diff, time_index=0, date_string='1979-2016', fig_name=fig_dir+'ts_slice_'+string+'_'+ptype+'_diff.png')
             else:
-                print 'Error (make_slices_lon): invalid option ' + option
+                print(('Error (make_slices_lon): invalid option ' + option))
                 sys.exit()
 
     # 50W, where WDW comes onto shelf
@@ -608,13 +608,13 @@ def prelim_slices (base_dir='./', fig_dir='./'):
 # Make all the preliminary plots.
 def prelim_all_plots (base_dir='./', fig_dir='./'):
 
-    print '\nPlotting timeseries'
+    print('\nPlotting timeseries')
     prelim_timeseries(base_dir=base_dir, fig_dir=fig_dir)
-    print '\nPlotting lat-lon plots'
+    print('\nPlotting lat-lon plots')
     prelim_latlon(base_dir=base_dir, fig_dir=fig_dir)
-    print '\nPlotting per-year plots'
+    print('\nPlotting per-year plots')
     prelim_peryear(base_dir=base_dir, fig_dir=fig_dir)
-    print '\nPlotting slices'
+    print('\nPlotting slices')
     prelim_slices(base_dir=base_dir, fig_dir=fig_dir)
 
 
@@ -625,10 +625,10 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     input_file = base_dir + case_dir[0] + avg_file
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
-    print 'Processing fields'
+    print('Processing fields')
     bwage = select_bottom(mask_3d(read_netcdf(input_file, 'TRAC01', time_index=0), grid))
     # Vertically integrate streamfunction and convert to Sv
     psi = np.sum(mask_3d(read_netcdf(input_file, 'PsiVEL', time_index=0), grid), axis=0)*1e-6
@@ -636,7 +636,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     bwsalt = select_bottom(mask_3d(read_netcdf(input_file, 'SALT', time_index=0), grid))
     ismr = convert_ismr(mask_except_ice(read_netcdf(input_file, 'SHIfwFlx', time_index=0), grid))
 
-    print 'Plotting'
+    print('Plotting')
     # Wrap some things up into lists for easier iteration
     data = [bwage, psi, bwtemp, bwsalt, ismr]
     ctype = ['basic', 'psi', 'basic', 'basic', 'ismr']
@@ -714,10 +714,10 @@ def aice_simulations (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
-    print 'Reading data'
+    print('Reading data')
     data = []
     mask = [None]
     for i in range(num_expts-1):
@@ -725,7 +725,7 @@ def aice_simulations (base_dir='./', fig_dir='./'):
         if i > 0:
             mask.append(read_binary(forcing_dir+polynya_file[i], [grid.nx, grid.ny], 'xy', prec=64))
 
-    print 'Plotting'
+    print('Plotting')
     fig, gs, cax = set_panels('5C1', figsize=(13,6.5))
     for i in range(num_expts-1):
         # Leave the bottom left plot empty for colourbar
@@ -760,7 +760,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)    
 
-    print 'Reading data'
+    print('Reading data')
     time = []
     conv_area = []
     wed_gyre = []
@@ -776,7 +776,7 @@ def deep_ocean_timeseries (base_dir='./', fig_dir='./'):
     title = ['a) Convective area', 'b) Weddell Gyre transport']
     units = ['10$^5$ km$^2$', 'Sv']
 
-    print 'Plotting'
+    print('Plotting')
     fig, gs = set_panels('2TS')
     for j in range(2):
         ax = plt.subplot(gs[0,j])
@@ -826,10 +826,10 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
 
     loc_label = 'from ' + get_loc(None, point0=point0, point1=point1)[-1]
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
-    print 'Reading data'
+    print('Reading data')
     temp = []
     salt = []
     rho = []
@@ -839,7 +839,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         salt.append(mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid))
         rho.append(mask_3d(density('MDJWF', salt[i], temp[i], ref_depth), grid)-1000)
 
-    print 'Building patches'
+    print('Building patches')
     temp_values = []
     salt_values = []
     rho_values = []
@@ -862,7 +862,7 @@ def mwdw_slices (base_dir='./', fig_dir='./'):
         rho_values.append(rho_values_tmp)
         rho_gridded.append(rho_gridded_tmp)
 
-    print 'Plotting'
+    print('Plotting')
     fig, gs, cax_t, cax_t_diff, cax_s, cax_s_diff, cax_r, cax_r_diff, titles_y = set_panels('3x3C6+T3')
     # Wrap some things up for easier iteration
     values = [temp_values, salt_values, rho_values]
@@ -921,7 +921,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     # Inner function to read and process field from a single simulation
@@ -951,7 +951,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
         return read_field(var, base_dir+case_dir[1]+avg_file) - read_field(var, base_dir+case_dir[0]+avg_file)
 
     # Now call the functions for each variable
-    print 'Processing fields'
+    print('Processing fields')
     temp_diff = read_anomaly('tempavg')
     iceprod_diff = read_anomaly('iceprod')
     salt_diff = read_anomaly('saltavg')
@@ -959,7 +959,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     speed_diff = read_anomaly('speed')
     ismr_diff = read_anomaly('ismr')
 
-    print 'Plotting'
+    print('Plotting')
     # Wrap things into lists
     data = [temp_diff, iceprod_diff, salt_diff, age_diff, speed_diff, ismr_diff]
     vmin_diff = [-0.06, -0.55, -0.004, -1.5, -0.006, -0.3]
@@ -981,7 +981,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Reading data'
+    print('Reading data')
     times = []
     fris_ismr = []
     ewed_ismr = []
@@ -1010,7 +1010,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
     vmin = [-2, -4]
     vmax = [35, 85]
 
-    print 'Plotting'
+    print('Plotting')
     fig, gs = set_panels('2TS')
     for j in range(2):
         ax = plt.subplot(gs[0,j])
@@ -1018,7 +1018,7 @@ def massloss_timeseries (base_dir='./', fig_dir='./'):
             # Annually average
             data_tmp, time_tmp = monthly_to_annual(data[j][i], times[i])
             # Print the maximum changes
-            print expt_names[i] + ' increases by up to ' + str(np.amax(data_tmp)) + '%'
+            print((expt_names[i] + ' increases by up to ' + str(np.amax(data_tmp)) + '%'))
             ax.plot_date(time_tmp, data_tmp, '-', color=expt_colours[i], label=expt_names[i], linewidth=1.25)
         ax.grid(True)
         ax.set_ylim([vmin[j], vmax[j]])
@@ -1090,8 +1090,8 @@ def calc_polynya_ts_anom (base_dir='./', year=-1):
     temp_polynya, time_tmp = monthly_to_annual(temp_polynya, time)
     salt_polynya, time_tmp = monthly_to_annual(salt_polynya, time)
 
-    print 'Change in temperature: ' + str(temp_polynya[year]-temp_polynya[0]) + ' degC'
-    print 'Change in salinity: ' + str(salt_polynya[year]-salt_polynya[0]) + ' psu'
+    print(('Change in temperature: ' + str(temp_polynya[year]-temp_polynya[0]) + ' degC'))
+    print(('Change in salinity: ' + str(salt_polynya[year]-salt_polynya[0]) + ' psu'))
 
     
 # Calculate the percentage change in convective area by the end of the given simulation, compare d to the given imposed value.
@@ -1104,7 +1104,7 @@ def calc_conv_area_anom (timeseries_path, orig_area, year=-1):
     # Annually average
     conv_area, time_tmp = monthly_to_annual(conv_area, time)
 
-    print 'Change in convective area: ' + str((conv_area[year]-orig_area)/orig_area*100) + '%'
+    print(('Change in convective area: ' + str((conv_area[year]-orig_area)/orig_area*100) + '%'))
 
     
 # Calculate the Weddell Gyre transport in the given simulation, either averaged over the entire simulation or just the last year.
@@ -1114,9 +1114,9 @@ def calc_wed_gyre_trans (timeseries_path, last_year=False):
     wed_gyre_trans = read_netcdf(timeseries_path, 'wed_gyre_trans')
     wed_gyre_trans, time = monthly_to_annual(wed_gyre_trans, time)
     if last_year:
-        print 'Weddell Gyre transport over last year: ' + str(wed_gyre_trans[-1]) + ' Sv'
+        print(('Weddell Gyre transport over last year: ' + str(wed_gyre_trans[-1]) + ' Sv'))
     else:
-        print 'Weddell Gyre transport over entire simulation: ' + str(np.mean(wed_gyre_trans))
+        print(('Weddell Gyre transport over entire simulation: ' + str(np.mean(wed_gyre_trans))))
 
 
 # Use signal-to-noise analysis to determine when the Maud Rise 5y experiment has "recovered", based on various timeseries.
@@ -1225,17 +1225,17 @@ def rho_range (base_dir='./', fig_dir='./', option='shelf_break'):
         point0 = (-55, -80)
         point1 = (-47, -76)
     else:
-        print 'Error (rho_range): invalid option ' + option
+        print(('Error (rho_range): invalid option ' + option))
         sys.exit()
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_dir)
 
     # Extract range of densities in each water column along the transect
     rho_min = []
     rho_max = []
     for expt in range(num_expts-1):
-        print 'Reading ' + expt_names[expt]
+        print(('Reading ' + expt_names[expt]))
         # Read temperature and salinity
         file_path = base_dir + case_dir[expt] + avg_file
         temp = mask_3d(read_netcdf(file_path, 'THETA', time_index=0), grid)
@@ -1252,7 +1252,7 @@ def rho_range (base_dir='./', fig_dir='./', option='shelf_break'):
     hmax = haxis[-1]
 
     for expt in range(1, num_expts-1):
-        print 'Plotting ' + expt_names[expt]
+        print(('Plotting ' + expt_names[expt]))
         fig, ax = plt.subplots(figsize=(11,6))
         ax.fill_between(haxis, rho_min[0], rho_max[0], color='blue', alpha=0.5)
         ax.fill_between(haxis, rho_min[expt], rho_max[expt], color='red', alpha=0.5)
@@ -1325,7 +1325,7 @@ def anomaly_vectors (base_dir='./', fig_dir='./', option='vice'):
         vmax_diff = 0.015
         figsize = (12, 5)
     else:
-        print 'Error (anomaly_vectors): invalid option ' + option
+        print(('Error (anomaly_vectors): invalid option ' + option))
         sys.exit()
 
     base_dir = real_dir(base_dir)
@@ -1370,8 +1370,8 @@ def calc_ismr_stats (base_dir='./'):
     # Annually average
     melt, time = monthly_to_annual(melt, time)
 
-    print 'Mean melt rate: ' + str(np.mean(melt)) + ' Gt/y'
-    print 'Standard deviation in annually averaged melt rate: ' + str(np.std(melt)) + ' Gt/y'
+    print(('Mean melt rate: ' + str(np.mean(melt)) + ' Gt/y'))
+    print(('Standard deviation in annually averaged melt rate: ' + str(np.std(melt)) + ' Gt/y'))
 
 
 # Calculate the baseline and Maud Rise salt fluxes from ice shelf refreezing beneath FRIS, and from sea ice formation on the continental shelf.
@@ -1381,7 +1381,7 @@ def calc_salt_fluxes (base_dir='./'):
     grid = Grid(base_dir+grid_dir)
 
     for expt in range(2):
-        print expt_names[expt]
+        print((expt_names[expt]))
         file_path = base_dir + case_dir[expt] + avg_file
         # Read salt flux from basal melting in kg/m^2/s
         shelf_flux = read_netcdf(file_path, 'SHIfwFlx', time_index=0)
@@ -1397,8 +1397,8 @@ def calc_salt_fluxes (base_dir='./'):
         shelf_flux = area_integral(shelf_flux, grid)
         seaice_flux = area_integral(seaice_flux, grid)
         # Print results
-        print 'Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/s'
-        print 'Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/s'
+        print(('Total salt flux from ice shelf refreezing: ' + str(shelf_flux) + ' kg/s'))
+        print(('Total salt flux from sea ice formation: ' + str(seaice_flux) + ' kg/s'))
 
 
 # Plot profiles of temperature and salinity in the upper 1500 m, in the centre of the Maud Rise polynya, on the edge, and outside.
@@ -1454,7 +1454,7 @@ def salinity_profile_evolution (base_dir='./', fig_dir='./'):
 
     profiles = np.ma.empty([num_points, num_years, grid.nz])
     for year in range(start_year, end_year+1):
-        print year
+        print(year)
         file_path = base_dir + case_dir[1] + 'output/annual_averages/' + str(year) + '_avg.nc'
         salt = mask_3d(read_netcdf(file_path, 'SALT', time_index=0), grid)
         for n in range(num_points):

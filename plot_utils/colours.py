@@ -89,7 +89,7 @@ def ismr_cmap (vmin, vmax, change_points=None):
         # Set change points to yield a linear transition between colours
         change_points = 0.25*vmax*np.arange(1,3+1)
     if len(change_points) != 3:
-        print 'Error (ismr_cmap): wrong size for change_points list'
+        print('Error (ismr_cmap): wrong size for change_points list')
         sys.exit()
 
     if vmin < 0:
@@ -121,7 +121,7 @@ def psi_cmap (vmin, vmax, change_points=None):
         # Set change points to yield a linear transition between colours
         change_points = [vmin/3, 2*vmin/3, vmax/4, vmax/2, 3*vmax/4]
     if len(change_points) != 5:
-        print 'Error (psi_cmap): wrong size for change_points list'
+        print('Error (psi_cmap): wrong size for change_points list')
         sys.exit()
 
     cmap_vals = np.concatenate(([vmin], change_points[:2], [0], change_points[2:], [vmax]))
@@ -224,7 +224,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
 
     elif ctype == 'centered':
         if val0 is None or vmin > val0 or vmax < val0:
-            print 'Error (set_colours): invalid val0'
+            print('Error (set_colours): invalid val0')
             sys.exit()
         return centered_cmap(vmin, vmax, val0), vmin, vmax
 
@@ -237,21 +237,21 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
 
     elif ctype == 'psi':
         if vmin >= 0 or vmax <= 0:
-            print 'Error (set_colours): streamfunction limits do not cross 0.'
+            print('Error (set_colours): streamfunction limits do not cross 0.')
             sys.exit()
         return psi_cmap(vmin, vmax, change_points=change_points), vmin, vmax
 
     elif ctype == 'ratio':
         if vmin < 0:
-            print 'Error (set_colours): ratio colourmap only accepts positive values.'
+            print('Error (set_colours): ratio colourmap only accepts positive values.')
             sys.exit()
         if vmax < 1:
-            print 'Error (set_colours): ratio colourmap needs values greater than 1'
+            print('Error (set_colours): ratio colourmap needs values greater than 1')
             sys.exit()
         return ratio_cmap(vmin, vmax), vmin, vmax
 
     else:
-        print 'Error (set_colours): invalid ctype ' + ctype
+        print(('Error (set_colours): invalid ctype ' + ctype))
         sys.exit()            
 
     

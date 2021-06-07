@@ -28,7 +28,7 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     ymin = -84
     ymax = -61
 
-    print 'Reading grid'
+    print('Reading grid')
     # Should be the same in both products because we downloaded it that way
     lon = fix_lon_range(read_netcdf(erai_file, 'longitude'))
     # Latitude starts at the North Pole; flip it
@@ -61,13 +61,13 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
     # First do this for the land mask
     land = process_field(land_mask_file, 'lsm', time_dependent=False)
     # Now for all the wind fields
-    print 'Reading data'
+    print('Reading data')
     erai_uwind = process_field(erai_file, 'u10', land=land)
     erai_vwind = process_field(erai_file, 'v10', land=land)
     era5_uwind = process_field(era5_file, 'u10', land=land)
     era5_vwind = process_field(era5_file, 'v10', land=land)
 
-    print 'Calculating derived variables'
+    print('Calculating derived variables')
     # Magnitude and direction of wind vectors
     erai_speed = np.sqrt(erai_uwind**2 + erai_vwind**2)
     era5_speed = np.sqrt(era5_uwind**2 + era5_vwind**2)
@@ -97,7 +97,7 @@ def compare_katabatics (erai_file, era5_file, land_mask_file, fig_dir='./'):
         fig.show()
 
     # Now call it for each variable
-    print 'Plotting'
+    print('Plotting')
     plot_field(erai_uwind, era5_uwind, 'Zonal wind (m/s)', fig_dir+'uwind.png')
     plot_field(erai_vwind, era5_vwind, 'Meridional wind (m/s)', fig_dir+'vwind.png')
     plot_field(erai_speed, era5_speed, 'Wind speed (m/s)', fig_dir+'speed.png')
@@ -124,7 +124,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(base_dir+grid_path)
 
     # Inner function to read a lat-lon variable from a file and process appropriately
@@ -176,7 +176,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
     extend = ['neither', 'max', 'neither', 'max', 'min', 'neither', 'neither', 'neither', 'neither', 'both', 'neither', 'neither']
     include_shelf = [False, False, False, True, True, False, False, True, False, False, True, False]
     for j in range(len(var_names)):
-        print 'Plotting ' + var_names[j]
+        print(('Plotting ' + var_names[j]))
         is_vel = var_names[j] in ['vel', 'velice']
         for zoom_fris in [False, True]:
             if zoom_fris and not include_shelf[j]:
@@ -235,7 +235,7 @@ def combined_plots(base_dir='./', fig_dir='./'):
             plt.suptitle(titles[j] + ', 2008-2017', fontsize=22)
             finished_plot(fig, fig_name=fig_dir+var_names[j]+zoom_string+'.png')
 
-    print 'Plotting FRIS melt timeseries'
+    print('Plotting FRIS melt timeseries')
     times = []
     datas = []
     for i in range(3):

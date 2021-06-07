@@ -9,11 +9,11 @@ import numpy as np
 import sys
 import datetime
 
-from timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff, calc_annual_averages
-from plot_utils.labels import monthly_ticks, yearly_ticks
-from plot_utils.windows import finished_plot
-from file_io import netcdf_time, read_netcdf
-from utils import trim_titles, moving_average, index_period, index_year_start
+from .timeseries import calc_special_timeseries, calc_special_timeseries_diff, set_parameters, trim_and_diff, calc_annual_averages
+from .plot_utils.labels import monthly_ticks, yearly_ticks
+from .plot_utils.windows import finished_plot
+from .file_io import netcdf_time, read_netcdf
+from .utils import trim_titles, moving_average, index_period, index_year_start
 
 
 # Helper function to plot timeseries.
@@ -203,7 +203,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
 def read_plot_timeseries (var, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, annual_average=False, smooth=0):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
-        print 'Error (read_plot_timeseries): must pass a list of 2 file paths when diff=True.'
+        print('Error (read_plot_timeseries): must pass a list of 2 file paths when diff=True.')
         sys.exit()
 
     if precomputed:
@@ -272,7 +272,7 @@ def default_colours (n):
 
     colours = plt.rcParams['axes.prop_cycle'].by_key()['color']
     if n > len(colours):
-        print 'Error (default_colours): must specify colours if there are more than ' + len(colours)
+        print(('Error (default_colours): must specify colours if there are more than ' + len(colours)))
         sys.exit()
     return colours[:n]
 
@@ -281,7 +281,7 @@ def default_colours (n):
 def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=False, grid=None, lon0=None, lat0=None, fig_name=None, monthly=True, legend_in_centre=False, dpi=None, colours=None, smooth=0, annual_average=False):
 
     if diff and (not isinstance(file_path, list) or len(file_path) != 2):
-        print 'Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.'
+        print('Error (read_plot_timeseries_multi): must pass a list of 2 file paths when diff=True.')
         sys.exit()
 
     if precomputed:
@@ -305,14 +305,14 @@ def read_plot_timeseries_multi (var_names, file_path, diff=False, precomputed=Fa
     # Loop over variables
     for var in var_names:
         if var.endswith('mass_balance'):
-            print 'Error (read_plot_timeseries_multi): ' + var + ' is already a multi-plot by itself.'
+            print(('Error (read_plot_timeseries_multi): ' + var + ' is already a multi-plot by itself.'))
             sys.exit()
         title, units_tmp = set_parameters(var)[2:4]
         labels.append(title)
         if units is None:
             units = units_tmp
         elif units != units_tmp:
-            print 'Error (read_plot_timeseries_multi): units do not match for all timeseries variables'
+            print('Error (read_plot_timeseries_multi): units do not match for all timeseries variables')
             sys.exit()
         if precomputed:
             if diff:
@@ -367,7 +367,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     if isinstance(var_name, str):
         var_name = [var_name]
     if (plot_anomaly or percent) and (base_year_start is None or base_year_end is None):
-        print 'Error (read_plot_timeseries_ensemble): must set base_year_start and base_year_end'
+        print('Error (read_plot_timeseries_ensemble): must set base_year_start and base_year_end')
         sys.exit()
 
     # Read data
@@ -377,7 +377,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         data = None
         for var in var_name:
             if var.endswith('mass_balance'):
-                print 'Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.'
+                print('Error (read_plot_timeseries_ensemble): This function does not work for mass balance terms.')
                 sys.exit()
             if precomputed:
                 time = netcdf_time(f, monthly=False)
@@ -392,7 +392,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                 elif operator == 'subtract':
                     data -= data_tmp
                 else:
-                    print 'Error (read_plot_timeseries_ensemble): invalid operator ' + operator
+                    print(('Error (read_plot_timeseries_ensemble): invalid operator ' + operator))
                     sys.exit()
         if plot_anomaly or percent or trim_before:
             # Find the time indices that define the baseline period
@@ -404,7 +404,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
                         # A tighter constraint on start year
                         t_start = index_year_start(time, base_year_start_first)
                 else:
-                    print 'Error (read_plot_timeseries_ensemble): this simulation does not cover the baseline period'
+                    print('Error (read_plot_timeseries_ensemble): this simulation does not cover the baseline period')
                     sys.exit()
             else:
                 t_start, t_end = index_period(time, base_year_start, base_year_end)
@@ -427,7 +427,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     else:
         # Make sure all simulations are the same length, and then choose one time axis to use
         if any([t.size != all_times[0].size for t in all_times]):
-            print 'Error (read_plot_timeseries_ensemble): not all the simulations are the same length.'
+            print('Error (read_plot_timeseries_ensemble): not all the simulations are the same length.')
             sys.exit()
         time = all_times[time_use]
 
@@ -435,7 +435,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         # Make sure it's an integer number of 30-day months
         calendar = netcdf_time(file_paths[0], return_units=True)[2]
         if calendar != '360_day' or not monthly or time.size%12 != 0:
-            print 'Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.'
+            print('Error (read_plot_timeseries_ensemble): can only do true annual averages if there are an integer number of 30-day months.')
             sys.exit()
         time, all_datas = calc_annual_averages(time, all_datas)
 
@@ -454,7 +454,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
     if len(var_name)==1:
         title, units = set_parameters(var_name[0])[2:4]
     elif title is None or units is None:
-        print 'Error (read_plot_timeseries_ensemble): must set title and units'
+        print('Error (read_plot_timeseries_ensemble): must set title and units')
         sys.exit()
     if percent:
         units = '% of '+str(base_year_start)+'-'+str(base_year_end)+' mean'
@@ -473,7 +473,7 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
         else:
             n0 = 1
         if time_use is None and any([t.size != all_times[n0].size for t in all_times[n0:]]):
-            print 'Error (read_plot_timeseries_ensemble): can only calculate mean if simulations are same length.'
+            print('Error (read_plot_timeseries_ensemble): can only calculate mean if simulations are same length.')
             sys.exit()            
         # Calculate the mean
         all_datas.append(np.mean(all_datas[n0:], axis=0))
@@ -490,8 +490,8 @@ def read_plot_timeseries_ensemble (var_name, file_paths, sim_names=None, precomp
             sim_names.append('Mean')
 
     if print_mean:
-        print 'Mean values for ' + title + ':'
+        print(('Mean values for ' + title + ':'))
         for data, sim in zip(all_datas, sim_names):
-            print sim + ': ' + str(np.mean(data)) + ' ' + units
+            print((sim + ': ' + str(np.mean(data)) + ' ' + units))
 
     timeseries_multi_plot(time, all_datas, sim_names, colours, title=title, units=units, monthly=monthly, fig_name=fig_name, dpi=dpi, legend_in_centre=legend_in_centre, thick_last=plot_mean, thick_first=(plot_mean and not first_in_mean), linestyles=linestyles, alphas=alphas, first_on_top=(plot_mean and not first_in_mean), vline=vline, year_ticks=year_ticks)

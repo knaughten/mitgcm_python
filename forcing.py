@@ -9,15 +9,15 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
-from file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
-from utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
-from interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
-from constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
-from calculus import area_integral
-from plot_latlon import latlon_plot
-from plot_utils.windows import set_panels, finished_plot
-from plot_utils.colours import set_colours
+from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
+from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
+from .utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
+from .interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
+from .constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
+from .calculus import area_integral
+from .plot_latlon import latlon_plot
+from .plot_utils.windows import set_panels, finished_plot
+from .plot_utils.colours import set_colours
 
 # Interpolate the freshwater flux from iceberg melting (monthly climatology from NEMO G07 simulations) to the model grid so it can be used for runoff forcing.
 
@@ -31,13 +31,13 @@ from plot_utils.colours import set_colours
 # prec: precision to write output_file. Must match exf_iprec in the "data.exf" namelist (default 32)
 def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 
-    from plot_latlon import latlon_plot
+    from .plot_latlon import latlon_plot
 
     input_dir = real_dir(input_dir)
     file_head = 'icebergs_'
     file_tail = '.nc'
 
-    print 'Building grids'
+    print('Building grids')
     # Read the NEMO grid from the first file
     # It has longitude in the range -180 to 180
     file_path = input_dir + file_head + '01' + file_tail
@@ -46,10 +46,10 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
     # Build the model grid
     model_grid = Grid(grid_path, max_lon=180)
 
-    print 'Interpolating'
+    print('Interpolating')
     icebergs_interp = np.zeros([12, model_grid.ny, model_grid.nx])    
     for month in range(12):
-        print '...month ' + str(month+1)
+        print(('...month ' + str(month+1)))
         # Read the data
         file_path = input_dir + file_head + '{0:02d}'.format(month+1) + file_tail
         icebergs = read_netcdf(file_path, 'berg_total_melt', time_index=0)
@@ -62,12 +62,12 @@ def iceberg_meltwater (grid_path, input_dir, output_file, nc_out=None, prec=32):
 
     write_binary(icebergs_interp, output_file, prec=prec)
 
-    print 'Plotting'
+    print('Plotting')
     # Make a nice plot of the annual mean
     latlon_plot(mask_land_ice(np.mean(icebergs_interp, axis=0), model_grid), model_grid, include_shelf=False, vmin=0, title=r'Annual mean iceberg melt (kg/m$^2$/s)')                
     if nc_out is not None:
         # Also write to NetCDF file
-        print 'Writing ' + nc_out
+        print(('Writing ' + nc_out))
         ncfile = NCfile(nc_out, model_grid, 'xyt')
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('iceberg_melt', icebergs_interp, 'xyt', units='kg/m^2/s')
@@ -93,7 +93,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
 
     sose_dir = real_dir(sose_dir)
 
-    print 'Building grids'
+    print('Building grids')
     # First build the model grid and check that we have the right value for split
     model_grid = grid_check_split(grid_path, split)
     # Now build the SOSE grid
@@ -101,7 +101,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     # Extract surface land mask
     sose_mask = sose_grid.hfac[0,:] == 0
 
-    print 'Building mask'
+    print('Building mask')
     mask_surface = np.ones([model_grid.ny, model_grid.nx])
     # Mask out land and ice shelves
     mask_surface[model_grid.hfac[0,:]==0] = 0
@@ -121,7 +121,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     mask_3d = np.zeros([model_grid.nz, model_grid.ny, model_grid.nx])
     mask_3d[0,:] = mask_surface
     
-    print 'Reading SOSE salinity'
+    print('Reading SOSE salinity')
     # Just keep the surface layer
     sose_sss = sose_grid.read_field(sose_dir+'SALT_climatology.data', 'xyzt')[:,0,:,:]
     
@@ -134,10 +134,10 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     # Process one month at a time
     sss_interp = np.zeros([12, model_grid.nz, model_grid.ny, model_grid.nx])
     for month in range(12):
-        print 'Month ' + str(month+1)
-        print '...filling missing values'
+        print(('Month ' + str(month+1)))
+        print('...filling missing values')
         sose_sss_filled = discard_and_fill(sose_sss[month,:], sose_mask, fill, use_3d=False)
-        print '...interpolating'
+        print('...interpolating')
         # Mask out land and ice shelves
         sss_interp[month,0,:] = interp_reg(sose_grid, model_grid, sose_sss_filled, dim=2)*mask_land_ice
 
@@ -145,7 +145,7 @@ def sose_sss_restoring (grid_path, sose_dir, output_salt_file, output_mask_file,
     write_binary(mask_3d, output_mask_file, prec=prec)
 
     if nc_out is not None:
-        print 'Writing ' + nc_out
+        print(('Writing ' + nc_out))
         ncfile = NCfile(nc_out, model_grid, 'xyzt')
         ncfile.add_time(np.arange(12)+1, units='months')
         ncfile.add_variable('salinity', sss_interp, 'xyzt', units='psu')
@@ -160,9 +160,9 @@ def process_era5 (in_dir, out_dir, year, six_hourly=True, first_year=False, last
     out_dir = real_dir(out_dir)
 
     if year == 1979 and not first_year:
-        print 'Warning (process_era): last we checked, 1979 was the first year of ERA5. Unless this has changed, you need to set first_year=True.'
+        print('Warning (process_era): last we checked, 1979 was the first year of ERA5. Unless this has changed, you need to set first_year=True.')
     if year == 2018 and not last_year:
-        print 'Warning (process_era): last we checked, 2018 was the last year of ERA5. Unless this has changed, you need to set last_year=True.'
+        print('Warning (process_era): last we checked, 2018 was the last year of ERA5. Unless this has changed, you need to set last_year=True.')
 
     # Construct file paths for input and output files
     in_head = in_dir + 'era5_'
@@ -192,30 +192,30 @@ def process_era5 (in_dir, out_dir, year, six_hourly=True, first_year=False, last
 
     if first_year:
         # Print grid information to the reader
-        print '\n'
-        print 'For var in ' + str(var_out) + ', make these changes in input/data.exf:\n'
-        print 'varstartdate1 = ' + start_date.strftime('%Y%m%d')
+        print('\n')
+        print(('For var in ' + str(var_out) + ', make these changes in input/data.exf:\n'))
+        print(('varstartdate1 = ' + start_date.strftime('%Y%m%d')))
         if six_hourly:
-            print 'varperiod = ' + str(6*dt)
+            print(('varperiod = ' + str(6*dt)))
         else:
-            print 'varperiod = ' + str(dt)
-        print 'varfile = ' + 'ERA5_var'
-        print 'var_lon0 = ' + str(lon[0])
-        print 'var_lon_inc = ' + str(lon[1]-lon[0])
-        print 'var_lat0 = ' + str(lat[0])
-        print 'var_lat_inc = ' + str(lat.size-1) + '*' + str(lat[1]-lat[0])
-        print 'var_nlon = ' + str(lon.size)
-        print 'var_nlat = ' + str(lat.size)
-        print '\n'
+            print(('varperiod = ' + str(dt)))
+        print(('varfile = ' + 'ERA5_var'))
+        print(('var_lon0 = ' + str(lon[0])))
+        print(('var_lon_inc = ' + str(lon[1]-lon[0])))
+        print(('var_lat0 = ' + str(lat[0])))
+        print(('var_lat_inc = ' + str(lat.size-1) + '*' + str(lat[1]-lat[0])))
+        print(('var_nlon = ' + str(lon.size)))
+        print(('var_nlat = ' + str(lat.size)))
+        print('\n')
 
     # Loop over variables
     for i in range(len(var_in)):
         
         in_file = in_head + var_in[i] + in_tail
-        print 'Reading ' + in_file
+        print(('Reading ' + in_file))
         data = read_netcdf(in_file, var_in[i])
         
-        print 'Processing'
+        print('Processing')
         # Trim and flip over latitude
         data = data[:,:j_bound:-1,:]
         
@@ -240,7 +240,7 @@ def process_era5 (in_dir, out_dir, year, six_hourly=True, first_year=False, last
             if six_hourly:
                 # Need to read data from the following hour to interpolate to this hour. This was downloaded into separate files.
                 in_file_2 = in_head + var_in[i] + accum_flag + in_tail
-                print 'Reading ' + in_file_2
+                print(('Reading ' + in_file_2))
                 data_2 = read_netcdf(in_file_2, var_in[i])
                 data_2 = data_2[:,:j_bound:-1,:]
             # not six_hourly will be dealt with after the first_year check
@@ -304,7 +304,7 @@ def era_dummy_year (bin_dir, last_year, option='era5', nlon=None, nlat=None, out
         elif option == 'eraint':
             nlon = 480
         else:
-            print 'Error (era_dummy_year): invalid option ' + option
+            print(('Error (era_dummy_year): invalid option ' + option))
             sys.exit()
     if nlat is None:
         # The same for both cases, assuming ERA5 was cut off at 30S
@@ -342,7 +342,7 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
 
     for year in range(start_year, end_year+1):
         in_file = in_head + str(year) + in_tail
-        print 'Reading ' + in_file
+        print(('Reading ' + in_file))
         # Need temperature, pressure, and dew point
         temp = read_netcdf(in_file, 't2m')
         press = read_netcdf(in_file, 'msl')
@@ -366,7 +366,7 @@ def fix_eraint_humidity (in_dir, out_dir, prec=32):
 # The argument "polynya" is a key determining the centre and radii of the ellipse bounding the polynya. Current options are 'maud_rise', 'near_shelf', 'maud_rise_big', and 'maud_rise_small'.
 def polynya_mask (grid_path, polynya, mask_file, prec=64):
 
-    from plot_latlon import latlon_plot
+    from .plot_latlon import latlon_plot
 
     # Define the centre and radii of the ellipse bounding the polynya
     if polynya == 'maud_rise':  # Area 2.6 x 10^5 km^2
@@ -390,7 +390,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
         rlon = 2.8
         rlat = 0.75
     else:
-        print 'Error (polynya_mask): invalid polynya option ' + polynya
+        print(('Error (polynya_mask): invalid polynya option ' + polynya))
         sys.exit()
 
     # Build the grid
@@ -402,7 +402,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
     mask[index] = 1
 
     # Print the area of the polynya
-    print 'Polynya area is ' + str(area_integral(mask, grid)*1e-6) + ' km^2'
+    print(('Polynya area is ' + str(area_integral(mask, grid)*1e-6) + ' km^2'))
     # Plot the mask
     latlon_plot(mask_land_ice(mask, grid), grid, include_shelf=False, title='Polynya mask', figsize=(10,6))
 
@@ -415,7 +415,7 @@ def polynya_mask (grid_path, polynya, mask_file, prec=64):
 # Settings from UKESM correction: rd_scale = ft_scale = 2.5, bb_scale = 0.5
 def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scale=1, prec=64):
 
-    from plot_latlon import latlon_plot
+    from .plot_latlon import latlon_plot
 
     # Cutoff latitude
     max_lat = -74
@@ -430,20 +430,20 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     # Sigma for smoothing
     sigma = 2
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(grid_path)
-    print 'Selecting coastal points'
+    print('Selecting coastal points')
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
 
-    print 'Selecting regions'
+    print('Selecting regions')
     scale_coast = np.ones(lon_coast.shape)
     for n in range(3):
         index = (lon_coast >= bounds[n][0])*(lon_coast <= bounds[n][1])*(lat_coast <= max_lat)
         scale_coast[index] = scale_factors[n]
 
-    print 'Calculating distance from the coast'
+    print('Calculating distance from the coast')
     min_dist = None
     nearest_scale = None
     # Loop over all the coastal points
@@ -463,15 +463,15 @@ def seaice_drag_scaling (grid_path, output_file, rd_scale=1, bb_scale=1, ft_scal
     min_dist = mask_land_ice(min_dist, grid)
     nearest_scale = mask_land_ice(smooth_xy(nearest_scale, sigma=sigma), grid)
 
-    print 'Extending scale factors offshore'
+    print('Extending scale factors offshore')
     # Cosine function moving from scaling factor to 1 over distance of 300 km offshore
     scale_extend = (min_dist < scale_dist)*(nearest_scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
 
-    print 'Plotting'
+    print('Plotting')
     latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling factor', figsize=(10,6))
     latlon_plot(scale_extend, grid, ctype='ratio', include_shelf=False, title='Scaling factor', zoom_fris=True)
 
-    print 'Writing to file'
+    print('Writing to file')
     # Replace mask with zeros
     mask = scale_extend.mask
     scale_extend = scale_extend.data
@@ -502,7 +502,7 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, mit_end_year=None, model_
 
     # Make sure it's a real variable
     if var not in ['tas', 'huss', 'uas', 'vas', 'psl', 'pr', 'rsds', 'rlds']:
-        print 'Error (cmip6_atm_forcing): unknown variable ' + var
+        print(('Error (cmip6_atm_forcing): unknown variable ' + var))
         sys.exit()
 
     # Construct out_file_head if needed
@@ -523,30 +523,30 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, mit_end_year=None, model_
     # Tell the user what to write about the grid
     lat = read_netcdf(in_files[0], 'lat')
     lon = read_netcdf(in_files[0], 'lon') 
-    print '\nChanges to make in data.exf:'
-    print '*_lon0='+str(lon[0])
-    print '*_lon_inc='+str(lon[1]-lon[0])
-    print '*_lat0='+str(lat[0])
-    print '*_lat_inc='+str(lat[1]-lat[0])
-    print '*_nlon='+str(lon.size)
-    print '*_nlat='+str(lat.size)
+    print('\nChanges to make in data.exf:')
+    print(('*_lon0='+str(lon[0])))
+    print(('*_lon_inc='+str(lon[1]-lon[0])))
+    print(('*_lat0='+str(lat[0])))
+    print(('*_lat_inc='+str(lat[1]-lat[0])))
+    print(('*_nlon='+str(lon.size)))
+    print(('*_nlat='+str(lat.size)))
 
     # Loop over each file
     for t in range(len(in_files)):
 
         file_path = in_files[t]
-        print 'Processing ' + file_path        
-        print 'Covers years '+str(start_years[t])+' to '+str(end_years[t])
+        print(('Processing ' + file_path))        
+        print(('Covers years '+str(start_years[t])+' to '+str(end_years[t])))
         
         # Loop over years
         t_start = 0  # Time index in file
         t_end = t_start+days_per_year
         for year in range(start_years[t], end_years[t]+1):
             if year >= mit_start_year and year <= mit_end_year:
-                print 'Processing ' + str(year)
+                print(('Processing ' + str(year)))
 
                 # Read data
-                print 'Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)
+                print(('Reading ' + str(year) + ' from indicies ' + str(t_start) + '-' + str(t_end)))
                 data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
                 # Conversions if necessary
                 if var == 'tas':
@@ -572,13 +572,13 @@ def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
     per_day = 24/6
 
     for year in range(start_year, end_year+1):
-        print 'Processing year ' + str(year)
+        print(('Processing year ' + str(year)))
         data = read_binary(file_head_in+'_'+str(year), [grid.nx, grid.ny], 'xyt')
         data_monthly = np.empty([12, grid.ny, grid.nx])
         t = 0
         for month in range(12):
             nt = days_per_month(month+1, year)*per_day
-            print 'Indices ' + str(t) + ' to ' + str(t+nt-1)
+            print(('Indices ' + str(t) + ' to ' + str(t+nt-1)))
             data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
             t += nt
         write_binary(data_monthly, file_head_out+'_'+str(year))
@@ -595,7 +595,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
     ens_str = str(ens).zfill(2)
 
     if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
-        print 'Error (pace_atm_forcing): Invalid variable ' + var
+        print(('Error (pace_atm_forcing): Invalid variable ' + var))
         sys.exit()
 
     path = real_dir(in_dir)
@@ -608,7 +608,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
     path += var + '/'
 
     for year in range(start_year, end_year+1):
-        print 'Processing ' + str(year)
+        print(('Processing ' + str(year)))
         # Construct the file based on the year (after 2006 use RCP 8.5) and whether it's monthly or daily
         if year < 2006:
             file_head = 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'
@@ -644,7 +644,7 @@ def pace_atm_forcing (var, ens, in_dir, out_dir):
             elif year > 1988:
                 t_start -= per_year - 1
         t_end = t_start + per_year
-        print 'Reading indices ' + str(t_start) + '-' + str(t_end-1)
+        print(('Reading indices ' + str(t_start) + '-' + str(t_end-1)))
         # Read data
         data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
         # Unit conversions
@@ -668,9 +668,9 @@ def pace_all (in_dir, out_dir):
     var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
 
     for ens in range(1,20+1):
-        print 'Processing ensemble member ' + str(ens)
+        print(('Processing ensemble member ' + str(ens)))
         for var in var_names:
-            print 'Processing ' + var
+            print(('Processing ' + var))
             pace_atm_forcing(var, ens, in_dir, out_dir)
 
 
@@ -714,7 +714,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
             monthly = [False, False, False, True, True]
         gtype = ['t', 't', 't', 't', 't']
     else:
-        print 'Error (process_forcing_for_correction): invalid source ' + source
+        print(('Error (process_forcing_for_correction): invalid source ' + source))
         sys.exit()
     # Set parameters based on variable type
     if var == 'wind':
@@ -724,17 +724,17 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         var_names = ['atemp', 'aqh', 'precip', 'swdown', 'lwdown']
         units = ['degC', '1', 'm/s', 'W/m^2', 'W/m^2']
     else:
-        print 'Error (process_forcing_for_correction): invalid var ' + var
+        print(('Error (process_forcing_for_correction): invalid var ' + var))
         sys.exit()
     # Check end_year is defined
     if end_year is None:
-        print 'Error (process_forcing_for_correction): must set end_year. Typically use 2014 for WSFRIS and 2013 for PACE.'
+        print('Error (process_forcing_for_correction): must set end_year. Typically use 2014 for WSFRIS and 2013 for PACE.')
         sys.exit()
 
     mit_grid_dir = real_dir(mit_grid_dir)
     in_dir = real_dir(in_dir)
 
-    print 'Building grids'
+    print('Building grids')
     if source == 'ERA5':
         forcing_grid = ERA5Grid()
     elif source == 'UKESM':
@@ -751,7 +751,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
 
     # Loop over variables
     for n in range(len(var_names)):
-        print 'Processing variable ' + var_names[n]
+        print(('Processing variable ' + var_names[n]))
         # Read the data, time-integrating as we go
         data = None
         num_time = 0
@@ -781,22 +781,22 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
 
         elif source ==' UKESM':
             if monthly_clim:
-                print 'Error (process_forcing_for_correction): monthly_clim option not supported for UKESM'
+                print('Error (process_forcing_for_correction): monthly_clim option not supported for UKESM')
                 sys.exit()
             in_files, start_years, end_years = find_cmip6_files(in_dir, expt, ensemble_member, var_names_in[n], 'day')
             # Loop over each file
             for t in range(len(in_files)):
                 file_path = in_files[t]
-                print 'Processing ' + file_path
-                print 'Covers years ' + str(start_years[t]) + ' to ' + str(end_years[t])
+                print(('Processing ' + file_path))
+                print(('Covers years ' + str(start_years[t]) + ' to ' + str(end_years[t])))
                 # Loop over years
                 t_start = 0  # Time index in file
                 t_end = t_start+days_per_year
                 for year in range(start_years[t], end_years[t]+1):
                     if year >= start_year and year <= end_year:
-                        print 'Processing ' + str(year)
+                        print(('Processing ' + str(year)))
                         # Read data
-                        print 'Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)
+                        print(('Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)))
                         data_tmp = read_netcdf(file_path, var_names_in[n], t_start=t_start, t_end=t_end)
                         if data is None:
                             data = np.sum(data_tmp, axis=0)
@@ -871,15 +871,15 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
         data = split_longitude(data, i_split)
         # Now interpolate to MITgcm tracer grid        
         mit_lon, mit_lat = mit_grid.get_lon_lat(gtype='t', dim=1)
-        print 'Interpolating'
+        print('Interpolating')
         if monthly_clim:
             data_interp = np.empty([12, mit_grid.ny, mit_grid.nx])
             for m in range(12):
-                print '...month ' + str(m+1)
+                print(('...month ' + str(m+1)))
                 data_interp[m,:] = interp_reg_xy(forcing_lon, forcing_lat, data[m,:], mit_lon, mit_lat)
         else:
             data_interp = interp_reg_xy(forcing_lon, forcing_lat, data, mit_lon, mit_lat)
-        print 'Saving to ' + out_file
+        print(('Saving to ' + out_file))
         ncfile.add_variable(var_names[n], data_interp, dim_code, units=units[n])
 
     ncfile.close()
@@ -893,9 +893,9 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     # Radius for smoothing
     sigma = 2
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(grid_dir)
-    print 'Selecting coastal points'
+    print('Selecting coastal points')
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
@@ -908,7 +908,7 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     if ymax is None:
         ymax = np.amax(grid.lat_2d)
 
-    print 'Calculating winds in polar coordinates'
+    print('Calculating winds in polar coordinates')
     magnitudes = []
     angles = []
     for fname in [cmip_file, era5_file]:
@@ -918,7 +918,7 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
         angle = np.arctan2(v,u)
         angles.append(angle)
 
-    print 'Calculating corrections'
+    print('Calculating corrections')
     # Take minimum of the ratio of ERA5 to CMIP wind magnitude, and the scale cap
     scale = np.minimum(magnitudes[1]/magnitudes[0], scale_cap)
     # Smooth and mask the land and ice shelf
@@ -933,7 +933,7 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
     # Smoothing would be weird with the periodic angle, so just mask
     rotate = mask_land_ice(rotate, grid)
 
-    print 'Calculating distance from the coast'
+    print('Calculating distance from the coast')
     min_dist = None
     # Loop over all the coastal points
     for i in range(lon_coast.size):
@@ -950,13 +950,13 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
             index = dist_to_pt < min_dist
             min_dist[index] = dist_to_pt[index]
 
-    print 'Tapering function offshore'
+    print('Tapering function offshore')
     # Cosine function moving from scaling factor to 1 over distance of scale_dist km offshore
     scale_tapered = (min_dist < scale_dist)*(scale - 1)*np.cos(np.pi/2*min_dist/scale_dist) + 1
     # For the rotation, move from scaling factor to 0
     rotate_tapered = (min_dist < scale_dist)*rotate*np.cos(np.pi/2*min_dist/scale_dist)    
 
-    print 'Plotting'
+    print('Plotting')
     data_to_plot = [min_dist, scale_tapered, rotate_tapered]
     titles = ['Distance to coast (km)', 'Scaling factor', 'Rotation factor']
     ctype = ['basic', 'ratio', 'plusminus']
@@ -965,7 +965,7 @@ def katabatic_correction (grid_dir, cmip_file, era5_file, out_file_scale, out_fi
         for fig_name in [None, fig_names[i]]:
             latlon_plot(data_to_plot[i], grid, ctype=ctype[i], include_shelf=False, title=titles[i], figsize=(10,6), fig_name=fig_name)
 
-    print 'Writing to file'
+    print('Writing to file')
     fields = [scale_tapered, rotate_tapered]
     out_files = [out_file_scale, out_file_rotate]
     for n in range(len(fields)):
@@ -1029,12 +1029,12 @@ def ukesm_tas_timeseries (out_dir='./'):
     grid = UKESMGrid()
 
     for n in range(num_expt):
-        print 'Processing ' + expt[n]
+        print(('Processing ' + expt[n]))
         directory = base_path+mip[n]+'/MOHC/UKESM1-0-LL/'
         for e in range(1, num_ens+1):
             if expt[n] in ['piControl', 'abrupt-4xCO2'] and e>1:
                 continue
-            print 'Ensemble member ' + str(e)
+            print(('Ensemble member ' + str(e)))
             ensemble_member = 'r'+str(e)+'i1p1f2'
             in_files, start_years, end_years = find_cmip6_files(directory, expt[n], ensemble_member, var, time_code)
             timeseries = []
@@ -1044,7 +1044,7 @@ def ukesm_tas_timeseries (out_dir='./'):
                 t_end = t_start+days_per_year
                 for year in range(start_years[t], end_years[t]+1):
                     if year >= start_year[n] and year <= end_year[n]:
-                        print '...' + str(year)
+                        print(('...' + str(year)))
                         # Read data for this year and time-average
                         data = np.mean(read_netcdf(in_files[t], var, t_start=t_start, t_end=t_end), axis=0)
                         # Area-average
@@ -1053,9 +1053,9 @@ def ukesm_tas_timeseries (out_dir='./'):
                     t_start = t_end
                     t_end = t_start+days_per_year
             out_file = out_dir + expt[n] + '_e' + str(e) + '_tas.nc'
-            print 'Writing ' + out_file
+            print(('Writing ' + out_file))
             ncfile = NCfile(out_file, grid, 't')
-            ncfile.add_time(range(start_year[n], end_year[n]+1), units='year')
+            ncfile.add_time(list(range(start_year[n], end_year[n]+1)), units='year')
             ncfile.add_variable('tas_mean', timeseries, 't', long_name='global mean surface air temperature', units='K')
             ncfile.close()
 
@@ -1100,7 +1100,7 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
 
     # Print total value
     total_flux = np.sum(mflux_3d)*sec_per_year/kg_per_Gt/num_time
-    print 'Total meltwater flux after interpolation: '+str(total_flux)+' Gt/y'
+    print(('Total meltwater flux after interpolation: '+str(total_flux)+' Gt/y'))
 
     # Save to file
     write_binary(mflux_3d, out_file, prec=64)

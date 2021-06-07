@@ -4,7 +4,7 @@
 
 import numpy as np
 import datetime
-from utils import z_to_xyz, xy_to_xyz, add_time_dim, is_depth_dependent
+from .utils import z_to_xyz, xy_to_xyz, add_time_dim, is_depth_dependent
 
 
 # Helper functions to set up integrands and masks, tiled to be the same dimension as the "data" array
@@ -13,13 +13,13 @@ from utils import z_to_xyz, xy_to_xyz, add_time_dim, is_depth_dependent
 def prepare_integrand_mask (option, data, grid, gtype='t', time_dependent=False):
     
     if option in ['dA','dV'] and gtype != 't':
-        print 'Error (prepare_integrand_mask): non-tracer grids not yet supported'
+        print('Error (prepare_integrand_mask): non-tracer grids not yet supported')
         sys.exit()
     elif option == 'dx' and gtype == 'u':
-        print 'Error (prepare_integrand_mask): u-grid not yet supported for dx'
+        print('Error (prepare_integrand_mask): u-grid not yet supported for dx')
         sys.exit()
     elif option == 'dy' and gtype == 'v':
-        print 'Error (prepare_integrand_mask): v-grid not yet supported for dy'
+        print('Error (prepare_integrand_mask): v-grid not yet supported for dy')
         sys.exit()
 
     # Get the mask as 1s and 0s
@@ -38,7 +38,7 @@ def prepare_integrand_mask (option, data, grid, gtype='t', time_dependent=False)
     elif option == 'dy':
         integrand = grid.dy_w
     else:
-        print 'Error (prepare_integrand_mask): invalid option ' + option
+        print(('Error (prepare_integrand_mask): invalid option ' + option))
     if (len(integrand.shape)==2) and is_depth_dependent(data, time_dependent=time_dependent):
         # There's also a depth dimension; tile in z
         integrand = xy_to_xyz(integrand, grid)
@@ -81,7 +81,7 @@ def over_depth (option, data, grid, gtype='t', time_dependent=False):
     elif option == 'integrate':
         return np.sum(data*dz*hfac*mask, axis=-3)
     else:
-        print 'Error (over_depth): invalid option ' + option
+        print(('Error (over_depth): invalid option ' + option))
         sys.exit()
 
 
@@ -93,7 +93,7 @@ def over_area (option, data, grid, gtype='t', time_dependent=False):
     elif option == 'integrate':
         return np.sum(data*dA*mask, axis=(-2,-1))
     else:
-        print 'Error (over_area): invalid option ' + option
+        print(('Error (over_area): invalid option ' + option))
         sys.exit()
 
 
@@ -105,7 +105,7 @@ def over_volume (option, data, grid, gtype='t', time_dependent=False):
     elif option == 'integrate':
         return np.sum(data*dV*mask, axis=(-3,-2,-1))
     else:
-        print 'Error (over_volume): invalid option ' + option
+        print(('Error (over_volume): invalid option ' + option))
         sys.exit()
 
 
@@ -222,7 +222,7 @@ def prepare_coord (shape, grid, option, gtype='t', time_dependent=False):
     elif option == 'depth':
         # Get 3D z
         if gtype == 'w':
-            print 'Error (prepare_coord): w-grid not yet supported for depth derivatives'
+            print('Error (prepare_coord): w-grid not yet supported for depth derivatives')
             sys.exit()
         coordinates = z_to_xyz(grid.z, z)
     if option in ['lon', 'lat'] and ((len(shape)==3 and not time_dependent) or (len(shape)==4 and time_dependent)):

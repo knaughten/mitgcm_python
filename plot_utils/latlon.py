@@ -112,7 +112,7 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey', rasterize
     elif colour == 'white':
         rgb = (1, 1, 1)
     else:
-        print 'Error (shade_mask): invalid colour ' + colour
+        print(('Error (shade_mask): invalid colour ' + colour))
         sys.exit()
     # Add to plot        
     img = ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]), linewidth=0, rasterized=rasterized)
@@ -181,7 +181,7 @@ def prepare_vel (u, v, grid, vel_option='avg', z0=None, time_dependent=False):
         v_2d = v
     elif vel_option == 'interp':
         if z0 is None:
-            print "Error (prepare_vel): Must set z0 if option='interp'."
+            print("Error (prepare_vel): Must set z0 if option='interp'.")
             sys.exit()
         u_2d = interp_to_depth(u, z0, grid, gtype='u', time_dependent=time_dependent)
         v_2d = interp_to_depth(v, z0, grid, gtype='v', time_dependent=time_dependent)

@@ -5,8 +5,8 @@
 import numpy as np
 import sys
 
-from utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz, is_depth_dependent
-from grid import Grid
+from .utils import mask_land, mask_land_ice, mask_3d, xy_to_xyz, z_to_xyz, is_depth_dependent
+from .grid import Grid
 
 
 # Interpolate from one grid type to another. 
@@ -30,7 +30,7 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask=Tru
     depth_dependent = is_depth_dependent(data, time_dependent=time_dependent)
     # Make sure we're not trying to mask the ice shelf from a depth-dependent field
     if mask_shelf and depth_dependent:
-        print "Error (interp_grid): can't set mask_shelf=True for a depth-dependent field."
+        print("Error (interp_grid): can't set mask_shelf=True for a depth-dependent field.")
         sys.exit()
 
     if mask and gtype_in in ['u', 'v', 'psi', 'w']:
@@ -70,7 +70,7 @@ def interp_grid (data, grid, gtype_in, gtype_out, time_dependent=False, mask=Tru
         # Extend the southernmost row
         data_interp[...,0,:] = data_tmp[...,0,:]
     else:
-        print 'Error (interp_grid): interpolation from the ' + gtype_in + '-grid to the ' + gtype_out + '-grid is not yet supported'
+        print('Error (interp_grid): interpolation from the ' + gtype_in + '-grid to the ' + gtype_out + '-grid is not yet supported')
         sys.exit()
 
     if mask:
@@ -147,13 +147,13 @@ def neighbours_z (data, missing_val=-9999):
 def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3d=False, preference='horizontal', num_iters=1):
 
     if missing_val != -9999 and masked:
-        print "Error (extend_into_mask): can't set a missing value for a masked array"
+        print("Error (extend_into_mask): can't set a missing value for a masked array")
         sys.exit()
     if use_1d and use_3d:
-        print "Error (extend_into_mask): can't have use_1d and use_3d at the same time"
+        print("Error (extend_into_mask): can't have use_1d and use_3d at the same time")
         sys.exit()
     if use_3d and preference not in ['horizontal', 'vertical']:
-        print 'Error (extend_into_mask): invalid preference ' + preference
+        print('Error (extend_into_mask): invalid preference ' + preference)
 
     if masked:
         # MaskedArrays will mess up the extending
@@ -259,7 +259,7 @@ def remove_isolated_cells (data, mask_val=0):
 
     num_valid_neighbours = neighbours(data, missing_val=mask_val)[-1]
     index = (data!=mask_val)*(num_valid_neighbours==0)
-    print '...' + str(np.count_nonzero(index)) + ' isolated cells'
+    print('...' + str(np.count_nonzero(index)) + ' isolated cells')
     data[index] = mask_val
     return data
 
@@ -316,7 +316,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
     elif dim == 3:
         return interp_reg_xyz(source_lon, source_lat, source_grid.z, source_data, target_lon, target_lat, target_grid.z, fill_value=fill_value)
     else:
-        print 'Error (interp_reg): dim must be 2 or 3'
+        print('Error (interp_reg): dim must be 2 or 3')
         sys.exit()
 
 
@@ -332,7 +332,7 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
     num_missing = np.count_nonzero((data==missing_val)*fill)
     while num_missing > 0:
         if log:
-            print '......' + str(num_missing) + ' points to fill'
+            print('......' + str(num_missing) + ' points to fill')
         data = extend_into_mask(data, missing_val=missing_val, use_1d=use_1d, use_3d=use_3d, preference=preference)
         num_missing_old = num_missing
         num_missing = np.count_nonzero((data==missing_val)*fill)
@@ -346,8 +346,8 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                     break
             if num_missing == num_missing_old:
                 # If cannot complete discard and fill, write errors out to very basic file 
-                print 'Error (discard_and_fill): some missing values cannot be filled'
-                print 'Dumping data, discard, and fill data to error_fill_dump.nc' 
+                print('Error (discard_and_fill): some missing values cannot be filled')
+                print('Dumping data, discard, and fill data to error_fill_dump.nc') 
                 fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
                 fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
                 fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
@@ -379,7 +379,7 @@ def interp_slice_helper (data, val0, lon=False):
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
     if i2 != i1+1:
-        print 'Error (interp_slice_helper): something went wrong'
+        print('Error (interp_slice_helper): something went wrong')
         sys.exit()        
     # Calculate the weighting coefficients
     c2 = (val0 - data[i1])/(data[i2] - data[i1])
@@ -462,9 +462,9 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
         data_interp = interpolant(target_h)
     
     if np.count_nonzero(data_interp==missing_val) > 0:
-        print 'Error (interp_bdry): missing values remain in the interpolated data.'
+        print('Error (interp_bdry): missing values remain in the interpolated data.')
         if np.amin(target_h) < np.amin(source_h) or np.amax(target_h) > np.amax(source_h):
-            print 'Need to extend the horizontal axis for the source data.'
+            print('Need to extend the horizontal axis for the source data.')
         sys.exit()
         
     return data_interp
@@ -480,7 +480,7 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
         z = grid
         
     if gtype == 'w':
-        print 'Error (interp_to_depth): w-grids not supported yet'
+        print('Error (interp_to_depth): w-grids not supported yet')
         sys.exit()
     if z0 > z[0]:
         # Return surface layer
@@ -546,7 +546,7 @@ def interp_nonreg_xyz (source_lon, source_lat, source_z, source_data, target_lon
     # Interpolate each depth individually
     data_interp = np.ma.empty([nz, ny, nx])
     for k in range(nz):
-        print '...depth ' + str(k+1) + ' of ' + str(nz)
+        print('...depth ' + str(k+1) + ' of ' + str(nz))
         if k==0 and target_z[k] > source_z[0]:
             # Target grid's surface layer is too shallow - extrapolate
             source_data_2d = source_data[0,:]
@@ -574,7 +574,7 @@ def interp_nonreg (source_grid, target_grid, source_data, dim=3, gtype='t', fill
     elif dim == 3:
         return interp_nonreg_xyz(source_lon, source_lat, source_grid.z, source_data, target_lon, target_lat, target_grid.z, fill_value=fill_value)
     else:
-        print 'Error (interp_nonreg): dim must be 2 or 3'
+        print('Error (interp_nonreg): dim must be 2 or 3')
         sys.exit()
 
 

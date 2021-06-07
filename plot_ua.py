@@ -10,13 +10,13 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from plot_utils.colours import set_colours, get_extend
-from plot_utils.labels import latlon_axes
-from plot_utils.windows import finished_plot
-from file_io import read_netcdf
-from utils import var_min_max, choose_range
-from interpolation import interp_nonreg_xy
-from constants import ua_titles
+from .plot_utils.colours import set_colours, get_extend
+from .plot_utils.labels import latlon_axes
+from .plot_utils.windows import finished_plot
+from .file_io import read_netcdf
+from .utils import var_min_max, choose_range
+from .interpolation import interp_nonreg_xy
+from .constants import ua_titles
 
 # Plot a 2D variable on either the Ua triangular mesh or interpolated to a regular grid.
 # Arguments:
@@ -36,7 +36,7 @@ def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=N
     import matplotlib.pyplot as plt
 
     if option == 'tri' and connectivity is None:
-        print 'Error (ua_plot): Need to provide connectivity'
+        print('Error (ua_plot): Need to provide connectivity')
         sys.exit()
 
     if figsize is None:
@@ -224,7 +224,7 @@ def gl_animation (file_path, mov_name=None):
         gl_frame(xGL, yGL, t, ax=ax, title='Grounding line position, '+str(t+1)+'/'+str(num_frames), xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, move_box=t==0)
 
     # Call it for each frame and save as an animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_frames)))
     writer = animation.FFMpegWriter(bitrate=500, fps=10)
     if mov_name is None:
         plt.show()
@@ -287,7 +287,7 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
         data_1 = np.ma.masked_where(flt_mask_1==0, data_1)
         data_2 = np.ma.masked_where(flt_mask_2==0, data_2)
     if np.any(x_reg_1 != x_reg_2) or np.any(y_reg_1 != y_reg_2):
-        print 'Error (read_plot_ua_difference): The extent of the two meshes does not match.'
+        print('Error (read_plot_ua_difference): The extent of the two meshes does not match.')
         sys.exit()
     if percent:
         data_diff = (data_2 - data_1)/data_1*1e2

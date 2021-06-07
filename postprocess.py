@@ -8,13 +8,13 @@ import numpy as np
 import shutil
 import netCDF4 as nc
 
-from grid import Grid
-from file_io import NCfile, netcdf_time, find_time_index, read_netcdf, read_iceprod
-from timeseries import calc_timeseries, calc_special_timeseries, set_parameters
-from utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask
-from constants import deg_string, region_names
-from calculus import area_average
-from diagnostics import density
+from .grid import Grid
+from .file_io import NCfile, netcdf_time, find_time_index, read_netcdf, read_iceprod
+from .timeseries import calc_timeseries, calc_special_timeseries, set_parameters
+from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask
+from .constants import deg_string, region_names
+from .calculus import area_average
+from .diagnostics import density
 
 
 # Helper function to build lists of output files in a directory.
@@ -79,11 +79,11 @@ def segment_file_paths (output_dir, segment_dir=None, file_name='output.nc'):
 
 def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', file_path=None, monthly=True, date_string=None, time_index=-1, time_average=True, unravelled=False, key='WSFRIS', hovmoller_file='hovmoller.nc', ctd_file='../../ctddatabase.mat'):
 
-    from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
-    from plot_latlon import read_plot_latlon
-    from plot_slices import read_plot_ts_slice
-    from plot_misc import read_plot_hovmoller_ts
-    from plot_misc import ctd_cast_compare, amundsen_rignot_comparison
+    from .plot_1d import read_plot_timeseries, read_plot_timeseries_multi
+    from .plot_latlon import read_plot_latlon
+    from .plot_slices import read_plot_ts_slice
+    from .plot_misc import read_plot_hovmoller_ts
+    from .plot_misc import ctd_cast_compare, amundsen_rignot_comparison
 
     if time_average:
         time_index = None
@@ -225,7 +225,7 @@ def plot_everything (output_dir='./', timeseries_file='timeseries.nc', grid_path
 def select_common_time (output_files_1, output_files_2, option='last_year', monthly=True, check_match=True):
 
     if not monthly and option == 'last_year':
-        print 'Error (select_common_time): need monthly output to correctly select the last year.'
+        print('Error (select_common_time): need monthly output to correctly select the last year.')
         sys.exit()
 
     # Concatenate the time arrays from all files
@@ -238,7 +238,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
     if check_match:
         # Make sure we got this right
         if netcdf_time(file_path_1, monthly=monthly)[time_index_1] != netcdf_time(file_path_2, monthly=monthly)[time_index_2]:
-            print 'Error (select_common_time): something went wrong when matching time indices between the two files.'
+            print('Error (select_common_time): something went wrong when matching time indices between the two files.')
             sys.exit()
     if option == 'last_year':
         # Add 1 to get the upper bound on the time range we care about
@@ -249,7 +249,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
         t_start_2 = t_end_2 - 12
         # Make sure it's still contained within one file
         if t_start_1 < 0 or t_start_2 < 0:
-            print "Error (select_common_time): option last_year doesn't work if that year isn't contained within one file, for both simulations."
+            print("Error (select_common_time): option last_year doesn't work if that year isn't contained within one file, for both simulations.")
             sys.exit()
         # Set the other options
         time_index_1 = None
@@ -263,7 +263,7 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
         t_end_2 = None
         time_average = False
     else:
-        print 'Error (select_common_time): invalid option ' + option
+        print(('Error (select_common_time): invalid option ' + option))
         sys.exit()
     return file_path_1, file_path_2, time_index_1, time_index_2, t_start_1, t_start_2, t_end_1, t_end_2, time_average
 
@@ -282,16 +282,16 @@ def select_common_time (output_files_1, output_files_2, option='last_year', mont
 
 def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='timeseries.nc', grid_path=None, fig_dir='.', option='last_year', unravelled=False, monthly=True, key='WSFRIS', hovmoller_file='hovmoller.nc', file_name=None):
 
-    from plot_1d import read_plot_timeseries, read_plot_timeseries_multi
-    from plot_latlon import read_plot_latlon_diff
-    from plot_slices import read_plot_ts_slice_diff
-    from plot_misc import read_plot_hovmoller_ts_diff
-    from plot_utils.labels import parse_date
+    from .plot_1d import read_plot_timeseries, read_plot_timeseries_multi
+    from .plot_latlon import read_plot_latlon_diff
+    from .plot_slices import read_plot_ts_slice_diff
+    from .plot_misc import read_plot_hovmoller_ts_diff
+    from .plot_utils.labels import parse_date
 
     # Check that baseline_dir is set
     # It's a keyword argument on purpose so that the user can't mix up which simulation is which.
     if baseline_dir is None:
-        print 'Error (plot_everything_diff): must set baseline_dir'
+        print('Error (plot_everything_diff): must set baseline_dir')
         sys.exit()
 
     # Make sure proper directories, and rename so 1=baseline, 2=current
@@ -416,7 +416,7 @@ def plot_everything_diff (output_dir='./', baseline_dir=None, timeseries_file='t
 
 def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=True):
 
-    from plot_latlon import plot_aice_minmax
+    from .plot_latlon import plot_aice_minmax
 
     fig_dir = real_dir(fig_dir)
 
@@ -468,7 +468,7 @@ def set_update_time (id, mit_file, monthly=True, time_average=False):
         id.add_time(time, units=time_units, calendar=calendar)
         return 0
     else:
-        print 'Error (set_update_time): unknown id type'
+        print('Error (set_update_time): unknown id type')
         sys.exit()
 
 # Define or update non-time variables.
@@ -482,7 +482,7 @@ def set_update_var (id, num_time, data, dimensions, var_name, title, units):
         # Add the variable to the file
         id.add_variable(var_name, data, dimensions, long_name=title, units=units)
     else:
-        print 'Error (set_update_var): unknown id type'
+        print('Error (set_update_var): unknown id type')
         sys.exit()        
 
 
@@ -524,7 +524,7 @@ def precompute_timeseries (mit_file, timeseries_file, timeseries_types=None, mon
 
     # Now process all the timeseries
     for ts_name in timeseries_types:
-        print 'Processing ' + ts_name
+        print(('Processing ' + ts_name))
         # Get information about the variable; only care about title and units
         title, units = set_parameters(ts_name)[2:4]
         if ts_name == 'fris_mass_balance':
@@ -573,14 +573,14 @@ def precompute_timeseries_coupled (output_dir='./', timeseries_file='timeseries.
     output_dir = real_dir(output_dir)
 
     if segment_dir is None and os.path.isfile(output_dir+timeseries_file):
-        print 'Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'
+        print(('Error (precompute_timeseries_coupled): since ' + timeseries_file + ' exists, you must specify segment_dir'))
         sys.exit()
     segment_dir = check_segment_dir(output_dir, segment_dir)
     file_paths = segment_file_paths(output_dir, segment_dir, file_name)
 
     # Call precompute_timeseries for each segment
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, monthly=True, time_average=time_average)
         if len(hovmoller_loc) > 0 and hovmoller_loc is not None:
             precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)
@@ -592,9 +592,9 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
 
     import matplotlib.animation as animation
     import matplotlib.pyplot as plt
-    from plot_latlon import latlon_plot
-    from plot_utils.labels import parse_date
-    from plot_utils.colours import get_extend
+    from .plot_latlon import latlon_plot
+    from .plot_utils.labels import parse_date
+    from .plot_utils.colours import get_extend
 
     output_dir = real_dir(output_dir)
     segment_dir = check_segment_dir(output_dir, segment_dir)
@@ -612,7 +612,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
         elif mask_option == 'land_ice':
             data = mask_land_ice(data, grid, gtype=gtype, time_dependent=True)
         else:
-            print 'Error (read_process_data): invalid mask_option ' + mask_option
+            print(('Error (read_process_data): invalid mask_option ' + mask_option))
             sys.exit()
         if lev_option is not None:
             if lev_option == 'top':
@@ -620,7 +620,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
             elif lev_option == 'bottom':
                 data = select_bottom(data)
             else:
-                print 'Error (read_process_data): invalid lev_option ' + lev_option
+                print(('Error (read_process_data): invalid lev_option ' + lev_option))
                 sys.exit()
         if ismr:
             data = convert_ismr(data)
@@ -633,7 +633,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
     all_dates = []
     # Loop over segments
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         # Build the grid
         grid = Grid(file_path)
         # Read and process the variable we need
@@ -670,7 +670,7 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
             title = 'Vertically integrated streamfunction (Sv)'
             ctype = 'plusminus'
         else:
-            print 'Error (animate_latlon): invalid var ' + var
+            print(('Error (animate_latlon): invalid var ' + var))
             sys.exit()
         # Loop over timesteps
         if var == 'draft':
@@ -722,16 +722,16 @@ def animate_latlon_coupled (var, output_dir='./', file_name='output.nc', segment
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t) + ' of ' + str(num_frames)
+        print(('Frame ' + str(t) + ' of ' + str(num_frames)))
         ax.cla()
         plot_one_frame(t)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_frames)))
     writer = animation.FFMpegWriter(bitrate=500, fps=12)
     anim.save(mov_name, writer=writer)
     if mov_name is not None:
-        print 'Saving ' + mov_name
+        print(('Saving ' + mov_name))
         anim.save(mov_name, writer=writer)
     else:
         plt.show()
@@ -841,7 +841,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None, leap
 
     # Extract the first time record from the first file
     # This will make a skeleton file with 1 time record and all the right metadata; later we will overwrite the values of all the time-dependent variables with the weighted time-averages.
-    print 'Initialising ' + output_file
+    print(('Initialising ' + output_file))
     nco = Nco()
     nco.ncks(input=input_files[0], output=output_file, options=[Limit('time', t_start, t_start)])
 
@@ -856,7 +856,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None, leap
     # Time-average each variable
     id_out = nc.Dataset(output_file, 'a')
     for var in var_names:
-        print 'Processing ' + var
+        print(('Processing ' + var))
 
         # Reset time
         year = year0
@@ -871,7 +871,7 @@ def average_monthly_files (input_files, output_file, t_start=0, t_end=None, leap
         for i in range(len(input_files)):
 
             file_name = input_files[i]
-            print '...' + file_name
+            print(('...' + file_name))
             
             # Figure out how many time indices there are
             id_in = nc.Dataset(file_name, 'r')
@@ -961,13 +961,13 @@ def make_annual_averages (in_dir='./', out_dir='./'):
     num_files = len(file_names)
     # Make sure their names go from 1 to n where  n is the number of files
     if '001' not in file_names[0] or '{0:03d}'.format(num_files) not in file_names[-1]:
-        print 'Error (make_annual_average): based on filenames, you seem to be missing some files.'
+        print('Error (make_annual_average): based on filenames, you seem to be missing some files.')
         sys.exit()
 
     # Get the starting date
     time0 = netcdf_time(file_names[0])[0]
     if time0.month != 1:
-        print "Error (make_annual_average): this simulation doesn't start in January."
+        print("Error (make_annual_average): this simulation doesn't start in January.")
         sys.exit()
     year0 = time0.year
 
@@ -993,7 +993,7 @@ def make_annual_averages (in_dir='./', out_dir='./'):
             files_to_average.append(file_names[i])
             t_start = t
             t_end = t+12
-            print 'Processing all of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(t_end-1)
+            print(('Processing all of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(t_end-1)))
             average_monthly_files(files_to_average, out_dir+str(year)+'_avg.nc', t_start=t_start, t_end=t_end)
             files_to_average = []
             t_start = None
@@ -1004,30 +1004,30 @@ def make_annual_averages (in_dir='./', out_dir='./'):
             # Option 2: Start a new year
             files_to_average.append(file_names[i])
             t_start = t
-            print 'Processing beginning of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(num_months[i]-1)
+            print(('Processing beginning of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t_start) + ' to ' + str(num_months[i]-1)))
             tmp_months = num_months[i] - t_start
-            print '(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'
+            print(('(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'))
             t = num_months[i]
 
         elif len(files_to_average)>0 and t+12-tmp_months > num_months[i]:
             # Option 3: Add onto an existing year, but can't complete it
             files_to_average.append(file_names[i])
             if t != 0:
-                print 'Error (make_annual_averages): something weird happened with Option 3'
+                print('Error (make_annual_averages): something weird happened with Option 3')
                 sys.exit()
-            print 'Processing middle of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(num_months[i]-1)
+            print(('Processing middle of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(num_months[i]-1)))
             tmp_months += num_months[i] - t
-            print '(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'
+            print(('(have processed ' + str(tmp_months) + ' months of ' + str(year) + ')'))
             t = num_months[i]
 
         elif len(files_to_average)>0 and t+12-tmp_months <= num_months[i]:
             # Option 4: Add onto an existing year and complete it
             files_to_average.append(file_names[i])
             if t != 0:
-                print 'Error (make_annual_averages): something weird happened with Option 4'
+                print('Error (make_annual_averages): something weird happened with Option 4')
                 sys.exit()
             t_end = t+12-tmp_months
-            print 'Processing end of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(t_end-1)
+            print(('Processing end of ' + str(year) + ' from ' + file_names[i] + ', indices ' + str(t) + ' to ' + str(t_end-1)))
             average_monthly_files(files_to_average, out_dir+str(year)+'_avg.nc', t_start=t_start, t_end=t_end)
             files_to_average = []
             t_start = None
@@ -1035,14 +1035,14 @@ def make_annual_averages (in_dir='./', out_dir='./'):
             year += 1
 
         if t == num_months[i]:
-            print 'Reached the end of ' + file_names[i]
+            print(('Reached the end of ' + file_names[i]))
             # Prepare for the next file
             i += 1
             t = 0
             if i == num_files:
                 # No more files
                 if len(files_to_average)>0:
-                    print 'Warning: ' + str(year) + ' is incomplete. Ignoring it.'
+                    print(('Warning: ' + str(year) + ' is incomplete. Ignoring it.'))
                 break
 
 
@@ -1053,7 +1053,7 @@ def make_climatology (start_year, end_year, output_file, directory='./'):
 
     # Copy the first file
     # This will make a skeleton file with 12 time records and all the right metadata; later we will overwrite the values of all the time-dependent variables.
-    print 'Setting up ' + output_file
+    print(('Setting up ' + output_file))
     shutil.copyfile(directory+str(start_year)+'.nc', output_file)
 
     # Find all the time-dependent variables
@@ -1062,15 +1062,15 @@ def make_climatology (start_year, end_year, output_file, directory='./'):
     # Calculate the monthly climatology for each variable
     id_out = nc.Dataset(output_file, 'a')
     for var in var_names:
-        print 'Processing ' + var
+        print(('Processing ' + var))
 
         # Start with the first year
-        print '...' + str(start_year)
+        print(('...' + str(start_year)))
         data = id_out.variables[var][:]
         
         # Add subsequent years
         for year in range(start_year+1, end_year+1):
-            print '...' + str(year)
+            print(('...' + str(year)))
             data += read_netcdf(directory+str(year)+'.nc', var)
 
         # Divide by number of years to get average
@@ -1117,7 +1117,7 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
     num_time = set_update_time(id, mit_file, monthly=monthly)
 
     for v in var:
-        print 'Processing ' + v
+        print(('Processing ' + v))
         if v == 'temp':
             var_name = 'THETA'
             title = 'Temperature'
@@ -1134,7 +1134,7 @@ def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dot
         # Mask land/ice shelves
         data_full = mask_3d(data_full, grid, time_dependent=True)
         for l in loc:
-            print '...at ' + l
+            print(('...at ' + l))
             loc_name = region_names[l]
             # Average over the correct region
             if l == 'filchner_front':
@@ -1157,14 +1157,14 @@ def precompute_hovmoller_all_coupled (output_dir='./', hovmoller_file='hovmoller
 
     output_dir = real_dir(output_dir)
     if segment_dir is None and os.path.isfile(hovmoller_file):
-        print 'Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'
+        print(('Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'))
         sys.exit()
     segment_dir = check_segment_dir(output_dir, segment_dir)
     file_paths = segment_file_paths(output_dir, segment_dir, file_name)
 
     # Call precompute_hovmoller for each segment
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         precompute_hovmoller(file_path, hovmoller_file, loc=loc, var=var, monthly=monthly)
         
 
@@ -1179,9 +1179,9 @@ def precompute_hovmoller_all_coupled (output_dir='./', hovmoller_file='hovmoller
 # key: simulation type key which will set variable types and other settings
 def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmoller_file='hovmoller.nc', timeseries_file='timeseries.nc', key='PAS', ctd_file='../../ctddatabase.mat'):
 
-    from plot_1d import read_plot_timeseries_multi
-    from plot_latlon import read_plot_latlon_comparison
-    from plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, amundsen_rignot_comparison, ctd_cast_compare
+    from .plot_1d import read_plot_timeseries_multi
+    from .plot_latlon import read_plot_latlon_comparison
+    from .plot_misc import read_plot_hovmoller_ts, read_plot_hovmoller_ts_diff, amundsen_rignot_comparison, ctd_cast_compare
 
     if key == 'PAS':
         latlon_names_forcing = ['atemp', 'aqh', 'uwind', 'vwind', 'wind', 'windangle', 'precip', 'swdown', 'lwdown']
@@ -1198,14 +1198,14 @@ def plot_everything_compare (name_1, name_2, dir_1, dir_2, fname, fig_dir, hovmo
         hovmoller_t_contours = [0, 1]
         hovmoller_s_contours = [34.5, 34.6, 34.7]
     else:
-        print 'Error (plot_everything_compare): need to write the code for simulation key ' + key
+        print(('Error (plot_everything_compare): need to write the code for simulation key ' + key))
         sys.exit()
 
     dir_1 = real_dir(dir_1)
     dir_2 = real_dir(dir_2)
     fig_dir = real_dir(fig_dir)
     if ' ' in name_1 or ' ' in name_2:
-        print 'Error (plot_everything_compare): no spaces allowed in simulation names'
+        print('Error (plot_everything_compare): no spaces allowed in simulation names')
         sys.exit()
     dirs = [dir_1, dir_2]
     names = [name_1, name_2]
@@ -1282,17 +1282,17 @@ def long_term_mean (output_dir, year_start, year_end, proper_weighting=True, lea
 
     # Make sure we found them
     if start_file is None:
-        print 'Error (long_term_mean): simulation finishes before ' + str(year_start)
+        print(('Error (long_term_mean): simulation finishes before ' + str(year_start)))
         sys.exit()
     if end_file is None:
-        print 'Error (long_term_mean): simulation ends before the end of ' + str(year_end)
+        print(('Error (long_term_mean): simulation ends before the end of ' + str(year_end)))
         sys.exit()
 
     # Now average them
-    print 'Averaging from index ' + str(t_start) + ' of ' + start_file + ' to index ' + str(t_end) + ' of ' + end_file
+    print(('Averaging from index ' + str(t_start) + ' of ' + start_file + ' to index ' + str(t_end) + ' of ' + end_file))
     out_file = output_dir + str(year_start) + '_' + str(year_end) + '_avg.nc'
     if os.path.isfile(out_file):
-        print 'Already exists'
+        print('Already exists')
     else:
         if proper_weighting:
             average_monthly_files(files_to_avg, out_file, t_start=t_start, t_end=t_end, leap_years=leap_years)
@@ -1310,7 +1310,7 @@ def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc
         if hovmoller_loc is None:
             hovmoller_loc = ['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break']
     else:
-        print 'Error (precompute_all): invalid key ' + key
+        print(('Error (precompute_all): invalid key ' + key))
         sys.exit()
     if obs_file is None:
         obs_file = '/data/oceans_output/shelf/kaight/ctddatabase.mat'
@@ -1322,7 +1322,7 @@ def precompute_all (output_dir='./', fnames=None, timeseries_file='timeseries.nc
         file_path = output_dir + f
         if grid is None:
             grid = Grid(file_path)
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         precompute_timeseries(file_path, output_dir+timeseries_file, timeseries_types=timeseries_types, grid=grid, time_average=time_average)
         if len(hovmoller_loc) > 0:
             precompute_hovmoller(file_path, output_dir+hovmoller_file, loc=hovmoller_loc)            
@@ -1338,9 +1338,9 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     # Plot standard deviation as well as mean
     # Compare ismr estimates to what Paul uses in obs/
 
-    from plot_1d import read_plot_timeseries_ensemble
-    from plot_latlon import read_plot_latlon_comparison
-    from plot_misc import amundsen_rignot_comparison, ctd_cast_compare
+    from .plot_1d import read_plot_timeseries_ensemble
+    from .plot_latlon import read_plot_latlon_comparison
+    from .plot_misc import amundsen_rignot_comparison, ctd_cast_compare
     
     latlon_types = ['bwtemp', 'bwsalt', 'sst', 'sss', 'ismr', 'aice', 'hice', 'fwflx']
     ymax = -70
@@ -1350,7 +1350,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
         # Case for a single ensemble member
         pace_dir = [pace_dir]
     num_ens = len(pace_dir)
-    print 'PACE ensemble has ' + str(num_ens) + ' members'
+    print(('PACE ensemble has ' + str(num_ens) + ' members'))
     era5_dir = real_dir(era5_dir) + 'output/'
     for n in range(num_ens):
         pace_dir[n] = real_dir(pace_dir[n]) + 'output/'
@@ -1360,13 +1360,13 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
     
     # Calculate long-term means
     for d in directories:
-        print 'Calculating long term mean of ' + d
+        print(('Calculating long term mean of ' + d))
         file_path = long_term_mean(d, year_start, year_end, leap_years=(d==era5_dir))
         avg_file = file_path[file_path.rfind('/')+1:]
 
     # Calculate timeseries and Hovmollers
     for d in directories:
-        print 'Calculating timeseries and Hovmollers for ' + d
+        print(('Calculating timeseries and Hovmollers for ' + d))
         precompute_all(output_dir=d, key='PAS')
 
     # Plot ensemble for all timeseries

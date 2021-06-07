@@ -96,7 +96,7 @@ def latlon_axes (ax, x, y, zoom_fris=False, xmin=None, xmax=None, ymin=None, yma
         if lon_lines is not None or lat_lines is not None:
             # Overlay latitude and/or longitude contours
             if grid is None:
-                print 'Error (latlon_axes): need to supply grid if lon_lines and/or lat_lines is set'
+                print('Error (latlon_axes): need to supply grid if lon_lines and/or lat_lines is set')
                 sys.exit()
             # Get the coordinates in both formats
             lon_data, lat_data = grid.get_lon_lat()

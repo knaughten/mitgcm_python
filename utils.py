@@ -5,7 +5,7 @@
 import numpy as np
 import sys
 
-from constants import rho_fw, sec_per_year, region_bounds, deg2rad, rEarth
+from .constants import rho_fw, sec_per_year, region_bounds, deg2rad, rEarth
 
 
 # Given an array containing longitude, make sure it's in the range (max_lon-360, max_lon). Default is (-180, 180). If max_lon is None, nothing will be done to the array.
@@ -64,7 +64,7 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
 
     if not masked:
         if grid is None:
-            print 'Error (select_level): need to supply grid if masked=False'
+            print('Error (select_level): need to supply grid if masked=False')
             sys.exit()
         data_masked = mask_3d(np.copy(data), grid, gtype=gtype, time_dependent=time_dependent)
     else:
@@ -79,12 +79,12 @@ def select_level (option, data, masked=True, grid=None, gtype='t', time_dependen
     data_lev[:] = np.nan
     if option == 'top':
         # Loop from surface to bottom
-        k_vals = range(data_masked.shape[-3])
+        k_vals = list(range(data_masked.shape[-3]))
     elif option == 'bottom':
         # Loop from bottom to top
-        k_vals = range(data.shape[-3]-1, -1, -1)
+        k_vals = list(range(data.shape[-3]-1, -1, -1))
     else:
-        print 'Error (select_level): invalid option ' + option
+        print(('Error (select_level): invalid option ' + option))
         sys.exit()
     for k in k_vals:
         curr_data = data_masked[...,k,:,:]
@@ -128,7 +128,7 @@ def apply_mask (data, mask, time_dependent=False, depth_dependent=False):
         mask = add_time_dim(mask, data.shape[0])
 
     if len(mask.shape) != len(data.shape):
-        print 'Error (apply_mask): invalid dimensions of data'
+        print('Error (apply_mask): invalid dimensions of data')
         sys.exit()
 
     data = np.ma.masked_where(mask, data)
@@ -200,7 +200,7 @@ def select_year (time, year):
             t_start = t
             break
     if t_start == -1:
-        print 'Error (trim_year): this array contains no instances of the year ' + str(year)
+        print(('Error (trim_year): this array contains no instances of the year ' + str(year)))
         sys.exit()
     t_end = time.size
     for t in range(t_start+1, time.size):
@@ -344,7 +344,7 @@ def mask_line (data, lon, lat, p_start, p_end, direction, mask_val=0):
     elif direction == 'below':
         index = (lat <= limit)*(lon >= west_bound)*(lon <= east_bound)
     else:
-        print 'Error (mask_line): invalid direction ' + direction
+        print(('Error (mask_line): invalid direction ' + direction))
         sys.exit()
     data[index] = mask_val
     return data
@@ -382,7 +382,7 @@ def mask_iceshelf_box (omask, imask, lon, lat, xmin=None, xmax=None, ymin=None, 
         # Turn ice shelf points into open ocean
         mask = imask
     else:
-        print 'Error (mask_iceshelf_box): Invalid option ' + option
+        print(('Error (mask_iceshelf_box): Invalid option ' + option))
         sys.exit()
     mask[index] = mask_val
     return mask
@@ -422,7 +422,7 @@ def days_per_month (month, year, allow_leap=True):
 def check_time_dependent (var, num_dim=3):
 
     if len(var.shape) == num_dim+1:
-        print 'Error (check_time_dependent): variable cannot be time dependent.'
+        print('Error (check_time_dependent): variable cannot be time dependent.')
         sys.exit()
 
 
@@ -495,12 +495,12 @@ def bdry_from_hfac (option, hfac, z_edges):
     bdry[:,:] = np.nan
     if option == 'bathy':
         # Loop from bottom to top
-        k_vals = range(nz-1, -1, -1)
+        k_vals = list(range(nz-1, -1, -1))
     elif option == 'draft':
         # Loop from top to bottom
-        k_vals = range(nz)
+        k_vals = list(range(nz))
     else:
-        print 'Error (bdry_from_hfac): invalid option ' + option
+        print(('Error (bdry_from_hfac): invalid option ' + option))
         sys.exit()
     for k in k_vals:
         hfac_tmp = hfac[k,:]
@@ -549,7 +549,7 @@ def dist_btw_points (point0, point1):
 # For a specific ice shelf, pass a special ice_mask 
 def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
 
-    from interpolation import neighbours
+    from .interpolation import neighbours
 
     # Build masks
     if ice_mask is None:
@@ -643,7 +643,7 @@ def wrap_periodic (data, is_lon=False):
     data_wrap[...,-1] = data[...,0]
     if is_lon:
         if np.amin(np.diff(data, axis=-1)) < 0:
-            print 'Error (wrap_periodic): longitude array is not monotonic'
+            print('Error (wrap_periodic): longitude array is not monotonic')
             sys.exit()
         # Add/subtract 360, if needed
         data_wrap[...,0] -= 360
@@ -657,7 +657,7 @@ def wrap_periodic (data, is_lon=False):
 def daily_to_monthly (data, year=1979, per_day=1):
 
     if data.shape[0]/per_day not in [365, 366]:
-        print 'Error (daily_to_monthly): The first dimension is not time, or else this is not one year of data.'
+        print('Error (daily_to_monthly): The first dimension is not time, or else this is not one year of data.')
         sys.exit()
     new_shape = [12] + list(data.shape[1:])
     if isinstance(data, np.ma.MaskedArray):
@@ -746,7 +746,7 @@ def moving_average (data, window, time=None, keep_edges=False):
                 data_smoothed_full[-(n+1),...] = np.mean(data[-(2*n+1):,...], axis=0)
             data_smoothed = data_smoothed_full
         else:
-            print 'Error (moving_average): have not yet coded keep_edges=False for even windows. Want to figure it out?'
+            print('Error (moving_average): have not yet coded keep_edges=False for even windows. Want to figure it out?')
             sys.exit()
     if time is not None and not keep_edges:
         if centered:
@@ -804,7 +804,7 @@ def mask_2d_to_3d (mask, grid, zmin=None, zmax=None):
 def average_12_months (data, t0, calendar='standard', year=None):
 
     if calendar == 'standard' and year is None:
-        print 'Error (average_12_months): must provide year'
+        print('Error (average_12_months): must provide year')
     if calendar in ['360-day', '360_day']:
         days = None
     else:

@@ -8,16 +8,16 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 
-from grid import Grid, choose_grid
-from file_io import read_netcdf, find_variable, netcdf_time, check_single_time, read_iceprod
-from utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max, real_dir, select_top
-from plot_utils.windows import set_panels, finished_plot
-from plot_utils.labels import latlon_axes, check_date_string, parse_date
-from plot_utils.colours import set_colours, get_extend
-from plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background, clear_ocean
-from diagnostics import t_minus_tf, find_aice_min_max, potential_density
-from constants import deg_string, sec_per_year, temp_C2K
-from calculus import vertical_average
+from .grid import Grid, choose_grid
+from .file_io import read_netcdf, find_variable, netcdf_time, check_single_time, read_iceprod
+from .utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max, real_dir, select_top
+from .plot_utils.windows import set_panels, finished_plot
+from .plot_utils.labels import latlon_axes, check_date_string, parse_date
+from .plot_utils.colours import set_colours, get_extend
+from .plot_utils.latlon import cell_boundaries, shade_land, shade_land_ice, contour_iceshelf_front, prepare_vel, overlay_vectors, shade_background, clear_ocean
+from .diagnostics import t_minus_tf, find_aice_min_max, potential_density
+from .constants import deg_string, sec_per_year, temp_C2K
+from .calculus import vertical_average
 
 
 # Basic lat-lon plot of any variable.
@@ -413,7 +413,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         elif mask_option == 'land_ice':
             data = mask_land_ice(data, grid, gtype=gtype)
         else:
-            print 'Error (read_and_mask): invalid mask_option ' + mask_option
+            print(('Error (read_and_mask): invalid mask_option ' + mask_option))
             sys.exit()
         return data
 
@@ -487,7 +487,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     elif var == 'iceprod':
         plot_2d_noshelf('iceprod', iceprod, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     else:
-        print 'Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'
+        print(('Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'))
         sys.exit()
 
 
@@ -541,7 +541,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         elif mask_option == 'land_ice':
             data = mask_land_ice(data, grid)
         else:
-            print 'Error (read_and_mask): invalid mask_option ' + mask_option
+            print(('Error (read_and_mask): invalid mask_option ' + mask_option))
             sys.exit()
         return data
 
@@ -643,7 +643,7 @@ def read_plot_latlon_diff (var, file_path_1, file_path_2, grid=None, time_index=
         data_diff = iceprod_2 - iceprod_1
         title = 'Change in sea ice production (m/y)'
     else:
-        print 'Error (read_plot_latlon_diff): variable key ' + str(var) + ' does not exist'
+        print(('Error (read_plot_latlon_diff): variable key ' + str(var) + ' does not exist'))
         sys.exit()
 
     # Choose value for include_shelf
@@ -866,7 +866,7 @@ def latlon_comparison_plot (data1, data2, grid, gtype='t', include_shelf=False, 
 def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, directory2, fname, grid=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, vmin=None, vmax=None, vmin_diff=None, vmax_diff=None, extend=None, extend_diff=None, date_string=None, fig_name=None, change_points=None, time_index=None, time_average=False, percent_anomaly=False, pster=False, fill_gap=True, lon_lines=None, lat_lines=None):
 
     if time_index is None and not time_average:
-        print 'Error (read_plot_latlon_comparison): either select a time_index or set time_average=True.'
+        print('Error (read_plot_latlon_comparison): either select a time_index or set time_average=True.')
         sys.exit()
 
     ensemble = isinstance(directory2, list)
@@ -949,7 +949,7 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
         elif var == 'fwflx':
             return mask_land_ice(read_netcdf(file_path, 'oceFWflx', time_index=time_index, time_average=time_average), grid)*1e6, r'Surface freshwater flux (10$^{-6}$ kg/m$^2$/s)'
         else:
-            print 'Error (read_plot_latlon_comparison): no such variable ' + var
+            print(('Error (read_plot_latlon_comparison): no such variable ' + var))
             sys.exit()
 
     # Call this for each simulation

@@ -89,7 +89,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
 
     # Inner function to make climatology of an ERA5 variable
     def era5_process_var (var_name_pace, var_name_era5, monthly):
-        print 'Processing ' + var_name_pace
+        print(('Processing ' + var_name_pace))
         if monthly:
             per_year = months_per_year
         else:
@@ -122,7 +122,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
         return data_accum/num_years
 
     # Loop over daily and monthly variables
-    print 'Processing ERA5'
+    print('Processing ERA5')
     era5_clim_daily = np.empty([num_vars_daily, days_per_year, era5_grid.ny, era5_grid.nx])
     for n in range(num_vars_daily):
         era5_clim_daily[n,:] = era5_process_var(var_pace_daily[n], var_era5_daily[n], False)
@@ -134,7 +134,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
     # Now do all the binning at once to save memory
     era5_clim_regrid_daily = np.zeros([num_vars_daily, days_per_year, pace_grid.ny, pace_grid.nx])
     era5_clim_regrid_monthly = np.zeros([num_vars_monthly, months_per_year, pace_grid.ny, pace_grid.nx])
-    print 'Regridding from ERA5 to PACE grid'
+    print('Regridding from ERA5 to PACE grid')
     for j in range(pace_grid.ny):
         for i in range(pace_grid.nx):
             if np.any(i_bins==i) and np.any(j_bins==j):
@@ -150,16 +150,16 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
         file_path = real_dir(out_dir) + file_head_era5 + var_pace_monthly[n] + file_tail
         write_binary(era5_clim_regrid_monthly[n,:], file_path)
 
-    print 'Processing PACE'
+    print('Processing PACE')
     for n in range(num_vars):
-        print 'Processing ' + var_pace[n]
+        print(('Processing ' + var_pace[n]))
         if monthly[n]:
             per_year = months_per_year
         else:
             per_year = days_per_year
         for ens in range(1, num_ens+1):
             ens_str = str(ens).zfill(2)
-            print 'Processing PACE ensemble member ' + ens_str
+            print(('Processing PACE ensemble member ' + ens_str))
             # As before, but simpler because no leap days and no need to regrid 
             data_accum = np.zeros([per_year, pace_grid.ny, pace_grid.nx])
             for year in range(start_year, end_year+1):
@@ -263,14 +263,14 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     ax.legend()
     finished_plot(fig, fig_name=real_dir(fig_dir)+var_name+'_et.png')
 
-    print 'Annual bias: ' + str(bias)
+    print(('Annual bias: ' + str(bias)))
     if monthly:
         bias_t_monthly = bias_t
     else:
         bias_t_monthly = daily_to_monthly(bias_t)
-    print 'Monthly biases: '
+    print('Monthly biases: ')
     for month in range(months_per_year):
-        print str(bias_t_monthly[month])
+        print((str(bias_t_monthly[month])))
         
 
 # Call plot_biases for all variables.
@@ -444,9 +444,9 @@ def plot_addmass_merino (merino_file, addmass_file, grid_dir):
     # Calculate total flux in region for both datasets (Gt/y)
     addmass_total = np.sum(addmass*grid.dA)*sec_per_year/kg_per_Gt
     merino_total = np.sum(mflux[j_start:j_end,i_start:i_end]*mdA[j_start:j_end,i_start:i_end])*sec_per_year/kg_per_Gt
-    print 'Total Amundsen Sea melt flux in Gt/y:'
-    print 'Existing setup: ' + str(addmass_total)
-    print 'Merino et al: ' + str(merino_total)
+    print('Total Amundsen Sea melt flux in Gt/y:')
+    print(('Existing setup: ' + str(addmass_total)))
+    print(('Merino et al: ' + str(merino_total)))
 
     # Multiply by 1e4 for readability
     addmass *= 1e4
@@ -486,16 +486,16 @@ def order_ensemble_std (base_dir='./'):
     base_dir = real_dir(base_dir)
 
     for var_name in ['pig_massloss', 'dotson_massloss']:
-        print var_name
+        print(var_name)
         std_list = []
         for rid in run_id+era5_id:
             data = read_netcdf(base_dir+'PAS_'+rid+'/output/'+ts_file, var_name)
             data_smooth = moving_average(data, smooth)
             std_list.append(np.std(data_smooth))
         sort_index = np.argsort(std_list)
-        print 'Members, from flattest to spikiest:'
+        print('Members, from flattest to spikiest:')
         for n in sort_index:
-            print run_names[n]
+            print((run_names[n]))
 
 
 # Make a massive plot of Hovmollers in all PACE ensemble members (pass in order), for a given location and variable.
@@ -505,7 +505,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
     year_end = 2013
     num_members = len(sim_dir)
     if num_members not in [10]:
-        print 'Error (hovmoller_ensemble_tiles): need to write an entry in set_panels for ' + str(num_members) + ' members'
+        print(('Error (hovmoller_ensemble_tiles): need to write an entry in set_panels for ' + str(num_members) + ' members'))
         sys.exit()
     sim_names = ['PACE '+str(n+1) for n in range(num_members)]
     file_paths = [real_dir(d)+'/output/'+hovmoller_file for d in sim_dir]
@@ -537,7 +537,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
             vmin = 34.2
             vmax = 34.72
     else:
-        print 'Error (hovmoller_ensemble_tiles): invalid location ' + loc
+        print(('Error (hovmoller_ensemble_tiles): invalid location ' + loc))
         sys.exit()            
     if var == 'temp':
         title += ' temperature ('+deg_string+'C)'
@@ -546,7 +546,7 @@ def hovmoller_ensemble_tiles (loc, var, sim_dir, hovmoller_file='hovmoller.nc', 
         title += ' salinity (psu)'
         contours = [34.5, 34.7]
     else:
-        print 'Error (hovmoller_ensemble_tiles): invalid variable ' + var
+        print(('Error (hovmoller_ensemble_tiles): invalid variable ' + var))
         sys.exit()
 
     fig, gs, cax = set_panels(str(num_members)+'x1C1')
@@ -671,7 +671,7 @@ def ensemble_trends (var, sim_dir, timeseries_file='timeseries.nc', fig_name=Non
     finished_plot(fig, fig_name=fig_name)
     t_val, p_val = ttest_1samp(values, 0)
     confidence = (1-p_val)*100
-    print 'Confidence trend is nonzero: '+str(confidence)+'%'
+    print(('Confidence trend is nonzero: '+str(confidence)+'%'))
 
 
 # Call for a bunch of variables.
@@ -695,7 +695,7 @@ def plot_timeseries_ensemble_era5 (era5_dir, pace_dir, timeseries_types=None, fi
     base_year_start_first = 1979
     if ismr_percent or plot_anomaly:
         if era5_dir is not None:
-            print 'Warning: removing ERA5'
+            print('Warning: removing ERA5')
         # Remove ERA5 so we can plot percent/anomaly
         sim_dir = sim_dir[1:]
         sim_names = sim_names[1:]
@@ -770,7 +770,7 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, smin=None, smax=
                 z0[n] = -500
             else:
                 if not region[n].endswith('_front'):
-                    print 'Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'
+                    print(('Warning (plot_ts_decades): using default value of z0=0 for ' + region + ', is this what you want?'))
                 z0[n] = 0
         if z0[n] is not None and z0[n] != 0:
             title += ', below ' + str(abs(z0[n])) + 'm'
@@ -928,7 +928,7 @@ def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
     num_members, sim_names, file_paths, colours = setup_ensemble(sim_dir, timeseries_file)
     smooth_short = 24
     year0 = 1920
-    test_smooth = range(20, 50+1)
+    test_smooth = list(range(20, 50+1))
     num_tests = len(test_smooth)
 
     r2 = np.empty(num_tests)
@@ -976,9 +976,9 @@ def find_correlation_timescale(sim_dir, shelf, timeseries_file='timeseries.nc'):
         # Calculate correlation
         slope, intercept, r_value, p_value, std_err = linregress(np.array(all_wind), np.array(all_ismr))
         r2[m] = r_value**2
-        print 'Timescale of '+str(test_smooth[m])+' years gives r^2='+str(r2[m])
+        print(('Timescale of '+str(test_smooth[m])+' years gives r^2='+str(r2[m])))
     m0 = np.argmax(r2)
-    print 'Best correlation is with timescale of '+str(test_smooth[m0])+' years: r^2='+str(r2[m0])
+    print(('Best correlation is with timescale of '+str(test_smooth[m0])+' years: r^2='+str(r2[m0])))
 
 
 # Test the correlation in 4 stages:
@@ -1080,9 +1080,9 @@ def monthly_from_daily_climatologies (clim_dir):
         if var in ['FSDS', 'FLDS']:
             # Already monthly
             continue
-        print 'Processing ' + var
+        print(('Processing ' + var))
         for model in models:
-            print 'Processing ' + model
+            print(('Processing ' + model))
             data_daily = read_binary(clim_dir+model+'_'+var+'_clim', [grid.nx, grid.ny], 'xyt')
             data_monthly = np.empty([months_per_year, grid.ny, grid.nx])
             for month in range(months_per_year):
@@ -1186,7 +1186,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
     data_save = None
     # Loop over ensemble member
     for m in range(num_ens):
-        print 'Processing ' + sim_dir[m]
+        print(('Processing ' + sim_dir[m]))
         # Get all the file paths (assume one for each year)
         file_paths = segment_file_paths(sim_dir[m]+'/output/')
         t_start = file_paths.index(sim_dir[m]+'/output/'+str(start_year)+'01/MITgcm/output.nc')
@@ -1196,7 +1196,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             data_save = np.empty([num_ens, num_years, num_pts])
         # Read annually-averaged data at each point in the mask
         for t in range(num_years):
-            print '...Reading ' + file_paths[t]
+            print(('...Reading ' + file_paths[t]))
             if var_name == 'advection_3d':
                 data_x, long_name, units = read_netcdf(file_paths[t], 'ADVx_TH', return_info=True)
                 data_y = read_netcdf(file_paths[t], 'ADVy_TH')
@@ -1286,7 +1286,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
-                print 'Error (make_trend_file): wrong dimension for this variable.'
+                print('Error (make_trend_file): wrong dimension for this variable.')
                 sys.exit()
             if var_name == 'ADVx_TH':
                 # Need to convert to heat advection relative to freezing point
@@ -1308,9 +1308,9 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
             data_save[m,:] = np.cumsum(data_save[m,:]*dt, axis=0)
 
     # Now loop over ensemble members again and calculate the trend at each point
-    print 'Calculating trends'
+    print('Calculating trends')
     for m in range(num_ens):
-        print '...member '+str(m+1)
+        print(('...member '+str(m+1)))
         trends_tmp = np.empty(num_pts)
         for p in range(num_pts):
             slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[m,:,p])
@@ -1501,10 +1501,10 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
     t_start, t_end = index_period(time, base_year_start, base_year_end)
 
     # Read and process the ice shelf melt rates
-    print 'Reading ice shelf melt rates'
+    print('Reading ice shelf melt rates')
     ismr_data = None    
     for n in range(num_ens):
-        print '...' + pace_dir[n]
+        print(('...' + pace_dir[n]))
         ismr_tmp = None
         file_paths = segment_file_paths(output_dir[n])
         for f in file_paths:
@@ -1527,13 +1527,13 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
 
     # Now process one forcing at a time
     for m in range(num_forcing):
-        print 'Processing ' + forcing_names[m]
-        print 'Reading forcing timeseries and calculating lags'
+        print(('Processing ' + forcing_names[m]))
+        print('Reading forcing timeseries and calculating lags')
         forcing_data = np.empty([num_ens, num_time])
         avg_lag = np.empty(num_ens)
 
         for n in range(num_ens):
-            print '...'+pace_dir[n]
+            print(('...'+pace_dir[n]))
             # Read and process the timeseries
             data_tmp = read_netcdf(ts_paths[n], forcing_names[m])            
             if forcing_names[m] == 'amundsen_shelf_break_uwind_avg':
@@ -1567,10 +1567,10 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
 
         # Calculate average lag over all ensemble members and round to nearest int
         final_lag = int(np.round(np.mean(avg_lag)))
-        print 'Optimum lag of ' + str(final_lag) + ' months'
+        print(('Optimum lag of ' + str(final_lag) + ' months'))
 
         # Now get ensemble-mean correlation coefficients for each point and each member
-        print 'Calculating correlation coefficients'
+        print('Calculating correlation coefficients')
         mean_r = np.empty(num_ice_pts)
         for p in range(num_ice_pts):
             r_values = np.empty(num_ens)
@@ -1586,7 +1586,7 @@ def correlate_ismr_forcing (pace_dir, grid_path, timeseries_file='timeseries.nc'
         r_data = np.zeros([grid.ny, grid.nx])
         r_data[mask] = mean_r
         r_data = mask_except_ice(r_data, grid)
-        print 'Mean r over all points and ensemble members = '+str(np.mean(r_data))
+        print(('Mean r over all points and ensemble members = '+str(np.mean(r_data))))
 
         # Plot this map
         latlon_plot(r_data, grid, ctype='plusminus', ymax=ymax, vmin=-vmax, vmax=vmax, title=title_head+forcing_titles[m]+'\nat optimum lag of '+str(final_lag)+' months', titlesize=14, figsize=(14,5), fig_name=fig_dir+'correlation_map_ismr_'+forcing_abbrv[m]+'.png')
@@ -1606,13 +1606,13 @@ def precompute_ts_ensemble_mean (sim_dir, grid_dir, out_file, start_year=1920, e
     for d in sim_dir:
         for year in range(start_year, end_year+1):
             file_path = real_dir(d) + 'output/' + str(year)+ '01/MITgcm/output.nc'
-            print 'Reading ' + file_path
+            print(('Reading ' + file_path))
             for n in range(num_var):
                 final_data[n,year-start_year,:] += read_netcdf(file_path, var_names[n], time_average=True)
     # Divide by number of simulations to get ensemble mean
     final_data /= num_ens
 
-    print 'Writing ' + out_file
+    print(('Writing ' + out_file))
     ncfile = NCfile(out_file, grid, 'xyzt')
     ncfile.add_time(np.arange(start_year, end_year+1), units='year')
     for n in range(num_var):
@@ -1674,8 +1674,8 @@ def plot_ohc_adv (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_
     
     # Get the correlation coefficient between the two timeseries
     r, p = pearsonr(dohc_smooth, dohc_adv_smooth)
-    print 'Sum of dOHC: '+str(np.sum(dohc_smooth))
-    print 'Sum of dOHC_adv: '+str(np.sum(dohc_adv_smooth))
+    print(('Sum of dOHC: '+str(np.sum(dohc_smooth))))
+    print(('Sum of dOHC_adv: '+str(np.sum(dohc_adv_smooth))))
 
     # Plot
     timeseries_multi_plot(time_smooth, [dohc_smooth, dohc_adv_smooth], ['Total', 'Horizontal advection'], ['blue', 'red'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names[region]+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_adv.png')
@@ -1683,7 +1683,7 @@ def plot_ohc_adv (sim_dir, region='amundsen_shelf', timeseries_file='timeseries_
     # Now plot the residual
     residual = dohc_smooth-dohc_adv_smooth
     r, p = pearsonr(dohc_smooth, residual)
-    print 'Sum of residual: '+str(np.sum(residual))
+    print(('Sum of residual: '+str(np.sum(residual))))
     timeseries_multi_plot(time_smooth, [dohc_smooth, residual], ['Total', 'Residual'], ['blue', 'green'], title='Ensemble mean rate of change of ocean heat content\nbelow 300m in '+region_names[region]+' (r='+round_to_decimals(r,3)+')', units='GJ/s', vline=base_year_start, fig_name=fig_dir+'timeseries_'+region+'_dohc_residual.png')
 
 
@@ -1693,7 +1693,7 @@ def ts_animation_pace_shelf (precompute_file, grid_path, region='amundsen_shelf'
     fig_dir = real_dir(fig_dir)
     grid = Grid(grid_path)
     time = read_netcdf(precompute_file, 'time')  # In years, not Date objects
-    print 'Reading precomputed T and S'
+    print('Reading precomputed T and S')
     temp = read_netcdf(precompute_file, 'THETA')
     salt = read_netcdf(precompute_file, 'SALT')
     ts_animation(temp, salt, time, grid, region, sim_title, mov_name=fig_dir+mov_name)
@@ -1704,7 +1704,7 @@ def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_y
 
     grid = Grid(grid_path)
     mask = mask_2d_to_3d(grid.get_region_mask(region), grid)
-    print 'Reading precomputed T and S'
+    print('Reading precomputed T and S')
     temp = read_netcdf(precompute_file, 'THETA')
     salt = read_netcdf(precompute_file, 'SALT')
     temp_start = np.mean(temp[:num_years,:], axis=0)
@@ -1733,7 +1733,7 @@ def ts_volume_change (precompute_file, grid_path, region='amundsen_shelf', num_y
     rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
 
     # Plot the change in volume
-    print 'Plotting'
+    print('Plotting')
     cmap, vmin, vmax = set_colours(volume_diff, ctype='plusminus')
     fig, ax = plt.subplots(figsize=(8,6))
     img = ax.pcolormesh(salt_edges, temp_edges, volume_diff, vmin=vmin, vmax=vmax, cmap=cmap)
@@ -1767,7 +1767,7 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
 
     time = None
     for n in range(len(file_paths)):
-        print 'Processing ' + file_paths[n]
+        print(('Processing ' + file_paths[n]))
         time_tmp = netcdf_time(file_paths[n])
         num_time = time_tmp.size
         if time is None:
@@ -1775,7 +1775,7 @@ def heat_budget_analysis (output_dir, region='amundsen_shelf', z0=-300, smooth=2
         else:
             time = np.concatenate((time, time_tmp), axis=0)
         for v in range(num_var):
-            print '...'+titles[v]
+            print(('...'+titles[v]))
             if var[v] == 'total':
                 # Sum of all previous entries
                 data_int[v, n*12:(n+1)*12] = np.sum(data_int[:,n*12:(n+1)*12], axis=0)
@@ -1866,7 +1866,7 @@ def compare_ohc_trends (sim_dir, region='amundsen_shelf', timeseries_file='times
     dohc_adv_anom.append(np.mean(dohc_adv_anom))
     # Calculate percent explained by advection
     adv_percent = dohc_adv_anom[-1]/ohc_trend[-1]*100
-    print 'Horizontal advection can explain '+str(adv_percent)+'% of OHC trend (ensemble mean)'
+    print(('Horizontal advection can explain '+str(adv_percent)+'% of OHC trend (ensemble mean)'))
 
     # Plot
     index = -1*np.arange(num_ens+1)
@@ -1930,7 +1930,7 @@ def plot_timeseries_std (var_type, sim_dir, smooth=24, timeseries_file='timeseri
     # Calculate trends in the standard deviation timeseries
     for v in range(len(var_names)):
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size)/12., data_std[v])
-        print var_names[v]+': '+str(slope)+' '+units+'/y, p='+str(p_value)
+        print((var_names[v]+': '+str(slope)+' '+units+'/y, p='+str(p_value)))
 
     # Plot
     timeseries_multi_plot(time, data_std, labels, default_colours(len(var_names)), title=title, units=units, fig_name=fig_name)
@@ -2092,14 +2092,14 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         slope, intercept, r_value, p_value, std_err = linregress(time_cent, pace_mean[v,:])
         slopes.append(slope)
         intercepts.append(intercept)
-        print '\n'+var_names[v]
-        print 'Trend of mean = '+str(slope)
+        print(('\n'+var_names[v]))
+        print(('Trend of mean = '+str(slope)))
         # Now do some checking
         slope_members = []        
         for n in range(num_ens):
             slope, intercept, r_value, p_value, std_err = linregress(time_cent, pace_data[v,n,:])
             slope_members.append(slope)
-        print 'Mean of trend = '+str(np.mean(slope_members))
+        print(('Mean of trend = '+str(np.mean(slope_members))))
         if v == 2:
             slope_percent = linregress(time_cent, np.mean(pace_percent, axis=0))[0]
 
@@ -2205,13 +2205,13 @@ def calc_all_trends (base_dir='./', timeseries_file='timeseries_final.nc'):
         # Calculate significance
         p_val = ttest_1samp(trends, 0)[1]
         sig = (1-p_val)*100
-        print var_names[v]+': trend='+str(np.mean(trends))+' '+units[v]+'/decade, significance='+str(sig)
+        print((var_names[v]+': trend='+str(np.mean(trends))+' '+units[v]+'/decade, significance='+str(sig)))
         # Calculate trend in control
         slope, sig = read_calc_trends(var_names[v], ctrl_dir+timeseries_file, 'smooth', p0=0.1)
         if sig:
-           print '(control: '+str(slope)+' '+units[v]+'/decade)'
+           print(('(control: '+str(slope)+' '+units[v]+'/decade)'))
         else:
-            print '(control: none)'
+            print('(control: none)')
 
 
 # Plot sensitivity of temperature trend to convection.
@@ -2342,7 +2342,7 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     obs_smooth_below = -100
 
     # Read precomputed Hovmollers from file
-    print 'Reading model output'
+    print('Reading model output')
     model_hov = np.ma.empty([num_regions, num_var, model_num_time, grid.nz])
     for r in range(num_regions):
         for v in range(num_var):
@@ -2362,10 +2362,10 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             model_data2[:,:,t-model_num_years1] = model_data
 
     # Now read observations
-    print 'Reading observations'
+    print('Reading observations')
     obs_data = None
     for t in range(obs_num_years):
-        print '...'+str(obs_years[t])
+        print(('...'+str(obs_years[t])))
         f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
         if obs_data is None:
             # This is the first year: read the grid and set up array
@@ -2497,7 +2497,7 @@ def plot_temp_timeseries_obs (obs_dir='/data/oceans_input/processed_input_data/p
     start_year = 1979
 
     # Read model timeseries
-    print 'Reading model timeseries'
+    print('Reading model timeseries')
     time = netcdf_time(model_file, monthly=False)  # It is actually monthly but we don't want to advance by a month because that's already been done in the precomputation
     t0 = index_year_start(time, start_year)
     time = time[t0:]
@@ -2509,12 +2509,12 @@ def plot_temp_timeseries_obs (obs_dir='/data/oceans_input/processed_input_data/p
         model_temp[n,:] = read_netcdf(model_file, regions[n]+'_temp_'+depth_key)[t0:]    
 
     # Read observations for each year, averaged over each region
-    print 'Reading observations'
+    print('Reading observations')
     obs_temp = None
     obs_iso = None
     obs_date = []
     for t in range(obs_num_years):
-        print '...'+str(obs_years[t])
+        print(('...'+str(obs_years[t])))
         f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
         if obs_temp is None:
             # This is the first year: read the grid and set up array
@@ -2694,7 +2694,7 @@ def plot_aice_seasonal_obs (nsidc_dir='/data/oceans_input/raw_input_data/seaice/
     [vmin, vmax] = [0, 1]
 
     # Read and seasonally average model output
-    print 'Reading model output'
+    print('Reading model output')
     model_aice = np.zeros([num_seasons, grid.ny, grid.nx])
     model_hice = np.zeros([num_seasons, grid.ny, grid.nx])
     ndays_int = np.zeros(num_seasons)
@@ -2714,11 +2714,11 @@ def plot_aice_seasonal_obs (nsidc_dir='/data/oceans_input/raw_input_data/seaice/
     model_hice = mask_land_ice(model_hice, grid, time_dependent=True)
 
     # Read and seasonally average NSIDC data
-    print 'Reading NSIDC obs'
+    print('Reading NSIDC obs')
     nsidc_aice = None
     ndays_int = np.zeros(num_seasons)
     for year in range(start_year, end_year+1):
-        print '...'+str(year)
+        print(('...'+str(year)))
         for n in range(num_seasons):
             for month in season_months[n]:
                 if year == 1988 and month == 1:
@@ -2810,14 +2810,14 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
     # Calculate percentiles and number of cold and warm years
     cutoff_warm = np.percentile(temp, 100-percentile)
     cutoff_cold = np.percentile(temp, percentile)
-    print 'warm cutoff='+str(cutoff_warm)+' degC'
-    print 'cold cutoff='+str(cutoff_cold)+' degC'
+    print(('warm cutoff='+str(cutoff_warm)+' degC'))
+    print(('cold cutoff='+str(cutoff_cold)+' degC'))
     num_warm = np.sum((temp > cutoff_warm).astype(float), axis=0)
     num_cold = np.sum((temp < cutoff_cold).astype(float), axis=0)
     # Calculate trends
     for data, string in zip([num_warm, num_cold], ['warm', 'cold']):
         slope, intercept, r_value, p_value, std_err = linregress(time_years, data)
-        print string+' trend: '+str(slope*10)+' members/decade, significance='+str((1-p_value)*100)
+        print((string+' trend: '+str(slope*10)+' members/decade, significance='+str((1-p_value)*100)))
 
     # Plot
     data_plot = [num_cold, num_warm]
@@ -2863,7 +2863,7 @@ def precompute_heat_budget_trend (base_dir='./'):
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
     grid_path = base_dir + 'PAS_grid/'
     for var_name in ['advection_3d', 'diffusion_kpp']:
-        print 'Processing ' + var_name
+        print(('Processing ' + var_name))
         make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc')
 
 
@@ -2875,7 +2875,7 @@ def precompute_sfc_trends (base_dir='./'):
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2) for n in range(num_ens)]
     grid_path = base_dir + 'PAS_grid/'
     for var_name in ['SIfwfrz', 'SIfwmelt', 'EXFuwind', 'EXFvwind', 'oceQnet', 'oceFWflx', 'SIarea', 'SIheff', 'ismr', 'sst', 'sss', 'EXFatemp', 'EXFpreci', 'EXFaqh', 'wind_speed', 'thermocline']:
-        print 'Processing ' + var_name
+        print(('Processing ' + var_name))
         make_trend_file(var_name, 'all', sim_dir, grid_path, base_dir+var_name+'_trend.nc', dim=2)
 
 
@@ -2921,7 +2921,7 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
 
     time = None
     for n in range(len(file_paths)):
-        print 'Processing ' + file_paths[n]
+        print(('Processing ' + file_paths[n]))
         time_tmp = netcdf_time(file_paths[n])
         num_time = time_tmp.size
         if time is None:
@@ -2929,7 +2929,7 @@ def plot_test_heat_budget (base_dir='./', fig_name=None):
         else:
             time = np.concatenate((time, time_tmp), axis=0)
         for v in range(num_var):
-            print '...'+titles[v]
+            print(('...'+titles[v]))
             if var[v] == 'total':
                 # Sum of all previous entries
                 data_int[v, n*12:(n+1)*12] = np.sum(data_int[:,n*12:(n+1)*12], axis=0)
@@ -3245,7 +3245,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
         for n in range(num_ens):
             all_trends.append(linregress(time_decades, data_smoothed[v,n,:])[0])
         p_val = ttest_1samp(all_trends, 0)[1]
-        print var_titles[v] + ': '+str(np.mean(all_trends))+' EJ/decade, significance='+str((1-p_val)*100)+'%'
+        print((var_titles[v] + ': '+str(np.mean(all_trends))+' EJ/decade, significance='+str((1-p_val)*100)+'%'))
 
     # Read and process 3D trends
     mean_trends = np.ma.empty([num_trends, grid.nz, grid.ny, grid.nx])
@@ -3429,14 +3429,14 @@ def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hov
 
     output_dir = real_dir(output_dir)
     if segment_dir is None and os.path.isfile(hovmoller_file):
-        print 'Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'
+        print(('Error (precompute_hovmoller_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'))
         sys.exit()
     segment_dir = check_segment_dir(output_dir, segment_dir)
     file_paths = segment_file_paths(output_dir, segment_dir, 'output.nc')
     grid = Grid(grid_dir)
 
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         id = set_update_file(output_dir+hovmoller_file, grid, 'zt')
         num_time = set_update_time(id, file_path, monthly=monthly)
         if var_name == 'diffusion_kpp':
@@ -3454,7 +3454,7 @@ def precompute_hb_hovmoller (var_name, output_dir, grid_dir, hovmoller_file='hov
             data[:,:-1,:-1,:-1] = data_x[:,:-1,:-1,:-1] - data_x[:,:-1,:-1,1:] + data_y[:,:-1,:-1,:-1] - data_y[:,:-1,1:,:-1] + data_z[:,1:,:-1,:-1] - data_z[:,:-1,:-1,:-1]
         data = mask_3d(data, grid, time_dependent=True)
         for l in loc:
-            print '...at ' + l
+            print(('...at ' + l))
             loc_name = region_names[l]
             mask = grid.get_region_mask(l)
             data_region = apply_mask(data, np.invert(mask), time_dependent=True, depth_dependent=True)
@@ -3651,7 +3651,7 @@ def plot_trends_ex_convection (base_dir='./', fig_dir='./'):
     def calc_mean_sig (trends):
         p_val = ttest_1samp(trends, 0)[1]
         if p_val >= p0:
-            print 'Warning: trend not significant at '+str((1-p0)*100)+'% level'
+            print(('Warning: trend not significant at '+str((1-p0)*100)+'% level'))
         return np.mean(trends)
 
     trends_base_mean = np.empty(num_regions)
@@ -3684,7 +3684,7 @@ def plot_trends_ex_convection (base_dir='./', fig_dir='./'):
         trends_base_mean[r] = calc_mean_sig(trends_base)
         for y in range(max_delay+1):
             trends_noconv_mean[y,r] = calc_mean_sig(trends_noconv[y,:])
-        print regions[r] + ': trend decreases by '+str((trends_base_mean[r]-trends_noconv_mean[0,r])/trends_base_mean[r]*100)+'%'
+        print((regions[r] + ': trend decreases by '+str((trends_base_mean[r]-trends_noconv_mean[0,r])/trends_base_mean[r]*100)+'%'))
 
     # Plot
     fig = plt.figure(figsize=(8,4))

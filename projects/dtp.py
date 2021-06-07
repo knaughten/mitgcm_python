@@ -40,7 +40,7 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
                 data_unpick.append(data[0,:])
                 data = data[1:,:]
             else:
-                print 'Error (read_var_name_from_pickup): unknown var_nameiable '+var
+                print(('Error (read_var_name_from_pickup): unknown var_nameiable '+var))
                 sys.exit()
         i = meta['fldlist'].index(var0)
         return data_unpick[i]

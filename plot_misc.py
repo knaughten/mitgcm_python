@@ -10,18 +10,18 @@ import numpy as np
 import datetime
 import itertools
 
-from grid import choose_grid, Grid
-from file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
-from plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label, reduce_cbar_labels
-from plot_utils.windows import finished_plot, set_panels
-from plot_utils.colours import get_extend, set_colours
-from plot_1d import timeseries_multi_plot
-from utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average, mask_2d_to_3d
-from diagnostics import tfreeze, potential_density
-from constants import deg_string, rignot_melt, region_bounds, region_names
-from interpolation import interp_bilinear
-from calculus import area_average
-from timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
+from .grid import choose_grid, Grid
+from .file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
+from .plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label, reduce_cbar_labels
+from .plot_utils.windows import finished_plot, set_panels
+from .plot_utils.colours import get_extend, set_colours
+from .plot_1d import timeseries_multi_plot
+from .utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average, mask_2d_to_3d
+from .diagnostics import tfreeze, potential_density
+from .constants import deg_string, rignot_melt, region_bounds, region_names
+from .interpolation import interp_bilinear
+from .calculus import area_average
+from .timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
 
 
 # Helper function to split temperature and salinity in the given region (set by mask) into bins, to get the volume in m^3 of each bin. The arrays can be time-dependent if you want. You can set the bounds of the bins, but they must be at least as permissive as the bounds of the data in that region.
@@ -47,27 +47,27 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
             vmin = min(vmin, np.amin(data_tmp[mask]))
             vmax = max(vmax, np.amax(data_tmp[mask]))
         return [vmin, vmax]
-    print 'Calculating bounds'
+    print('Calculating bounds')
     temp_bounds = get_vmin_vmax(temp)
     salt_bounds = get_vmin_vmax(salt)
     if tmin is not None:
         if tmin > temp_bounds[0]:
-            print 'Error (ts_binning): tmin is too high'
+            print('Error (ts_binning): tmin is too high')
             sys.exit()
         temp_bounds[0] = tmin
     if tmax is not None:
         if tmax < temp_bounds[-1]:
-            print 'Error (ts_binning): tmax is too low'
+            print('Error (ts_binning): tmax is too low')
             sys.exit()
         temp_bounds[1] = tmax
     if smin is not None:
         if smin > salt_bounds[0]:
-            print 'Error (ts_binning): smin is too high'
+            print('Error (ts_binning): smin is too high')
             sys.exit()
         salt_bounds[0] = smin
     if smax is not None:
         if smax < salt_bounds[-1]:
-            print 'Error (ts_binning): smax is too low'
+            print('Error (ts_binning): smax is too low')
             sys.exit()
         salt_bounds[1] = smax            
 
@@ -85,16 +85,16 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
         volume = np.zeros([num_bins, num_bins])
 
     # Now categorise the values
-    print 'Binning T and S'
+    print('Binning T and S')
     for t in range(num_time):
         if time_dependent:
-            print '...time index '+str(t+1)+' of '+str(num_time)
+            print(('...time index '+str(t+1)+' of '+str(num_time)))
             temp_tmp = temp[t,:]
             salt_tmp = salt[t,:]
         else:
             temp_tmp = temp
             salt_tmp = salt
-        for temp_val, salt_val, grid_val in itertools.izip(temp_tmp[mask], salt_tmp[mask], grid.dV[mask]):
+        for temp_val, salt_val, grid_val in zip(temp_tmp[mask], salt_tmp[mask], grid.dV[mask]):
             temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
             salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
             if time_dependent:
@@ -471,7 +471,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
     if ensemble:
         num_ens = len(file_path_2)
     if second and (sim_names is None or not isinstance(sim_names, list) or len(sim_names) != 2):
-        print 'Error (amundsen_rignot_comparison): must set sim_names as list of 2 simulation names if file_path_2 is set.'
+        print('Error (amundsen_rignot_comparison): must set sim_names as list of 2 simulation names if file_path_2 is set.')
         sys.exit()
 
     model_melt = []
@@ -519,7 +519,7 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
             obs_melt.append(obs[2])
             obs_std.append(obs[3])
         else:
-            print 'Error (amundsen_rignot_comparison): invalid option ' + option
+            print(('Error (amundsen_rignot_comparison): invalid option ' + option))
             sys.exit()
 
     if second and ensemble:
@@ -532,11 +532,11 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
 
     fig, ax = plt.subplots()
     if second:
-        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=sim_names[0])
+        ax.plot(list(range(num_shelves)), model_melt, 'o', color='blue', label=sim_names[0])
         if ensemble:
-            ax.errorbar(range(num_shelves), model2_melt0, yerr=model2_melt_diff, fmt='none', color='green', capsize=4, label=sim_names[1])
+            ax.errorbar(list(range(num_shelves)), model2_melt0, yerr=model2_melt_diff, fmt='none', color='green', capsize=4, label=sim_names[1])
         else:
-            ax.plot(range(num_shelves), model2_melt, 'o', color='green', label=sim_names[1])
+            ax.plot(list(range(num_shelves)), model2_melt, 'o', color='green', label=sim_names[1])
     else:
         if isinstance(sim_names, list):
             label = sim_names[0]
@@ -544,11 +544,11 @@ def amundsen_rignot_comparison (file_path, precomputed=False, option='melting', 
             label = sim_names
         else:
             label = 'MITgcm'
-        ax.plot(range(num_shelves), model_melt, 'o', color='blue', label=label)
-    ax.errorbar(range(num_shelves), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4, label='Observations')
+        ax.plot(list(range(num_shelves)), model_melt, 'o', color='blue', label=label)
+    ax.errorbar(list(range(num_shelves)), obs_melt, yerr=obs_std, fmt='none', color='black', capsize=4, label='Observations')
     ax.legend()
     ax.grid(True)
-    plt.xticks(range(num_shelves), shelf_titles, rotation='vertical')
+    plt.xticks(list(range(num_shelves)), shelf_titles, rotation='vertical')
     plt.subplots_adjust(bottom=0.2)
     if option == 'massloss':
         title = 'Basal mass loss'
@@ -706,7 +706,7 @@ def ctd_cast_compare (loc, hovmoller_file, obs_file, grid, std=False, ens_hovmol
 # Plot a timeseries of the number of cells grounded and ungrounded, and the maximum thinning and thickening, in a coupled run.
 def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None):
 
-    from postprocess import segment_file_paths
+    from .postprocess import segment_file_paths
 
     file_paths = segment_file_paths(output_dir)
 
@@ -722,7 +722,7 @@ def plot_geometry_timeseries (output_dir='./', fig_name_1=None, fig_name_2=None)
 
     # Loop over the rest of the timeseries
     for file_path in file_paths[1:]:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         # Save time index from the beginning of the run
         time.append(netcdf_time(file_path)[0])
         # Calculate geometry changes
@@ -778,7 +778,7 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
     if rho_lev is None:
         rho_lev = np.arange(np.ceil(np.amin(rho)*10)/10., np.ceil(np.amax(rho)*10)/10., 0.1)
 
-    print 'Plotting'
+    print('Plotting')
     fig, ax = plt.subplots(figsize=(8,6))
 
     # Inner function to plot one frame
@@ -802,12 +802,12 @@ def ts_animation (temp, salt, time, grid, region, sim_title, tmin=None, tmax=Non
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t+1) + ' of ' + str(num_years)
+        print(('Frame ' + str(t+1) + ' of ' + str(num_years)))
         ax.cla()
         plot_one_frame(t)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_years))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_years)))
     anim.save(mov_name, bitrate=2000, fps=2)
 
     

@@ -38,7 +38,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
     ctype = ['basic', 'basic', 'vel']
     title = ['Bottom water temperature ('+deg_string+'C)', 'Bottom water salinity (psu)', 'Barotropic velocity (m/s)']
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(grid_dir)
 
     all_data = []
@@ -49,7 +49,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
     # Loop over variables
     for j in range(len(var_names)):
         var = var_names[j]
-        print 'Processing ' + var
+        print(('Processing ' + var))
 
         # Initialise data arrays and min/max values
         data = []
@@ -61,7 +61,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
 
         # Loop over years
         for year in range(start_year, end_year+1):
-            print '...reading ' + str(year)
+            print(('...reading ' + str(year)))
             i = year-start_year
 
             # Read data
@@ -104,7 +104,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
 
         # Loop over years again
         for year in range(start_year, end_year+1):
-            print '...plotting ' + str(year)
+            print(('...plotting ' + str(year)))
             i = year-start_year
 
             # Draw this panel            
@@ -132,9 +132,9 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
         all_vmax.append(vmax)
         all_extend.append(extend)
 
-    print 'Plotting conditions for each year'
+    print('Plotting conditions for each year')
     for year in range(start_year, end_year+1):
-        print '...' + str(year)
+        print(('...' + str(year)))
         i = year-start_year
         fig, gs, cax1, cax2, cax3 = set_panels('1x3C3', figsize=(12, 5))
         cax = [cax1, cax2, cax3]
@@ -207,7 +207,7 @@ def compare_keith_ctd (ctd_dir='/work/n02/n02/kaight/raw_input_data/ctd_data/', 
             if file0 is not None:
                 break
         if file0 is None:
-            print "Error (compare_keith_ctd): couldn't find " + str(ctd_month) + '/' + str(ctd_year) + ' in model output'
+            print(("Error (compare_keith_ctd): couldn't find " + str(ctd_month) + '/' + str(ctd_year) + ' in model output'))
             sys.exit()
 
         # Read variables
@@ -279,20 +279,20 @@ def extract_ismr (out_file, start_year=1994, end_year=2016, output_dir='./annual
     grid_dir = real_dir(grid_dir)
     file_tail = '_avg.nc'
 
-    print 'Building grid'
+    print('Building grid')
     grid = Grid(grid_dir)
 
     # Set up array to hold melt rates
     ismr = np.empty([end_year-start_year+1, grid.ny, grid.nx])
     for year in range(start_year, end_year+1):
-        print 'Processing ' + str(year)
+        print(('Processing ' + str(year)))
         file_path = output_dir + str(year) + file_tail
         ismr_tmp = convert_ismr(read_netcdf(file_path, 'SHIfwFlx', time_index=0))
         ismr[year-start_year,:] = ismr_tmp
     
-    print 'Writing ' + out_file
+    print(('Writing ' + out_file))
     ncfile = NCfile(out_file, grid, 'xyt')
-    ncfile.add_time(range(start_year,end_year+1), units='year')
+    ncfile.add_time(list(range(start_year,end_year+1)), units='year')
     ncfile.add_variable('melt_rate', ismr, 'xyt', units='m/y')
     ncfile.close()
 
@@ -383,7 +383,7 @@ def bdry_transports (obcs_e_u, obcs_n_v, file_path, nc_out, sponge=8):
         elif direction == 'N':
             area = area_n
         else:
-            print 'Error (calc_save_transport): invalid direction ' + direction
+            print(('Error (calc_save_transport): invalid direction ' + direction))
             sys.exit()
         area = add_time_dim(area, vnorm.shape[0])
         trans = np.sum(vnorm*area, axis=(1,2))*1e-6
@@ -557,7 +557,7 @@ def forcing_sws_timeseries (era5_dir, ukesm_dir, era5_out_file, ukesm_out_file):
 
     # Now loop over all the variables and years
     for n in range(num_vars):
-        print 'Processing variable ' + var_names_out[n]
+        print(('Processing variable ' + var_names_out[n]))
         for i in range(2):
             data = None
             for year in range(start_years[i], end_years[i]+1):

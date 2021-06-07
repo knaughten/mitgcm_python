@@ -57,7 +57,7 @@ def woa18_pico_input (woa_dir, out_file):
     var_names_long = ['Temperature', 'Salinity']
     woa_dir = real_dir(woa_dir)
 
-    print 'Building WOA grid'
+    print('Building WOA grid')
     # Use the January temperature file
     grid = WOAGrid(woa_dir + file_head + var_names[0] + '01' + file_tail)
 
@@ -69,10 +69,10 @@ def woa18_pico_input (woa_dir, out_file):
     annual_data = np.zeros(2)
     # Loop over variables
     for n in range(2):
-        print 'Processing ' + var_names_long[n]
+        print(('Processing ' + var_names_long[n]))
         # Loop over months
         for t in range(12):
-            print 'Month ' + str(t+1)
+            print(('Month ' + str(t+1)))
             # Construct the filename
             file_path = woa_dir + file_head + var_names[n] + str(t+1).zfill(2) + file_tail
             # Read the data
@@ -102,9 +102,9 @@ def woa18_pico_input (woa_dir, out_file):
     # Print the contents of that file
     f = open(out_file, 'r')
     for line in f:
-        print line
+        print(line)
     f.close()    
-    print 'Data saved in ' + out_file
+    print(('Data saved in ' + out_file))
 
 
 # Calculate the monthly transient values for MITgcm's bottom temperature and salinity on the continental shelf in front of FRIS, as inputs to PICO. Write the results to ASCII files.
@@ -119,11 +119,11 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
     out_files = [out_file_temp, out_file_salt]
     # Loop over variables
     for n in range(2):
-        print 'Processing ' + var_names[n]
+        print(('Processing ' + var_names[n]))
         f = open(out_files[n], 'w')
         # Loop over files
         for file_path in mit_files:
-            print 'Reading ' + file_path
+            print(('Reading ' + file_path))
             data_full = read_netcdf(file_path, var_names[n])
             # Loop over timesteps
             num_time = data_full.shape[0]
@@ -133,7 +133,7 @@ def mitgcm_pico_input (uamit_out_dir, out_file_temp, out_file_salt):
                 data = apply_mask(data, np.invert(grid.get_region_mask('sws_shelf')))
                 data = area_average(data, grid)
                 data_print = str(round_to_decimals(data, 2))
-                print data_print
+                print(data_print)
                 f.write(data_print+'\n')
         f.close()
 
@@ -153,13 +153,13 @@ def concat_mitgcm_ismr (mit_output_dir, out_file, num_years=40):
     t = 0
     # Loop over files
     for in_file in file_paths:
-        print 'Processing ' + in_file
+        print(('Processing ' + in_file))
         # Read the data, convert to m/y, and swap the sign
         ismr = -1*convert_ismr(read_netcdf(in_file, 'SHIfwFlx'))
         # Loop over timesteps
         num_time = ismr.shape[0]
         for tt in range(num_time):
-            print '...timestep ' + str(tt+1) + ' of ' + str(num_time)
+            print(('...timestep ' + str(tt+1) + ' of ' + str(num_time)))
             # Throw away non-FRIS regions and then extend into the whole domain
             discard = np.invert(grid.get_ice_mask(shelf='fris'))
             fill = np.ones([grid.ny, grid.nx]).astype(bool)  # array of all True

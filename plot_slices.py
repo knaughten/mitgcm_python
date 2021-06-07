@@ -9,16 +9,16 @@ import matplotlib.pyplot as plt
 import sys
 import numpy as np
 
-from grid import choose_grid, Grid
-from file_io import read_netcdf, find_variable, check_single_time
-from utils import mask_3d, z_to_xyz
-from plot_utils.windows import set_panels, finished_plot
-from plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
-from plot_utils.colours import set_colours, get_extend
-from plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
-from plot_utils.latlon import shade_background
-from diagnostics import t_minus_tf, density, normal_vector, parallel_vector
-from constants import deg_string
+from .grid import choose_grid, Grid
+from .file_io import read_netcdf, find_variable, check_single_time
+from .utils import mask_3d, z_to_xyz
+from .plot_utils.windows import set_panels, finished_plot
+from .plot_utils.labels import slice_axes, lon_label, lat_label, check_date_string, reduce_cbar_labels
+from .plot_utils.colours import set_colours, get_extend
+from .plot_utils.slices import slice_patches, slice_values, plot_slice_patches, get_slice_minmax, transect_patches, transect_values
+from .plot_utils.latlon import shade_background
+from .diagnostics import t_minus_tf, density, normal_vector, parallel_vector
+from .constants import deg_string
 
 
 # Helper function to determine whether this is a slice along latitude, longitude, or a general transect, and format the string describing the slice.
@@ -60,7 +60,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
     if contours is not None:
         # Overlay contours
         if None in [data_grid, haxis, zaxis]:
-            print 'Error (make_slice_plot): need to specify data_grid, haxis, and zaxis to do contours'
+            print('Error (make_slice_plot): need to specify data_grid, haxis, and zaxis to do contours')
             sys.exit()
         plt.contour(haxis, zaxis, data_grid, levels=contours, colors='black', linestyles='solid')
     # Make nice axis labels
@@ -111,7 +111,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1
         loc0 = None
         patches, values, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, data_grid, haxis, zaxis = transect_patches(data, grid, point0, point1, gtype=gtype, zmin=zmin, zmax=zmax, return_gridded=True)
     else:
-        print 'Error (slice_plot): must specify either lon0, lat0, or point0 and point1'
+        print('Error (slice_plot): must specify either lon0, lat0, or point0 and point1')
         sys.exit()
     # Update any colour bounds which aren't already set
     if vmin is None:
@@ -143,7 +143,7 @@ def slice_plot_diff (data_1, data_2, grid, gtype='t', lon0=None, lat0=None, poin
         patches, values_1, hmin, hmax, zmin, zmax, tmp1, tmp2, left, right, below, above, data_grid_1, haxis, zaxis = transect_patches(data_1, grid, point0, point1, gtype=gtype, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         values_2, tmp3, tmp4, data_grid_2 = transect_values(data_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, gtype=gtype, return_gridded=True)
     else:
-        print 'Error (slice_plot_diff): must specify either lon0, lat0, or point0 and point1'
+        print('Error (slice_plot_diff): must specify either lon0, lat0, or point0 and point1')
         sys.exit()
             
     # Calculate the difference
@@ -239,7 +239,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         tdif_y = read_and_mask('DFyE_TH')
 
     if var in ['vnorm', 'valong', 'tadv_along', 'tdif_along'] and None in [point0, point1]:
-        print 'Error (read_plot_slice): normal or along-transect variables require point0 and point1 to be specified.'
+        print('Error (read_plot_slice): normal or along-transect variables require point0 and point1 to be specified.')
         sys.exit()
             
     # Plot
@@ -270,7 +270,7 @@ def read_plot_slice (var, file_path, grid=None, lon0=None, lat0=None, point0=Non
         tdif_along = parallel_vector(tdif_x, tdif_y, grid, point0, point1)
         slice_plot(tdif_along, grid, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, ctype='plusminus', contours=contours, title=r'Along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
-        print 'Error (read_plot_slice): variable key ' + str(var) + ' does not exist'
+        print(('Error (read_plot_slice): variable key ' + str(var) + ' does not exist'))
         sys.exit()
 
 
@@ -327,7 +327,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
         return data1, data2
 
     if var in ['vnorm', 'valong', 'tadv_along', 'tdif_along'] and None in [point0, point1]:
-        print 'Error (read_plot_slice_diff): normal or along-transect variables require point0 and point1 to be specified.'
+        print('Error (read_plot_slice_diff): normal or along-transect variables require point0 and point1 to be specified.')
         sys.exit()
 
     # Read variables and make plots
@@ -362,7 +362,7 @@ def read_plot_slice_diff (var, file_path_1, file_path_2, grid=None, lon0=None, l
         tdif_along_1, tdif_along_2 = read_and_mask_both(var)
         slice_plot_diff(tdif_along_1, tdif_along_2, grid_1, point0=point0, point1=point1, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, vmin=vmin, vmax=vmax, contours=contours, title=r'Change in along-transect diffusive heat transport (Km$^3$/s)', date_string=date_string, fig_name=fig_name)
     else:
-        print 'Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'
+        print(('Error (read_plot_slice_diff): variable key ' + str(var) + ' does not exist'))
         sys.exit()
 
 
@@ -401,7 +401,7 @@ def make_ts_slice_plot (patches, temp_values, salt_values, loc0, hmin, hmax, zmi
         if contours[i] is not None:
             # Overlay contours
             if None in [data_grid[i], haxis, zaxis]:
-                print 'Error (make_ts_slice_plot): need to specify temp_grid/salt_grid, haxis, and zaxis to do tcontours/scontours'
+                print('Error (make_ts_slice_plot): need to specify temp_grid/salt_grid, haxis, and zaxis to do tcontours/scontours')
                 sys.exit()
             plt.contour(haxis, zaxis, data_grid[i], levels=contours[i], colors='black', linestyles='solid')
         # Nice axes
@@ -441,7 +441,7 @@ def ts_slice_plot (temp, salt, grid, lon0=None, lat0=None, point0=None, point1=N
         patches, temp_values, hmin, hmax, zmin, zmax, tmin_tmp, tmax_tmp, left, right, below, above, temp_grid, haxis, zaxis = transect_patches(temp, grid, point0, point1, zmin=zmin, zmax=zmax, return_bdry=True, return_gridded=True)
         salt_values, smin_tmp, smax_tmp, salt_grid = transect_values(salt, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
     else:
-        print 'Error (ts_slice_plot): must specify either lon0, lat0, or point0 and point1'
+        print('Error (ts_slice_plot): must specify either lon0, lat0, or point0 and point1')
         sys.exit()        
 
     # Update any colour bounds which aren't already set
@@ -483,7 +483,7 @@ def ts_slice_plot_diff (temp_1, temp_2, salt_1, salt_2, grid, lon0=None, lat0=No
         salt_values_1, tmp5, tmp6, salt_grid_1 = transect_values(salt_1, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
         salt_values_2, tmp7, tmp8, salt_grid_2 = transect_values(salt_2, grid, point0, point1, left, right, below, above, hmin, hmax, zmin, zmax, return_gridded=True)
     else:
-        print 'Error (ts_slice_plot_diff): must specify either lon0, lat0, or point0 and point1'
+        print('Error (ts_slice_plot_diff): must specify either lon0, lat0, or point0 and point1')
         sys.exit()
         
     # Calculate the differences

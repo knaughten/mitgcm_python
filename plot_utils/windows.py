@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 def finished_plot (fig, fig_name=None, dpi=None):
 
     if fig_name is not None:
-        print 'Saving ' + fig_name
+        print(('Saving ' + fig_name))
         fig.savefig(fig_name, dpi=dpi)
     else:
         fig.show()
@@ -267,7 +267,7 @@ def set_panels (key, figsize=None):
                 cax = fig.add_axes([x0[i], y0[j], 0.2, 0.02])
                 cax_all.append(cax)
     else:
-        print 'Error (set_panels): no entry for key ' + key
+        print(('Error (set_panels): no entry for key ' + key))
         sys.exit()
         
     if key == 'CTD':

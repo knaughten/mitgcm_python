@@ -73,7 +73,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
     fig_name = None
     fig_dir = real_dir(fig_dir)
 
-    print 'Selecting coastal points'
+    print('Selecting coastal points')
     grid = Grid(grid_dir)
     coast_mask = grid.get_coast_mask(ignore_iceberg=True)
     var_names = ['uwind', 'vwind']
@@ -81,7 +81,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
     ukesm_wind_vectors = []
     era5_wind_vectors = []
     for n in range(2):
-        print 'Processing ' + var_names[n]
+        print(('Processing ' + var_names[n]))
         # Read the data and select coastal points only
         ukesm_wind = (read_netcdf(ukesm_file, var_names[n])[coast_mask]).ravel()
         era5_wind = (read_netcdf(era5_file, var_names[n])[coast_mask]).ravel()
@@ -92,18 +92,18 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
 
         # Figure out how many are in opposite directions
         percent_opposite = float(np.count_nonzero(ukesm_wind*era5_wind < 0))/ukesm_wind.size*100
-        print str(percent_opposite) + '% of points have ' + var_names[n] + ' components in opposite directions'
+        print((str(percent_opposite) + '% of points have ' + var_names[n] + ' components in opposite directions'))
 
-        print 'Analysing ratios'
-        print 'Minimum ratio of ' + str(np.amin(ratio))
-        print 'Maximum ratio of ' + str(np.amax(ratio))
-        print 'Mean ratio of ' + str(np.mean(ratio))
+        print('Analysing ratios')
+        print(('Minimum ratio of ' + str(np.amin(ratio))))
+        print(('Maximum ratio of ' + str(np.amax(ratio))))
+        print(('Mean ratio of ' + str(np.mean(ratio))))
         percent_exceed = np.empty(20)
         for i in range(20):
             percent_exceed[i] = float(np.count_nonzero(ratio > i+1))/ratio.size*100
         # Find first value of ratio which includes >90% of points
         i_cap = np.nonzero(percent_exceed < 10)[0][0] + 1
-        print 'A ratio cap of ' + str(i_cap) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'
+        print(('A ratio cap of ' + str(i_cap) + ' will cover ' + str(100-percent_exceed[i_cap]) + '%  of points'))
         # Plot the percentage of points that exceed each threshold ratio
         fig, ax = plt.subplots()
         ax.plot(np.arange(20)+1, percent_exceed, color='blue')
@@ -116,7 +116,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
             fig_name = fig_dir + 'ratio_caps.png'
         finished_plot(fig, fig_name=fig_name)
 
-        print 'Making scatterplot'
+        print('Making scatterplot')
         fig, ax = plt.subplots()
         ax.scatter(era5_wind, ukesm_wind, color='blue')
         xlim = np.array(ax.get_xlim())
@@ -137,7 +137,7 @@ def analyse_coastal_winds (grid_dir, ukesm_file, era5_file, save_fig=False, fig_
             fig_name = fig_dir + 'scatterplot_' + var_names[n] + '.png'
         finished_plot(fig, fig_name=fig_name)
 
-    print 'Plotting coastal wind vectors'
+    print('Plotting coastal wind vectors')
     scale = 30
     lon_coast = grid.lon_2d[coast_mask].ravel()
     lat_coast = grid.lat_2d[coast_mask].ravel()
@@ -179,7 +179,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields_par
     vmax = [None for n in range(num_vars)]
     # Loop over files
     for file_path in file_paths:
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         time_tmp, units, calendar = netcdf_time(file_path, return_date=False, return_units=True)
         if time is None:
             # First file - initialise array
@@ -195,7 +195,7 @@ def precompute_animation_fields (output_dir='./', out_file='animation_fields_par
             land_mask = np.concatenate((land_mask, mask_tmp), axis=0)
         # Loop over proper variables and process data
         for n in range(num_vars):
-            print '...'+var_names[n]
+            print(('...'+var_names[n]))
             if var_names[n] == 'bwtemp':
                 data_tmp = select_bottom(mask_3d(read_netcdf(file_path, 'THETA'), grid, time_dependent=True))
             elif var_names[n] == 'bwsalt':
@@ -307,13 +307,13 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t+1) + ' of ' + str(num_time)
+        print(('Frame ' + str(t+1) + ' of ' + str(num_time)))
         for n in range(num_vars):
             ax[n].cla()
         plot_one_frame(t)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_time))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_time)))
     writer = animation.FFMpegWriter(bitrate=2000, fps=24) #12)
     anim.save(mov_name, writer=writer)
     
@@ -473,7 +473,7 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
 
     # Loop over variables
     for i in range(len(var_names)):
-        print 'Processing ' + var_names[i]
+        print(('Processing ' + var_names[i]))
         data = []
         for n in range(num_sims):
             x, y, data_diff = read_ua_difference(var_names[i], file_paths[0][n], file_paths[1][n])
@@ -723,20 +723,20 @@ def precompute_ts_bounds (output_dir='./'):
     # Loop over segments
     all_file_paths = segment_file_paths(real_dir(output_dir))
     for file_path in all_file_paths:
-        print 'Reading ' + file_path
+        print(('Reading ' + file_path))
         grid = Grid(file_path)
         # Get the indices on the continental shelf and FRIS cavity
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
         # Loop over variables
         for n in range(len(var_names)):
-            print '...' + var_names[n]
+            print(('...' + var_names[n]))
             data = read_netcdf(file_path, var_names[n], time_average=True)
             vmin[n] = min(vmin[n], np.amin(data[loc_index]))
             vmax[n] = max(vmax[n], np.amax(data[loc_index]))
 
     # Print the results
     for n in range(len(var_names)):
-        print var_names[n] + ' bounds: ' + str(vmin[n]) + ', ' + str(vmax[n])
+        print((var_names[n] + ' bounds: ' + str(vmin[n]) + ', ' + str(vmax[n])))
 
 
 # Precompute the T/S distribution for the animation in the next function, and save to a NetCDF file.
@@ -751,7 +751,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
         salt_bounds = [32.234, 34.881]
         start_year = 1850
     else:
-        print 'Error (precompute_ts_animation_fields): unknown expt ' + expt
+        print(('Error (precompute_ts_animation_fields): unknown expt ' + expt))
         sys.exit()
 
     file_paths = segment_file_paths(real_dir(output_dir))
@@ -770,7 +770,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
 
     # Loop over years
     for t in range(num_years):
-        print 'Processing ' + file_paths[t]
+        print(('Processing ' + file_paths[t]))
         # Set up the masks
         grid = Grid(file_paths[t])
         loc_index = (grid.hfac > 0)*xy_to_xyz(grid.get_region_mask('sws_shelf') + grid.get_ice_mask(shelf='fris'), grid)
@@ -778,7 +778,7 @@ def precompute_ts_animation_fields (expt, output_dir='./', out_file='ts_animatio
         temp = read_netcdf(file_paths[t], 'THETA', time_average=True)
         salt = read_netcdf(file_paths[t], 'SALT', time_average=True)
         # Loop over valid cells and categorise them into bins
-        for temp_val, salt_val, grid_val in itertools.izip(temp[loc_index], salt[loc_index], grid.dV[loc_index]):
+        for temp_val, salt_val, grid_val in zip(temp[loc_index], salt[loc_index], grid.dV[loc_index]):
             temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
             salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
             volume[t, temp_index, salt_index] += grid_val
@@ -852,12 +852,12 @@ def ts_animation (file_path='ts_animation_fields.nc', mov_name='ts_diagram.mp4')
 
     # Function to update figure with the given frame
     def animate(t):
-        print 'Frame ' + str(t+1) + ' of ' + str(time.size)
+        print(('Frame ' + str(t+1) + ' of ' + str(time.size)))
         ax.cla()
         plot_one_frame(t)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(time.size))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(time.size)))
     writer = animation.FFMpegWriter(bitrate=2000, fps=2)
     anim.save(mov_name, writer=writer)
 
@@ -873,7 +873,7 @@ def plot_iceprod_pminuse (sim_key, smooth=0, base_dir='./', fig_dir='./'):
     elif sim_key in ['abIO', '1pIO']:
         ctrl_key = 'ctIO'
     else:
-        print 'Error (plot_iceprod_pminuse): invalid sim_key ' + sim_key
+        print(('Error (plot_iceprod_pminuse): invalid sim_key ' + sim_key))
         sys.exit()
     sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
     file_paths = [base_dir + sim_dirs[n] + timeseries_file_2 for n in sim_numbers]
@@ -920,13 +920,13 @@ def plot_freezing_months (base_dir='./', fig_dir='./'):
 
     data_plot = []
     for n in range(len(directories)):
-        print 'Processing ' + sim_names[sim_numbers[n]]
+        print(('Processing ' + sim_names[sim_numbers[n]]))
         output_dir = directories[n]
         file_paths = segment_file_paths(output_dir)
         num_time = len(file_paths)
         data = np.empty([num_time, grid.ny, grid.nx])
         for t in range(num_time):
-            print '...year ' + str(t+1) + ' of ' + str(num_time)
+            print(('...year ' + str(t+1) + ' of ' + str(num_time)))
             # Read sea ice production and add up all the freezing months this year
             iceprod = read_iceprod(file_paths[t])
             is_freezing = (iceprod > 0).astype(float)
@@ -935,7 +935,7 @@ def plot_freezing_months (base_dir='./', fig_dir='./'):
             # Calculate the average
             data_plot.append(mask_land_ice(np.mean(data, axis=0),grid))
         else:
-            print 'Calculating trend'
+            print('Calculating trend')
             # Calculate the trend - have to do this individually for each data point
             time = np.arange(num_time)
             trend = np.empty([grid.ny, grid.nx])
@@ -973,7 +973,7 @@ def plot_atm_timeseries (sim_key, smooth=0, base_dir='./', fig_dir='./'):
     elif sim_key in ['abIO', '1pIO']:
         ctrl_key = 'ctIO'
     else:
-        print 'Error (plot_atm_timeseries): invalid sim_key ' + sim_key
+        print(('Error (plot_atm_timeseries): invalid sim_key ' + sim_key))
         sys.exit()
     sim_numbers = [sim_keys.index(key) for key in [ctrl_key, sim_key]]
     file_paths = [base_dir + sim_dirs[n] + timeseries_file_2 for n in sim_numbers]
@@ -1029,12 +1029,12 @@ def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
         # Read all the data
         data_plot = []
         for n in range(len(directories)):
-            print 'Processing ' + sim_names[sim_numbers[n]]
+            print(('Processing ' + sim_names[sim_numbers[n]]))
             file_paths = segment_file_paths(directories[n])
             num_years = len(file_paths)
             data = np.empty([num_years, grid.ny, grid.nx])
             for t in range(num_years):
-                print '...year ' + str(t+1) + ' of ' + str(num_years)
+                print(('...year ' + str(t+1) + ' of ' + str(num_years)))
                 if var_names[v] == 'atemp':
                     data[t,:] = read_netcdf(file_paths[t], 'EXFatemp', time_average=True) - temp_C2K
                 elif var_names[v] == 'windspeed':
@@ -1045,7 +1045,7 @@ def plot_atm_trend_maps (base_dir='./', fig_dir='./'):
                     data[t,:] = np.mean(speed, axis=0)
                 elif var_names[v] == 'pminuse':
                     data[t,:] = read_netcdf(file_paths[t], 'EXFpreci', time_average=True) - read_netcdf(file_paths[t], 'EXFevap', time_average=True)
-            print 'Calculating trend'
+            print('Calculating trend')
             time = np.arange(num_years)
             trend = np.empty([grid.ny, grid.nx])
             for j in range(grid.ny):
@@ -1096,7 +1096,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
     elif sim_key in ['1pO', '1pIO']:
         sim_name = '1pctCO2'
     else:
-        print 'Error (plot_wind_changes): invalid sim_key ' + sim_key
+        print(('Error (plot_wind_changes): invalid sim_key ' + sim_key))
         sys.exit()
 
     ukesm_lon, ukesm_lat = ukesm_grid.get_lon_lat(dim=1)
@@ -1126,7 +1126,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
             elif var == 'vwind':
                 data_tmp = v_t
             else:
-                print 'Error (plot_wind_changes): invalid variable ' + var
+                print(('Error (plot_wind_changes): invalid variable ' + var))
                 sys.exit()
             data_tmp = np.mean(data_tmp, axis=0)
             if data is None:
@@ -1150,7 +1150,7 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
         data = None
         for year in range(year_start, year_end+1):
             file_path = base_dir+'WSFRIS_'+key+'/output/'+str(year)+'01/MITgcm/output.nc'
-            print 'Reading ' + file_path
+            print(('Reading ' + file_path))
             u = read_netcdf(file_path, 'EXFuwind')
             v = read_netcdf(file_path, 'EXFvwind')
             if var == 'windspeed':
@@ -1238,7 +1238,7 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         elif sim_key in ['1pO', '1pIO']:
             sim_name = '1pctCO2'
         else:
-            print 'Error (plot_obcs_change): invalid sim_key ' + sim_key
+            print(('Error (plot_obcs_change): invalid sim_key ' + sim_key))
             sys.exit()
         expt_title = sim_name + ' minus piControl (last 10 years)'
     if var == 'temp':
@@ -1248,7 +1248,7 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         file_head = 'SALT_'
         var_title = 'Change in salinity (psu)'
     else:
-        print 'Error (plot_obcs_change): invalid variable ' + var
+        print(('Error (plot_obcs_change): invalid variable ' + var))
         sys.exit()
     if direction == 'E':
         dimensions = 'yzt'
@@ -1257,7 +1257,7 @@ def plot_obcs_change (sim_key, var, direction, obcs_dir='/work/n02/n02/shared/ba
         dimensions = 'xzt'
         shape = [grid.nz, grid.nx]
     else:
-        print 'Error (plot_obcs_change): invalid direction ' + direction
+        print(('Error (plot_obcs_change): invalid direction ' + direction))
         sys.exit()
     file_tail = '.OBCS_'+direction+'_'
 
@@ -1435,11 +1435,11 @@ def plot_final_timeseries (base_dir='./', fig_dir='./'):
     # Calculate final factor of increase in mass loss in abrupt-4xCO2.
     final_melt = data[-1][-1][-1]
     factor_inc = final_melt/np.mean(data[-1][0])
-    print sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'
+    print((sim_names_plot[-1] + ' mass loss increases by factor of ' + str(factor_inc) + ' over final year'))
     # Calculate final increase in temperature in abrupt-4xCO2.
     final_temp = data[1][-1][-1]
     temp_inc = final_temp - np.mean(data[1][0])
-    print sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year' 
+    print((sim_names_plot[-1] + ' temperature increases by ' + str(temp_inc) + 'C over final year')) 
 
     # Set up plot
     fig, gs = set_panels('3x1C0')
@@ -2016,12 +2016,12 @@ def compare_tas_scenarios (timeseries_dir='./', fig_dir='./'):
         if n < 2:
             ax.plot(threshold_year[n]+1850, data[n][threshold_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
             ax.plot(stage1_year[n]+1850, data[n][stage1_year[n]], '*', color=colours[n], markersize=20, markeredgecolor='black')
-            print titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'
-            print titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'
+            print((titles[n] + ' at threshold year ' + str(data[n][threshold_year[n]]) + 'C'))
+            print((titles[n] + ' at Stage 1 year ' + str(data[n][stage1_year[n]]) + 'C'))
     plt.text(1957, 6.66, 'Stage 2 begins', ha='center', va='center', fontsize=14)
     plt.text(1890, 4, 'Stage 1\ndetectable', ha='center', va='center', fontsize=14)
     ax.axhline(data[-1][-1], color='black', linestyle='dashed')
-    print 'Final observations: '+str(data[-1][-1])+'C'
+    print(('Final observations: '+str(data[-1][-1])+'C'))
     plt.text(1970, 1.35, 'Current warming', ha='center', va='center', fontsize=14)
     #plt.text(1945, 6.5, 'This study', ha='center', va='center', fontsize=14)
     plt.title('Global mean near-surface air temperature anomaly', fontsize=17)
@@ -2066,7 +2066,7 @@ def plot_ismr_moholdt (base_dir='./', fig_dir='./'):
 
     fig, gs, cax = set_panels('1x2C1', figsize=(9, 4.5))
     data = [ismr, ismr_obs_interp]
-    title = [u'ÚaMITgcm', 'Moholdt et al. (2014)']
+    title = ['ÚaMITgcm', 'Moholdt et al. (2014)']
     ab = ['a', 'b']
     for n in range(2):
         ax = plt.subplot(gs[0,n])
@@ -2144,7 +2144,7 @@ def ts_front_ps111 (base_dir='./', fig_dir='./'):
     cticks = [np.arange(34.3,34.8+0.1,0.1), np.arange(-2.2,-1.6+0.2,0.2)]
     ytitle = [0.9, 0.42]
     var_title = ['a) Salinity (psu)', 'b) Temperature ('+deg_string+'C)']
-    source_title = [u'ÚaMITgcm', 'PS111']
+    source_title = ['ÚaMITgcm', 'PS111']
     xticks = np.arange(-60,-35+5,5)
     labels = ['RD', 'BB', 'FT']
     labels_x = [-60, -48, -38.5]
@@ -2193,7 +2193,7 @@ def control_trends (base_dir='./'):
         data_full = read_netcdf(file_path, var)
         time, data = calc_annual_averages(time_full, data_full)
         slope, intercept, r_value, p_value, std_err = linregress(np.arange(time.size), data)
-        print var + ': slope=' + str(slope) + ', r^2=' + str(r_value**2) + ', p-value=' + str(p_value)
+        print((var + ': slope=' + str(slope) + ', r^2=' + str(r_value**2) + ', p-value=' + str(p_value)))
 
 
 def cmip_co2 (fig_dir='./'):
@@ -2306,7 +2306,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     obs_temp_regions = np.ma.empty([num_loc, nz])
     for l in range(num_loc):
         index = mask_flag[l,:] == 1
-        print str(np.count_nonzero(index)) + ' points in ' + loc[l]
+        print((str(np.count_nonzero(index)) + ' points in ' + loc[l]))
         obs_salt_regions[l,:] = np.mean(obs_salt[index,:], axis=0)
         obs_temp_regions[l,:] = np.mean(obs_temp[index,:], axis=0)
 
@@ -2314,7 +2314,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
     model_salt_regions = np.ma.empty([num_years, num_loc, grid.nz])
     model_temp_regions = np.ma.empty([num_years, num_loc, grid.nz])
     for year in range(start_year, end_year+1):
-        print 'Processing ' + str(year)
+        print(('Processing ' + str(year)))
         file_path = mit_dir + str(year) + file_tail
         def read_interp (var_name):
             data_3d = mask_3d(read_netcdf(file_path, var_name, t_end=num_months, time_average=True), grid)
@@ -2375,7 +2375,7 @@ def ts_casts_ps111 (base_dir='./', fig_dir='./'):
             ax.set_ylim([None, 0])
         plt.text(0.5, ytitle[l], loc_titles[l], fontsize=20, transform=fig.transFigure, ha='center', va='center')
     # Main title
-    plt.text(0.6, 0.95, u'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
+    plt.text(0.6, 0.95, 'ÚaMITgcm (1979-2014, colours)\nvs PS111 cruise (2018, black)', fontsize=24, transform=fig.transFigure, ha='center', va='center')
     # Add map in top corner showing where casts are
     ax = fig.add_axes([0.01, 0.88, 0.2, 0.11])
     empty_data = mask_land_ice(np.ones([grid.ny,grid.nx]),grid)-100
@@ -2425,7 +2425,7 @@ def calc_thresholds (base_dir='./'):
             data_slice = data_tmp[t-num_years_spinup:t]
             slope, intercept, r_value, p_value, std_err = linregress(dummy_time, data_slice)
             if slope < 0 and p_value <= 0.05:
-                print sim_names_plot[n] + ' begins Stage 1 in year ' + str(years[t-num_years_spinup-1])
+                print((sim_names_plot[n] + ' begins Stage 1 in year ' + str(years[t-num_years_spinup-1])))
                 break
 
     timeseries_multi_plot(years, data1, sim_names_plot, sim_colours, title=title, units=units, dates=False)
@@ -2437,7 +2437,7 @@ def calc_thresholds (base_dir='./'):
         data2.append(data_tmp[:num_years])
     for n in range(1, num_sims):
         i = np.where(data2[n] > temp_threshold)[0][0]
-        print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])
+        print((sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])))
 
     fig, ax = timeseries_multi_plot(years, data2, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
     ax.axhline(temp_threshold, color='black', linestyle='dashed')
@@ -2464,7 +2464,7 @@ def calc_threshold_stage2 (base_dir='./'):
         data.append(data_tmp[:num_years])
     for n in range(1, num_sims):
         i = np.where(data[n] > 0)[0][0]
-        print sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])
+        print((sim_names_plot[n] + ' begins Stage 2 in year ' + str(years[i])))
 
     fig, ax = timeseries_multi_plot(years, data, sim_names_plot, sim_colours, title=title, units=units, dates=False, return_fig=True)
     ax.axhline(0, color='black', linestyle='dashed')
@@ -2532,7 +2532,7 @@ def calc_threshold_stage1 (base_dir='./'):
             else:
                 flag *= flag_tmp
         i = np.where(flag)[0][0]
-        print sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[i])
+        print((sim_names_plot[n] + ' begins Stage 1 in year ' + str(time[i])))
 
 
 def calc_slr_contribution (base_dir='./'):
@@ -2551,7 +2551,7 @@ def calc_slr_contribution (base_dir='./'):
     slr_diff = slr[1]-slr[0]
     time = np.arange(0, 200, 1/12.) + 1/24.
 
-    print 'Final sea level rise contribution from abrupt-4xCO2 (drift subtracted): ' + str(slr_diff[-1]) + ' m'
+    print(('Final sea level rise contribution from abrupt-4xCO2 (drift subtracted): ' + str(slr_diff[-1]) + ' m'))
     
     timeseries_multi_plot(time, slr, sim_names_plot, colours, title='Sea level rise contribution', units='m', dates=False)
     timeseries_multi_plot(time, [slr_diff], [sim_names_plot[1]], [colours[1]], title='Sea level rise contribution, drift subtracted', units='m', dates=False)
@@ -2588,7 +2588,7 @@ def calc_ewed_massloss (file_path):
 
     for var in ['brunt_riiser_larsen', 'ekstrom_jelbart_fimbul']:
         mask = grid.get_ice_mask(shelf=var)
-        print var + ': ' + str(total_melt(ismr, mask, grid)) + ' Gt/y'
+        print((var + ': ' + str(total_melt(ismr, mask, grid)) + ' Gt/y'))
 
 
 # Compare the UKESM boundary conditions to the World Ocean Atlas 2018 for temperature and salinity.
@@ -2722,7 +2722,7 @@ def precompute_density (precompute_file, base_dir='./'):
         density_int = None
         for year in range(year0[n]+start_year[n], year0[n]+end_year[n]+1):
             file_path = base_dir + out_dir[n] + str(year) + '01/MITgcm/output.nc'
-            print 'Processing ' + file_path
+            print(('Processing ' + file_path))
             grid = Grid(file_path)
             temp = read_netcdf(file_path, 'THETA', time_average=True)
             salt = read_netcdf(file_path, 'SALT', time_average=True)
@@ -2735,7 +2735,7 @@ def precompute_density (precompute_file, base_dir='./'):
             density_all = np.ma.empty([num_periods, grid.nz, grid.ny, grid.nx])
         density_all[n,:] = density_int/(end_year[n]-start_year[n]+1)
     # Now save to file
-    print 'Saving ' + precompute_file
+    print(('Saving ' + precompute_file))
     ncfile = NCfile(precompute_file, grid, 'xyzt')
     ncfile.add_variable('potential_density', density_all, 'xyzt', units='kg/m^3')
     ncfile.close()

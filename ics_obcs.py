@@ -2,12 +2,12 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from grid import Grid, grid_check_split, choose_grid
-from utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
-from file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic
-from interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
-from constants import sec_per_year, gravity, sec_per_day, months_per_year
-from diagnostics import density
+from .grid import Grid, grid_check_split, choose_grid
+from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
+from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
+from .constants import sec_per_year, gravity, sec_per_day, months_per_year
+from .diagnostics import density
 
 import numpy as np
 import os
@@ -40,7 +40,7 @@ def make_sose_climatology (in_file, out_file):
 # Do the same for SOSE versions stored in NetCDF files (like B-SOSE). You must also supply the variable name in the file, and the path to the complete NetCDF grid file.
 def make_sose_climatology_netcdf (in_file, var_name, out_file, units=None):
     
-    from file_io import read_netcdf
+    from .file_io import read_netcdf
     import netCDF4 as nc
     data = read_netcdf(in_file, var_name)
     climatology = calc_climatology(data)
@@ -50,7 +50,7 @@ def make_sose_climatology_netcdf (in_file, var_name, out_file, units=None):
 # Helper function for initial conditions: figure out which points on the source grid will be needed for interpolation. Does not include ice shelf cavities, unless missing_cavities=False.
 def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 
-    from interpolation import interp_reg
+    from .interpolation import interp_reg
 
     # Find open cells according to the model, interpolated to source grid
     model_open = np.ceil(interp_reg(model_grid, source_grid, np.ceil(model_grid.hfac), fill_value=0))
@@ -72,17 +72,17 @@ def get_fill_mask (source_grid, model_grid, missing_cavities=True):
 # Helper function for initial conditions: process and interpolate a field from the source grid to the model grid, and write to file (binary plus NetCDF if needed).
 def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, dim, field_name, out_file, missing_cavities=True, model_cavity=None, cavity_value=None, regular=True, nc_out=None, ncfile=None, prec=64, missing_val=-9999):
 
-    from interpolation import interp_reg, interp_nonreg
+    from .interpolation import interp_reg, interp_nonreg
 
     # Error checking
     if missing_cavities and dim==3 and (model_cavity is None or cavity_value is None):
-        print 'Error (process_ini_field): must provide model_cavity and cavity_value'
+        print('Error (process_ini_field): must provide model_cavity and cavity_value')
         sys.exit()
     if nc_out is not None and ncfile is None:
-        print 'Error (process_ini_field): must provide ncfile'
+        print('Error (process_ini_field): must provide ncfile')
         sys.exit()
         
-    print '...extrapolating into missing regions'
+    print('...extrapolating into missing regions')
     if dim == 3:
         source_data = discard_and_fill(source_data, source_mask, fill, missing_val=missing_val)
         if missing_cavities:
@@ -91,7 +91,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
         # Just the surface layer
         source_data = discard_and_fill(source_data, source_mask[0,:], fill[0,:], use_3d=False, missing_val=missing_val)
 
-    print '...interpolating to model grid'
+    print('...interpolating to model grid')
     if regular:
         data_interp = interp_reg(source_grid, model_grid, source_data, dim=dim)
     else:
@@ -109,7 +109,7 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
     # Write file
     write_binary(data_interp, out_file, prec=prec)
     if nc_out is not None:
-        print '...adding to ' + nc_out
+        print(('...adding to ' + nc_out))
         if dim == 3:
             ncfile.add_variable(field_name, data_interp, 'xyz')
         else:
@@ -132,8 +132,8 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
 
 def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
 
-    from grid import SOSEGrid
-    from file_io import NCfile
+    from .grid import SOSEGrid
+    from .file_io import NCfile
 
     sose_dir = real_dir(sose_dir)
     output_dir = real_dir(output_dir)
@@ -157,7 +157,7 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
     # End of filenames for output
     outfile_tail = '_BSOSE.ini'
     
-    print 'Building grids'
+    print('Building grids')
     # First build the model grid and check that we have the right value for split
     model_grid = grid_check_split(grid_path, split)
     # Now build the SOSE grid
@@ -169,7 +169,7 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
     # Extract land mask
     sose_mask = sose_grid.hfac == 0
     
-    print 'Building mask for SOSE points to fill'
+    print('Building mask for SOSE points to fill')
     fill, model_cavity = get_fill_mask(sose_grid, model_grid)
 
     # Set up a NetCDF file so the user can check the results
@@ -180,10 +180,10 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
 
     # Process fields
     for n in range(len(fields)):
-        print 'Processing ' + fields[n]
+        print(('Processing ' + fields[n]))
         in_file = sose_dir + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
-        print '...reading ' + in_file
+        print(('...reading ' + in_file))
         # Just keep the January climatology
         if dim[n] == 3:
             sose_data = sose_grid.read_field(in_file, 'xyzt', var_name=fields[n])[0,:]
@@ -209,7 +209,7 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
 
 def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
-    from file_io import NCfile, read_netcdf
+    from .file_io import NCfile, read_netcdf
 
     output_dir = real_dir(output_dir)
 
@@ -220,13 +220,13 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
     # End of filenames for output
     outfile_tail = '_MIT.ini'
 
-    print 'Building grids'
+    print('Building grids')
     source_grid = Grid(source_file)
     model_grid = Grid(grid_path)
     # Extract land mask of source grid
     source_mask = source_grid.hfac==0
 
-    print 'Building mask for points to fill'
+    print('Building mask for points to fill')
     fill = get_fill_mask(source_grid, model_grid, missing_cavities=False)
 
     # Set up a NetCDF file so the user can check the results
@@ -235,7 +235,7 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 
     # Process fields
     for n in range(len(fields)):
-        print 'Processing ' + fields[n]
+        print(('Processing ' + fields[n]))
         out_file = output_dir + fields[n] + outfile_tail
         # Read the January climatology
         source_data = read_netcdf(source_file, fields[n], time_index=0)
@@ -245,8 +245,8 @@ def mit_ics (grid_path, source_file, output_dir, nc_out=None, prec=64):
 # Create initial conditions for temperature, salinity, sea ice area, sea ice thickness, and snow thickness using January output from the given year of a CMIP6 simulation. 
 def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', constant_t=-1.9, constant_s=34.4, output_dir='./', nc_out=None, prec=64):
 
-    from file_io import NCfile, read_netcdf
-    from grid import CMIPGrid
+    from .file_io import NCfile, read_netcdf
+    from .grid import CMIPGrid
 
     output_dir = real_dir(output_dir)
 
@@ -262,12 +262,12 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
     # End of filenames for output
     outfile_tail = '_'+expt+'.ini'
 
-    print 'Building MITgcm grid'
+    print('Building MITgcm grid')
     model_grid = Grid(grid_path)
-    print 'Building CMIP6 model grid'
+    print('Building CMIP6 model grid')
     cmip_grid = CMIPGrid(cmip_model_path, expt, ensemble_member)
 
-    print 'Building mask for CMIP points to fill'
+    print('Building mask for CMIP points to fill')
     fill, model_cavity = get_fill_mask(cmip_grid, model_grid)
 
     # Set up NetCDF file
@@ -276,7 +276,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
 
     # Process fields
     for n in range(len(fields_mit)):
-        print 'Processing ' + fields_mit[n]
+        print(('Processing ' + fields_mit[n]))
         # Figure out where all the files are, and which years they cover
         in_files, start_years, end_years = find_cmip6_files(cmip_model_path, expt, ensemble_member, fields_cmip[n], realm[n])
         # Find which file includes the year we want
@@ -292,7 +292,7 @@ def cmip6_ics (grid_path, year0, expt='piControl', cmip_model_path='/badc/cmip6/
             file_path_aice = file_path
             time_index_aice = time_index
         # Read data
-        print 'Reading ' + file_path + ' at index ' + str(time_index)
+        print(('Reading ' + file_path + ' at index ' + str(time_index)))
         cmip_data = read_netcdf(file_path, fields_cmip[n], time_index=time_index)
         if fields_mit[n] == 'SIarea':
             # Convert from percent to fraction
@@ -353,7 +353,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         temp = read_binary(ini_temp_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
         salt = read_binary(ini_salt_file, [grid.nx, grid.ny, grid.nz], 'xyz', prec=prec)
     else:
-        print 'Error (calc_load_anomaly): Must either specify ini_temp and ini_salt OR ini_temp_file and ini_salt_file'
+        print('Error (calc_load_anomaly): Must either specify ini_temp and ini_salt OR ini_temp_file and ini_salt_file')
         sys.exit()
 
     # Fill in the ice shelves
@@ -374,7 +374,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
         for data in [temp, salt]:
             # Make sure there are no missing values
             if (data[~closed]==0).any():
-                print 'Error (calc_load_anomaly): you selected the precomputed option, but there are appear to be missing values in the land mask.'
+                print('Error (calc_load_anomaly): you selected the precomputed option, but there are appear to be missing values in the land mask.')
                 sys.exit()
             # Make sure it's not a masked array as this will break the rms
             if isinstance(data, np.ma.MaskedArray):
@@ -382,7 +382,7 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
                 data[data.mask] = 0
                 data = data.data
     else:
-        print 'Error (calc_load_anomaly): invalid option ' + option
+        print(('Error (calc_load_anomaly): invalid option ' + option))
         sys.exit()
 
     # Get vertical integrands considering z at both centres and edges of layers
@@ -402,9 +402,9 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     while True:
         rms_old = rms_error
         rms_error = rms(press, press_old)
-        print 'RMS error = ' + str(rms_error)
+        print(('RMS error = ' + str(rms_error)))
         if rms_error < errorTol or np.abs(rms_error-rms_old) < 0.1*errorTol:
-            print 'Converged'
+            print('Converged')
             break
         # Save old pressure
         press_old = np.copy(press)
@@ -455,7 +455,7 @@ def find_obcs_boundary (grid, location):
         loc0 = grid.lon_1d[-1]
         loc0_e = 2*grid.lon_corners_1d[-1] - grid.lon_corners_1d[-2]
     else:
-        print 'Error (find_obcs_boundary): invalid location '+str(location)
+        print(('Error (find_obcs_boundary): invalid location '+str(location)))
         sys.exit()
     return loc0, loc0_e
 
@@ -476,9 +476,9 @@ def find_obcs_boundary (grid, location):
 
 def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32, split=180):
 
-    from grid import SOSEGrid
-    from file_io import NCfile, read_netcdf
-    from interpolation import interp_bdry
+    from .grid import SOSEGrid
+    from .file_io import NCfile, read_netcdf
+    from .interpolation import interp_bdry
 
     if source in ['SOSE', 'BSOSE']:
         input_path = real_dir(input_path)
@@ -504,7 +504,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     # End of filenames for output
     outfile_tail = '_'+source+'.OBCS_'+location
 
-    print 'Building MITgcm grid'
+    print('Building MITgcm grid')
     if source in ['SOSE', 'BSOSE']:
         model_grid = grid_check_split(grid_path, split)
     elif source == 'MIT':
@@ -512,19 +512,19 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 
     # Identify boundary
     loc0, loc0_e = find_obcs_boundary(model_grid, location)
-    print location+' boundary at '+str(loc0)+' (cell centre), '+str(loc0_e)+' (cell edge)'
+    print((location+' boundary at '+str(loc0)+' (cell centre), '+str(loc0_e)+' (cell edge)'))
 
     if source == 'SOSE':
-        print 'Building SOSE grid'
+        print('Building SOSE grid')
         source_grid = SOSEGrid(input_path+'grid/', model_grid=model_grid, split=split)
     elif source == 'BSOSE':
-        print 'Building B-SOSE grid'
+        print('Building B-SOSE grid')
         source_grid = SOSEGrid(input_path+'grid.nc', model_grid=model_grid, split=split)
     elif source == 'MIT':
-        print 'Building grid from source model'
+        print('Building grid from source model')
         source_grid = Grid(input_path)
     else:
-        print 'Error (make_obcs): invalid source ' + source
+        print(('Error (make_obcs): invalid source ' + source))
         sys.exit()
     # Calculate interpolation indices and coefficients to the boundary latitude or longitude
     if location in ['N', 'S']:
@@ -547,7 +547,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         if fields[n].startswith('SI') and not use_seaice:
             continue
 
-        print 'Processing ' + fields[n]
+        print(('Processing ' + fields[n]))
         if source in ['SOSE', 'BSOSE']:
             in_file = input_path + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
@@ -562,12 +562,12 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
 
         if fields[n] == 'SIarea' and source == 'SOSE':
             # We'll need this field later for SIuice and SIvice, as SOSE didn't mask those variables properly
-            print 'Interpolating sea ice area to u and v grids for masking of sea ice velocity'
+            print('Interpolating sea ice area to u and v grids for masking of sea ice velocity')
             source_aice_u = interp_grid(source_data, source_grid, 't', 'u', time_dependent=True, mask_with_zeros=True, periodic=True)
             source_aice_v = interp_grid(source_data, source_grid, 't', 'v', time_dependent=True, mask_with_zeros=True, periodic=True)
         # Set sea ice velocity to zero wherever sea ice area is zero
         if fields[n] in ['SIuice', 'SIvice'] and source == 'SOSE':
-            print 'Masking sea ice velocity with sea ice area'
+            print('Masking sea ice velocity with sea ice area')
             if fields[n] == 'SIuice':
                 index = source_aice_u==0
             else:
@@ -623,7 +623,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         else:
             data_interp = np.zeros([12, model_haxis.size])
         for month in range(12):
-            print '...interpolating month ' + str(month+1)
+            print(('...interpolating month ' + str(month+1)))
             data_interp_tmp = interp_bdry(source_haxis, source_grid.z, source_data[month,:], source_hfac, model_haxis, model_grid.z, model_hfac, depth_dependent=(dim[n]==3))
             if fields[n] not in ['THETA', 'SALT']:
                 # Zero in land mask is more physical than extrapolated data
@@ -634,7 +634,7 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         write_binary(data_interp, out_file, prec=prec)
         
         if nc_out is not None:
-            print '...adding to ' + nc_out
+            print(('...adding to ' + nc_out))
             # Construct the dimension code
             if location in ['S', 'N']:
                 dimension = 'x'
@@ -713,7 +713,7 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
         axis = 0
     # Error checking
     if np.count_nonzero(np.sum(weights, axis=axis)) != N:
-        print 'Error (find_slice_weights): Something went wrong'
+        print('Error (find_slice_weights): Something went wrong')
         sys.exit()
     return weights, haxis
 
@@ -722,9 +722,9 @@ def find_slice_weights (cmip_grid, model_grid, location, gtype):
 # Assumes 30-day months, and ocean longitude in the range (-180, 180).
 def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=None, cmip_model_path='/badc/cmip6/data/CMIP6/CMIP/MOHC/UKESM1-0-LL/', ensemble_member='r1i1p1f2', output_dir='./', nc_out=None, prec=32):
 
-    from file_io import NCfile, read_netcdf
-    from grid import CMIPGrid
-    from interpolation import interp_bdry
+    from .file_io import NCfile, read_netcdf
+    from .grid import CMIPGrid
+    from .interpolation import interp_bdry
 
     output_dir = real_dir(output_dir)
 
@@ -740,11 +740,11 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
     # Middle of filenames for output (will be preceded by variable, and followed by year)
     outfile_mid = '_'+expt+'.OBCS_'+location+'_'
 
-    print 'Building MITgcm grid'
+    print('Building MITgcm grid')
     model_grid = Grid(grid_path)
-    print 'Building CMIP6 model grid'
+    print('Building CMIP6 model grid')
     cmip_grid = CMIPGrid(cmip_model_path, expt, ensemble_member)
-    print 'Calculating weighting coefficients to extract slice'
+    print('Calculating weighting coefficients to extract slice')
     # Do this for each grid
     weights_t, haxis_t = find_slice_weights(cmip_grid, model_grid, location, 't')
     weights_u, haxis_u = find_slice_weights(cmip_grid, model_grid, location, 'u')
@@ -780,10 +780,10 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
 
     # Process each field
     for n in range(len(fields_mit)):
-        print 'Variable ' + fields_mit[n]
+        print(('Variable ' + fields_mit[n]))
 
         # Organise grids
-        print 'Tiling weights to correct dimensions'
+        print('Tiling weights to correct dimensions')
         weights, cmip_haxis = get_weights_haxis(gtype[n], dim[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
@@ -824,15 +824,15 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
         # Loop over each file
         for t in range(len(in_files)):
             file_path = in_files[t]
-            print 'Processing ' + file_path
-            print 'Covers years '+str(start_years[t])+' to '+str(end_years[t])
+            print(('Processing ' + file_path))
+            print(('Covers years '+str(start_years[t])+' to '+str(end_years[t])))
             
             # Loop over years
             t_start = 0  # Time index in file
             t_end = t_start+months_per_year
             for year in range(start_years[t], end_years[t]+1):
                 if year >= mit_start_year and year <= mit_end_year:
-                    print 'Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)
+                    print(('Reading ' + str(year) + ' from indices ' + str(t_start) + '-' + str(t_end)))
                     # Read data
                     data = read_netcdf(file_path, fields_cmip[n], t_start=t_start, t_end=t_end)
                     if fields_mit[n] == 'SIarea':
@@ -847,7 +847,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                         # These variables need to be weighted by sea ice concentration.
                         # Make sure the concentration files (saved from before) line up with these files.
                         if (start_years != start_years_aice) or (end_years != end_years_aice):
-                            print 'Error (cmip6_obcs): siconc files do not line up with ' + fields_cmip[n] + ' files. You will need to edit the code.'
+                            print(('Error (cmip6_obcs): siconc files do not line up with ' + fields_cmip[n] + ' files. You will need to edit the code.'))
                             sys.exit()
                         data_aice = read_netcdf(in_files_aice[t], 'siconc', t_start=t_start, t_end=t_end)*1e-2
                         data *= data_aice
@@ -866,7 +866,7 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
                     else:
                         data_interp = np.zeros([12, model_haxis.size])
                     for month in range(12):
-                        print 'Interpolating ' + str(year) + '/' + str(month+1)
+                        print(('Interpolating ' + str(year) + '/' + str(month+1)))
                         data_interp_tmp = interp_bdry(cmip_haxis, cmip_grid.z, data_slice[month,:], data_mask, model_haxis, model_grid.z, model_hfac, lon=h_is_lon, depth_dependent=(dim[n]==3))
                         if fields_mit[n] not in ['THETA', 'SALT']:
                             # Zero in land mask is more physical than extrapolated data
@@ -915,10 +915,10 @@ def cmip6_obcs (location, grid_path, expt, mit_start_year=None, mit_end_year=Non
 def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_file_e_u=None, obcs_file_s_v=None, obcs_file_n_v=None, d_eta=None, d_t=None, max_deta_dt=0.5, multi_year=False, start_year=None, end_year=None, prec=32):
 
     if option == 'correct' and (d_eta is None or d_t is None):
-        print 'Error (balance_obcs): must set d_eta and d_t for option="correct"'
+        print('Error (balance_obcs): must set d_eta and d_t for option="correct"')
         sys.exit()
     if multi_year and (start_year is None or end_year is None):
-        print 'Error (balance_obcs): must set start_year and end_year when multi_year=True'
+        print('Error (balance_obcs): must set start_year and end_year when multi_year=True')
         sys.exit()        
 
     in_dir = real_dir(in_dir)
@@ -968,7 +968,7 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
     total_area = 0
     for i in range(len(files)):
         if files[i][0] is not None:
-            print 'Calculating area of ' + bdry_key[i] + ' boundary'
+            print(('Calculating area of ' + bdry_key[i] + ' boundary'))
             total_area += np.sum(dA_bdry[i])            
 
     # Calculate the net transport into the domain
@@ -982,14 +982,14 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
         for t in range(num_years):
             for i in range(len(files)):
                 if files[i][t] is not None:
-                    print 'Processing ' + bdry_key[i] + ' boundary from ' + files[i][t]
+                    print(('Processing ' + bdry_key[i] + ' boundary from ' + files[i][t]))
                     # Read data
                     vel = read_binary(files[i][t], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
                     if num_months is None:
                         # Find number of time indices
                         num_months = vel.shape[0]
                     elif num_months != vel.shape[0]:
-                        print 'Error (balance_obcs): inconsistent number of time indices between OBCS files'
+                        print('Error (balance_obcs): inconsistent number of time indices between OBCS files')
                         sys.exit()
                     if option == 'dampen' and net_transport is None:
                         # Initialise transport per month
@@ -1016,17 +1016,17 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
             direction = 'out of the domain'
         else:
             direction = 'into the domain'
-        print 'Net transport is ' + str(abs(transport*1e-6)) + ' Sv ' + direction
+        print(('Net transport is ' + str(abs(transport*1e-6)) + ' Sv ' + direction))
 
     if option == 'correct':
         print_net_transport(net_transport)
     else:
         for t in range(num_years):
             if multi_year:
-                print 'Year ' + str(start_year+t)
+                print(('Year ' + str(start_year+t)))
             if option == 'dampen':
                 for tt in range(num_months):
-                    print 'Month ' + str(tt+1)
+                    print(('Month ' + str(tt+1)))
                     print_net_transport(net_transport[t,tt])
             else:
                 print_net_transport(net_transport[t])        
@@ -1036,40 +1036,40 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
         # First need total area of sea surface (including cavities) in domain
         surface_area = np.sum(mask_land(grid.dA, grid))
         max_transport = max_deta_dt*surface_area/(sec_per_day*30)
-        print 'Maximum allowable transport is ' + str(max_transport*1e-6) + ' Sv'
+        print(('Maximum allowable transport is ' + str(max_transport*1e-6) + ' Sv'))
         correction = np.zeros([num_years, num_months])
         for t in range(num_years):
             if multi_year:
-                print 'Year ' + str(start_year+t)
+                print(('Year ' + str(start_year+t)))
             if np.max(np.abs(net_transport[t,:])) <= max_transport:
-                print 'OBCS satisfy max allowable transport; nothing to do'
+                print('OBCS satisfy max allowable transport; nothing to do')
                 continue
             # Work out by what factor to dampen the transports
             scale_factor = max_transport/np.max(np.abs(net_transport[t,:]))
-            print 'Will scale transports by ' + str(scale_factor)
+            print(('Will scale transports by ' + str(scale_factor)))
             # Calculate corresponding velocity correction at each month
             for tt in range(num_months):
                 correction[t,tt] = (scale_factor-1)*net_transport[t,tt]/total_area
-                print 'Month ' + str(tt+1) + ': will apply correction of ' + str(correction[t,tt]) + ' m/s to normal velocity at each boundary'
+                print(('Month ' + str(tt+1) + ': will apply correction of ' + str(correction[t,tt]) + ' m/s to normal velocity at each boundary'))
     else:
         # Calculate correction in m/s
         correction = -1*net_transport/total_area
         # Print results
         if option == 'correct':
             # Just a single value
-            print 'Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'
+            print(('Will apply correction of ' + str(correction) + ' m/s to normal velocity at each boundary'))
         elif option == 'balance':
             # Loop over years (even if just one)
             for t in range(num_years):
                 if multi_year:
-                    print 'Year ' + str(start_year+t)
-                print 'Will apply correction of ' + str(correction[t]) + ' m/s to normal velocity at each boundary'
+                    print(('Year ' + str(start_year+t)))
+                print(('Will apply correction of ' + str(correction[t]) + ' m/s to normal velocity at each boundary'))
 
     # Now apply the correction
     for t in range(num_years):
         for i in range(len(files)):
             if files[i][t] is not None:
-                print 'Correcting ' + files[i][t]
+                print(('Correcting ' + files[i][t]))
                 # Read all the data again
                 vel = read_binary(files[i][t], [grid.nx, grid.ny, grid.nz], dimensions[i], prec=prec)
                 # Apply the correction
@@ -1100,19 +1100,19 @@ def balance_obcs (grid, option='balance', in_dir='./', obcs_file_w_u=None, obcs_
                         for tt in range(num_months):
                             net_transport_new[t,tt] += np.sum(sign[i]*vel[tt,:]*dA_bdry[i])
             if multi_year:
-                print 'Year ' + str(start_year+t)
+                print(('Year ' + str(start_year+t)))
             if option == 'balance':
                 print_net_transport(net_transport_new[t])
             elif option == 'dampen':
                 for tt in range(num_months):
-                    print 'Month ' + str(tt+1)
+                    print(('Month ' + str(tt+1)))
                     print_net_transport(net_transport_new[t,tt])
 
 
 # Merge two sets of initial conditions for temperature and salinity, to keep the values from the first set in the deep ocean, and the values for the second set on the continental shelf (defined by the 2500 m isobath plus ice shelf cavities).
 def ics_merge (grid_path, temp_file_deep, salt_file_deep, temp_file_shelf, salt_file_shelf, temp_file_out, salt_file_out, h0=-2500, prec=64, nc_out=None):
 
-    from file_io import NCfile
+    from .file_io import NCfile
 
     # Build the grid
     grid = Grid(grid_path)

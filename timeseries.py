@@ -6,13 +6,13 @@ import numpy as np
 import sys
 import datetime
 
-from grid import choose_grid, Grid
-from file_io import read_netcdf, netcdf_time
-from utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land, depth_of_isoline
-from diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing, thermocline
-from calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
-from interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
-from constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst, Cp_sw
+from .grid import choose_grid, Grid
+from .file_io import read_netcdf, netcdf_time
+from .utils import convert_ismr, var_min_max, mask_land_ice, days_per_month, apply_mask, mask_3d, xy_to_xyz, select_top, select_bottom, add_time_dim, z_to_xyz, mask_2d_to_3d, mask_land, depth_of_isoline
+from .diagnostics import total_melt, wed_gyre_trans, transport_transect, density, in_situ_temp, tfreeze, adv_heat_wrt_freezing, thermocline
+from .calculus import over_area, area_integral, over_volume, vertical_average_column, area_average, volume_average, volume_integral
+from .interpolation import interp_bilinear, neighbours, interp_to_depth, interp_grid
+from .constants import deg_string, region_names, temp_C2K, sec_per_year, sec_per_day, rhoConst, Cp_sw
 
 
 # Calculate total mass loss or area-averaged melt rate from ice shelves in the given NetCDF file. You can specify specific ice shelves (as specified in region_names in constants.py). The default behaviour is to calculate the melt at each time index in the file, but you can also select a subset of time indices, and/or time-average - see optional keyword arguments. You can also split into positive (melting) and negative (freezing) components.
@@ -138,7 +138,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             elif operator == 'subtract':
                 data -= data_tmp
             else:
-                print 'Error (timeseries_area_sfc): invalid operator ' + operator
+                print(('Error (timeseries_area_sfc): invalid operator ' + operator))
                 sys.exit()
     if len(data.shape)==2:
         # Just one timestep; add a dummy time dimension
@@ -189,7 +189,7 @@ def timeseries_vol_3d (option, file_path, var_name, grid, gtype='t', time_index=
         
     if var_name == 'RHO':
         if rho is None:
-            print 'Error (timeseries_avg_3d): must precompute density'
+            print('Error (timeseries_avg_3d): must precompute density')
             sys.exit()
         data = rho
     elif var_name == 'TMINUSTF':
@@ -288,14 +288,14 @@ def timeseries_avg_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None
 # Same but volume-averaged value between the given depths (where z0=[z_deep, z_shallow]).
 def timeseries_avg_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     if not isinstance(z0, list) or len(z0) != 2:
-        print 'Error (timeseries_avg_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
+        print('Error (timeseries_avg_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]')
     return timeseries_vol_3d('avg_btw_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
 # Same but volume-integrated value between the given depths.
 def timeseries_int_btw_z0 (file_path, var_name, z0, grid, gtype='t', time_index=None, t_start=None, t_end=None, time_average=False, mask=None, rho=None):
     if not isinstance(z0, list) or len(z0) != 2:
-        print 'Error (timeseries_int_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]'
+        print('Error (timeseries_int_btw_z0): z0 must be a list of length 2: [z_deep, z_shallow]')
     return timeseries_vol_3d('int_btw_z0', file_path, var_name, grid, gtype=gtype, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average, mask=mask, rho=rho, z0=z0)
 
 
@@ -429,7 +429,7 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
         elif direction == 'S':
             trans = trans_S - trans_N
         else:
-            print 'Error (timeseries_transport_transect): invalid direction ' + direction
+            print(('Error (timeseries_transport_transect): invalid direction ' + direction))
             sys.exit()
         timeseries.append(trans)
     return np.array(timeseries)
@@ -649,25 +649,25 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
 def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
 
     if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho', 'thermocline'] and var_name is None:
-        print 'Error (calc_timeseries): must specify var_name'
+        print('Error (calc_timeseries): must specify var_name')
         sys.exit()
     if option == 'point_vavg' and (lon0 is None or lat0 is None):
-        print 'Error (calc_timeseries): must specify lon0 and lat0'
+        print('Error (calc_timeseries): must specify lon0 and lat0')
         sys.exit()
     if option in ['area_threshold', 'iso_depth'] and val0 is None:
-        print 'Error (calc_timeseries): must specify val0'
+        print('Error (calc_timeseries): must specify val0')
         sys.exit()
     if option in ['transport_transect', 'delta_rho'] and (point0 is None or point1 is None):
-        print 'Error (calc_timeseries): must specify point0 and point1'
+        print('Error (calc_timeseries): must specify point0 and point1')
         sys.exit()
     elif option in ['delta_rho', 'avg_z0', 'avg_btw_z0', 'int_btw_z0'] and z0 is None:
-        print 'Error (calc_timeseries): must specify z0'
+        print('Error (calc_timeseries): must specify z0')
         sys.exit()
     if var_name == 'RHO' and rho is None:
-        print 'Error (calc_timeseries): must precompute density'
+        print('Error (calc_timeseries): must precompute density')
         sys.exit()
     if option == 'adv_dif_bdry' and bdry is None:
-        print 'Error (calc_timeseries): must specify bdry'
+        print('Error (calc_timeseries): must specify bdry')
         sys.exit()
 
     if isinstance(file_path, str):
@@ -812,7 +812,7 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, factor=1, offset=0):
 
     if option == 'ismr' and mass_balance:
-        print "Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance"
+        print("Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance")
         sys.exit()
 
     # Calculate timeseries for each
@@ -1416,7 +1416,7 @@ def set_parameters (var):
         title = 'Shortwave penetration of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
         units = 'GJ/s'
     else:
-        print 'Error (set_parameters): invalid variable ' + var
+        print(('Error (set_parameters): invalid variable ' + var))
         sys.exit()
 
     return option, var_name, title, units, xmin, xmax, ymin, ymax, region, bdry, mass_balance, result, val0, tmin, tmax, smin, smax, point0, point1, z0, direction, factor, offset
@@ -1468,7 +1468,7 @@ def monthly_to_annual (data, time):
 
     # Make sure we start at the beginning of a year
     if time[0].month != 1:
-        print 'Error (monthly_to_annual): timeseries must start with January.'
+        print('Error (monthly_to_annual): timeseries must start with January.')
         sys.exit()
 
     # Weighted average of each year, taking days per month into account

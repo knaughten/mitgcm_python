@@ -11,9 +11,9 @@ import numpy as np
 import sys
 import os
 
-from file_io import read_netcdf, find_cmip6_files
-from utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d
-from constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
+from .file_io import read_netcdf, find_cmip6_files
+from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d
+from .constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
 # Grid object containing lots of grid variables:
@@ -53,7 +53,7 @@ class Grid:
             path = real_dir(path)
             from MITgcmutils import rdmds
         else:
-            print 'Error (Grid): ' + path + ' is neither a NetCDF file nor a directory'
+            print(('Error (Grid): ' + path + ' is neither a NetCDF file nor a directory'))
             sys.exit()
             
         # Read variables
@@ -118,7 +118,7 @@ class Grid:
             self.lon_1d = fix_lon_range(self.lon_1d, max_lon=max_lon)
             # Make sure it's strictly increasing now
             if not np.all(np.diff(self.lon_1d)>0):
-                print 'Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).'
+                print('Error (Grid): Longitude is not strictly increasing either in the range (0, 360) or (-180, 180).')
                 sys.exit()
         if max_lon == 360:
             self.split = 0
@@ -180,7 +180,7 @@ class Grid:
             lat = self.lat_2d
             lat_corners = self.lat_corners_2d
         else:
-            print 'Error (get_lon_lat): dim must be 1 or 2'
+            print('Error (get_lon_lat): dim must be 1 or 2')
             sys.exit()
 
         if gtype in ['t', 'w']:
@@ -192,7 +192,7 @@ class Grid:
         elif gtype == 'psi':
             return lon_corners, lat_corners
         else:
-            print 'Error (get_lon_lat): invalid gtype ' + gtype
+            print(('Error (get_lon_lat): invalid gtype ' + gtype))
             sys.exit()
 
 
@@ -207,7 +207,7 @@ class Grid:
         elif gtype == 'v':
             return self.hfac_s
         else:
-            print 'Error (get_hfac): no hfac exists for the ' + gtype + ' grid'
+            print(('Error (get_hfac): no hfac exists for the ' + gtype + ' grid'))
             sys.exit()
 
 
@@ -221,7 +221,7 @@ class Grid:
         elif gtype == 'v':
             return self.land_mask_v
         else:
-            print 'Error (get_land_mask): no mask exists for the ' + gtype + ' grid'
+            print(('Error (get_land_mask): no mask exists for the ' + gtype + ' grid'))
             sys.exit()
 
 
@@ -262,7 +262,7 @@ class Grid:
         elif gtype == 'v':
             ice_mask_all = self.ice_mask_v
         else:
-            print 'Error (get_ice_mask): no mask exists for the ' + gtype + ' grid'
+            print(('Error (get_ice_mask): no mask exists for the ' + gtype + ' grid'))
             sys.exit()
         
         # Select ice shelf
@@ -342,10 +342,10 @@ class Grid:
     # This was written specifically for the sws_shelf region but could easily be edited to work for other regions.
     def get_region_bdry_mask (self, region, bdry, gtype='t', ignore_iceberg=True):
 
-        from interpolation import neighbours
+        from .interpolation import neighbours
 
         if region != 'sws_shelf':
-            print 'Error (get_region_bdry_mask): code only works for sws_shelf case, you will have to edit and test it'
+            print('Error (get_region_bdry_mask): code only works for sws_shelf case, you will have to edit and test it')
             sys.exit()
 
         land_mask = self.get_land_mask(gtype=gtype)
@@ -393,7 +393,7 @@ class Grid:
         elif bdry == 'all':
             return icefront_mask, openocean_mask, upstream_mask, downstream_mask
         else:
-            print 'Error (get_region_bdry_mask): invalid bdry ' + bdry
+            print(('Error (get_region_bdry_mask): invalid bdry ' + bdry))
             sys.exit()
 
 
@@ -418,7 +418,7 @@ class Grid:
     
     # Build and return a mask for coastal points: open-ocean points with at least one neighbour that is land or ice shelf.
     def get_coast_mask (self, gtype='t', ignore_iceberg=True):
-        from interpolation import neighbours
+        from .interpolation import neighbours
         open_ocean = self.get_open_ocean_mask(gtype=gtype)
         land_ice = 1 - open_ocean
         num_coast_neighbours = neighbours(land_ice, missing_val=0)[-1]
@@ -459,15 +459,15 @@ def grid_check_split (grid_path, split):
     if split == 180:
         grid = Grid(grid_path, max_lon=180)
         if grid.lon_1d[0] > grid.lon_1d[-1]:
-            print 'Error (grid_check_split): Looks like your domain crosses 180E. Run this again with split=0.'
+            print('Error (grid_check_split): Looks like your domain crosses 180E. Run this again with split=0.')
             sys.exit()
     elif split == 0:
         grid = Grid(grid_path, max_lon=360)
         if grid.lon_1d[0] > grid.lon_1d[-1]:
-            print 'Error (grid_check_split): Looks like your domain crosses 0E. Run this again with split=180.'
+            print('Error (grid_check_split): Looks like your domain crosses 0E. Run this again with split=180.')
             sys.exit()
     else:
-        print 'Error (grid_check_split): split must be 180 or 0'
+        print('Error (grid_check_split): split must be 180 or 0')
         sys.exit()
     return grid
 
@@ -493,7 +493,7 @@ class SOSEGrid(Grid):
             path = real_dir(path)
             from MITgcmutils import rdmds
         else:
-            print 'Error (SOSEGrid): ' + path + ' is neither a NetCDF file nor a directory'
+            print(('Error (SOSEGrid): ' + path + ' is neither a NetCDF file nor a directory'))
             sys.exit()
 
         self.trim_extend = True
@@ -505,15 +505,15 @@ class SOSEGrid(Grid):
             if split == 180:
                 max_lon = 180
                 if np.amax(model_grid.lon_2d) > max_lon:
-                    print 'Error (SOSEGrid): split=180 does not match model grid'
+                    print('Error (SOSEGrid): split=180 does not match model grid')
                     sys.exit()
             elif split == 0:
                 max_lon = 360
                 if np.amin(model_grid.lon_2d) < 0:
-                    print 'Error (SOSEGrid): split=0 does not match model grid'
+                    print('Error (SOSEGrid): split=0 does not match model grid')
                     sys.exit()
             else:
-                print 'Error (SOSEGrid): split must be 180 or 0'
+                print('Error (SOSEGrid): split must be 180 or 0')
                 sys.exit()
         else:
             max_lon = 360
@@ -552,7 +552,7 @@ class SOSEGrid(Grid):
             self.lon_corners_1d[0] -= 360
         # Make sure the longitude axes are strictly increasing after the splitting
         if not np.all(np.diff(self.lon_1d)>0) or not np.all(np.diff(self.lon_corners_1d)>0):
-            print 'Error (SOSEGrid): longitude is not strictly increasing'
+            print('Error (SOSEGrid): longitude is not strictly increasing')
             sys.exit()
             
         # Save original dimensions
@@ -595,7 +595,7 @@ class SOSEGrid(Grid):
                 # Trim
                 self.i0_before = np.nonzero(self.lon_1d > xmin)[0][0] - 1
             else:
-                print 'Error (SOSEGrid): not allowed to extend westward'
+                print('Error (SOSEGrid): not allowed to extend westward')
                 sys.exit()
             self.i0_after = 0
 
@@ -607,7 +607,7 @@ class SOSEGrid(Grid):
                 # Trim
                 self.i1_before = np.nonzero(self.lon_corners_1d > xmax)[0][0] + 1
             else:
-                print 'Error (SOSEGrid): not allowed to extend eastward'
+                print('Error (SOSEGrid): not allowed to extend eastward')
                 sys.exit()
             self.i1_after = self.i1_before - self.i0_before + self.i0_after
             self.nx = self.i1_after
@@ -634,7 +634,7 @@ class SOSEGrid(Grid):
                 # Trim
                 self.j1_before = np.nonzero(self.lat_corners_1d > ymax)[0][0] + 1
             else:
-                print 'Error (SOSEGrid): not allowed to extend northward'
+                print('Error (SOSEGrid): not allowed to extend northward')
                 sys.exit()
             self.j1_after = self.j1_before - self.j0_before + self.j0_after
             self.ny = self.j1_after
@@ -681,22 +681,22 @@ class SOSEGrid(Grid):
 
             # Make sure we cleared those bounds
             if self.lon_corners_1d[0] > xmin:
-                print 'Error (SOSEGrid): western bound not cleared'
+                print('Error (SOSEGrid): western bound not cleared')
                 sys.exit()
             if self.lon_corners_1d[-1] < xmax:
-                print 'Error (SOSEGrid): eastern bound not cleared'
+                print('Error (SOSEGrid): eastern bound not cleared')
                 sys.exit()
             if self.lat_corners_1d[0] > ymin:
-                print 'Error (SOSEGrid): southern bound not cleared'
+                print('Error (SOSEGrid): southern bound not cleared')
                 sys.exit()
             if self.lat_corners_1d[-1] < ymax:
-                print 'Error (SOSEGrid): northern bound not cleared'
+                print('Error (SOSEGrid): northern bound not cleared')
                 sys.exit()
             if self.z[0] < z_shallow:
-                print 'Error (SOSEGrid): shallow bound not cleared'
+                print('Error (SOSEGrid): shallow bound not cleared')
                 sys.exit()
             if self.z[-1] > z_deep:
-                print 'Error (SOSEGrid): deep bound not cleared'
+                print('Error (SOSEGrid): deep bound not cleared')
                 sys.exit()
 
         else:
@@ -745,7 +745,7 @@ class SOSEGrid(Grid):
 
         if path.endswith('.nc'):
             if var_name is None:
-                print 'Error (SOSEGrid.read_field): Must specify var_name for NetCDF files'
+                print('Error (SOSEGrid.read_field): Must specify var_name for NetCDF files')
                 sys.exit()
             data_orig = read_netcdf(path, var_name)
         elif path.endswith('.data') or os.path.isfile(path+'.data'):
@@ -791,7 +791,7 @@ class WOAGrid(Grid):
     def __init__ (self, file_path, split=180):
 
         if split != 180:
-            print "Error (WOA_grid): Haven't coded for values of split other than 180."
+            print("Error (WOA_grid): Haven't coded for values of split other than 180.")
             sys.exit()
         self.split = split
         self.lon_1d = read_netcdf(file_path, 'lon')
@@ -816,7 +816,7 @@ class WOAGrid(Grid):
             try:
                 data = read_netcdf(file_path, 's_an')
             except(KeyError):
-                print 'Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.'
+                print('Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.')
                 sys.exit()
         mask = data.mask
         depth_masked = np.ma.masked_where(data.mask, depth_3d)
@@ -855,7 +855,7 @@ class CMIPGrid:
     # Return longitude and latitude on the right grid
     def get_lon_lat (self, gtype='t', dim=2):
         if dim != 2:
-            print 'Error (get_lon_lat): must have dim=2 for CMIP grid'
+            print('Error (get_lon_lat): must have dim=2 for CMIP grid')
             sys.exit()
         if gtype == 't':
             return self.lon_2d, self.lat_2d
@@ -947,14 +947,14 @@ class ERA5Grid:
         
     def get_lon_lat (self, gtype='t', dim=2):
         if gtype != 't':
-            print 'Error (get_lon_lat): there is only the t-grid.'
+            print('Error (get_lon_lat): there is only the t-grid.')
             sys.exit()
         if dim == 1:
             return self.lon[0,:], self.lat[:,0]
         elif dim == 2:
             return self.lon, self.lat
         else:
-            print 'Error (get_lon_lat): invalid dim ' + str(dim)
+            print(('Error (get_lon_lat): invalid dim ' + str(dim)))
             sys.exit()
 
 
@@ -996,7 +996,7 @@ class UKESMGrid:
             lon = self.lon_v
             lat = self.lat_v
         else:
-            print 'Error (get_lon_lat): invalid gtype ' + gtype
+            print(('Error (get_lon_lat): invalid gtype ' + gtype))
             sys.exit()
             
         if dim == 1:
@@ -1004,7 +1004,7 @@ class UKESMGrid:
         elif dim == 2:
             return lon, lat
         else:
-            print 'Error (get_lon_lat): invalid dim ' + str(dim)
+            print(('Error (get_lon_lat): invalid dim ' + str(dim)))
             sys.exit()
 
 
@@ -1028,14 +1028,14 @@ class PACEGrid:
     def get_lon_lat (self, dim=2, gtype='t'):
 
         if gtype != 't':
-            print 'Error (get_lon_lat): invalid gtype ' + gtype
+            print(('Error (get_lon_lat): invalid gtype ' + gtype))
             sys.exit()        
         if dim == 1:
             return self.lon[0,:], self.lat[:,0]
         elif dim == 2:
             return self.lon, self.lat
         else:
-            print 'Error (get_lon_lat): invalid dim ' + str(dim)
+            print(('Error (get_lon_lat): invalid dim ' + str(dim)))
             sys.exit()
 
 

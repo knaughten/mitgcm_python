@@ -5,11 +5,11 @@
 import numpy as np
 import sys
 
-from constants import rho_ice, region_bounds, Cp_sw, Tf_ref
-from utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land, depth_of_max, mask_3d
-from calculus import area_integral, vertical_integral, indefinite_ns_integral
-from plot_utils.slices import get_transect
-from interpolation import interp_grid
+from .constants import rho_ice, region_bounds, Cp_sw, Tf_ref
+from .utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land, depth_of_max, mask_3d
+from .calculus import area_integral, vertical_integral, indefinite_ns_integral
+from .plot_utils.slices import get_transect
+from .interpolation import interp_grid
 
 
 # Calculate the adiabatic temperature gradient exactly like MITgcm does. This originates from section 7 of "Algorithms for computation of fundamental properties of seawater", UNESCO technical papers in marine science 44, 1983.
@@ -201,11 +201,11 @@ def density (eosType, salt, temp, press, rhoConst=None, Tref=None, Sref=None, tA
         return densjmd95(salt, temp, press)
     elif eosType == 'LINEAR':
         if None in [rhoConst, Tref, Sref, tAlpha, sBeta]:
-            print 'Error (density): for eosType LINEAR, you must set rhoConst, Tref, Sref, tAlpha, sBeta'
+            print('Error (density): for eosType LINEAR, you must set rhoConst, Tref, Sref, tAlpha, sBeta')
             sys.exit()
         return dens_linear(salt, temp, rhoConst, Tref, Sref, tAlpha, sBeta)
     else:
-        print 'Error (density): invalid eosType ' + eosType
+        print(('Error (density): invalid eosType ' + eosType))
         sys.exit()
         
 
@@ -258,7 +258,7 @@ def rotate_vector (u, v, grid, point0, point1, option='both', time_dependent=Fal
     elif option == 'both':
         return u_new, v_new
     else:
-        print 'Error (rotate_vector): invalid option ' + option
+        print(('Error (rotate_vector): invalid option ' + option))
         sys.exit()
 
 
@@ -296,7 +296,7 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
     elif shore == 'N':
         return trans_N, trans_S
     else:
-        print 'Error (transport_transect): invalid shore ' + shore
+        print(('Error (transport_transect): invalid shore ' + shore))
         sys.exit()
 
 
@@ -340,7 +340,7 @@ def adv_heat_wrt_freezing (adv, vel, grid):
 def thermocline (temp, grid):
 
     if len(temp.shape)==4:
-        print 'Error (thermocline): have not written time-dependent case yet'
+        print('Error (thermocline): have not written time-dependent case yet')
         sys.exit()
     temp = mask_3d(temp, grid)
     dtemp_dz = (temp[1:,:,:]-temp[:-1,:,:])/np.abs(grid.z[1:,None,None]-grid.z[:-1,None,None])

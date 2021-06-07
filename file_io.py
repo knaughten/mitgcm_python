@@ -7,7 +7,7 @@ import sys
 import os
 import datetime
 
-from utils import days_per_month, real_dir, is_depth_dependent, average_12_months
+from .utils import days_per_month, real_dir, is_depth_dependent, average_12_months
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
@@ -44,7 +44,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
 
     # Check for conflicting arguments
     if time_index is not None and time_average==True:
-        print 'Error (function read_netcdf): you selected a specific time index (time_index=' + str(time_index) + '), and also want time averaging (time_average=True). Choose one or the other.'
+        print(('Error (function read_netcdf): you selected a specific time index (time_index=' + str(time_index) + '), and also want time averaging (time_average=True). Choose one or the other.'))
         sys.exit()
 
     # Open the file
@@ -88,7 +88,7 @@ def read_netcdf (file_path, var_name, time_index=None, t_start=None, t_end=None,
         # Not time-dependent
 
         if time_index is not None or time_average==True or t_start is not None or t_end is not None:
-            print 'Error (function read_netcdf): you want to do something fancy with the time dimension of variable ' + var_name + ' in file ' + file_path + ', but this does not appear to be a time-dependent variable.'
+            print(('Error (function read_netcdf): you want to do something fancy with the time dimension of variable ' + var_name + ' in file ' + file_path + ', but this does not appear to be a time-dependent variable.'))
             sys.exit()
 
         # Read the variable
@@ -193,14 +193,14 @@ def find_variable (file_path_1, file_path_2, var_name):
     elif var_name in nc.Dataset(file_path_2).variables:
         return file_path_2
     else:
-        print 'Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2
+        print(('Error (find_variable): variable ' + var_name + ' not in ' + file_path_1 + ' or ' + file_path_2))
         sys.exit()
 
 
 # Given time parameters, make sure we will end up with a single record in time.
 def check_single_time (time_index, time_average):
     if time_index is None and not time_average:
-        print 'Error (check_single_time): either specify time_index or set time_average=True.'
+        print('Error (check_single_time): either specify time_index or set time_average=True.')
         sys.exit()
 
 
@@ -212,14 +212,14 @@ def set_dtype (prec, endian):
     elif endian == 'little':
         dtype = '<'
     else:
-        print 'Error (set_dtype): invalid endianness'
+        print('Error (set_dtype): invalid endianness')
         sys.exit()
     if prec == 32:
         dtype += 'f4'
     elif prec == 64:
         dtype += 'f8'
     else:
-        print 'Error (set_dtype): invalid precision'
+        print('Error (set_dtype): invalid precision')
         sys.exit()
     return dtype
 
@@ -237,7 +237,7 @@ def set_dtype (prec, endian):
 
 def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
 
-    print 'Reading ' + filename
+    print(('Reading ' + filename))
 
     dtype = set_dtype(prec, endian)
 
@@ -248,7 +248,7 @@ def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
         # It's a 3D grid
         nz = grid_sizes[2]
     elif 'z' in dimensions:
-        print 'Error (read_binary): ' + dimensions + ' is depth-dependent, but your grid sizes are 2D.'
+        print(('Error (read_binary): ' + dimensions + ' is depth-dependent, but your grid sizes are 2D.'))
         sys.exit()
 
     # Read data
@@ -272,14 +272,14 @@ def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
     if 't' in dimensions:
         # Time-dependent field; figure out how many timesteps
         if np.mod(data.size, size0) != 0:
-            print 'Error (read_binary): incorrect dimensions or precision'
+            print('Error (read_binary): incorrect dimensions or precision')
             sys.exit()
         num_time = data.size/size0
         shape = [num_time] + shape
     else:
         # Time-independent field; just do error checking
         if data.size != size0:
-            print 'Error (read_binary): incorrect dimensions or precision'
+            print('Error (read_binary): incorrect dimensions or precision')
             sys.exit()
 
     # Reshape the data and return
@@ -290,7 +290,7 @@ def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
 # Write an array ("data"), of any dimension, to a binary file ("file_path"). Optional keyword arguments ("prec" and "endian") are as in function read_binary.
 def write_binary (data, file_path, prec=32, endian='big'):
 
-    print 'Writing ' + file_path
+    print(('Writing ' + file_path))
 
     if isinstance(data, np.ma.MaskedArray):
         # Need to remove the mask
@@ -528,7 +528,7 @@ def find_time_index (file_list, time_index):
         else:
             time_index -= num_time
     # If we're still here, we didn't find it
-    print "Error (find_time_index): this simulation isn't long enough to contain time_index=" + str(time_index)
+    print(("Error (find_time_index): this simulation isn't long enough to contain time_index=" + str(time_index)))
     sys.exit()
 
 
@@ -550,7 +550,7 @@ def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
     # Construct the path to the directory containing all the data files, and make sure it exists
     in_dir = real_dir(model_path)+expt+'/'+ensemble_member+'/'+time_code+'/'+var+'/gn/latest/'
     if not os.path.isdir(in_dir):
-        print 'Error (find_cmip6_files): no such directory ' + in_dir
+        print(('Error (find_cmip6_files): no such directory ' + in_dir))
         sys.exit()
 
     # Get the names of all the data files in this directory, in chronological order
@@ -575,10 +575,10 @@ def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
         end_year = end_date[:4]
         # Make sure they are 30-day months and complete years        
         if (time_code.endswith('day') and start_date[4:] != '0101') or (time_code.endswith('mon') and start_date[4:] != '01'):
-            print 'Error (find_cmip6_files): '+file_path+' does not start at the beginning of January'
+            print(('Error (find_cmip6_files): '+file_path+' does not start at the beginning of January'))
             sys.exit()
         if (time_code.endswith('day') and end_date[4:] != '1230') or (time_code.endswith('mon') and end_date[4:] != '12'):
-            print 'Error (find_cmip6_files): '+file_path+' does not end at the end of December'
+            print(('Error (find_cmip6_files): '+file_path+' does not end at the end of December'))
             sys.exit()
         # Save the start and end years
         start_years.append(int(start_year))
@@ -586,7 +586,7 @@ def find_cmip6_files (model_path, expt, ensemble_member, var, time_code):
     # Now make sure there are no missing years
     for t in range(1, len(in_files)):
         if start_years[t] != end_years[t-1]+1:
-            print 'Error (find_cmip6_files): there are missing years in '+in_dir
+            print(('Error (find_cmip6_files): there are missing years in '+in_dir))
             sys.exit()
 
     return in_files, start_years, end_years
@@ -651,7 +651,7 @@ def read_annual_average (var_name, file_paths, return_years=False):
             # There is a partial year from last time - complete it
             num_months = 12-data_tmp.shape[0]
             if data.shape[0] < num_months:
-                print 'Error (read_annual_average): '+f+' has only '+str(data.shape[0])+' time indices. This is too short. Concatenate it with the next one and re-run.'
+                print(('Error (read_annual_average): '+f+' has only '+str(data.shape[0])+' time indices. This is too short. Concatenate it with the next one and re-run.'))
                 sys.exit()
             data_tmp2 = data[:num_months,...]
             data_year = np.concatenate((data_tmp, data_tmp2), axis=0)
@@ -662,13 +662,13 @@ def read_annual_average (var_name, file_paths, return_years=False):
             t_start = 0
         # Loop over complete years
         for t in range(t_start, (time.size-t_start)/12*12, 12):
-            print time[t].year
+            print((time[t].year))
             years.append(time[t].year)
             data_annual = update_data_annual(data, t, time[t].year, data_annual)
         if t+12 < time.size:
             # Read partial year from end
             data_tmp = data[t+12:,...]
-            print time[t+12].year
+            print((time[t+12].year))
             years.append(time[t+12].year)
         else:
             # Reset

@@ -7,11 +7,11 @@ from scipy.io import loadmat
 import sys
 import shutil
 
-from constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, region_bounds
-from file_io import write_binary, NCfile_basiclatlon, read_netcdf
-from utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
-from interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
-from grid import Grid
+from .constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, region_bounds
+from .file_io import write_binary, NCfile_basiclatlon, read_netcdf
+from .utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
+from .interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
+from .grid import Grid
 
 
 # Create the 2D grid points (regular lon and lat) based on the boundaries and resolution given by the user. Resolution is constant in longitude, but scaled by cos(latitude) in latitude.
@@ -21,7 +21,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     num_lat_iter = 10
 
     if xmin > xmax:
-        print "Error (latlon_points): looks like your domain crosses 180E. Try again with your longitude in the range (0, 360) instead of (-180, 180)."
+        print("Error (latlon_points): looks like your domain crosses 180E. Try again with your longitude in the range (0, 360) instead of (-180, 180).")
         sys.exit()
 
     # Build longitude values
@@ -29,7 +29,7 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     # Update xmax if the range doesn't evenly divide by res
     if xmax != lon[-1]:
         xmax = lon[-1]
-        print 'Eastern boundary moved to ' + str(xmax)
+        print(('Eastern boundary moved to ' + str(xmax)))
     # Put xmin in the range (0, 360) for namelist
     if xmin < 0:
         xmin += 360
@@ -52,18 +52,18 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
         lat = np.array(lat)
     # Update ymax
     ymax = lat[-1]
-    print 'Northern boundary moved to ' + str(ymax)
+    print(('Northern boundary moved to ' + str(ymax)))
 
     # Write latitude resolutions to file
     dlat = lat[1:] - lat[:-1]
     write_binary(dlat, dlat_file, prec=prec)
 
     # Remind the user what to do in their namelist
-    print '\nChanges to make to input/data:'
-    print 'xgOrigin=' + str(xmin)
-    print 'ygOrigin=' + str(ymin)
-    print 'dxSpacing=' + str(res)
-    print "delYfile='" + dlat_file + "' (and copy this file into input/)"
+    print('\nChanges to make to input/data:')
+    print(('xgOrigin=' + str(xmin)))
+    print(('ygOrigin=' + str(ymin)))
+    print(('dxSpacing=' + str(res)))
+    print(("delYfile='" + dlat_file + "' (and copy this file into input/)"))
 
     # Find dimensions of tracer grid
     Nx = lon.size-1
@@ -71,10 +71,10 @@ def latlon_points (xmin, xmax, ymin, ymax, res, dlat_file, prec=64):
     # Find all the factors
     factors_x = factors(Nx)
     factors_y = factors(Ny)
-    print '\nNx = ' + str(Nx) + ' which has the factors ' + str(factors_x)
-    print 'Ny = ' + str(Ny) + ' which has the factors ' + str(factors_y)
-    print 'If you are happy with this, proceed with interp_bedmap2. At some point, choose your tile size based on the factors and update code/SIZE.h.'
-    print 'Otherwise, tweak the boundaries and try again.'
+    print(('\nNx = ' + str(Nx) + ' which has the factors ' + str(factors_x)))
+    print(('Ny = ' + str(Ny) + ' which has the factors ' + str(factors_y)))
+    print('If you are happy with this, proceed with interp_bedmap2. At some point, choose your tile size based on the factors and update code/SIZE.h.')
+    print('Otherwise, tweak the boundaries and try again.')
 
     return lon, lat
 
@@ -85,9 +85,9 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
 
     import netCDF4 as nc
 
-    print 'Adding grounded iceberg A-23A'
+    print('Adding grounded iceberg A-23A')
     
-    print 'Reading data'
+    print('Reading data')
     id = nc.Dataset(rtopo_file, 'r')
     lon_rtopo = id.variables['lon'][:]
     lat_rtopo = id.variables['lat'][:]
@@ -104,7 +104,7 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
     lon_rtopo = lon_rtopo[i_start:i_end]
     lat_rtopo = lat_rtopo[j_start:j_end]
 
-    print 'Interpolating mask'
+    print('Interpolating mask')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
     mask_rtopo_interp = interp_topo(lon_rtopo, lat_rtopo, mask_rtopo, lon_2d, lat_2d)
     # The mask is 1 in the grounded iceberg region and 0 elsewhere. Take a threshold of 0.5 for interpolation errors. Treat it as land.
@@ -121,7 +121,7 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
 def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=False, rtopo_file=None):
 
     import netCDF4 as nc
-    from plot_latlon import plot_tmp_domain
+    from .plot_latlon import plot_tmp_domain
 
     topo_dir = real_dir(topo_dir)
 
@@ -138,7 +138,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
 
     if np.amin(lat) > -60:
-        print "Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2."
+        print("Error (interp_bedmap2): this domain doesn't go south of 60S, so it's not covered by BEDMAP2.")
         sys.exit()
     if np.amax(lat) > -60:
         use_gebco = True
@@ -155,7 +155,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
     y = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
 
-    print 'Reading data'
+    print('Reading data')
     # Have to flip it vertically so lon0=0 in polar stereographic projection
     # Otherwise, lon0=180 which makes x_interp and y_interp strictly decreasing when we call polar_stereo later, and the interpolation chokes
     bathy = np.flipud(np.fromfile(bed_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
@@ -164,15 +164,15 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     mask = np.flipud(np.fromfile(mask_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
 
     if np.amax(lat_b) > -61:
-        print 'Extending bathymetry past 60S'
+        print('Extending bathymetry past 60S')
         # Bathymetry has missing values north of 60S. Extend into that mask so there are no artifacts in the splines near 60S.
         bathy = extend_into_mask(bathy, missing_val=bedmap_missing_val, num_iters=5)
 
-    print 'Calculating ice shelf draft'
+    print('Calculating ice shelf draft')
     # Calculate ice shelf draft from ice surface and ice thickness
     draft = surf - thick
 
-    print 'Calculating ocean and ice masks'
+    print('Calculating ocean and ice masks')
     # Mask: -9999 is open ocean, 0 is grounded ice, 1 is ice shelf
     # Make an ocean mask and an ice mask. Ice shelves are in both.
     omask = (mask!=0).astype(float)
@@ -183,19 +183,19 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     x_interp, y_interp = polar_stereo(lon_2d, lat_2d)
 
     # Interpolate fields
-    print 'Interpolating bathymetry'
+    print('Interpolating bathymetry')
     bathy_interp = interp_topo(x, y, bathy, x_interp, y_interp)
-    print 'Interpolating ice shelf draft'
+    print('Interpolating ice shelf draft')
     draft_interp = interp_topo(x, y, draft, x_interp, y_interp)
-    print 'Interpolating ocean mask'
+    print('Interpolating ocean mask')
     omask_interp = interp_topo(x, y, omask, x_interp, y_interp)
-    print 'Interpolating ice mask'
+    print('Interpolating ice mask')
     imask_interp = interp_topo(x, y, imask, x_interp, y_interp)
 
     if use_gebco:
-        print 'Filling in section north of 60S with GEBCO data'
+        print('Filling in section north of 60S with GEBCO data')
 
-        print 'Reading data'
+        print('Reading data')
         id = nc.Dataset(gebco_file, 'r')
         lat_gebco_grid = id.variables['lat'][:]
         lon_gebco_grid = id.variables['lon'][:]
@@ -211,11 +211,11 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         lat_gebco_grid = lat_gebco_grid[j_start:j_end]
         lon_gebco_grid = lon_gebco_grid[i_start:i_end]
 
-        print 'Interpolating bathymetry'
+        print('Interpolating bathymetry')
         lon_2d, lat_2d = np.meshgrid(lon, lat_g)
         bathy_gebco_interp = interp_topo(lon_gebco_grid, lat_gebco_grid, bathy_gebco, lon_2d, lat_2d)
 
-        print 'Combining BEDMAP2 and GEBCO sections'
+        print('Combining BEDMAP2 and GEBCO sections')
         # Deep copy the BEDMAP2 section of each field
         bathy_bedmap_interp = np.copy(bathy_interp)
         draft_bedmap_interp = np.copy(draft_interp)
@@ -235,7 +235,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
         imask_interp = np.zeros([lat.size-1, lon.size-1])
         imask_interp[:j_split-1,:] = imask_bedmap_interp
 
-    print 'Processing masks'
+    print('Processing masks')
     # Deal with values interpolated between 0 and 1
     omask_interp[omask_interp < 0.5] = 0
     omask_interp[omask_interp >= 0.5] = 1
@@ -268,19 +268,19 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     index = draft_interp == 0
     imask_interp[index] = 0
 
-    print 'Removing isolated ocean cells'
+    print('Removing isolated ocean cells')
     omask_interp = remove_isolated_cells(omask_interp)
     bathy_interp[omask_interp==0] = 0
     draft_interp[omask_interp==0] = 0
     imask_interp[omask_interp==0] = 0
-    print 'Removing isolated ice shelf cells'
+    print('Removing isolated ice shelf cells')
     imask_interp = remove_isolated_cells(imask_interp)
     draft_interp[imask_interp==0] = 0
     
     if grounded_iceberg:
         bathy_interp, omask_interp = add_grounded_iceberg(rtopo_file, lon, lat, bathy_interp, omask_interp)
         
-    print 'Plotting'
+    print('Plotting')
     if use_gebco:
         # Remesh the grid, using the full latitude array
         lon_2d, lat_2d = np.meshgrid(lon, lat)
@@ -298,46 +298,46 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     ncfile.add_variable('imask', imask_interp)
     ncfile.close()
 
-    print 'The results have been written into ' + nc_out
-    print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
-    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"
+    print(('The results have been written into ' + nc_out))
+    print('Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)')
+    print(("Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"))
 
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed.
 def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None):
 
-    from plot_latlon import plot_tmp_domain
+    from .plot_latlon import plot_tmp_domain
 
     if grounded_iceberg:
         if topo_dir is None and rtopo_file is None:
-            print 'Error (ua_topo): must set topo_dir or rtopo_file if grounded_iceberg is True'
+            print('Error (ua_topo): must set topo_dir or rtopo_file if grounded_iceberg is True')
             sys.exit()
         if rtopo_file is None:
             rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
 
-    print 'Reading ' + ua_file
+    print(('Reading ' + ua_file))
     f = loadmat(ua_file)
     bathy = np.transpose(f['bathy'])
     draft = np.transpose(f['draft'])
     omask = np.transpose(f['omask'])
     imask = np.transpose(f['imask'])
     if (bathy.shape[0] != len(lat)-1) or (bathy.shape[1] != len(lon)-1):
-        print 'Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'
+        print(('Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'))
         sys.exit()
 
-    print 'Removing isolated ocean cells'
+    print('Removing isolated ocean cells')
     omask = remove_isolated_cells(omask)
     bathy[omask==0] = 0
     draft[omask==0] = 0
     imask[omask==0] = 0
-    print 'Removing isolated ice shelf cells'
+    print('Removing isolated ice shelf cells')
     imask = remove_isolated_cells(imask)
     draft[imask==0] = 0
 
     if grounded_iceberg:
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
-    print 'Plotting'
+    print('Plotting')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
     plot_tmp_domain(lon_2d, lat_2d, bathy, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft, title='Ice shelf draft (m)')
@@ -353,9 +353,9 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
     ncfile.add_variable('imask', imask)
     ncfile.close()
 
-    print 'The results have been written into ' + nc_out
-    print 'Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)'
-    print "Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy))) + " m), and run remove_grid_problems"
+    print(('The results have been written into ' + nc_out))
+    print('Take a look at this file and make whatever edits you would like to the mask (eg removing everything west of the peninsula; you can use edit_mask if you like)')
+    print(("Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy))) + " m), and run remove_grid_problems"))
 
 
 # Helper function to read variables from a temporary NetCDF grid file
@@ -507,7 +507,7 @@ def edit_mask (nc_in, nc_out, key='WSK'):
     # Update the variables
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
-    print "Fields updated successfully. The deepest bathymetry is now " + str(abs(np.amin(bathy))) + " m."
+    print(("Fields updated successfully. The deepest bathymetry is now " + str(abs(np.amin(bathy))) + " m."))
 
     
 # Helper function to read vertical layer thicknesses from an ASCII file, and compute the edges of the z-levels. Returns dz and z_edges.
@@ -553,7 +553,7 @@ def level_vars (A, dz, z_edges, include_edge='top'):
         elif include_edge == 'bottom':
             index = (A < z_edges[k])*(A >= z_edges[k+1])
         else:
-            print 'Error (level_vars): invalid include_edge=' + include_edge
+            print(('Error (level_vars): invalid include_edge=' + include_edge))
             sys.exit()
         layer_number[index] = k
         level_above[index] = z_edges[k]
@@ -569,7 +569,7 @@ def level_vars (A, dz, z_edges, include_edge='top'):
             dz_layer_below[index] = dz[k+1]
         flag[index] = 1
     if (flag==0).any():
-        print 'Error (level_vars): some values not caught by the loop. This could happen if some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.'
+        print('Error (level_vars): some values not caught by the loop. This could happen if some of your ice shelf draft points are in the bottommost vertical layer. This will impede digging. Adjust your vertical layer thicknesses and try again.')
         sys.exit()
     return layer_number, level_above, level_below, dz_layer, dz_layer_above, dz_layer_below
 
@@ -582,7 +582,7 @@ def single_model_bdry (A, dz, z_edges, option='bathy', hFacMin=0.1, hFacMinDr=20
     elif option == 'draft':
         include_edge = 'top'
     else:
-        print 'Error (single_model_bdry): invalid option ' + option
+        print(('Error (single_model_bdry): invalid option ' + option))
         sys.exit()
 
     # Get some intermediate variables
@@ -632,7 +632,7 @@ def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
     level_below_neighbours = np.stack((level_below_w, level_below_e, level_below_s, level_below_n))
     level_below_deepest_neighbour = np.amin(level_below_neighbours, axis=0)
     # Find cells which are in a deeper vertical layer than all their neighbours, and build them up by the minimum amount necessary
-    print '...' + str(np.count_nonzero(bathy < level_below_deepest_neighbour)) + ' cells to fill'
+    print(('...' + str(np.count_nonzero(bathy < level_below_deepest_neighbour)) + ' cells to fill'))
     bathy = np.maximum(bathy, level_below_deepest_neighbour)
 
     return bathy
@@ -656,7 +656,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         include_edge = 'bottom'
         direction_flag = 1
     else:
-        print 'Error (do_digging): invalid dig_option ' + dig_option
+        print(('Error (do_digging): invalid dig_option ' + dig_option))
         sys.exit()
 
     # Find the other field as the model will see it (based on hFac constraints)
@@ -672,7 +672,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         dz_next = dz_layer_above  # Thickness of the layer above that
         # Also make sure the bathymetry itself is deep enough
         if (layer_number == 1).any():
-            print "Error (do_digging): some bathymetry points are within the first vertical layer. If this is a coupled simulation, you need to set up the initial domain using bathymetry digging. If this is not a coupled simulation, use dig_option='bathy'."
+            print("Error (do_digging): some bathymetry points are within the first vertical layer. If this is a coupled simulation, you need to set up the initial domain using bathymetry digging. If this is not a coupled simulation, use dig_option='bathy'.")
             sys.exit()
             
     # Figure out the shallowest acceptable bathymetry OR the deepest acceptable ice shelf draft of each point and its neighbours. We want 2 (at least partially) open cells.
@@ -700,7 +700,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         elif dig_option == 'draft':
             # Find ice shelf draft that's too deep
             index = (bathy != 0)*(field < limit)
-        print '...' + str(np.count_nonzero(index)) + ' cells to dig'
+        print(('...' + str(np.count_nonzero(index)) + ' cells to dig'))
         field[index] = limit[index]
         return field
 
@@ -708,12 +708,12 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     limit_neighbours = [limit_w, limit_e, limit_s, limit_n]
     loc_strings = ['west', 'east', 'south', 'north']
     for i in range(len(loc_strings)):
-        print 'Digging based on field to ' + loc_strings[i]
+        print(('Digging based on field to ' + loc_strings[i]))
         field = dig_one_direction(limit_neighbours[i])
 
     # Error checking
     if (dig_option == 'bathy' and (field < z_edges[-1]).any()) or (dig_option == 'draft' and (field > 0).any()):
-        print 'Error (do_digging): we have dug off the edge of the grid!!'
+        print('Error (do_digging): we have dug off the edge of the grid!!')
         sys.exit()
 
     return field
@@ -725,18 +725,18 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
     if only_grow:
         # Find any points which are less than the depth of the surface layer and grow them
         index = (draft != 0)*(abs(draft) < dz[0])
-        print '...' + str(np.count_nonzero(index)) + ' cells to grow'
+        print(('...' + str(np.count_nonzero(index)) + ' cells to grow'))
         draft[index] = -1*dz[0]
     else:
         # Find any points which are less than half the depth of the surface layer and remove them
         index = (draft != 0)*(abs(draft) < 0.5*dz[0])
-        print '...' + str(np.count_nonzero(index)) + ' cells to zap'
+        print(('...' + str(np.count_nonzero(index)) + ' cells to zap'))
         draft[index] = 0
         imask[index] = 0
         if hFacMinDr < dz[0]:
             # Also find any points which are between half the depth and the full depth of the surface layer, and grow them
             index = (abs(draft) >= 0.5*dz[0])*(abs(draft) < dz[0])
-            print '...' + str(np.count_nonzero(index)) + ' cells to grow'
+            print(('...' + str(np.count_nonzero(index)) + ' cells to grow'))
             draft[index] = -1*dz[0]
         
     return draft, imask
@@ -755,31 +755,31 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
 
 def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False):
 
-    from plot_latlon import plot_tmp_domain
+    from .plot_latlon import plot_tmp_domain
 
     # Read all the variables
     lon_2d, lat_2d, bathy, draft, omask, imask = read_nc_grid(nc_in)
     # Generate the vertical grid
     dz, z_edges = vertical_layers(dz_file)
     if z_edges[-1] > np.amin(bathy):
-        print 'Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'
+        print(('Error (remove_grid_problems): deepest bathymetry is ' + str(abs(np.amin(bathy))) + ' m, but your vertical levels only go down to ' + str(abs(z_edges[-1])) + ' m. Adjust your vertical layer thicknesses and try again.'))
         sys.exit()
 
-    print 'Filling isolated bottom cells'
+    print('Filling isolated bottom cells')
     bathy_orig = np.copy(bathy)
     bathy = do_filling(bathy, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after filling')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to filling')
 
-    print 'Digging subglacial lakes'
+    print('Digging subglacial lakes')
     bathy_orig = np.copy(bathy)
     bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
 
-    print 'Zapping thin ice shelf draft'
+    print('Zapping thin ice shelf draft')
     draft_orig = np.copy(draft)
     draft, imask = do_zapping(draft, imask, dz, z_edges, hFacMinDr=hFacMinDr, only_grow=coupled)
     # Plot how the results have changed
@@ -790,7 +790,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., co
     # Update the variables
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
-    print "The updated grid has been written into " + nc_out + ". Take a look and make sure everything looks okay. If you're happy, run write_topo_files to generate the binary files for MITgcm input."
+    print(("The updated grid has been written into " + nc_out + ". Take a look and make sure everything looks okay. If you're happy, run write_topo_files to generate the binary files for MITgcm input."))
 
 
 # Given a precomputed grid (from interp_bedmap2 + edit_mask + remove_grid_problems), swap in topography from an Ua simulation - just like in the UaMITgcm coupler. First remove FRIS from the existing domain so the ice front is identical.
@@ -841,7 +841,7 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     shutil.copyfile(nc_file, out_file)
     update_nc_grid(out_file, bathy, draft, omask, imask)
 
-    print 'Finished swapping out Ua geometry. Take a look and then call write_topo_files.'
+    print('Finished swapping out Ua geometry. Take a look and then call write_topo_files.')
 
     
 # Write the bathymetry and ice shelf draft fields, currently stored in a NetCDF file, into binary files to be read by MITgcm.
@@ -851,7 +851,7 @@ def write_topo_files (nc_grid, bathy_file, draft_file, prec=64):
     draft = read_netcdf(nc_grid, 'draft')
     write_binary(bathy, bathy_file, prec=prec)
     write_binary(draft, draft_file, prec=prec)
-    print 'Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.'
+    print('Files written successfully. Now go try them out! Make sure you update all the necessary variables in data, data.shelfice, SIZE.h, job scripts, etc.')
 
 
 # Helper function to check that neighbouring ocean cells have at least 2 open faces in the given direction.
@@ -863,7 +863,7 @@ def check_one_direction (open_cells, open_cells_beside, loc_string, problem):
     num_pinched = np.count_nonzero((np.sum(open_cells, axis=0) != 0)*(np.sum(open_cells_beside, axis=0) != 0)*(np.sum(open_face, axis=0)<2))
     if num_pinched > 0:
         problem = True
-        print 'Problem!! There are ' + str(num_pinched) + ' locations with less than 2 open faces on the ' + loc_string + ' side.'
+        print(('Problem!! There are ' + str(num_pinched) + ' locations with less than 2 open faces on the ' + loc_string + ' side.'))
     return problem
         
 
@@ -881,14 +881,14 @@ def check_final_grid (grid_path):
     num_isolated = np.count_nonzero((hfac!=0)*(valid_below==0)*(num_valid_neighbours==0))
     if num_isolated > 0:
         problem = True
-        print 'Problem!! There are ' + str(num_isolated) + ' locations with isolated bottom cells.'    
+        print(('Problem!! There are ' + str(num_isolated) + ' locations with isolated bottom cells.'))    
 
     # Check that every water column has at least 2 open cells (partial cells count)
     open_cells = np.ceil(grid.hfac)
     num_pinched = np.count_nonzero(np.sum(open_cells, axis=0)==1)
     if num_pinched > 0:
         problem = True
-        print 'Problem!! There are ' + str(num_pinched) + ' locations with only one open cell in the water column.'
+        print(('Problem!! There are ' + str(num_pinched) + ' locations with only one open cell in the water column.'))
 
     # Check that neighbouring ocean cells have at least 2 open faces between
     open_cells_w, open_cells_e, open_cells_s, open_cells_n = neighbours(open_cells)[:4]
@@ -898,9 +898,9 @@ def check_final_grid (grid_path):
         problem = check_one_direction(open_cells, open_cells_neighbours[i], loc_strings[i], problem)
         
     if problem:
-        print 'Something went wrong with the filling or digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?'
+        print('Something went wrong with the filling or digging. Are you sure that your values of hFacMin and hFacMinDr are correct? Are you working with a version of MITgcm that calculates Ro_sfc and R_low differently?')
     else:
-        print 'Everything looks good!'
+        print('Everything looks good!')
 
 
 # Merge updates to a BEDMAP2 field from two or more sources (e.g. Sebastian Rosier's updates to the Filchner and Lianne Harrison's updates to the Larsen). The code makes sure that no updates are contradictory, i.e. trying to change the same points in different ways.
@@ -929,9 +929,9 @@ def merge_bedmap2_changes (orig_file, updated_files, out_file):
                 index = (changes[i,:]==1)*(changes[j,:]==1)
                 if (data_new[i,:][index] != data_new[j,:][index]).any():
                     stop = True
-                    print updated_files[i] + ' contradicts ' + updated_files[j]
+                    print((updated_files[i] + ' contradicts ' + updated_files[j]))
         if stop:
-            print 'Error (merge_bedmap2_changes): some changes are contradictory'
+            print('Error (merge_bedmap2_changes): some changes are contradictory')
             sys.exit()
 
     # Apply the changes

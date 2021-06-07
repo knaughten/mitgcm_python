@@ -45,7 +45,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         elif mask_option == 'land':
             data = mask_land(data, grid, gtype=gtype, time_dependent=True)
         else:
-            print 'Error (read_process_data): invalid mask_option ' + mask_option
+            print(('Error (read_process_data): invalid mask_option ' + mask_option))
             sys.exit()
         if lev_option is not None:
             if lev_option == 'top':
@@ -53,7 +53,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
             elif lev_option == 'bottom':
                 data = select_bottom(data)
             else:
-                print 'Error (read_process_data): invalid lev_option ' + lev_option
+                print(('Error (read_process_data): invalid lev_option ' + lev_option))
                 sys.exit()
         if ismr:
             data = convert_ismr(data)
@@ -65,7 +65,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
     for sdir in segment_dir:
         # Construct the file name
         file_path = output_dir + sdir + '/MITgcm/' + file_name
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         # Build the grid
         grid = Grid(file_path)
         # Read and process the variable we need
@@ -93,7 +93,7 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
             data = mask_except_ice(grid.draft, grid)
             title = 'Ice shelf draft (m)'
         else:
-            print 'Error (animate_latlon): invalid var ' + var
+            print(('Error (animate_latlon): invalid var ' + var))
             sys.exit()
         # Loop over timesteps
         if var == 'draft':
@@ -131,11 +131,11 @@ def animate_latlon (var, output_dir='./', file_name='output.nc', vmin=None, vmax
         latlon_plot(all_data[i], all_grids[i], ax=ax, gtype=gtype, ctype=ctype, vmin=vmin, vmax=vmax, change_points=change_points, title=title+', '+str(i+1)+'/'+str(num_frames), label_latlon=False, make_cbar=False)
 
     # Call this for each frame
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_frames)))
     writer = animation.FFMpegWriter(bitrate=500, fps=10)
     anim.save(mov_name, writer=writer)
     if mov_name is not None:
-        print 'Saving ' + mov_name
+        print(('Saving ' + mov_name))
         anim.save(mov_name, writer=writer)
     else:
         plt.show()
@@ -161,7 +161,7 @@ def precompute_misomip_timeseries (output_dir='./', file_name='output.nc', times
 
     for sdir in segment_dir:
         file_path = output_dir+sdir+'/MITgcm/'+file_name
-        print 'Processing ' + file_path
+        print(('Processing ' + file_path))
         precompute_timeseries(file_path, timeseries_file, timeseries_types=timeseries_types, monthly=False)
 
 
@@ -200,7 +200,7 @@ def compare_timeseries_multi (base_dir='./', simulations=['MISOMIP_1r','MISOMIP_
     colours = ['black', 'blue', 'green', 'red', 'magenta', 'cyan']
     num_sim = len(simulations)
     if num_sim > len(colours):
-        print 'Error (compare_timeseries_multi): not enough colours defined.'
+        print('Error (compare_timeseries_multi): not enough colours defined.')
         sys.exit()
     colours = colours[:num_sim]
 
@@ -280,7 +280,7 @@ def compare_2d_anim_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, 
     # Function to update figure with the given frame
     def animate(t):
         if (t+1) % 10 == 0:
-            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
+            print(('Frame ' + str(t+1) + ' of ' + str(num_frames)))
         for i in range(3):
             ax[i].cla()
             img = ax[i].pcolormesh(x_bound, y_bound, data[i][t,:], cmap=cmaps[i], vmin=vmins[i], vmax=vmaxs[i])
@@ -293,10 +293,10 @@ def compare_2d_anim_netcdf (var_name, file_path_1, file_path_2, name_1, name_2, 
         plt.suptitle(title+' ('+units+'), '+str(t+1)+'/'+str(num_frames), fontsize=24)
 
     # Call it for each frame and save as animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_frames)))
     writer = animation.FFMpegWriter(bitrate=500, fps=10)
     mov_name = fig_dir + var_name + '.mp4'
-    print 'Saving ' + mov_name
+    print(('Saving ' + mov_name))
     anim.save(mov_name, writer=writer)
 
 
@@ -321,7 +321,7 @@ def compare_gl_anim_netcdf (file_path_1, file_path_2, name_1, name_2, fig_dir='.
     # Function to update figure with the given frame
     def animate(t):
         if (t+1) % 10 == 0:
-            print 'Frame ' + str(t+1) + ' of ' + str(num_frames)
+            print(('Frame ' + str(t+1) + ' of ' + str(num_frames)))
         ax.cla()
         ax.plot(x_1[t,:], y_1[t,:], '-', color='black', label=name_1)
         ax.plot(x_2[t,:], y_2[t,:], '-', color='blue', label=name_2)
@@ -336,10 +336,10 @@ def compare_gl_anim_netcdf (file_path_1, file_path_2, name_1, name_2, fig_dir='.
         ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
 
     # Call it for each frame and save as animation
-    anim = animation.FuncAnimation(fig, func=animate, frames=range(num_frames))
+    anim = animation.FuncAnimation(fig, func=animate, frames=list(range(num_frames)))
     writer = animation.FFMpegWriter(bitrate=500, fps=10)
     mov_name = fig_dir + 'GL.mp4'
-    print 'Saving ' + mov_name
+    print(('Saving ' + mov_name))
     anim.save(mov_name, writer=writer)  
     
 
@@ -357,34 +357,34 @@ def compare_everything_netcdf (file_path_1_ocean, file_path_1_ice, name_1, file_
     timeseries_var_ocean = ['meanMeltRate', 'totalMeltFlux', 'totalOceanVolume', 'meanTemperature', 'meanSalinity']
     timeseries_var_ice = ['iceVolume', 'iceVAF', 'groundedArea']
     for var in timeseries_var_ocean:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_timeseries_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, fig_dir=fig_dir, num_years=num_years)
     for var in timeseries_var_ice:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_timeseries_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir, num_years=num_years)
 
     # Lat-lon animations
     latlon_var_ocean = ['iceDraft', 'meltRate', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity'] #['iceDraft', 'bathymetry', 'meltRate', 'frictionVelocity', 'thermalDriving', 'halineDriving', 'uBoundaryLayer', 'vBoundaryLayer', 'barotropicStreamfunction', 'bottomTemperature', 'bottomSalinity']
     latlon_var_ice = ['iceThickness'] #['iceThickness', 'upperSurface', 'lowerSurface', 'basalMassBalance', 'groundedMask', 'floatingMask', 'basalTractionMagnitude', 'uBase', 'vBase', 'uSurface', 'vSurface', 'uMean', 'vMean']
     for var in latlon_var_ocean:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, yo, fig_dir=fig_dir)
     for var in latlon_var_ice:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_2d_anim_netcdf(var, file_path_1_ice, file_path_2_ice, name_1, name_2, xi, yi, fig_dir=fig_dir)
 
     # Slice animations
     slice_var_xz = ['overturningStreamfunction', 'temperatureXZ', 'salinityXZ']
     slice_var_yz = ['temperatureYZ', 'salinityYZ']
     for var in slice_var_xz:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, xo, zo, fig_dir=fig_dir)
     for var in slice_var_yz:
-        print 'Processing ' + var
+        print(('Processing ' + var))
         compare_2d_anim_netcdf(var, file_path_1_ocean, file_path_2_ocean, name_1, name_2, yo, zo, fig_dir=fig_dir)
 
     # Grounding line animation
-    print 'Processing grounding line'
+    print('Processing grounding line')
     compare_gl_anim_netcdf(file_path_1_ice, file_path_2_ice, name_1, name_2, fig_dir=fig_dir)
 
     

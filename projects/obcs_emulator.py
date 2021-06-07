@@ -30,16 +30,16 @@ def build_trend (trend, num_time):
     time = np.arange(num_time + 1)
     if trend == 'linear':
         coeff1 = trend_std*np.random.randn()
-        print 'Linear trend of ' + str(coeff1) + ' m/y'
+        print(('Linear trend of ' + str(coeff1) + ' m/y'))
         trend_full = coeff1*time
     elif trend == 'quadratic':
         coeff1 = trend_std*np.random.randn()
-        print 'Quadratic trend of ' + str(coeff1) + 'm/y^2'
+        print(('Quadratic trend of ' + str(coeff1) + 'm/y^2'))
         trend_full = coeff1*time**2
     elif trend == 'sinusoid':
         amplitude = amp_std*np.random.randn()
         period = per_std*np.random.randn() + per_mean
-        print 'Sinusoidal trend with amplitude ' + str(amplitude) + ' m and period ' + str(period) + ' years'
+        print(('Sinusoidal trend with amplitude ' + str(amplitude) + ' m and period ' + str(period) + ' years'))
         trend_full = amplitude*np.sin(time*2*np.pi/period)
     trend_steps = np.diff(trend_full)
     return trend_steps

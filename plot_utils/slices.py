@@ -30,7 +30,7 @@ from ..utils import dist_btw_points, ice_shelf_front_points
 def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_vars=True):
 
     if gtype not in ['t', 'u', 'v', 'psi']:
-        print 'Error (get_slice_values): the ' + gtype + '-grid is not supported for slices'
+        print(('Error (get_slice_values): the ' + gtype + '-grid is not supported for slices'))
 
     # Figure out direction of slice
     if lon0 is not None and lat0 is None:
@@ -38,7 +38,7 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
     elif lat0 is not None and lon0 is None:
         h_axis = 'lon'
     else:
-        print 'Error (get_slice_values): must specify exactly one of lon0, lat0'
+        print('Error (get_slice_values): must specify exactly one of lon0, lat0')
         sys.exit()
 
     # Find nearest neighbour to lon0 and slice the data here
@@ -135,7 +135,7 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
     # Partial cells with both ice shelves and seafloor - this is a problem with the grid - print a warning, and assume the wet portion is at the bottom.
     index = (hfac>0)*(hfac<1)*(hfac_above==0)*(hfac_below==0)
     if np.count_nonzero(index) > 0:
-        print 'Warning (get_slice_boundaries): this grid has partial cells with both ice shelves and seafloor. They will be pinched, and the position of the wet portion may not be accurate in this plot.'
+        print('Warning (get_slice_boundaries): this grid has partial cells with both ice shelves and seafloor. They will be pinched, and the position of the wet portion may not be accurate in this plot.')
         depth_above[index] = lev_below[index] + dz[index]*hfac[index]
     
     # Now we need to merge depth_above and depth_below, because depth_above for one cell is equal to depth_below for the cell above, and vice versa.
@@ -145,7 +145,7 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
     depth_above_2[0,:] = depth_above[0,:]  # No other option for surface
     # Should never be nonzero in the same place
     if np.any(depth_above*depth_above_2 != 0):
-        print 'Warning (get_slice_boundaries): something went wrong in calculation of partial cells'
+        print('Warning (get_slice_boundaries): something went wrong in calculation of partial cells')
     # Add them together to capture all the nonzero values
     above = depth_above + depth_above_2
     # Anything still zero is just the regular z levels
@@ -156,7 +156,7 @@ def get_slice_boundaries (data_slice, grid, h_bdry, hfac):
     depth_below_2[:-1,:] = depth_above[1:,:]
     depth_below_2[-1,:] = depth_below[-1,:]
     if np.any(depth_below*depth_below_2 != 0):
-        print 'Warning (get_slice_boundaries): something went wrong in calculation of partial cells'
+        print('Warning (get_slice_boundaries): something went wrong in calculation of partial cells')
     below = depth_below + depth_below_2
     index = below == 0
     below[index] = lev_below[index]
@@ -291,16 +291,16 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True, 
     
     # Some error checking
     if lon0 == lon1:
-        print 'Error (get_transect): This is a line of constant longitude. Use the regular slice scripts instead.'
+        print('Error (get_transect): This is a line of constant longitude. Use the regular slice scripts instead.')
         sys.exit()
     if lat0 == lat1:
-        print 'Error (get_transect): This is a line of constant latitude. Use the regular slice scripts instead.'
+        print('Error (get_transect): This is a line of constant latitude. Use the regular slice scripts instead.')
         sys.exit()
     if min(lon0, lon1) < np.amin(grid.lon_corners_1d) or max(lon0, lon1) > np.amax(grid.lon_1d) or lat0 < np.amin(grid.lat_corners_1d) or lat1 > np.amax(grid.lat_1d):
-        print 'Error (get_transect): This line falls outside of the domain.'
+        print('Error (get_transect): This line falls outside of the domain.')
         sys.exit()
     if gtype != 't':
-        print 'Error (get_transect): gtypes other than t are not yet supported.'
+        print('Error (get_transect): gtypes other than t are not yet supported.')
         sys.exit()
     # Save the slope of the line
     slope = float((lat1-lat0))/(lon1-lon0)
@@ -325,13 +325,13 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True, 
             # Get the cell most recently saved
             [j_old, i_old] = cells_intersect[-1]
             if j_old != j-1:
-                print 'Error: j_old is not j-1'
+                print('Error: j_old is not j-1')
                 sys.exit()
             # Add the cells between it and the new one, in the right order
             if pos_slope:
-                i_range = range(i_old+1, i_new+1)
+                i_range = list(range(i_old+1, i_new+1))
             else:
-                i_range = range(i_old-1, i_new-1, -1)
+                i_range = list(range(i_old-1, i_new-1, -1))
             for i in i_range:
                 cells_intersect.append((j-1,i))
         # Add the new cell
@@ -392,7 +392,7 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True, 
             continue
         elif len(intersections) in [0,3,4]:
             # This should never happen.
-            print 'Error (get_transect): ' + str(len(intersections)) + ' intersections. Something went wrong.'
+            print(('Error (get_transect): ' + str(len(intersections)) + ' intersections. Something went wrong.'))
             sys.exit()
         # Now save data from this water column to the transect
         data_trans[...,posn] = data[...,j,i]
@@ -465,13 +465,13 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
 
     # Check the primary/secondary start variables make sense:
     if primary_start not in ['W', 'E', 'S', 'N']:
-        print 'Error (get_iceshelf_front): invalid primary_start ' + primary_start
+        print(('Error (get_iceshelf_front): invalid primary_start ' + primary_start))
         sys.exit()
     if secondary_start not in ['W', 'E', 'S', 'N']:
-        print 'Error (get_iceshelf_front): invalid secondary_start ' + secondary_start
+        print(('Error (get_iceshelf_front): invalid secondary_start ' + secondary_start))
         sys.exit()
     if (primary_start in ['W', 'E'] and secondary_start in ['W', 'E']) or (primary_start in ['S', 'N'] and secondary_start in ['S', 'N']):
-        print 'Error (get_iceshelf_front): primary_start and secondary_start must be along different dimensions.'
+        print('Error (get_iceshelf_front): primary_start and secondary_start must be along different dimensions.')
         sys.exit()
 
     # Threshold distance after which to say the ice shelf is done
@@ -479,7 +479,7 @@ def get_iceshelf_front (data, grid, xmin=None, xmax=None, ymin=None, ymax=None, 
 
     # Set up some variables for this grid
     lon, lat = grid.get_lon_lat(gtype=gtype)
-    i_vals, j_vals = np.meshgrid(range(grid.nx), range(grid.ny))
+    i_vals, j_vals = np.meshgrid(list(range(grid.nx)), list(range(grid.ny)))
     land_mask = grid.get_land_mask(gtype=gtype)
     fris_mask = grid.get_ice_mask(shelf='fris', gtype=gtype)
     if shelf == 'ronne':
