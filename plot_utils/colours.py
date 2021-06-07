@@ -132,7 +132,7 @@ def psi_cmap (vmin, vmax, change_points=None):
 def centered_cmap (vmin, vmax, val0):
 
     ncolours = 256
-    half_colours = ncolours/2
+    half_colours = ncolours//2
     set1 = np.linspace(vmin, val0, num=half_colours, endpoint=False)
     set2 = np.linspace(val0, vmax, num=half_colours)
     cmap_vals = np.concatenate((set1, set2))

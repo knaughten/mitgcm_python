@@ -113,7 +113,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
                 data = daily_to_monthly(data, year=year, per_day=per_day)
             else:
                 # Average over each day
-                data = np.mean(np.reshape(data, (per_day, data.shape[0]/per_day, era5_grid.ny, era5_grid.nx), order='F'), axis=0)
+                data = np.mean(np.reshape(data, (per_day, data.shape[0]//per_day, era5_grid.ny, era5_grid.nx), order='F'), axis=0)
                 if data.shape[0] == days_per_year+1:
                     # Remove leap day
                     data = np.concatenate((data[:leap_day,:], data[leap_day+1:,:]), axis=0)
@@ -617,7 +617,7 @@ def read_calc_trends (var, file_path, option, percent=False, year_start=1920, ye
     elif option == 'annual':
         # Annual average to filter out seasonal cycle
         # First trim to the nearest complete year
-        new_size = len(time)/12*12
+        new_size = len(time)//12*12
         time = time[:new_size]
         data = data[:new_size]
         time, data = calc_annual_averages(time, data)
@@ -782,7 +782,7 @@ def plot_ts_decades (sim_dir, region, z0=None, year_start=1920, smin=None, smax=
         # Loop over decades
         for t in range(0, len(years), 10):
             # Choose decade (to determine colour)
-            decade = (years[t]-years[0])/10
+            decade = (years[t]-years[0])//10
             label = None
             if years[t] % 10 == 0:
                 label = str(years[t]) + 's'
@@ -1134,7 +1134,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
             ax.set_title('Annual')
         else:
             # Plot individual month
-            ax = plt.subplot(gs[n/4+1, n%4])
+            ax = plt.subplot(gs[n//4+1, n%4])
             img = ax.pcolormesh(pace_grid.lon, pace_grid.lat, pace_data[n,:]-era5_data[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
             ax.set_title(titles[n])
         ax.set_xlim([xmin, xmax])
@@ -2001,7 +2001,7 @@ def plot_bias_correction_fields (input_dir, grid_dir, fig_dir='./'):
 
     fig, gs, cax = set_panels('2x4-1C7')
     for n in range(num_var):
-        ax = plt.subplot(gs[(n+1)/4, (n+1)%4])
+        ax = plt.subplot(gs[(n+1)//4, (n+1)%4])
         img = latlon_plot(data[n], grid, ax=ax, make_cbar=False, ctype=ctype[n], include_shelf=False, title=titles[n], titlesize=13)
         cbar = plt.colorbar(img, cax=cax[n], orientation='horizontal')
         alternate = n==5
@@ -3153,7 +3153,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
             cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
             cax.append(cax_tmp)
     for n in range(num_var):
-        ax = plt.subplot(gs[n/2, n%2])
+        ax = plt.subplot(gs[n//2, n%2])
         img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n], val0=val0[n])
         cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
         if n%2 == 0:
@@ -3313,7 +3313,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     ax.legend(loc='upper left', borderpad=0.3)
     # Plot trend slices in bottom panels
     for v in range(num_trends):
-        ax = plt.subplot(gs[3*(v/2)+4:3*(v/2)+7, v%2])
+        ax = plt.subplot(gs[3*(v//2)+4:3*(v//2)+7, v%2])
         img = make_slice_plot(patches, values[v], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
         ax.axhline(-z0, color='black', linestyle='dashed', linewidth=1)
         if v == 0:
@@ -3483,7 +3483,7 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     hovmoller_file = ['hovmoller3.nc', 'hovmoller3.nc', 'hovmoller1.nc', 'hovmoller2.nc']  # I realise this is horrible but merging the files always gets rid of the land mask and I can't seem to fix it...
     start_year = 1920
     end_year = 2013
-    num_decades = int((end_year-start_year+1)/10)
+    num_decades = int((end_year-start_year+1)//10)
     era5_start_year = 1979
     smooth = 24
     p0 = 0.05
@@ -3565,10 +3565,10 @@ def plot_ts_casts_changes (base_dir='./', fig_dir='./'):
     gs.update(left=0.08, right=0.95, bottom=0.1, top=0.91, wspace=0.1, hspace=0.3)
     cmap = truncate_colourmap(plt.get_cmap('plasma_r'), minval=0.05, maxval=0.95)
     colours = cmap(np.linspace(0, 1, num=num_decades))
-    norm = cl.Normalize(vmin=start_year, vmax=int(end_year/10)*10)
+    norm = cl.Normalize(vmin=start_year, vmax=int(end_year//10)*10)
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    decade_ticks = np.arange(start_year, (int(end_year/10)+1)*10, 10)
+    decade_ticks = np.arange(start_year, (int(end_year//10)+1)*10, 10)
     for r in range(num_regions):
         # Plot temperature profile for each decade
         if r == 0:

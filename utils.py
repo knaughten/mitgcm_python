@@ -656,7 +656,7 @@ def wrap_periodic (data, is_lon=False):
 # If there is more than one record per day, set the per_day argument.
 def daily_to_monthly (data, year=1979, per_day=1):
 
-    if data.shape[0]/per_day not in [365, 366]:
+    if data.shape[0]//per_day not in [365, 366]:
         print('Error (daily_to_monthly): The first dimension is not time, or else this is not one year of data.')
         sys.exit()
     new_shape = [12] + list(data.shape[1:])
@@ -716,9 +716,9 @@ def moving_average (data, window, time=None, keep_edges=False):
 
     centered = window%2==1
     if centered:
-        radius = (window-1)/2
+        radius = (window-1)//2
     else:
-        radius = window/2
+        radius = window//2
 
     # Will have to trim each end by one radius
     t_first = radius
@@ -757,10 +757,9 @@ def moving_average (data, window, time=None, keep_edges=False):
             time1 = time[radius-1:time.size-radius-1]
             time2 = time[radius:time.size-radius]
             if isinstance(time[0], int):
-                divisor = 2.
+                time_trimmed = time1 + (time2-time1)/2.
             else:
-                divisor = 2  # Can't have a float for datetime
-            time_trimmed = time1 + (time2-time1)/divisor
+                time_trimmed = time1 + (time2-time1)//2 # Can't have a float for datetime            
         return data_smoothed, time_trimmed
     else:
         return data_smoothed

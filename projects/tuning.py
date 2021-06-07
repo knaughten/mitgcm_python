@@ -108,7 +108,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
             i = year-start_year
 
             # Draw this panel            
-            ax = plt.subplot(gs[i/8, i%8])
+            ax = plt.subplot(gs[i//8, i%8])
             img = latlon_plot(data[i], grid, ax=ax, make_cbar=False, ctype=ctype[j], vmin=vmin, vmax=vmax, zoom_fris=True, title=year)
             if var == 'vel':
                 # Add velocity vectors
@@ -116,7 +116,7 @@ def peryear_plots (output_dir='./annual_averages/', grid_dir='../grid/', fig_dir
             if i%8 != 0:
                 # Remove latitude labels
                 ax.set_yticklabels([])
-            if i/8 != 4:
+            if i//8 != 4:
                 # Remove longitude labels
                 ax.set_xticklabels([])
 

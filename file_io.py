@@ -274,7 +274,7 @@ def read_binary (filename, grid_sizes, dimensions, prec=32, endian='big'):
         if np.mod(data.size, size0) != 0:
             print('Error (read_binary): incorrect dimensions or precision')
             sys.exit()
-        num_time = data.size/size0
+        num_time = data.size//size0
         shape = [num_time] + shape
     else:
         # Time-independent field; just do error checking
@@ -661,7 +661,7 @@ def read_annual_average (var_name, file_paths, return_years=False):
             # This file starts at the beginning of a year
             t_start = 0
         # Loop over complete years
-        for t in range(t_start, (time.size-t_start)/12*12, 12):
+        for t in range(t_start, (time.size-t_start)//12*12, 12):
             print((time[t].year))
             years.append(time[t].year)
             data_annual = update_data_annual(data, t, time[t].year, data_annual)

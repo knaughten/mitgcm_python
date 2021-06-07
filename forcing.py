@@ -569,7 +569,7 @@ def cmip6_atm_forcing (var, expt, mit_start_year=None, mit_end_year=None, model_
 def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
 
     grid = ERA5Grid()
-    per_day = 24/6
+    per_day = 24//6
 
     for year in range(start_year, end_year+1):
         print(('Processing year ' + str(year)))
@@ -996,7 +996,7 @@ def thermo_correction (grid_dir, var_name, cmip_file, era5_file, out_file, prec=
                 img = ax.pcolormesh(np.mean(data_diff,axis=0), cmap=cmap, vmin=vmin, vmax=vmax)
                 ax.set_title('Annual')
             else:
-                ax = plt.subplot(gs[n/4+1, n%4])
+                ax = plt.subplot(gs[n//4+1, n%4])
                 img = ax.pcolormesh(data_diff[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
                 ax.set_title(titles[n])
             ax.set_xticks([])

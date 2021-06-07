@@ -287,7 +287,7 @@ def animate_cavity (animation_file, grid, mov_name='cavity.mp4'):
     cax = [cax1, cax2]
     ax = []
     for n in range(num_vars):
-        ax.append(plt.subplot(gs[n/2,n%2]))
+        ax.append(plt.subplot(gs[n//2,n%2]))
         ax[n].axis('equal')
 
     # Inner function to plot a frame
@@ -481,7 +481,7 @@ def plot_ua_changes (base_dir='./', fig_dir='./'):
         # Set up plot
         fig, gs, cax = set_panels('2x2C1', figsize=(9.5,10))
         for n in range(num_sims):
-            ax = plt.subplot(gs[n/2, n%2])
+            ax = plt.subplot(gs[n//2, n%2])
             img = ua_plot('reg', data[n], x, y, xGL=xGL[n], yGL=yGL[n], x_bdry=x_bdry, y_bdry=y_bdry, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin[i], vmax=vmax[i], zoom_fris=True, title=titles[n], titlesize=16, extend='both')
         cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
         plt.suptitle(var_titles[i], fontsize=24)
@@ -1112,8 +1112,8 @@ def plot_wind_changes (sim_key, var='windspeed', base_dir='./', fig_dir='./', fo
             u = read_binary(forcing_dir+name+'/'+name+'_uas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny], 'xyt')
             v = read_binary(forcing_dir+name+'/'+name+'_vas_'+str(year), [ukesm_grid.nx, ukesm_grid.ny_v], 'xyt')
             # Average in 30-day blocks to match model output
-            u = np.mean(np.reshape(u, (30, u.shape[0]/30, u.shape[1], u.shape[2]), order='F'), axis=0)
-            v = np.mean(np.reshape(v, (30, v.shape[0]/30, v.shape[1], v.shape[2]), order='F'), axis=0)
+            u = np.mean(np.reshape(u, (30, u.shape[0]//30, u.shape[1], u.shape[2]), order='F'), axis=0)
+            v = np.mean(np.reshape(v, (30, v.shape[0]//30, v.shape[1], v.shape[2]), order='F'), axis=0)
             # Interpolate to tracer grid
             u_t = np.empty(u.shape)
             u_t[:,:-1,:] = 0.5*(u[:,:-1,:] + u[:,1:,:])
@@ -2768,7 +2768,7 @@ def plot_density_panels (precompute_file, base_dir='./', fig_dir='./'):
     vmax = [np.amax(density_final[:2,:])]*2 + [np.amax(density_final[2:,:])]*2
     cax = [None, cax1, None, cax2]
     for n in range(num_periods):
-        ax = plt.subplot(gs[n/2, n%2])
+        ax = plt.subplot(gs[n//2, n%2])
         ax.axis('equal')
         img = latlon_plot(density_final[n,:], grid, ax=ax, make_cbar=False, vmin=vmin[n], vmax=vmax[n], zoom_fris=True, pster=True, title=titles[n])
         ax.set_xticks([])

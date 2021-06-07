@@ -198,12 +198,12 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
         # Mask out land and ice shelves
         data = mask_land_ice(data, grid)
         # Plot
-        ax = plt.subplot(gs[(i-1)/2, (i-1)%2])
+        ax = plt.subplot(gs[(i-1)//2, (i-1)%2])
         img = latlon_plot(data, grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, title=title, xmin=xmin_sfc, ymin=ymin_sfc)
         if (i-1)%2==1:
             # Remove latitude labels
             ax.set_yticklabels([])
-        if (i-1)/2==0:
+        if (i-1)//2==0:
             # Remove longitude labels
             ax.set_xticklabels([])
     # Main title
@@ -382,9 +382,9 @@ def prelim_latlon (base_dir='./', fig_dir='./'):
         for i in range(num_expts-1):
             # Leave the bottom left plot empty for colourbars
             if i < 3:
-                ax = plt.subplot(gs[i/3,i%3])
+                ax = plt.subplot(gs[i//3,i%3])
             else:
-                ax = plt.subplot(gs[i/3,i%3+1])
+                ax = plt.subplot(gs[i//3,i%3+1])
             if option=='absolute' or i==0:
                 ctype_curr = ctype
                 vmin_curr = vmin
@@ -647,7 +647,7 @@ def baseline_panels (base_dir='./', fig_dir='./'):
     fig, gs = set_panels('5C0')
     for i in range(len(data)):
         # Leave the top left plot empty for title
-        ax = plt.subplot(gs[(i+1)/3, (i+1)%3])
+        ax = plt.subplot(gs[(i+1)//3, (i+1)%3])
         # Just overlay lat/lon lines in one plot
         lon_lines = None
         lat_lines = None
@@ -730,9 +730,9 @@ def aice_simulations (base_dir='./', fig_dir='./'):
     for i in range(num_expts-1):
         # Leave the bottom left plot empty for colourbar
         if i < 3:
-            ax = plt.subplot(gs[i/3,i%3])
+            ax = plt.subplot(gs[i//3,i%3])
         else:
-            ax = plt.subplot(gs[i/3,i%3+1])
+            ax = plt.subplot(gs[i//3,i%3+1])
         img = latlon_plot(data[i], grid, ax=ax, include_shelf=False, make_cbar=False, vmin=0, vmax=1, xmin=xmin_sfc, ymin=ymin_sfc, title=title_prefix[i]+expt_names[i])
         if mask[i] is not None:
             # Contour imposed polynya in white
@@ -968,7 +968,7 @@ def anomaly_panels (base_dir='./', fig_dir='./'):
     title = ['a) Temperature ('+deg_string+'C), depth-average', 'b) Net sea ice production (m/y)', 'c) Salinity (psu), depth-average', 'd) Age (years), depth-average', 'e) Barotropic velocity (m/s)', 'f) Ice shelf melt rate (m/y)']
     fig, gs = set_panels('2x3C0')
     for i in range(len(data)):
-        ax = plt.subplot(gs[i/3,i%3])
+        ax = plt.subplot(gs[i//3,i%3])
         img = latlon_plot(data[i], grid, ax=ax, pster=True, ctype='plusminus', vmin=vmin_diff[i], vmax=vmax_diff[i], extend='both', zoom_fris=True, title=title[i])
     # Main title
     plt.suptitle('Maud Rise minus baseline (1979-2016 mean)', fontsize=24)
@@ -1124,7 +1124,7 @@ def calc_recovery_time (base_dir='./', fig_dir='./'):
 
     perturb_years = 5
     window = 5  # Must be odd
-    n = (window-1)/2 # Must be < perturb_years
+    n = (window-1)//2 # Must be < perturb_years
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
 
