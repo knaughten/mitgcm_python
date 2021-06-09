@@ -62,11 +62,16 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
     gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95)
     ax = plt.subplot(gs[0,0])
     img1 = ax.pcolormesh(x, y, sst_plot, cmap='inferno')
-    plt.text(0.63, 0.9, 'Ocean temperature', fontsize=18, transform=fig.transFigure)
+    cax = inset_axes(ax, "18%", "4%", loc='upper right')
+    cticks = [-1, 4]
+    cbar = plt.colorbar(img1, cax=cax, orientation='horizontal', ticks=cticks)
+    cbar.ax.set_xticklabels([str(ct)+deg_string+'C' for ct in cticks])
+    cbar.ax.tick_params(labelsize=12)
+    #plt.text(0.63, 0.9, 'Ocean temperature', fontsize=18, transform=fig.transFigure)
     img2 = ax.pcolormesh(x, y, aice_plot, cmap='Blues_r')
-    plt.text(0.1, 0.3, 'Sea ice', fontsize=18, transform=fig.transFigure)
+    #plt.text(0.1, 0.3, 'Sea ice', fontsize=18, transform=fig.transFigure)
     ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('Grey'), linestyles='solid', linewidths=1)
-    plt.text(0.68, 0.15, 'Antarctica', fontsize=18, transform=fig.transFigure)
+    #plt.text(0.68, 0.15, 'Antarctica', fontsize=18, transform=fig.transFigure)
     ax.set_xticks([])
     ax.set_yticks([])
     ax2 = inset_axes(ax, "30%", "30%", loc='upper left')
@@ -74,9 +79,9 @@ def eddy_ice_plot (output_dir='PAS_ERA5/output/201901/MITgcm/', grid_dir='PAS_gr
     map.drawmapboundary(fill_color='MidnightBlue')
     map.fillcontinents(color='white', lake_color='white')
     map.plot([x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0], color='red', latlon=True)
-    txt = plt.text(0.07, 0.9, 'Amundsen Sea', fontsize=20, color='white', transform=fig.transFigure)
-    txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='black')])
-    finished_plot(fig, fig_name='dtp_eddies.png')
+    #txt = plt.text(0.07, 0.9, 'Amundsen Sea', fontsize=20, color='white', transform=fig.transFigure)
+    #txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='black')])
+    finished_plot(fig, fig_name='dtp_eddies.png', dpi=300)
 
         
 
