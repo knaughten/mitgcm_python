@@ -324,7 +324,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal', log=True):
 
     # import file_io for basic error output
-    import mitgcm_python.file_io as fio
+    import .file_io as fio
  
     # First throw away the points we don't trust
     data[discard] = missing_val
