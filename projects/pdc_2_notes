@@ -1,0 +1,141 @@
+Timeseries for each ensemble member, 1920-2013:
+amundsen_shelf_break_uwind_avg
+amundsen_shelf_temp_btw_200_700m
+dotson_to_cosgrove_massloss
+amundsen_shelf_salt_btw_200_700m
+amundsen_shelf_advection_heat_xy_below_200m
+amundsen_shelf_advection_heat_z_below_200m
+amundsen_shelf_diffusion_heat_implicit_z_below_200m
+amundsen_shelf_kpp_heat_z_below_200m
+amundsen_shelf_shortwave_penetration_below_200m
+amundsen_shelf_isotherm_0.5C_below_100m
+pine_island_bay_isotherm_0C_below_100m
+dotson_bay_isotherm_-1C_below_100m
+
+Hovmollers for each ensemble member, 1920-2013:
+amundsen_shelf_temp
+amundsen_shelf_break_temp
+pine_island_bay_temp
+dotson_bay_temp
+
+Trends at each point for each ensemble member, precomputed over 1920-2013:
+ADVx_TH
+ADVy_TH
+advection_3d
+diffusion_kpp
+shortwave_pen
+hb_total
+EXFuwind
+EXFvwind
+EXFatemp
+EXFaqh
+EXFpreci
+SIfwfrz
+SIfwmelt
+SIarea
+SIheff
+oceFWflx
+sst
+sss
+
+Timeseries for ERA5, 1979-2019:
+amundsen_shelf_break_uwind_avg
+amundsen_shelf_temp_btw_200_700m
+dotson_to_cosgrove_massloss
+pine_island_bay_isotherm_0C_below_100m
+dotson_bay_isotherm_-1C_below_100m
+pine_island_bay_temp_below_700m
+dotson_bay_temp_below_700m
+pig_massloss
+dotson_massloss
+getz_massloss
+crosson_massloss
+thwaites_massloss
+cosgrove_massloss
+abbot_massloss
+venable_massloss
+
+Hovmollers for ERA5, 1979-2019:
+amundsen_west_shelf_break_temp
+amundsen_west_shelf_break_salt
+pine_island_bay_temp
+pine_island_bay_salt
+dotson_bay_temp
+dotson_bay_salt
+
+2D fields for ERA5, 1988-2019 only:
+SIarea
+SIheff
+
+
+
+Variables:
+uwind/EXFuwind (m/s) - eastward_wind
+EXFvwind (m/s) - northward_wind
+temp (degC) - sea_water_potential_temperature
+massloss (Gt/y) - ice_shelf_basal_melt_flux
+salt (psu) - sea_water_salinity
+advection_heat_xy (net horizontal advection of heat into region, GJ/s) - ocean_heat_convergence_due_to_horizontal_advection
+advection_heat_z (net vertical advection of heat into region, GJ/s) - ocean_heat_convergence_due_to_vertical_advection
+diffusion_heat_implicit_z (net vertical diffusion of heat into region, GJ/s) - ocean_heat_convergence_due_to_vertical_diffusion
+kpp_heat_z (net vertical KPP transport of heat into region, GJ/s) - ocean_heat_convergence_due_to_parameterised_vertical_mixing
+shortwave_penetration (shortwave penetration of heat into region, GJ/s) - ocean_heat_convergence_due_to_shortwave_flux
+isotherm_0.5C (depth of 0.5C isotherm, m) - depth_of_0.5C_isotherm
+isotherm_0C (depth of 0C isotherm, m) - depth_of_0C_isotherm
+isotherm_-1C (depth of -1C isotherm, m) - depth_of_-1C_isotherm
+ADVx_TH (zonal advection of heat relative to surface freezing point, degC.m^3/s/y) - eastward_ocean_heat_transport_due_to_advection
+ADVy_TH (meridional advection of heat relative to surface freezing point, degC.m^3/s/y) - northward_ocean_het_transport_due_to_advection
+advection_3d (net 3D advection of heat into cell, degC.m^3/s/y) - ocean_heat_convergence_due_to_advection
+diffusion_kpp (net vertical diffusion and KPP transport of heat into cell, degC.m^3/s/y) - ocean_heat_convergence_due_to_diffusion_and_parameterised_vertical_mixing
+shortwave_pen (shortwave penetration of heat into cell, degC.m^3/s/y) - ocean_heat_convergence_due_to_shortwave_flux
+hb_total (total of heat budget in interior ocean, degC.m^3/s/y) - ocean_heat_convergence_in_interior
+EXFatemp (K) - air_temperature
+EXFaqh (fraction) - specific_humidity
+EXFpreci (m/s) - precipitation_flux
+SIfwfrz (surface freshwater flux from sea ice freezing, kg/m^2/s) - freshwater_flux_into_sea_water_due_to_sea_ice_freezing
+SIfwmelt (surface freshwater flux from sea ice melting, kg/m^2/s) - freshwater_flux_into_sea_water_due_to_sea_ice_melting
+SIarea (fraction) - sea_ice_area_fraction
+SIheff (m) - sea_ice_thickness
+oceFWflx (kg/m^2/s) - freshwater_flux_into_sea_water
+sst (degC) - sea_suface_temperature
+sss (psu) - sea_surface_salinity
+
+Horizontal locations:
+amundsen_shelf_break - AmundsenSeaContinentalShelfBreak - 115:102W, 71.8:70.2S
+amundsen_shelf - AmundsenSeaContinentalShelf - 115:100W, 75.5:70S, 1750m isobath, ice front
+dotson_to_cosgrove - IceShelvesFromDotsonToCosgrove - 114.6:98.5W, 75.5:73.1S
+pine_island_bay - PineIslandBay - 104:100.5W, 75.2:74.2S, ice front
+dotson_bay - FrontOfDotsonIceShelf - 114:110.5W, 74.3:73.5S, ice front
+full domain - AmundsenSea - 140:80W, 76:62S
+pig - PineIslandIceShelf - 103:99W, 75.4:74S
+dotson - DotsonIceShelf - 114.6:111.2W, 75.3:74.1S
+getz - GetzIceShelf - 135:114.7W, 75.2:73.5S
+crosson - CrossonIceShelf - 111.2:109W, 75.4:74.1S
+thwaites - ThwaitesIceShelf - 109:103W, 75.4:74.6S
+cosgrove - CosgroveIceShelf - 102:98.5W, 73.8:73.2S
+abbot - AbbotIceShelf - 104:88.9W, 73.4:71.5S
+venable - VenableIceShelf - 88.9:85.6W, 73.4:72.7S
+amundsen_west_shelf_break - PineIslandThwaitesWestTrough - 115:112W, 72:71S
+
+Vertical locations:
+surface
+below 100m
+below 200m
+200-700m
+below 700m
+
+File types:
+Timeseries, monthly averaged
+Hovmollers, monthly averaged
+Lat-lon fields, monthly averaged
+Trends, calculated from annual averages
+
+Plan:
+File types
+  Location (unless trends)
+    Depth (unless trends)
+     Simulation (unless trends)
+        Variables within file
+Have all these things in filename too, and as attributes in file.
+
+     		
