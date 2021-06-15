@@ -317,7 +317,7 @@ def process_trend_var (var_name):
     if var_name == 'ADVx_TH':
         new_var = 'eastward_ocean_heat_transport_due_to_advection'
     elif var_name == 'ADVy_TH':
-        new_var = 'northward_ocean_het_transport_due_to_advection'
+        new_var = 'northward_ocean_heat_transport_due_to_advection'
     elif var_name == 'advection_3d':
         new_var = 'ocean_heat_convergence_due_to_advection'
     elif var_name == 'diffusion_kpp':
