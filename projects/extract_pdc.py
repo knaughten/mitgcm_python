@@ -213,6 +213,8 @@ dir_used.append(main_outdir+hovmoller_dir)
 def process_hovmoller_var (var_name, sim='pace', hov_file='hovmoller.nc'):
     print('Processing '+var_name+' for '+sim)
     region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    zmin = None
+    zmax = None
     dir_tmp = main_outdir+hovmoller_dir+region+'/'
     if dir_tmp not in dir_used:
         f.write('mkdir '+dir_tmp+'\n')
@@ -278,6 +280,8 @@ dir_used.append(main_outdir+latlon_dir)
 def process_latlon_var_era5 (var_name):
     print('Processing '+var_name+' for ERA5')
     region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    zmin = None
+    zmax = None
     if var_name == 'SIarea':
         new_var = 'sea_ice_area_fraction'
     elif var_name == 'SIheff':
@@ -307,6 +311,8 @@ dir_used.append(main_outdir+trend_dir)
 def process_trend_var (var_name):
     print('Processing '+var_name)
     region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    zmin = None
+    zmax = None
     dir_tmp = main_outdir+trend_dir
     if var_name == 'ADVx_TH':
         new_var = 'eastward_ocean_heat_transport_due_to_advection'
