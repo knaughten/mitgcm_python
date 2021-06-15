@@ -25,6 +25,7 @@ dir_used = []
 f = open(bash_script, 'w')
 f.write('#!/bin/bash\n')
 f.write('set -ex\n')
+f.write('export HDF5_USE_FILE_LOCKING=FALSE\n')
 f.write('mkdir '+main_outdir+'\n')
 dir_used.append(main_outdir)
 
