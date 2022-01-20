@@ -324,7 +324,7 @@ def interp_reg (source_grid, target_grid, source_data, dim=3, gtype='t', fill_va
 def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal', log=True):
 
     # import file_io for basic error output
-    import .file_io as fio
+    #import .file_io as fio
  
     # First throw away the points we don't trust
     data[discard] = missing_val
@@ -348,9 +348,9 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 # If cannot complete discard and fill, write errors out to very basic file 
                 print('Error (discard_and_fill): some missing values cannot be filled')
                 print('Dumping data, discard, and fill data to error_fill_dump.nc') 
-                fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
-                fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
-                fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
+                #fio.write_netcdf_very_basic(data,    'data',    'error_dump_data.nc', use_3d=use_3d)
+                #fio.write_netcdf_very_basic(discard, 'discard', 'error_dump_discard.nc', use_3d=use_3d)
+                #fio.write_netcdf_very_basic(fill,    'fill',    'error_dump_fill.nc', use_3d=use_3d)
                 sys.exit()
     return data
 
