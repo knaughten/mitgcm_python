@@ -1423,7 +1423,7 @@ def set_parameters (var):
         factor = 1e-12
         region = var[:var.index('_seaice_area')]
         title = 'Total sea ice area in '+region_names[region]
-        units = r'million km$^2'$
+        units = r'million km$^2$'
     else:
         print(('Error (set_parameters): invalid variable ' + var))
         sys.exit()
