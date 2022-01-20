@@ -1056,6 +1056,7 @@ def set_parameters (var):
         option = 'int_sfc'
         var_name = 'SIarea'
         title = 'Total sea ice area'
+        factor = 1e-12
         units = r'million km$^2$'
     elif var in ['temp_polynya', 'salt_polynya']:
         option = 'point_vavg'
@@ -1071,6 +1072,7 @@ def set_parameters (var):
         option = 'area_threshold'
         var_name = 'MXLDEPTH'
         val0 = 2000.
+        factor = 1e-12
         title = 'Convective area'
         units = r'million km$^2$'
     elif var == 'wed_gyre_trans':
@@ -1415,6 +1417,13 @@ def set_parameters (var):
         factor = 1e-9*Cp_sw*rhoConst
         title = 'Shortwave penetration of heat into '+region_names[region]+' below '+str(-z_shallow)+'m'
         units = 'GJ/s'
+    elif '_seaice_area' in var:
+        option = 'int_sfc'
+        var_name = 'SIarea'
+        factor = 1e-12
+        region = var[:var.index('_seaice_area')]
+        title = 'Total sea ice area in '+region_names[region]
+        units = r'million km$^2'$
     else:
         print(('Error (set_parameters): invalid variable ' + var))
         sys.exit()
@@ -1435,9 +1444,6 @@ def calc_special_timeseries (var, file_path, grid=None, lon0=None, lat0=None, mo
         return time, melt, freeze
     else:
         time, data = calc_timeseries(file_path, option=option, region=region, bdry=bdry, mass_balance=mass_balance, result=result, var_name=var_name, grid=grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, val0=val0, lon0=lon0, lat0=lat0, tmin=tmin, tmax=tmax, smin=smin, smax=smax, point0=point0, point1=point1, z0=z0, direction=direction, monthly=monthly, rho=rho, time_average=time_average, factor=factor, offset=offset)
-        if var in ['seaice_area', 'conv_area']:
-            # Convert from m^2 to million km^2
-            data *= 1e-12
         return time, data
 
 

@@ -87,7 +87,8 @@ region_bounds = {
     'filchner_sill': [-36, -30, -74.7, -74],
     'filchner_trough_cavity': [-44, -38, -81, -76],
     'amundsen_shelf': [-115, -100, -75.5, -70],
-    'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1]
+    'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1],
+    'amundsen_sea': [-140, -80, -75.6, -62]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']

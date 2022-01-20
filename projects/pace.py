@@ -16,7 +16,7 @@ import netCDF4 as nc
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land, axis_edges
 from ..plot_utils.colours import set_colours, choose_n_colours, truncate_colourmap
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
@@ -28,7 +28,7 @@ from ..plot_slices import slice_plot, make_slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
-from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var
+from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var, precompute_timeseries_coupled
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral, vertical_average, area_average
 from ..interpolation import interp_reg_xy, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
@@ -3707,6 +3707,73 @@ def plot_trends_ex_convection (base_dir='./', fig_dir='./'):
             ax.legend(loc='lower center', bbox_to_anchor=(0,-0.34), fontsize=11)
     plt.suptitle('Temperature trend (200-700m)', fontsize=16)
     finished_plot(fig, fig_name=fig_dir+'trends_ex_convection.png', dpi=300)
+
+
+# Plot timeseries of total sea ice area in the ERA5-forced run versus NSIDC observations, in the given region.
+def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/data/oceans_input/raw_input_data/seaice/nsidc/', base_dir='./', fig_dir='./'):
+
+    nsidc_dir = real_dir(nsidc_dir)
+    base_dir = real_dir(base_dir)
+    fig_dir = real_dir(fig_dir)
+    model_dir = base_dir + 'PAS_ERA5/output/'
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    start_year = 1987
+    end_year = 2019
+    start_month = 11  # Years begin in December according to NSDIC
+    regions = ['amundsen_sea', 'amundsen_shelf', 'pine_island_bay', 'dotson_bay']
+    region_titles = ['Full domain', 'Shelf', 'Pine Island Bay', 'Front of Dotson']
+    num_regions = len(regions)
+
+    precomputed = os.path.isfile(model_dir+timeseries_file)
+    if not precomputed:
+        # Precompute model timeseries
+        precompute_timeseries_coupled(output_dir=model_dir, timeseries_file=timeseries_file, timeseries_types=[r+'_seaice_area' for r in regions])
+    # Now read timeseries
+    model_time = netcdf_time(model_dir+timeseries_file, monthly=False)
+    t_start = index_year_start(model_time, start_year)+start_month
+    t_end = index_year_start(model_time, end_year)+start_month
+    model_time = model_time[t_start:t_end]
+    num_time = model_time.size
+    model_ts = np.empty(num_time, num_regions)
+    for n in range(num_regions):
+        model_ts[:,n] = read_netcdf(model_dir+timeseries_file, regions[n]+'_seaice_area')
+
+    # Read NSDIC output
+    nsidc_ts = np.empty(num_time, num_regions)
+    nsidc_dA_mask = []
+    t = 0
+    for year in range(start_year, end_year+1):
+        for month in range(12):
+            if (year==start_year and month<start_month) or (year==end_year and month>=start_month):
+                continue
+            file_path = nsidc_dir + nsidc_fname(year, month)
+            if t==0:
+                # Read grid
+                lon = read_netcdf(file_path, 'longitude')
+                lat = read_netcdf(file_path, 'latitude')
+                x = read_netcdf(file_path, 'xgrid')
+                y = read_netcdf(file_path, 'ygrid')
+                # Calculate area of each cell
+                x_edges = axis_edges(x)
+                y_edges = axis_edges(y)
+                dx = x_edges[1:] - x_edges[:-1]
+                dy = y_edges[1:] - y_edges[:-1]
+                dA = dx*dy
+                # Calculate masked area for each region
+                for region in regions:
+                    [xmin, xmax, ymin, ymax] = region_bounds[region]
+                    mask_tmp = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+                    nsidc_dA_mask.append(np.ma.masked_where(np.invert(mask_tmp), dA))
+            # Read aice
+            nsidc_aice = np.squeeze(read_netcdf(file_path, 'seaice_conc_monthly_cdr'))
+            # Integrate over each region
+            for n in range(num_regions):
+                nsidc_ts[t,n] = np.sum(nsidc_aice*nsidc_dA_mask[n])*1e-12
+            t += 1
+
+    for n in range(4):
+        timeseries_multi_plot(model_time, [model_ts[:,n], nsidc_ts[:,n]], ['Model', 'Observations'], ['blue', 'red'], title=region_titles[n], units=r'million km$^2$')
         
 
     
