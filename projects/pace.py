@@ -3035,7 +3035,7 @@ def plot_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-40
     gs.update(left=0.05, right=0.9, bottom=0.05, top=0.9)
     ax = plt.subplot(gs[0,0])
     # Plot the magnitude in red (all positive side of plusminus)
-    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal advection of heat at '+str(-z0)+r'm (kW/m$^2$/century)', titlesize=18, vmax=500)
+    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Trends in horizontal heat transport at '+str(-z0)+r'm (kW/m$^2$/century)', titlesize=18, vmax=500)
     # Contour shelf break
     bathy = grid.bathy
     bathy[grid.lat_2d < -74.2] = 0
