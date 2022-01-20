@@ -3709,7 +3709,7 @@ def plot_trends_ex_convection (base_dir='./', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'trends_ex_convection.png', dpi=300)
 
 
-# Plot timeseries of total sea ice area in the ERA5-forced run versus NSIDC observations, in the given region.
+# Plot timeseries of total sea ice area in the ERA5-forced run versus NSIDC observations.
 def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/data/oceans_input/raw_input_data/seaice/nsidc/', base_dir='./', fig_dir='./'):
 
     nsidc_dir = real_dir(nsidc_dir)
@@ -3718,37 +3718,34 @@ def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/
     model_dir = base_dir + 'PAS_ERA5/output/'
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
-    start_year = 1987
-    end_year = 2019
-    start_month = 11  # Years begin in December according to NSDIC
-    regions = ['amundsen_sea', 'amundsen_shelf', 'pine_island_bay', 'dotson_bay']
-    region_titles = ['Full domain', 'Shelf', 'Pine Island Bay', 'Front of Dotson']
-    num_regions = len(regions)
+    start_year = 1989
+    end_year = 2018
+    num_years = end_year-start_year+1
+    region = 'amundsen_sea'
 
     precomputed = os.path.isfile(model_dir+timeseries_file)
     if not precomputed:
         # Precompute model timeseries
-        precompute_timeseries_coupled(output_dir=model_dir, timeseries_file=timeseries_file, timeseries_types=[r+'_seaice_area' for r in regions])
+        precompute_timeseries_coupled(output_dir=model_dir, timeseries_file=timeseries_file, timeseries_types=[region+'_seaice_area'], hovmoller_loc=[])
     # Now read timeseries
     model_time = netcdf_time(model_dir+timeseries_file, monthly=False)
-    t_start = index_year_start(model_time, start_year)+start_month
-    t_end = index_year_start(model_time, end_year)+start_month
-    model_time = model_time[t_start:t_end]
-    num_time = model_time.size
-    model_ts = np.empty(num_time, num_regions)
-    for n in range(num_regions):
-        model_ts[:,n] = read_netcdf(model_dir+timeseries_file, regions[n]+'_seaice_area')
+    t_start = index_year_start(model_time, start_year)
+    t_end = index_year_end(model_time, end_year)
+    model_min = np.empty(num_years)
+    model_max = np.empty(num_years)
+    model_data_tmp = read_netcdf(model_dir+timeseries_file, region+'_seaice_area')[t_start:t_end]
+    for t in range(num_years):
+        model_min[t] = np.amin(model_data_tmp[t*12:(t+1)*12])
+        model_max[t] = np.amax(model_data_tmp[t*12:(t+1)*12])
 
     # Read NSDIC output
-    nsidc_ts = np.empty(num_time, num_regions)
-    nsidc_dA_mask = []
-    t = 0
+    nsidc_min = np.empty(num_years)
+    nsidc_max = np.empty(num_years)
     for year in range(start_year, end_year+1):
+        nsidc_tmp = np.empty(12)
         for month in range(12):
-            if (year==start_year and month<start_month) or (year==end_year and month>=start_month):
-                continue
-            file_path = nsidc_dir + nsidc_fname(year, month)
-            if t==0:
+            file_path = nsidc_dir + nsidc_fname(year, month+1)
+            if year==start_year and month==0:
                 # Read grid
                 lon = read_netcdf(file_path, 'longitude')
                 lat = read_netcdf(file_path, 'latitude')
@@ -3758,30 +3755,51 @@ def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/
                 x_edges = axis_edges(x)
                 y_edges = axis_edges(y)
                 dx = x_edges[1:] - x_edges[:-1]
-                dy = y_edges[1:] - y_edges[:-1]
+                dy = y_edges[:-1] - y_edges[1:]
+                dx, dy = np.meshgrid(dx, dy)
                 dA = dx*dy
-                # Calculate masked area for each region
-                for region in regions:
-                    [xmin, xmax, ymin, ymax] = region_bounds[region]
-                    mask_tmp = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
-                    nsidc_dA_mask.append(np.ma.masked_where(np.invert(mask_tmp), dA))
-            # Read aice
+                # Calculate masked area
+                [xmin, xmax, ymin, ymax] = region_bounds[region]
+                mask_tmp = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
+                nsidc_dA_mask = np.ma.masked_where(np.invert(mask_tmp), dA)
             nsidc_aice = np.squeeze(read_netcdf(file_path, 'seaice_conc_monthly_cdr'))
-            # Integrate over each region
-            for n in range(num_regions):
-                nsidc_ts[t,n] = np.sum(nsidc_aice*nsidc_dA_mask[n])*1e-12
-            t += 1
+            # Integrate
+            nsidc_tmp[month] = np.sum(nsidc_aice*nsidc_dA_mask)*1e-12
+        nsidc_min[year-start_year] = np.amin(nsidc_tmp)
+        nsidc_max[year-start_year] = np.amax(nsidc_tmp)
 
-    for n in range(4):
-        timeseries_multi_plot(model_time, [model_ts[:,n], nsidc_ts[:,n]], ['Model', 'Observations'], ['blue', 'red'], title=region_titles[n], units=r'million km$^2$')
-        
+    # Print correlation of min and max between model and obs, and mean and std of each
+    print('Annual max:')
+    print('Mean:')
+    print('Model: '+str(np.mean(model_max)))
+    print('Obs: '+str(np.mean(nsidc_max)))
+    print('Model bias: '+str(np.mean(model_max)-np.mean(nsidc_max)))
+    print('Std:')
+    print('Model: '+str(np.std(model_max)))
+    print('Obs: '+str(np.std(nsidc_max)))
+    slope, intercept, r_value, p_value, std_err = linregress(nsidc_max, model_max)
+    print('Correlation: '+str(r_value**2))
+    print('Annual min:')
+    print('Mean:')
+    print('Model: '+str(np.mean(model_min)))
+    print('Obs: '+str(np.mean(nsidc_min)))
+    print('Model bias: '+str(np.mean(model_min)-np.mean(nsidc_min)))
+    print('Std:')
+    print('Model: '+str(np.std(model_min)))
+    print('Obs: '+str(np.std(nsidc_min)))
+    slope, intercept, r_value, p_value, std_err = linregress(nsidc_min, model_min)
+    print('Correlation: '+str(r_value**2))
 
-    
-    
+    time = np.array([datetime.date(year, 1, 1) for year in np.arange(start_year, end_year+1)])
+    timeseries_multi_plot(time, [nsidc_max, model_max, nsidc_min, model_min], ['Observations (annual max)', 'Model (annual max)', 'Observations (annual min)', 'Model (annual min)'], ['black', 'blue', 'black', 'blue'], linestyles=['solid', 'solid', 'dashed', 'dashed'], title='Total sea ice area', units=r'million km$^2$', legend_outside=False, fig_name='aice_timeseries_obs.png', dpi=300)
 
-    
-                
-            
+
+
+
+
+
+
+
 
     
 

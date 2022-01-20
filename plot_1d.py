@@ -123,7 +123,7 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
     if legend_outside:
         figsize=(11,6)
     else:
-        figsize=(8,6)
+        figsize=(6,4)
     fig, ax = plt.subplots(figsize=figsize)
     # Plot each line
     for i in range(len(datas)):
@@ -164,10 +164,10 @@ def timeseries_multi_plot (times, datas, labels, colours, linestyles=None, alpha
         if dates:
             year_ticks = [datetime.date(y,1,1) for y in year_ticks]
         ax.set_xticks(year_ticks)
-    plt.title(title, fontsize=18)
-    plt.ylabel(units, fontsize=16)
+    plt.title(title, fontsize=16)
+    plt.ylabel(units, fontsize=12)
     if not dates:
-        plt.xlabel('Years', fontsize=16)
+        plt.xlabel('Years', fontsize=12)
     if plot_legend:
         if legend_outside:
             # Move plot over to make room for legend
