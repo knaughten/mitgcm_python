@@ -152,7 +152,8 @@ region_names = {
     'filchner_sill': 'Filchner Trough Sill',
     'filchner_trough_cavity': 'Filchner Trough in cavity',
     'amundsen_shelf': 'Amundsen Sea continental shelf',
-    'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove'
+    'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove',
+    'amundsen_sea': 'Amundsen Sea'
 }    
 
 # Resolution of SOSE grid in degrees
