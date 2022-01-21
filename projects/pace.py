@@ -31,7 +31,7 @@ from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var, precompute_timeseries_coupled
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral, vertical_average, area_average
-from ..interpolation import interp_reg_xy, interp_reg_xyz, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy
+from ..interpolation import interp_reg_xy, interp_reg_xyz, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy, discard_and_fill
 
 # Global variables
 file_head_era5 = 'ERA5_'
@@ -2313,17 +2313,16 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     base_dir = real_dir(base_dir)
     fig_dir = real_dir(fig_dir)
     model_dir = base_dir + 'PAS_ERA5/output/'
-    #model_file = base_dir + 'PAS_ERA5/output/hovmoller.nc'
     grid_path = base_dir + 'PAS_grid/'
     grid = Grid(grid_path)
     obs_file_head = obs_dir + 'ASEctd_griddedMean'
     obs_file_tail = '.mat'
-    obs_years = years_with_obs(obs_dir)
+    obs_years = np.array(years_with_obs(obs_dir))
     obs_num_years = len(obs_years)
     regions = ['amundsen_west_shelf_break', 'pine_island_bay', 'dotson_bay']
     region_titles = [r'$\bf{a}$. PITW Trough', r'$\bf{b}$. Pine Island Bay', r'$\bf{c}$. Dotson front']
     num_regions = len(regions)
-    model_var = ['temp', 'salt']
+    model_var = ['THETA', 'SALT']
     obs_var = ['PTmean', 'Smean']
     var_titles = ['Temperature', 'Salinity']
     var_units = [deg_string+'C', 'psu']
@@ -2332,37 +2331,10 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     model_start_year = 1979
     model_end_year = 2019
     model_split_year = 2013
-    #model_num_time = (model_end_year-model_year0+1)*months_per_year
-    #model_years = np.arange(model_start_year, model_end_year+1)
-    #model_num_years1 = model_split_year-model_start_year
-    #model_num_years2 = model_end_year-model_split_year+1
-    #model_num_years = model_years.size
-    #model_year_str1 = str(model_start_year)+'-'+str(model_split_year-1)
     model_years_excl = obs_years[obs_years < model_split_year]
-    model_years_excl_str = str(model_split_year)+'-'+str(model_end_year)
     model_num_years_excl = model_years_excl.size
     obs_smooth = 51
     obs_smooth_below = -100
-
-    # Read precomputed Hovmollers from file
-    '''print('Reading model output')
-    model_hov = np.ma.empty([num_regions, num_var, model_num_time, grid.nz])
-    for r in range(num_regions):
-        for v in range(num_var):
-            model_hov[r,v,:] = read_netcdf(model_file, regions[r]+'_'+model_var[v])
-    # For each of the years with observations, average over January-February
-    model_data1 = np.ma.empty([num_regions, num_var, model_num_years1, grid.nz])
-    model_data2 = np.ma.empty([num_regions, num_var, model_num_years2, grid.nz])
-    for t in range(model_num_years):
-        # Find time index of that January
-        t_jan = (model_years[t]-model_year0)*months_per_year
-        # Weight with days per month
-        ndays = np.array([days_per_month(m+1,model_years[t]) for m in range(2)])
-        model_data = np.sum(model_hov[:,:,t_jan-1:t_jan+1,:]*ndays[None,None,:,None], axis=2)/np.sum(ndays)
-        if model_years[t] < model_split_year:
-            model_data1[:,:,t,:] = model_data
-        else:
-            model_data2[:,:,t-model_num_years1] = model_data'''
 
     # Read observations and model in one go
     print('Reading observations')
@@ -2388,12 +2360,21 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             obs_var_3d = np.transpose(f[obs_var[v]])
             obs_var_3d = np.ma.masked_where(np.isnan(obs_var_3d), obs_var_3d)
             # Now read model data for Jan-Feb
-            model_var_3d = mask_3d(read_netcdf(model_dir+str(obs_years[t])+'01/MITgcm/output.nc', model_var[v])[:2,:], grid)
+            model_var_3d = read_netcdf(model_dir+str(obs_years[t])+'01/MITgcm/output.nc', model_var[v])[:2,:]
             # Time-average, weighting with days per month
             ndays = np.array([days_per_month(m+1, obs_years[t]) for m in range(2)])
             model_var_3d = np.sum(model_var_3d*ndays[:,None,None,None], axis=0)/np.sum(ndays)
+            # Fill the land mask with nearest neighbours to not screw up the interpolation
+            discard = grid.hfac==0
+            sum_of_regions = np.zeros(grid.hfac.shape)
+            for r in range(num_regions):
+                sum_of_regions += grid.get_region_mask(regions[r])
+            fill = (grid.hfac == 0)*(sum_of_regions > 0)
+            model_var_3d = discard_and_fill(model_var_3d, discard, fill, log=False)
+            model_var_3d = np.ma.masked_where(model_var_3d==-9999, model_var_3d)
             # Interpolate to observational grid
             model_var_3d_interp = interp_reg_xyz(grid.lon_1d, grid.lat_1d, grid.z, model_var_3d, obs_lon, obs_lat, obs_depth)
+            model_var_3d_interp = np.ma.masked_where(model_var_3d_interp==-9999, model_var_3d_interp)
             for r in range(num_regions):
                 # Area-average over the given region
                 [xmin, xmax, ymin, ymax] = region_bounds[regions[r]]
@@ -2445,9 +2426,12 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)')
             # Plot model mean in thick blue or red
             ax.plot(model_mean[r,v,:], obs_depth, color='red', linewidth=1.5, label='Model (mean/std)', zorder=2*obs_num_years+2)
-            ax.plot(model_mean_excl[r,v,:], model_depth, color='blue', linewidth=1.5, label='Model (mean/std before '+str(model_split_year)+')', zorder=2*obs_num_years+1)
+            ax.plot(model_mean_excl[r,v,:], obs_depth, color='blue', linewidth=1.5, label='Model (mean/std before '+str(model_split_year)+')', zorder=2*obs_num_years+1)
             # Find the deepest unmasked depth where there is data from both model and obs
             y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean[r,v,:].mask, obs_depth)))
+            if r > 0:
+                # Manually set to 1km
+                y_deep = 1000
             ax.set_ylim([y_deep,0])
             if v==0 and r==0:
                 plt.ylabel('Depth (m)', fontsize=12)
@@ -2477,7 +2461,7 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             ax2.set_xticklabels([round_to_decimals(tick,1) for tick in xticks])
             plt.title('std', fontsize=12)        
         plt.text(0.5, 0.985-0.3*r, region_titles[r], ha='center', va='top', fontsize=18, transform=fig.transFigure)
-    finished_plot(fig) #, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'ts_casts_obs.png', dpi=300)
 
 
 # Make a 2-panel timeseries plot showing ERA5-forced temperature (200-700m) in Pine Island Bay and Dotson, with Pierre's obs as markers on top.
