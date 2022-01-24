@@ -2085,6 +2085,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
     # Calculate mean trend for each variable (equivalent to trend of mean, but check this)
     slopes = []
     intercepts = []
+    all_slopes = []
     # Get time in centuries
     time_sec = np.array([(t-pace_time[0]).total_seconds() for t in pace_time])
     time_cent = time_sec/(365*sec_per_day*100)
@@ -2099,6 +2100,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         for n in range(num_ens):
             slope, intercept, r_value, p_value, std_err = linregress(time_cent, pace_data[v,n,:])
             slope_members.append(slope)
+        all_slopes.append(slope_members)
         print(('Mean of trend = '+str(np.mean(slope_members))))
         if v == 2:
             slope_percent = linregress(time_cent, np.mean(pace_percent, axis=0))[0]
@@ -3204,7 +3206,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     file_tail = '_trends.nc'
     trend_factor = Cp_sw*rhoConst*1e-7*100
     trend_units = r'10$^7$J/m$^3$/century'
-    lon0 = [-115, -100] #-106
+    lon0 = -106
     ymax = -73
     p0 = 0.05
     vmin = [-2, -2, 0, 0]
@@ -3249,6 +3251,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     timeseries_max = np.amax(data_smoothed, axis=1)
     # Calculate the trend and significance of each term
     time_decades = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*10)
+
     for v in range(num_var):
         all_trends = []
         for n in range(num_ens):
@@ -3288,6 +3291,25 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     vmax_tmp = max(vmax[0], vmax[1])
     vmin[0] = vmin[1] = vmin_tmp
     vmax[0] = vmax[1] = vmax_tmp
+
+    # Also area-average trends over the entire shelf, to get vertical mean profiles
+    trend_profiles = np.ma.empty([num_trends, grid.nz])
+    mask = grid.get_region_mask('amundsen_shelf')
+    for v in range(num_trends):
+        # Mask outside shelf
+        mean_trend_tmp = apply_mask(mean_trends[v,:], np.invert(mask), depth_dependent=True)
+        # Now horizontally average
+        trend_profiles[v,:] = area_average(mean_trend_tmp, grid)
+    fig, ax = plt.subplots()
+    for v in range(num_trends):
+        ax.plot(trend_profiles[v,:], grid.z, color=colours[v], label=var_titles[v])
+    ax.set_xlim([-1.5, 1.5])
+    ax.grid(True)
+    ax.legend()
+    ax.set_title('Heat budget trends over continental shelf', fontsize=16)
+    ax.set_xlabel('10$^7$J/m$^3$/century')
+    ax.set_ylabel('Depth (m)')
+    fig.savefig(fig_dir+'trend_profiles.png')
 
     # Plot
     fig = plt.figure(figsize=(7,9))
@@ -3336,9 +3358,9 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
             ax.set_xlabel('')
             ax.set_ylabel('')
         ax.set_title(trend_titles[v], fontsize=14)
-    plt.text(0.5, 0.625, 'Heat budget trends on continental shelf', fontsize=16, transform=fig.transFigure, ha='center', va='center')
+    plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
-    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
+    finished_plot(fig, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
 
 # Plot Hovmollers of temperature in Pine Island Bay for all the ensemble members and ERA5.
@@ -3803,6 +3825,43 @@ def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/
 
     time = np.array([datetime.date(year, 1, 1) for year in np.arange(start_year, end_year+1)])
     timeseries_multi_plot(time, [nsidc_max, model_max, nsidc_min, model_min], ['Observations (annual max)', 'Model (annual max)', 'Observations (annual min)', 'Model (annual min)'], ['black', 'blue', 'black', 'blue'], linestyles=['solid', 'solid', 'dashed', 'dashed'], title='Total sea ice area', units=r'million km$^2$', legend_outside=False, fig_name='aice_timeseries_obs.png', dpi=300)
+
+
+def intra_ensemble_correlation (var1, var2, base_dir='./', timeseries_file1='timeseries_final.nc', timeseries_final2='timeseries_final.nc'):
+
+    base_dir = real_dir(base_dir)
+    num_ens = 20
+    sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
+    year_start = 1920
+    year_end = 2013
+    p0 = 0.05
+
+    slopes1 = []
+    slopes2 = []
+    for n in range(num_ens):
+        file_path1 = sim_dir[n] + timeseries_file1
+        time_tmp = netcdf_time(file_path1, monthly=False)
+        t0, tf = index_period(time_tmp, year_start, year_end)
+        time_tmp = time_tmp[t0:tf]
+        data1 = read_netcdf(file_path1, var1)[t0:tf]
+        data1, time_smooth = moving_average(data1, smooth, time=time_tmp)
+        data2 = read_netcdf(file_path2, var2)[t0:tf]
+        data2 = moving_average(data2, smooth)
+        slope1, intercept, r_value, p_value, std_err = linregress(time_smooth, data1)
+        if p_value >= p0:
+            slope1 = 0
+        slopes1.append(slope1)
+        slope2, intercept, r_value, p_value, std_err = linregress(time_smooth, data2)
+        if p_value >= p0:
+            slope2 = 0
+        slopes2.append(slope2)
+    fig, ax = plt.subplots()
+    plt.scatter(slopes1, slopes2)
+    ax.set_xlabel(var1)
+    ax.set_ylabel(var2)
+    slope, intercept, r_value, p_value, std_err = linregress(slopes1, slopes2)
+    ax.set_title('r^2='+str(r_value**2))
+    plt.show()
 
 
 
