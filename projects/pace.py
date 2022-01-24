@@ -2331,8 +2331,10 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     model_start_year = 1979
     model_end_year = 2019
     model_split_year = 2013
-    model_years_excl = obs_years[obs_years < model_split_year]
-    model_num_years_excl = model_years_excl.size
+    model_years1 = obs_years[obs_years < model_split_year]
+    model_num_years1 = model_years1.size
+    model_years2 = obs_years[obs_years >= model_split_year]
+    model_num_years2 = model_years2.size
     obs_smooth = 51
     obs_smooth_below = -100
 
@@ -2340,7 +2342,8 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     print('Reading observations')
     obs_data = None
     model_data = None
-    model_data_excl = None
+    model_data1 = None
+    model_data2 = None
     for t in range(obs_num_years):
         print(('...'+str(obs_years[t])))
         f = loadmat(obs_file_head+str(obs_years[t])+obs_file_tail)
@@ -2354,7 +2357,8 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             obs_ice_mask = obs_ice_mask.astype(bool)
             obs_data = np.ma.empty([num_regions, num_var, obs_num_years, obs_depth.size])
             model_data = np.ma.empty([num_regions, num_var, obs_num_years, obs_depth.size])
-            model_data_excl = np.ma.empty([num_regions, num_var, model_num_years_excl, obs_depth.size])
+            model_data1 = np.ma.empty([num_regions, num_var, model_num_years1, obs_depth.size])
+            model_data2 = np.ma.empty([num_regions, num_var, model_num_years2, obs_depth.size])
         for v in range(num_var):
             # Read 3D temp or salinity
             obs_var_3d = np.transpose(f[obs_var[v]])
@@ -2393,14 +2397,16 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
                 obs_data[r,v,t,:] = obs_profile
                 model_data[r,v,t,:] = model_profile
                 if obs_years[t] < model_split_year:
-                    model_data_excl[r,v,t,:] = model_profile
+                    model_data1[r,v,t,:] = model_profile
+                else:
+                    model_data2[r,v,t-model_num_years1,:] = model_profile
 
     # Calculate time-mean and standard deviation from each source
     model_mean = np.mean(model_data, axis=-2)
-    model_mean_excl = np.mean(model_data_excl, axis=-2)
+    model_mean_excl = np.mean(model_data1, axis=-2)
     obs_mean = np.mean(obs_data, axis=-2)
     model_std = np.std(model_data, axis=-2)
-    model_std_excl = np.std(model_data_excl, axis=-2)
+    model_std_excl = np.std(model_data1, axis=-2)
     obs_std = np.std(obs_data, axis=-2)
     # Also make depth positive
     obs_depth *= -1
@@ -2419,14 +2425,15 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             for t in range(obs_num_years):
                 ax.plot(obs_data[r,v,t,:], obs_depth, color='DimGrey', linewidth=(1.5 if r==2 and obs_years[t]==2000 else 0.5), label=('Observations (each year)' if t==0 else None))
                 # Plot each year of model output in thin light blue or red
-                ax.plot(model_data[r,v,t,:], obs_depth, color='LightCoral', linewidth=0.5, label=('Model (each year)' if t==0 else None))
-            for t in range(model_num_years_excl):
-                ax.plot(model_data_excl[r,v,t,:], obs_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year before '+str(model_split_year)+')' if t==0 else None))
+            for t in range(model_num_years1):
+                ax.plot(model_data1[r,v,t,:], obs_depth, color='DodgerBlue', linewidth=0.5, label=('Model (each year pre-'+str(model_split_year)+')' if t==0 else None))
+            for t in range(model_num_years2):
+                ax.plot(model_data2[r,v,t,:], obs_depth, color='LightCoral', linewidth=0.5, label=('Model (each year post-'+str(model_split_year)+')' if t==0 else None))
             # Plot observational mean in thick black
             ax.plot(obs_mean[r,v,:], obs_depth, color='black', linewidth=1.5, label='Observations (mean/std)')
             # Plot model mean in thick blue or red
-            ax.plot(model_mean[r,v,:], obs_depth, color='red', linewidth=1.5, label='Model (mean/std)', zorder=2*obs_num_years+2)
-            ax.plot(model_mean_excl[r,v,:], obs_depth, color='blue', linewidth=1.5, label='Model (mean/std before '+str(model_split_year)+')', zorder=2*obs_num_years+1)
+            ax.plot(model_mean[r,v,:], obs_depth, color='blue', linewidth=1.5, label='Model (mean/std, all years)', zorder=2*obs_num_years+2)
+            ax.plot(model_mean_excl[r,v,:], obs_depth, color='blue', linestyle='dotted', linewidth=1.5, label='Model (mean/std pre-'+str(model_split_year)+')', zorder=2*obs_num_years+1)
             # Find the deepest unmasked depth where there is data from both model and obs
             y_deep = min(np.amax(np.ma.masked_where(obs_mean[r,v,:].mask, obs_depth)), np.amax(np.ma.masked_where(model_mean[r,v,:].mask, obs_depth)))
             if r > 0:
@@ -2452,8 +2459,8 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
             ax2.tick_params(direction='in')
             ax2.grid(linestyle='dotted')
             ax2.plot(obs_std[r,v,:], obs_depth, color='black', linewidth=1.5)
-            ax2.plot(model_std[r,v,:], obs_depth, color='red', linewidth=1.5)
-            ax2.plot(model_std_excl[r,v,:], obs_depth, color='blue', linewidth=1.5)
+            ax2.plot(model_std[r,v,:], obs_depth, color='blue', linewidth=1.5)
+            ax2.plot(model_std_excl[r,v,:], obs_depth, color='blue', linestyle='dotted', linewidth=1.5)
             ax2.set_yticklabels([])
             ax2.set_ylim([y_deep,0])
             # Overwrite the labels so there are no unnecessary decimals - otherwise you get an overlap of labels at 0
