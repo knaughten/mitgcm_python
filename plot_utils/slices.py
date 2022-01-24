@@ -53,6 +53,8 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
             dx = xy_to_xyz(grid.dx_s, grid)
             dx = np.ma.masked_where(hfac==0, dx)
             data_slice = np.sum(data[:,:,i_start:i_end+1]*dx[:,:,i_start:i_end+1], axis=-1)/np.sum(dx[:,:,i_start:i_end+1], axis=-1)
+            if return_grid_vars:
+                loc0 = lon0
         else:
             i0 = np.argmin(abs(lon-lon0))
             data_slice = data[:,:,i0]
@@ -66,6 +68,8 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
             dy = xy_to_xyz(grid.dy_w, grid)
             dy = np.ma.masked_where(hfac==0, dy)
             data_slice = np.sum(data[:,j_start:j_end+1,:]*dy[:,j_start:j_end+1,:], axis=-2)/np.sum(dy[:,j_start:j_end+1,:], axis=-2)
+            if return_grid_vars:
+                loc0 = lat0
         else:
             j0 = np.argmin(abs(lat-lat0))
             data_slice = data[:,j0,:]
