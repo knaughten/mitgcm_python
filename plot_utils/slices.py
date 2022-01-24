@@ -9,7 +9,7 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 import sys
 
-from ..utils import dist_btw_points, ice_shelf_front_points
+from ..utils import dist_btw_points, ice_shelf_front_points, xy_to_xyz
 
 
 # Create the rectangular Polygon patches for plotting a slice (necessary to properly represent partial cells) and the corresponding data values. This is done with 4 helper functions:
@@ -35,25 +35,42 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
     # Figure out direction of slice
     if lon0 is not None and lat0 is None:
         h_axis = 'lat'
+        avg = isinstance(lon0, list)            
     elif lat0 is not None and lon0 is None:
         h_axis = 'lon'
+        avg = isinstance(lat0, list)
     else:
         print('Error (get_slice_values): must specify exactly one of lon0, lat0')
         sys.exit()
 
     # Find nearest neighbour to lon0 and slice the data here
     lon, lat = grid.get_lon_lat(gtype=gtype, dim=1)
+    hfac = grid.get_hfac(gtype=gtype)
     if h_axis == 'lat':
-        i0 = np.argmin(abs(lon-lon0))
-        data_slice = data[:,:,i0]
-        if return_grid_vars:
-            # Save the real location of the slice
-            loc0 = lon[i0]
+        if avg:
+            i_start = np.argmin(abs(lon-lon0[0]))
+            i_end = np.argmin(abs(lon-lon0[1]))
+            dx = xy_to_xyz(dx_s, grid)
+            dx = np.ma.masked_where(hfac==0, dx)
+            data_slice = np.sum(data[:,:,i_start:i_end+1]*dx[:,:,i_start:i_end+1], axis=-1)/np.sum(dx[:,:,i_start:i_end+1], axis=-1)
+        else:
+            i0 = np.argmin(abs(lon-lon0))
+            data_slice = data[:,:,i0]
+            if return_grid_vars:
+                # Save the real location of the slice
+                loc0 = lon[i0]
     elif h_axis == 'lon':
-        j0 = np.argmin(abs(lat-lat0))
-        data_slice = data[:,j0,:]
-        if return_grid_vars:
-            loc0 = lat[j0]
+        if avg:
+            j_start = np.argmin(abs(lat-lat0[0]))
+            j_end = np.argmin(abs(lat-lat0[1]))
+            dy = xy_to_xyz(dy_w, grid)
+            dy = np.ma.masked_where(hfac==0, dy)
+            data_slice = np.sum(data[:,j_start:j_end+1,:]*dy[:,j_start:j_end+1,:], axis=-2)/np.sum(dy[:,j_start:j_end+1,:], axis=-2)
+        else:
+            j0 = np.argmin(abs(lat-lat0))
+            data_slice = data[:,j0,:]
+            if return_grid_vars:
+                loc0 = lat[j0]
 
     # Get horizontal boundaries and hfac
     # Also throw away one row of data so all points are bounded
@@ -66,7 +83,10 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 # Boundaries are southern edges of cells in y            
                 h_bdry = grid.lat_corners_1d            
                 # Get hfac at centres
-                hfac = grid.hfac[:,:-1,i0]
+                if avg:
+                    hfac = np.amax(grid.hfac[:,:-1,i_start:i_end], axis=-1)
+                else:
+                    hfac = grid.hfac[:,:-1,i0]
         elif gtype in ['v', 'psi']:
             # Edges in y
             # Throw away southernmost row of data
@@ -75,7 +95,10 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 # Boundaries are centres of cells in y
                 h_bdry = grid.lat_1d
                 # Get hfac at edges
-                hfac = grid.hfac_s[:,1:,i0]
+                if avg:
+                    hfac = np.amax(grid.hfac_s[:,1:,i_start:i_end], axis=-1)
+                else:
+                    hfac = grid.hfac_s[:,1:,i0]
     elif h_axis == 'lon':
         if gtype in ['t', 'v']:
             # Centered in x
@@ -85,7 +108,10 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 # Boundaries are western edges of cells in x
                 h_bdry = grid.lon_corners_1d
                 # Get hfac at centres
-                hfac = grid.hfac[:,j0,:-1]
+                if avg:
+                    hfac = np.amax(grid.hfac[:,j_start:j_end,:-1], axis=-2)
+                else:
+                    hfac = grid.hfac[:,j0,:-1]
         elif gtype in ['u', 'psi']:
             # Edges in x
             # Throw away westernmost row of data
@@ -94,7 +120,10 @@ def get_slice_values (data, grid, gtype='t', lon0=None, lat0=None, return_grid_v
                 # Boundaries are centres of cells in x
                 h_bdry = grid.lon_1d
                 # Get hfac at edges
-                hfac = grid.hfac_w[:,j0,1:]
+                if avg:
+                    hfac = np.amax(grid.hfac_w[:,j_start:j_end,1:], axis=-2)
+                else:
+                    hfac = grid.hfac_w[:,j0,1:]
 
     if return_grid_vars:
         return data_slice, h_bdry, hfac, loc0

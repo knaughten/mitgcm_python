@@ -3204,7 +3204,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     file_tail = '_trends.nc'
     trend_factor = Cp_sw*rhoConst*1e-7*100
     trend_units = r'10$^7$J/m$^3$/century'
-    lon0 = -106
+    lon0 = [-115, -100] #-106
     ymax = -73
     p0 = 0.05
     vmin = [-2, -2, 0, 0]
@@ -3213,7 +3213,7 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
     ticks = [None, np.arange(-2, 3, 1), np.arange(0, 4, 1), np.arange(0, 0.8, 0.2)]
 
     # Read and process timeseries
-    time = netcdf_time(file_paths[n], monthly=False)
+    time = netcdf_time(file_paths[0], monthly=False)
     t0 = index_year_start(time, start_year)
     time = time[t0:]
     num_time = time.size
@@ -3336,9 +3336,9 @@ def plot_heat_budget (base_dir='./', trend_dir='./', fig_dir='./'):
             ax.set_xlabel('')
             ax.set_ylabel('')
         ax.set_title(trend_titles[v], fontsize=14)
-    plt.text(0.5, 0.625, 'Heat budget trends at '+lon_label(lon0)+' (Thwaites Ice Shelf)', fontsize=16, transform=fig.transFigure, ha='center', va='center')
+    plt.text(0.5, 0.625, 'Heat budget trends on continental shelf', fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.text(0.5, 0.6, '('+trend_units+')', fontsize=12, transform=fig.transFigure, ha='center', va='center')
-    finished_plot(fig, fig_name=fig_dir+'heat_budget.png', dpi=300)
+    finished_plot(fig) #, fig_name=fig_dir+'heat_budget.png', dpi=300)
     
 
 # Plot Hovmollers of temperature in Pine Island Bay for all the ensemble members and ERA5.

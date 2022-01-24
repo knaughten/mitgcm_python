@@ -24,12 +24,19 @@ from .constants import deg_string
 # Helper function to determine whether this is a slice along latitude, longitude, or a general transect, and format the string describing the slice.
 def get_loc (loc0, lon0=None, lat0=None, point0=None, point1=None):
 
+    avg = isinstance(loc0, list)
     if lon0 is not None:
         h_axis = 'lat'
-        loc_string = lon_label(loc0, 3)
+        if avg:
+            loc_string = lon_label(loc0[0],3)+'-'+lon_label(loc0[1],3)
+        else:
+            loc_string = lon_label(loc0, 3)
     elif lat0 is not None:
         h_axis = 'lon'
-        loc_string = lat_label(loc0, 3)
+        if avg:
+            loc_string = lat_label(loc0[0],3)+'-'+lat_label(loc0[1],3)
+        else:
+            loc_string = lat_label(loc0, 3)
     elif point0 is not None and point1 is not None:
         h_axis = 'trans'
         loc_string = '('+lon_label(point0[0],0)+', '+lat_label(point0[1],0)+') to ('+lon_label(point1[0],0)+', '+lat_label(point1[1],0)+')'
