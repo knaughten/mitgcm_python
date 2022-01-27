@@ -3827,7 +3827,7 @@ def plot_aice_timeseries_obs (timeseries_file='timeseries_aice.nc', nsidc_dir='/
     timeseries_multi_plot(time, [nsidc_max, model_max, nsidc_min, model_min], ['Observations (annual max)', 'Model (annual max)', 'Observations (annual min)', 'Model (annual min)'], ['black', 'blue', 'black', 'blue'], linestyles=['solid', 'solid', 'dashed', 'dashed'], title='Total sea ice area', units=r'million km$^2$', legend_outside=False, fig_name='aice_timeseries_obs.png', dpi=300)
 
 
-def intra_ensemble_correlation (var1, var2, base_dir='./', timeseries_file1='timeseries_final.nc', timeseries_final2='timeseries_final.nc'):
+def intra_ensemble_correlation (var1, var2, base_dir='./', timeseries_file1='timeseries_final.nc', timeseries_file2='timeseries_final.nc', iso_region='amundsen_shelf', excl_conv1=False, excl_conv2=True):
 
     base_dir = real_dir(base_dir)
     num_ens = 20
@@ -3835,33 +3835,65 @@ def intra_ensemble_correlation (var1, var2, base_dir='./', timeseries_file1='tim
     year_start = 1920
     year_end = 2013
     p0 = 0.05
+    smooth = 24
+    timeseries_file_iso = 'timeseries_isotherm.nc'
+    if iso_region == 'amundsen_shelf':
+        isotherm = 0.5
+        z0 = -440
+    elif iso_region == 'pine_island_bay':
+        isotherm = 0
+        z0 = -470
+    elif iso_region == 'dotson_bay':
+        isotherm = -1
+        z0 = -430
+    else:
+        print('Error (intra_ensemble_correlation): unknown iso_region '+iso_region)
+        sys.exit()
 
     slopes1 = []
     slopes2 = []
     for n in range(num_ens):
         file_path1 = sim_dir[n] + timeseries_file1
+        file_path2 = sim_dir[n] + timeseries_file2
+        file_path_iso = sim_dir[n] + timeseries_file_iso
         time_tmp = netcdf_time(file_path1, monthly=False)
         t0, tf = index_period(time_tmp, year_start, year_end)
         time_tmp = time_tmp[t0:tf]
         data1 = read_netcdf(file_path1, var1)[t0:tf]
         data1, time_smooth = moving_average(data1, smooth, time=time_tmp)
+        time_sec = np.array([(t-time_smooth[0]).total_seconds() for t in time_smooth])
+        time_cent = time_sec/(365*sec_per_day*100)
         data2 = read_netcdf(file_path2, var2)[t0:tf]
         data2 = moving_average(data2, smooth)
-        slope1, intercept, r_value, p_value, std_err = linregress(time_smooth, data1)
+        data_iso = read_netcdf(file_path_iso, iso_region+'_isotherm_'+str(isotherm)+'C_below_100m')[t0:tf]
+        data_iso = moving_average(data_iso, smooth)
+        if excl_conv1:
+            index = data_iso >= z0
+        else:
+            index = np.ones(data_iso.shape).astype(bool)
+        slope1, intercept, r_value, p_value, std_err = linregress(time_cent[index], data1[index])
         if p_value >= p0:
-            slope1 = 0
+            continue
+        if excl_conv2:
+            index = data_iso >= z0
+        else:
+            index = np.ones(data_iso.shape).astype(bool)
+        slope2, intercept, r_value, p_value, std_err = linregress(time_cent[index], data2[index])
+        if p_value >= p0:
+            continue
         slopes1.append(slope1)
-        slope2, intercept, r_value, p_value, std_err = linregress(time_smooth, data2)
-        if p_value >= p0:
-            slope2 = 0
         slopes2.append(slope2)
     fig, ax = plt.subplots()
     plt.scatter(slopes1, slopes2)
     ax.set_xlabel(var1)
     ax.set_ylabel(var2)
     slope, intercept, r_value, p_value, std_err = linregress(slopes1, slopes2)
+    print(str(p_value))
+    [x0, x1] = ax.get_xlim()
+    [y0, y1] = slope*np.array([x0, x1]) + intercept
+    ax.plot([x0, x1], [y0, y1], '-')
     ax.set_title('r^2='+str(r_value**2))
-    plt.show()
+    fig.show()
 
 
 
