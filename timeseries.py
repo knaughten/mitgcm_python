@@ -1137,7 +1137,7 @@ def set_parameters (var):
         option = 'avg_sfc'
         var_name = 'EXFvwind'
         units = 'm/s'
-        region = var[:var.index('_uwind_avg')]
+        region = var[:var.index('_vwind_avg')]
         title = 'Meridional wind averaged over ' + region_names[region]
     elif var.endswith('aqh_avg'):
         option = 'avg_sfc'
