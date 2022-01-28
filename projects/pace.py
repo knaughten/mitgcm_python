@@ -14,7 +14,7 @@ from scipy.io import loadmat
 import os
 import netCDF4 as nc
 
-from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid
+from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid, ZGrid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land, axis_edges
 from ..plot_utils.colours import set_colours, choose_n_colours, truncate_colourmap
@@ -2326,6 +2326,7 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     num_regions = len(regions)
     model_var = ['THETA', 'SALT']
     obs_var = ['PTmean', 'Smean']
+    archive_var = ['temp', 'salt']
     var_titles = ['Temperature', 'Salinity']
     var_units = [deg_string+'C', 'psu']
     num_var = len(model_var)
@@ -2412,6 +2413,15 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     obs_std = np.std(obs_data, axis=-2)
     # Also make depth positive
     obs_depth *= -1
+
+    # Write model profiles to NetCDF file for archiving
+    z_grid = ZGrid(-obs_depth)
+    ncfile = NCfile('ts_casts.nc', z_grid, 'zt')
+    ncfile.add_time([datetime.date(y,2,1) for y in obs_years])
+    for r in range(num_regions):
+        for v in range(num_var):
+            ncfile.add_variable(regions[r]+'_'+archive_var[v]+model_data[r,v,:], 'zt')
+    ncfile.close()
 
     # Plot
     fig = plt.figure(figsize=(7,12))

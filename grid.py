@@ -1069,8 +1069,14 @@ def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):
 
     return lon, lat, depth, dA, dV
 
-        
 
+# Dummy class for a vertical grid to use NCfile with
+class ZGrid:
+
+    def __init__ (self, z):
+
+        self.z = z
+        self.nz = z.size
         
         
 

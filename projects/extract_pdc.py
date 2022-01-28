@@ -207,6 +207,7 @@ for var in ['amundsen_shelf_isotherm_0.5C_below_100m', 'pine_island_bay_isotherm
 # ERA5
 for var in ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss', 'pine_island_bay_isotherm_0C_below_100m', 'dotson_bay_isotherm_-1C_below_100m', 'pine_island_bay_temp_below_700m', 'dotson_bay_temp_below_700m', 'pig_massloss', 'dotson_massloss', 'getz_massloss', 'crosson_massloss', 'thwaites_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss']:
     process_timeseries_var(var, sim='era5')
+process_timeseries_var('amundsen_sea_seaice_area', sim='era5', ts_file='timeseries_seaice.nc')
 
 # Hovmollers
 f.write('mkdir '+main_outdir+hovmoller_dir+'\n')
