@@ -66,7 +66,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
     img = plot_slice_patches(ax, patches, values, hmin, hmax, zmin, zmax, vmin, vmax, cmap=cmap)
     if contours is not None:
         # Overlay contours
-        if None in [data_grid, haxis, zaxis]:
+        if data_grid is None or haxis is None or zaxis is None:
             print('Error (make_slice_plot): need to specify data_grid, haxis, and zaxis to do contours')
             sys.exit()
         plt.contour(haxis, zaxis, data_grid, levels=contours, colors='black', linestyles='solid')

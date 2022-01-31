@@ -4,6 +4,7 @@ bash_script = 'extract_pdc.sh'
 main_outdir = 'archive_for_grl/'
 timeseries_dir = 'timeseries/'
 hovmoller_dir = 'hovmollers/'
+casts_dir = 'casts/'
 latlon_dir = 'latlon/'
 trend_dir = 'ensemble_trends/'
 num_ens = 20
@@ -275,6 +276,40 @@ for n in range(len(hov_var)):
 # ERA5
 for var in ['amundsen_west_shelf_break_temp', 'amundsen_west_shelf_break_salt', 'pine_island_bay_temp', 'pine_island_bay_salt', 'dotson_bay_temp', 'dotson_bay_salt']:
     process_hovmoller_var(var, sim='era5')
+
+# T/S casts
+f.write('mkdir '+main_outdir+casts_dir+'\n')
+dir_used.append(main_outdir+casts_dir)
+def process_casts_var (var_name, sim='era5', casts_file='ts_casts.nc'):
+    print('Processing '+var_name)
+    region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    zmin = None
+    zmax = None
+    dir_tmp = main_outdir+casts_dir+region+'/'
+    if dir_tmp not in dir_used:
+        f.write('mkdir '+dir_tmp+'\n')
+        dir_used.append(dir_tmp)
+    if 'temp' in var_name:
+        new_var = 'sea_water_potential_temperature'
+    elif 'salt' in var_name:
+        new_var = 'sea_water_salinity'
+    if sim == 'pace':
+        print 'No PACE casts exist'
+        sys.exit()
+    elif sim == 'era5':
+        dir_tmp_era5 = dir_tmp+era5_outdir
+        if dir_tmp_era5 not in dir_used:
+            f.write('mkdir '+dir_tmp_era5+'\n')
+            dir_used.append(dir_tmp_era5)
+        fname_in = era5_indir+casts_file
+        fname_out = dir_tmp_era5+'MITgcm_'+region+'_1994-2019_'+new_var+'_ERA5.nc'
+        f.write('ncks -v '+var_name+' '+fname_in+' '+fname_out+'\n')
+        f.write('ncrename -v '+var_name+','+new_var+' '+fname_out+'\n')
+        add_attributes(fname_out, 'era5', lon_min, lon_max, lat_min, lat_max, zmin, zmax)
+        f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
+
+for var in ['amundsen_west_shelf_break_temp', 'amundsen_west_shelf_break_salt', 'pine_island_bay_temp', 'pine_island_bay_salt', 'dotson_bay_temp', 'dotson_bay_salt']:
+    process_casts_var(var)
 
 # Lat-lon fields for ERA5 (1988-2019)
 f.write('mkdir '+main_outdir+latlon_dir+'\n')
