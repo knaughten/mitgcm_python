@@ -155,6 +155,8 @@ def process_timeseries_var (var_name, sim='pace', ts_file='timeseries_final.nc')
         new_var = 'depth_of_0C_isotherm'
     elif 'isotherm_-1C' in var_name:
         new_var = 'depth_of_-1C_isotherm'
+    elif 'seaice_area' in var_name:
+        new_var = 'sea_ice_area_fraction'
     if sim == 'pace':
         for n in range(num_ens):
             dir_tmp_pace = dir_tmp+pace_outdir[n]
