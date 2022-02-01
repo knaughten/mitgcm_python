@@ -418,7 +418,7 @@ class NCfile:
 
     # Optional keyword argument:
     # units: units of time (eg 'seconds since 1979-01-01 00:00:00')
-    def add_time (self, time, units=None, calendar=None):
+    def add_time (self, time, units=None, calendar='gregorian'):
 
         import netCDF4 as nc
 

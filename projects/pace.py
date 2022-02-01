@@ -2420,7 +2420,7 @@ def plot_ts_casts_obs (obs_dir='/data/oceans_input/processed_input_data/pierre_c
     ncfile.add_time(np.array([datetime.datetime(y,2,1) for y in obs_years]))
     for r in range(num_regions):
         for v in range(num_var):
-            ncfile.add_variable(regions[r]+'_'+archive_var[v]+model_data[r,v,:], 'zt')
+            ncfile.add_variable(regions[r]+'_'+archive_var[v], model_data[r,v,:], 'zt')
     ncfile.close()
 
     # Plot
