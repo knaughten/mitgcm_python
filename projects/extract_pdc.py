@@ -210,7 +210,7 @@ for var in ['amundsen_shelf_isotherm_0.5C_below_100m', 'pine_island_bay_isotherm
 # ERA5
 for var in ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss', 'pine_island_bay_isotherm_0C_below_100m', 'dotson_bay_isotherm_-1C_below_100m', 'pine_island_bay_temp_below_700m', 'dotson_bay_temp_below_700m', 'pig_massloss', 'dotson_massloss', 'getz_massloss', 'crosson_massloss', 'thwaites_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss']:
     process_timeseries_var(var, sim='era5')
-process_timeseries_var('amundsen_sea_seaice_area', sim='era5', ts_file='timeseries_seaice.nc')
+process_timeseries_var('amundsen_sea_seaice_area', sim='era5', ts_file='timeseries_aice.nc')
 
 # Hovmollers
 f.write('mkdir '+main_outdir+hovmoller_dir+'\n')
@@ -296,7 +296,7 @@ def process_casts_var (var_name, sim='era5', casts_file='ts_casts.nc'):
     elif 'salt' in var_name:
         new_var = 'sea_water_salinity'
     if sim == 'pace':
-        print 'No PACE casts exist'
+        print('No PACE casts exist')
         sys.exit()
     elif sim == 'era5':
         dir_tmp_era5 = dir_tmp+era5_outdir
@@ -400,7 +400,9 @@ def process_trend_var (var_name):
     # Rename the variable
     f.write('ncrename -v '+var_name+'_trend,'+new_var+' '+fname_out+'\n')
     # Rename the time axis and variable (fudge from before)
+    f.write('ncks -3 -O '+fname_out+' tmp.nc\n')
     f.write('ncrename -d time,ensemble_member '+fname_out+'\n')
+    f.write('ncks -4 -O tmp.nc '+fname_out+'\n')
     f.write('ncrename -v time,ensemble_member '+fname_out+'\n')
     # Add some attributes
     add_attributes(fname_out, 'pace', lon_min, lon_max, lat_min, lat_max, zmin, zmax)
