@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import os
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon

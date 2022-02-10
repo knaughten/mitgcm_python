@@ -5,7 +5,7 @@
 import numpy as np
 from itertools import compress, cycle
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 import datetime
@@ -3138,12 +3138,12 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     var_names = ['EXFatemp', 'EXFvwind', 'SIfwfrz', 'SIfwmelt', 'SIheff', 'oceFWflx', 'sst', 'sss']
     factor = [1, 1, sec_per_year/rho_fw, sec_per_year/rho_fw, 1, sec_per_year/rho_fw, 1, 1]
     units = [deg_string+'C', 'm/s', 'm/y', 'm/y', 'm', 'm/y', deg_string+'C', 'psu']
-    titles = [r'$\bf{a}$. Surface air temperature', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Sea ice freezing flux', r'$\bf{d}$. Sea ice melting flux', r'$\bf{e}$. Sea ice thickness', r'$\bf{f}$. Surface freshwater flux', r'$\bf{g}$. Sea surface temperature', r'$\bf{h}$. Sea surface salinity']
+    titles = [r'$\bf{a}$. Surface air temperature', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Sea ice freezing FW flux', r'$\bf{d}$. Sea ice melting FW flux', r'$\bf{e}$. Sea ice thickness', r'$\bf{f}$. Surface freshwater flux', r'$\bf{g}$. Sea surface temperature', r'$\bf{h}$. Sea surface salinity']
     file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
     vmin = [None, None, None, -0.8, -0.75, None, None, None]
     vmax = [None, None, 2.5, 0.5, None, 2, None, None]
     val0 = [1, None, None, None, None, None, None, None]
-    ticks = [np.arange(1.2, 2.2, 0.2), np.arange(-0.2, 0.2, 0.1), np.arange(-0.5, 2, 0.5), np.arange(-0.6, 0.6, 0.3), np.arange(-0.6, 0.2, 0.2), np.arange(0, 3, 1), np.arange(0.2, 0.8, 0.2), np.arange(-0.1, 0.2, 0.1)]
+    ticks = [np.arange(1.2, 2.2, 0.2), np.arange(-0.2, 0.2, 0.1), np.arange(0, 2.5, 0.5), np.arange(-0.6, 0.6, 0.3), np.arange(-0.6, 0.2, 0.2), np.arange(0, 3, 1), np.arange(0.2, 0.8, 0.2), np.arange(-0.1, 0.2, 0.1)]
     extend = ['neither', 'neither', 'max', 'both', 'min', 'max', 'neither', 'neither']
     num_var = len(var_names)
     grid = Grid(grid_dir)
@@ -3175,7 +3175,7 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
             cax.append(cax_tmp)
     for n in range(num_var):
         ax = plt.subplot(gs[n//2, n%2])
-        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=13, vmin=vmin[n], vmax=vmax[n], val0=val0[n])
+        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n]+' ('+units[n]+')', titlesize=12, vmin=vmin[n], vmax=vmax[n], val0=val0[n])
         cbar = plt.colorbar(img, cax=cax[n], extend=extend[n], ticks=ticks[n])
         if n%2 == 0:
             cax[n].yaxis.set_ticks_position('left')

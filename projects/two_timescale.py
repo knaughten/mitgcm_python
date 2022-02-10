@@ -8,7 +8,7 @@ import os
 import numpy as np
 import sys
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 matplotlib.rcParams['pdf.fonttype'] = 'truetype'
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
