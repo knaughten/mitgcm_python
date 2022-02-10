@@ -7,7 +7,7 @@ import numpy as np
 from scipy.io import loadmat
 
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from .plot_utils.colours import set_colours, get_extend
@@ -32,7 +32,7 @@ from .constants import ua_titles
 def ua_plot (option, data, x, y, connectivity=None, xGL=None, yGL=None, x_bdry=None, y_bdry=None, ax=None, make_cbar=True, ctype='basic', vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, title=None, titlesize=18, return_fig=False, fig_name=None, extend=None, figsize=None, dpi=None, rasterized=False):
     
     import matplotlib
-    #matplotlib.use('TkAgg')
+    matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
 
     if option == 'tri' and connectivity is None:
@@ -301,7 +301,7 @@ def read_ua_difference (var, file_path_1, file_path_2, nx=1000, ny=1000, mask=No
 def read_plot_ua_difference (var, file_path_1, file_path_2, gl_file=None, gl_time_index=-1, title=None, vmin=None, vmax=None, xmin=None, xmax=None, ymin=None, ymax=None, zoom_fris=False, fig_name=None, figsize=None, dpi=None, nx=1000, ny=1000):
 
     import matplotlib
-    #matplotlib.use('TkAgg')
+    matplotlib.use('TkAgg')
     import matplotlib.pyplot as plt
 
     x, y, data_diff = read_ua_difference(var, file_path_1, file_path_2, nx=nx, ny=ny)

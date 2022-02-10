@@ -5,7 +5,7 @@
 import numpy as np
 from itertools import compress, cycle
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 import datetime

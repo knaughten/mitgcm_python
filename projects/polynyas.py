@@ -4,7 +4,7 @@
 
 import sys
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as cl
 import numpy as np

@@ -3,7 +3,7 @@
 ##################################################################
 
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pthe
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
