@@ -14,7 +14,7 @@ from .grid import choose_grid, Grid
 from .file_io import check_single_time, find_variable, read_netcdf, netcdf_time, read_title_units
 from .plot_utils.labels import check_date_string, depth_axis, yearly_ticks, lon_label, lat_label, reduce_cbar_labels
 from .plot_utils.windows import finished_plot, set_panels
-from .plot_utils.colours import get_extend, set_colours
+from .plot_utils.colours import get_extend, set_colours, parula_cmap
 from .plot_1d import timeseries_multi_plot
 from .utils import mask_3d, xy_to_xyz, z_to_xyz, var_min_max_zt, mask_outside_box, moving_average, mask_2d_to_3d
 from .diagnostics import tfreeze, potential_density
@@ -127,7 +127,7 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
 # option='cavities': smin=33.5, tmax=1, num_bins=2000
 # option='all': smin=33, tmax=1.5, num_bins=2000
 
-def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string='', figsize=(8,6), fig_name=None):
+def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string='', figsize=(8,6), fig_name=None, plot_density=False, vmin=None, vmax=None, title=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -159,11 +159,6 @@ def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t
     # Make the bins
     volume, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, num_bins=num_bins)
 
-    # Find the volume bounds for plotting
-    min_vol = np.log(np.amin(volume))
-    max_vol = np.log(np.amax(volume))
-    # Calculate the surface freezing point for plotting
-    tfreeze_sfc = tfreeze(salt_centres, 0)
     # Choose the plotting bounds if not set
     if tmin is None:
         tmin = temp_edges[0]
@@ -173,26 +168,41 @@ def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t
         smin = salt_edges[0]
     if smax is None:
         smax = salt_edges[-1]
+    if vmin is None:
+        vmin = np.log(np.amin(volume))
+        print(vmin)
+    if vmax is None:
+        vmax = np.log(np.amax(volume))
+        print(vmax)
+    # Calculate the surface freezing point for plotting
+    tfreeze_sfc = tfreeze(np.linspace(smin, smax), 0)
+    if plot_density:
+        salt_2d, temp_2d = np.meshgrid(np.linspace(smin, smax), np.linspace(tmin, tmax))
+        density = potential_density('MDJWF', salt_2d, temp_2d)
+
     # Construct the title
-    title = 'Water masses'
-    if region == 'all':
-        pass
-    elif region == 'cavities':
-        title += ' in ice shelf cavities'
-    elif region.endswith('cavity'):
-        title += ' in ' + region_names[region[:region.index('_cavity')]]
-    else:
-        title += ' in ' + region_names[region]
-    if date_string != '':
-        title += ', ' + date_string
+    if title is None:
+        title = 'Water masses'
+        if region == 'all':
+            pass
+        elif region == 'cavities':
+            title += ' in ice shelf cavities'
+        elif region.endswith('cavity'):
+            title += ' in ' + region_names[region[:region.index('_cavity')]]
+        else:
+            title += ' in ' + region_names[region]
+        if date_string != '':
+            title += ', ' + date_string
 
     # Plot
     fig, ax = plt.subplots(figsize=figsize)
+    if plot_density:
+        plt.contour(salt_2d, temp_2d, density, colors='DarkGrey', linestyles='dotted')
     # Use a log scale for visibility
-    img = plt.pcolor(salt_centres, temp_centres, np.log(volume), vmin=min_vol, vmax=max_vol)
+    img = plt.pcolor(salt_centres, temp_centres, np.log(volume), vmin=vmin, vmax=vmax, cmap='magma_r')
     # Add the surface freezing point
-    plt.plot(salt_centres, tfreeze_sfc, color='black', linestyle='dashed', linewidth=2)
-    ax.grid(True)
+    plt.plot(np.linspace(smin, smax), tfreeze_sfc, color='black', linestyle='dashed')
+    #ax.grid(True, linestyle='dotted')
     ax.set_xlim([smin, smax])
     ax.set_ylim([tmin, tmax])
     plt.xlabel('Salinity (psu)')
