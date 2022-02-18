@@ -127,7 +127,7 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
 # option='cavities': smin=33.5, tmax=1, num_bins=2000
 # option='all': smin=33, tmax=1.5, num_bins=2000
 
-def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string=None, figsize=(8,6), fig_name=None):
+def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t_start=None, t_end=None, time_average=False, second_file_path=None, tmin=None, tmax=None, smin=None, smax=None, num_bins=1000, date_string='', figsize=(8,6), fig_name=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -166,13 +166,13 @@ def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t
     tfreeze_sfc = tfreeze(salt_centres, 0)
     # Choose the plotting bounds if not set
     if tmin is None:
-        tmin = temp_bins[0]
+        tmin = temp_edges[0]
     if tmax is None:
-        tmax = temp_bins[-1]
+        tmax = temp_edges[-1]
     if smin is None:
-        smin = salt_bins[0]
+        smin = salt_edges[0]
     if smax is None:
-        smax = salt_bins[-1]
+        smax = salt_edges[-1]
     # Construct the title
     title = 'Water masses'
     if region == 'all':
