@@ -1139,7 +1139,7 @@ def lens_atm_forcing (var, ens, in_dir, out_dir):
             else:
                 file_tail = '.18500101-20051231.nc'
         else:
-            file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16'
+            file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.'
             if year < 2081:
                 year0 = 2006
                 if monthly:
