@@ -1104,6 +1104,95 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
 
     # Save to file
     write_binary(mflux_3d, out_file, prec=64)
+
+
+# Process atmospheric forcing from LENS (same conventions as PACE) for a single variable and single ensemble member.
+def lens_atm_forcing (var, ens, in_dir, out_dir):
+
+    import netCDF4 as nc
+    start_year = 1850
+    end_year = 2100
+    days_per_year = 365
+    months_per_year = 12
+    ens_str = str(ens).zfill(3)
+
+    if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
+        print(('Error (lens_atm_forcing): Invalid variable ' + var))
+        sys.exit()
+
+    path = real_dir(in_dir)
+    # Decide if monthly or daily data
+    monthly = var in ['FLDS', 'FSDS']
+    if monthly:        
+        path += 'monthly/'
+    else:
+        path += 'daily/'
+    path += var + '/'
+
+    for year in range(start_year, end_year+1):
+        print(('Processing ' + str(year)))
+        if year < 2006:
+            year0 = start_year
+            file_head = 'b.e11.B20TRC5CNBDRD.f09_g16.'
+            if monthly:
+                file_tail = '.185001-200512.nc'
+            else:
+                file_tail = '.18500101-20051231.nc'
+        else:
+            file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16'
+            if year < 2081:
+                year0 = 2006
+                if monthly:
+                    file_tail = '.200601-208012.nc'
+                else:
+                    file_tail = '.20060101-20801231.nc'
+            else:
+                year0 = 2081
+                if monthly:
+                    file_tail = '.208101-210012.nc'
+                else:
+                    file_tail = '.20810101-21001231.nc'
+        if monthly:
+            file_mid = '.cam.h0.'
+        else:
+            file_mid = '.cam.h1.'
+        file_path = path + file_head + ens_str + file_mid + var + file_tail
+        # Choose time indicies
+        if monthly:
+            per_year = months_per_year
+        else:
+            per_year = days_per_year
+        t_start = (year-year0)*per_year
+        t_end = t_start + per_year
+        print(('Reading indices ' + str(t_start) + '-' + str(t_end-1)))
+        # Read data
+        data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+        # Unit conversions
+        if var in ['FLDS', 'FSDS']:
+            # Swap sign
+            data *= -1
+        elif var == 'TREFHT':
+            # Convert from K to C
+            data -= temp_C2K
+        elif var == 'QBOT':
+            # Convert from mixing ratio to specific humidity
+            data = data/(1.0 + data)
+        # Write data
+        out_file = real_dir(out_dir) + 'LENS_ens' + ens_str + '_' + var + '_' + str(year)
+        write_binary(data, out_file)
+
+
+# Call lens_atm_forcing for all variables and the first n ensemble members (default 20, there are over 100 available to download)
+def lens_all (in_dir='/data/oceans_input/raw_input_data/CESM/LENS/', out_dir='/data/oceans_input/processed_input_data/CESM/LENS/', num_ens=20):
+
+    var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
+
+    for ens in range(1,num_ens+1):
+        print(('Processing ensemble member ' + str(ens)))
+        for var in var_names:
+            print(('Processing ' + var))
+            lens_atm_forcing(var, ens, in_dir, out_dir)
+                
     
             
         
