@@ -1110,7 +1110,10 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
 def lens_atm_forcing (var, ens, in_dir, out_dir):
 
     import netCDF4 as nc
-    start_year = 1850
+    if ens == 1:
+        start_year = 1850
+    else:
+        start_year = 1920
     end_year = 2100
     days_per_year = 365
     months_per_year = 12
@@ -1135,9 +1138,9 @@ def lens_atm_forcing (var, ens, in_dir, out_dir):
             year0 = start_year
             file_head = 'b.e11.B20TRC5CNBDRD.f09_g16.'
             if monthly:
-                file_tail = '.185001-200512.nc'
+                file_tail = '.'+str(start_year)+'01-200512.nc'
             else:
-                file_tail = '.18500101-20051231.nc'
+                file_tail = '.'+str(start_year)+'0101-20051231.nc'
         else:
             file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.'
             if year < 2081:
