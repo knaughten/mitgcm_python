@@ -6,15 +6,39 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import os
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range
 from ..grid import Grid
 from ..ics_obcs import find_obcs_boundary
-from ..file_io import read_netcdf, read_binary
+from ..file_io import read_netcdf, read_binary, netcdf_time
 from ..constants import deg_string
 from ..plot_utils.windows import set_panels, finished_plot
 from ..interpolation import interp_slice_helper
+from ..postprocess import precompute_timeseries_coupled
+
+
+# Update the timeseries calculations from wherever they left off before.
+def update_lens_timeseries (num_ens=5, base_dir='./'):
+
+    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
+    base_dir = real_dir(base_dir)
+    sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '/output/' for n in range(num_ens)]
+    timeseries_file = 'timeseries.nc'
+
+    for n in range(num_ens):
+        # Work out the first year based on where the timeseries file left off
+        start_year = netcdf_time(sim_dir[n]+timeseries_file, monthly=False)[-1].year+1
+        # Work on the last year based on the contents of the output directory
+        sim_years = []
+        for fname in os.listdir(sim_dir[n]):
+            if os.path.isdir(sim_dir[n]+fname) and fname.endswith('01'):
+                sim_years.append(int(fname))
+        sim_years.sort()
+        end_year = sim_years[-1]//100
+        segment_dir = [str(year)+'01' for year in range(start_year, end_year+1)]
+        precompute_timeseries_coupled(output_dir=sim_dir[n], segment_dir=segment_dir, timeseries_types=timeseries_types, hovmoller_loc=[], timeseries_file=timesries_file, key='PAS')        
 
 
 # Plot a bunch of precomputed timeseries from ongoing LENS-forced test simulations (ensemble of 5 to start), compared to the PACE-forced ensemble mean.
