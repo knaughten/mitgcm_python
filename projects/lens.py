@@ -13,7 +13,7 @@ from ..grid import Grid
 from ..ics_obcs import find_obcs_boundary
 from ..file_io import read_netcdf, read_binary
 from ..constants import deg_string
-from ..windows import set_panels, finished_plot
+from ..plot_utils.windows import set_panels, finished_plot
 
 
 # Plot a bunch of precomputed timeseries from ongoing LENS-forced test simulations (ensemble of 5 to start), compared to the PACE-forced ensemble mean.
