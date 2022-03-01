@@ -379,8 +379,9 @@ def interp_slice_helper (data, val0, lon=False):
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
     if i2 != i1+1:
-        print('Error (interp_slice_helper): something went wrong')
-        sys.exit()        
+        print('Warning (interp_slice_helper): i1='+str(i1)+' but i2='+str(i2))
+        print('Setting i2='+str(i1+1)+', is this what you want?')
+        i2 = i1+1
     # Calculate the weighting coefficients
     c2 = (val0 - data[i1])/(data[i2] - data[i1])
     c1 = 1 - c2
