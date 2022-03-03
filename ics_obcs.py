@@ -4,7 +4,7 @@
 
 from .grid import Grid, grid_check_split, choose_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
-from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic
+from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
 from .diagnostics import density
@@ -1159,13 +1159,14 @@ def calc_lens_climatology (out_dir='./'):
     start_year = 2013  # for climatology calculation
     end_year = 2017
     num_years = end_year - start_year + 1
-    num_ens = 10  #20 update when downloading done
+    num_ens = 20
 
     # Repeat almost the same code for ocean and sea ice variables
     for var_names, file_mid, file_tail in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail]):
         # Loop over variables
         for var in var_names:
             print('Processing ' + var)
+            data_clim = None
             # Loop over ensemble members and years
             for n in range(num_ens):
                 # Read the whole dataset
@@ -1177,31 +1178,170 @@ def calc_lens_climatology (out_dir='./'):
                     t_end = t_start + months_per_year
                     if data_clim is None:
                         # Initialise the monthly climatology
-                        shape = data.shape
-                        shape[0] = months_per_year
+                        shape = [months_per_year] + list(data.shape[1:])
                         data_clim = np.ma.zeros(shape)
                     # Accumulate the monthly climatology
-                    data_clim += var[t_start:t_end,:]
+                    data_clim += data[t_start:t_end,:]
             # Convert from integral to average
             data_clim /= num_years*num_ens
+            # Unit conversions
+            if var == 'aice':
+                # % to fraction
+                data_clim *= 1e-2
+            elif var in ['UVEL', 'VVEL', 'uvel', 'vvel']:
+                # cm/s to m/s
+                data_clim *= 1e-2
             # Save to NetCDF
             out_file = out_dir + 'LENS_climatology_' + var + '_' + str(start_year) + '-' + str(end_year) + '.nc'
-            print('...writing ' + out_file)
+            print('...writing ' + out_file)        
             # Make a skeleton file with all the right dimensions etc
             nco = Nco()
-            nco.ncks(input=file_path, output=out_file, options=[Limit('time', t_start, t_end)])
+            nco.ncks(input=file_path, output=out_file, options=[Limit('time', t_start, t_end-1).prn_option()])
             # Now overwrite the variable
             id = nc.Dataset(out_file, 'a')
             id.variables[var][:] = data_clim
             id.close()
-            
-            
-            
-    
-    
 
-    
-    
 
-    
-    
+# Calculate bias correction files for each boundary condition, based on the LENS ensemble mean climatology compared to the WOA/SOSE fields we used previously.
+def make_lens_bias_correction_files (out_dir='./'):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    lens_dir = base_dir + 'CESM_bias_correction/obcs/'
+    obcs_dir = base_dir + 'ics_obcs/PAS/'
+    bdry_loc = ['N', 'W', 'E']
+    var_obcs_oce = ['theta_woa_mon', 'salt_woa_mon', 'uvel_sose', 'vvel_sose']
+    var_obcs_ice = ['area_sose', 'heff_sose', 'hsnow_sose', 'uice_sose', 'vice_sose']
+    obcs_gtype_oce = ['t', 't', 'u', 'v']
+    obcs_gtype_ice = ['t', 't', 't', 'u', 'v']
+    obcs_file_head = obcs_dir + 'OB'
+    obcs_file_tail = '.bin'
+    var_lens_oce = ['TEMP', 'SALT', 'UVEL', 'VVEL']
+    var_lens_ice = ['aice', 'hi', 'hs', 'uvel', 'vvel']
+    num_var_oce = len(var_lens_oce)
+    num_var_ice = len(var_lens_ice)
+    lens_gtype_oce = ['t', 't', 'u', 'u']
+    lens_gtype_ice = ['t', 't', 't', 'u', 'u']
+    lens_file_head = lens_dir + 'LENS_climatology_'
+    lens_file_tail = '_2013-2017.nc'
+    out_dir = real_dir(out_dir)
+
+    # Read the grids
+    mit_grid = Grid(mit_grid_dir)
+    oce_grid_file = lens_file_head + var_lens_oce[0] + lens_file_tail
+    oce_tlat = read_netcdf(oce_grid_file, 'TLAT')
+    oce_tlon = read_netcdf(oce_grid_file, 'TLONG')
+    oce_ulat = read_netcdf(oce_grid_file, 'ULAT')
+    oce_ulon = read_netcdf(oce_grid_file, 'ULONG')
+    oce_z = read_netcdf(oce_grid_file, 'z_t')*1e-2
+    oce_nx = oce_tlon.shape[1]
+    oce_ny = oce_tlat.shape[0]
+    oce_nz = oce_z.size
+    ice_grid_file = lens_file_head + var_lens_ice[0] + lens_file_tail
+    ice_tlat = read_netcdf(ice_grid_file, 'TLAT')
+    ice_tlon = read_netcdf(ice_grid_file, 'TLON')
+    ice_ulat = read_netcdf(ice_grid_file, 'ULAT')
+    ice_ulon = read_netcdf(ice_grid_file, 'ULON')
+    ice_nx = ice_tlon.shape[1]
+    ice_ny = ice_tlat.shape[0]
+
+    # Loop over boundaries
+    for bdry in bdry_loc:
+        # Find the location of this boundary (lat/lon)
+        loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
+        # Loop over domains (ocean + ice)
+        for var_obcs, obcs_gtype, var_lens, lens_gtype, tlat, tlon, ulat, ulon, nx, ny, num_var, oce in zip([var_obcs_oce, var_obcs_ice], [obcs_gtype_oce, obcs_gtype_ice], [var_lens_oce, var_lens_ice], [lens_gtype_oce, lens_gtype_ice], [oce_tlat, ice_tlat], [oce_tlon, ice_tlon], [oce_ulat, ice_ulat], [oce_ulon, ice_ulon], [oce_nx, ice_nx], [oce_ny, ice_ny], [num_var_oce, num_var_ice], [True, False]):
+            # Loop over variables
+            for v in range(num_var):
+                print('Processing ' + var_lens[v] + ' on ' + bdry + ' boundary')
+                
+                # Read the data from LENS and OBCS
+                lens_file = lens_file_head + var_lens[v] + lens_file_tail
+                lens_clim = read_netcdf(lens_file, var_lens[v])
+                obcs_file = obcs_file_head + var_obcs[v] + obcs_file_tail
+                if bdry in ['N', 'S']:
+                    dimensions = 'x'
+                elif bdry in ['E', 'W']:
+                    dimensions = 'y'
+                if oce:
+                    dimensions += 'z'
+                dimensions += 't'
+                obcs_clim_bdry = read_binary(obcs_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+                    
+                # Select the correct grid type in LENS
+                if gtype[v] == 't':
+                    lens_lat = tlat
+                    lens_lon = tlon
+                elif gtype[v] == 'u':
+                    lens_lat = ulat
+                    lens_lon = ulon
+                # Select the correct boundary location in MITgcm
+                if bdry in ['N', 'S'] and obcs_gtype[v] == 'v':
+                    loc0 = loc0_edge
+                elif bdry in ['E', 'W'] and obcs_gtype[v] == 'u':
+                    loc0 = loc0_edge
+                else:
+                    loc0 = loc0_centre
+                mit_lon, mit_lat = mit_grid.get_lon_lat(gtype=obcs_gtype[v])
+                mit_hfac = mit_grid.get_hfac(gtype=obcs_gtype[v])
+                if bdry == 'N':
+                    mit_hfac = mit_hfac[:,-1,:]
+                elif bdry == 'S':
+                    mit_hfac = mit_hfac[:,0,:]
+                elif bdry == 'E':
+                    mit_hfac = mit_hfac[:,:,-1]
+                elif bdry == 'W':
+                    mit_hfac = mit_hfac[:,:,0]
+                if not oce:
+                    mit_hfac = mit_hfac[0,:]
+                
+                # Calculate interpolation coefficients to select this boundary in LENS
+                if bdry in ['N', 'S']:
+                    lens_n = nx
+                    mit_n = mit_nx
+                    mit_h = mit_lon
+                elif bdry in ['E', 'W']:
+                    lens_n = ny
+                    mit_n = mit_ny
+                    mit_h = mit_lat
+                i1 = np.empty(lens_n)
+                i2 = np.empty(lens_n)
+                c1 = np.empty(lens_n)
+                c2 = np.empty(lens_n)
+                for j in range(lens_n):
+                    if bdry in ['N', 'S']:
+                        i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lens_lat[:,j], loc0)
+                    elif bdry in ['E', 'W']:
+                        i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lens_lon[j,:], loc0, lon=True)
+                # Now select the boundary in LENS
+                shape = [months_per_year]
+                if oce:
+                    shape += [nz]
+                shape += [lens_n]
+                lens_clim_bdry = np.zeros(shape)
+                lens_h = np.zeros([lens_n])
+                for j in range(lens_n):
+                    if bdry in ['N', 'S']:
+                        lens_clim_bdry[...,j] = c1[j]*lens_clim[...,int(i1[j]),j] + c2[j]*lens_clim[...,int(i2[j]),j]
+                        lens_h[j] = c1[j]*lens_lon[int(i1[j]),j] + c2[j]*lens_lon[int(i2[j]),j]
+                    elif bdry in ['E', 'W']:
+                        lens_clim_bdry[...,j] = c1[j]*lens_clim[...,j,int(i1[j])] + c2[j]*lens_clim[...,j,int(i2[j])]
+                        lens_h[j] = c1[j]*lens_lat[j,int(i1[j])] + c2[j]*lens_lat[j,int(i2[j])]
+
+                # Now interpolate this slice of LENS data to the MITgcm grid on the boundary, one month at a time.
+                shape = [months_per_year]
+                if oce:
+                    shape += [mit_grid.nz]
+                shape += [mit_n]
+                lens_clim_bdry_interp = np.zeros(shape)
+                for t in range(months_per_year):
+                    print('...interpolating month '+str(t+1)+' of '+str(months_per_year))
+                    lens_clim_bdry_interp[t,:] = interp_bdry(lens_h, oce_z, lens_clim_bdry[t,:], np.invert(lens_clim_bdry[t,:].mask).astype(float), mit_h, mit_grid.z, mit_hfac, lon=(bdry in ['N', 'S']), depth_dependent=oce)
+                    
+                # Now get the bias correction
+                lens_offset = obcs_clim_bdry - lens_clim_bdry_interp
+                # Save to file
+                out_file = out_dir + 'LENS_offset_' + var_lens[v] + '_' + bdry
+                print('Writing ' + out_file)
+                write_binary(lens_offset, out_file)   
