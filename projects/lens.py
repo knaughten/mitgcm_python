@@ -37,6 +37,7 @@ def update_lens_timeseries (num_ens=5, base_dir='./'):
                 sim_years.append(int(fname))
         sim_years.sort()
         end_year = sim_years[-1]//100
+        print('Processing years '+str(start_year)+'-'+str(end_year))
         segment_dir = [str(year)+'01' for year in range(start_year, end_year+1)]
         precompute_timeseries_coupled(output_dir=sim_dir[n], segment_dir=segment_dir, timeseries_types=timeseries_types, hovmoller_loc=[], timeseries_file=timeseries_file, key='PAS')        
 

@@ -12,6 +12,9 @@ from .diagnostics import density
 import numpy as np
 import os
 import sys
+import netCDF4 as nc
+from nco import Nco
+from nco.custom import Limit
 
 
 # Helper function for make_sose_climatology and make_bsose_climatology.
@@ -1138,6 +1141,66 @@ def ics_merge (grid_path, temp_file_deep, salt_file_deep, temp_file_shelf, salt_
         ncfile.add_variable('THETA', temp, 'xyz')
         ncfile.add_variable('SALT', salt, 'xyz')
         ncfile.close()
+
+
+# Calculate a monthly climatology of OBCS variables from the LENS simulations of CESM: ensemble mean over first 20 members, climatology over 2013-2017 for comparison with B-SOSE.
+def calc_lens_climatology (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
+    oce_var = ['TEMP', 'SALT', 'UVEL', 'VVEL']
+    ice_var = ['aice', 'hi', 'hs', 'uvel', 'vvel']
+    file_head = '/b.e11.BRCP85C5CNBDRD.f09_g16.'
+    oce_file_mid = '.pop.h.'
+    ice_file_mid = '.cice.h.'
+    oce_file_tail = '.200601-208012.nc'
+    ice_file_tail = '_sh.200601-208012.nc'
+    year0 = 2006  # in input files
+    start_year = 2013  # for climatology calculation
+    end_year = 2017
+    num_years = end_year - start_year + 1
+    num_ens = 20
+
+    # Repeat almost the same code for ocean and sea ice variables
+    for var_names, file_mid, file_tail in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail]):
+        # Loop over variables
+        for var in var_names:
+            print 'Processing ' + var
+            # Loop over ensemble members and years
+            for n in range(num_ens):
+                # Read the whole dataset
+                file_path = in_dir + var + file_head + str(n+1).zfill(3) + file_mid + var + file_tail
+                print '...reading ' + file_path
+                data = read_netcdf(file_path, var)
+                for year in range(start_year, end_year+1):
+                    t_start = (year-year0)*months_per_year
+                    t_end = t_start + months_per_year
+                    if data_clim is None:
+                        # Initialise the monthly climatology
+                        shape = data.shape
+                        shape[0] = months_per_year
+                        data_clim = np.ma.zeros(shape)
+                    # Accumulate the monthly climatology
+                    data_clim += var[t_start:t_end,:]
+            # Convert from integral to average
+            data_clim /= num_years*num_ens
+            # Save to NetCDF
+            out_file = out_dir + 'LENS_climatology_' + var + '_' + str(start_year) + '-' + str(end_year) + '.nc'
+            print '...writing ' + out_file
+            # Make a skeleton file with all the right dimensions etc
+            nco = Nco()
+            nco.ncks(input=file_path, output=out_file, options=[Limit('time', t_start, t_end)])
+            # Now overwrite the variable
+            id = nc.Dataset(out_file, 'a')
+            id.variables[var][:] = data_clim
+            id.close()
+            
+            
+            
+    
+    
+
+    
     
 
     
