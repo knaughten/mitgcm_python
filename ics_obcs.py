@@ -1159,18 +1159,18 @@ def calc_lens_climatology (out_dir='./'):
     start_year = 2013  # for climatology calculation
     end_year = 2017
     num_years = end_year - start_year + 1
-    num_ens = 20
+    num_ens = 10  #20 update when downloading done
 
     # Repeat almost the same code for ocean and sea ice variables
     for var_names, file_mid, file_tail in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail]):
         # Loop over variables
         for var in var_names:
-            print 'Processing ' + var
+            print('Processing ' + var)
             # Loop over ensemble members and years
             for n in range(num_ens):
                 # Read the whole dataset
                 file_path = in_dir + var + file_head + str(n+1).zfill(3) + file_mid + var + file_tail
-                print '...reading ' + file_path
+                print('...reading ' + file_path)
                 data = read_netcdf(file_path, var)
                 for year in range(start_year, end_year+1):
                     t_start = (year-year0)*months_per_year
@@ -1186,7 +1186,7 @@ def calc_lens_climatology (out_dir='./'):
             data_clim /= num_years*num_ens
             # Save to NetCDF
             out_file = out_dir + 'LENS_climatology_' + var + '_' + str(start_year) + '-' + str(end_year) + '.nc'
-            print '...writing ' + out_file
+            print('...writing ' + out_file)
             # Make a skeleton file with all the right dimensions etc
             nco = Nco()
             nco.ncks(input=file_path, output=out_file, options=[Limit('time', t_start, t_end)])
