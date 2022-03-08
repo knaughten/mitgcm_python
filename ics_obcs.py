@@ -1153,16 +1153,17 @@ def calc_lens_climatology (out_dir='./'):
     file_head = '/b.e11.BRCP85C5CNBDRD.f09_g16.'
     oce_file_mid = '.pop.h.'
     ice_file_mid = '.cice.h.'
-    oce_file_tail = '.200601-208012.nc'
+    oce_file_tail = '.201301-201712.nc'
     ice_file_tail = '_sh.200601-208012.nc'
-    year0 = 2006  # in input files
+    year0_oce = 2013  # in input files
+    year0_ice = 2006
     start_year = 2013  # for climatology calculation
     end_year = 2017
     num_years = end_year - start_year + 1
-    num_ens = 2 #20
+    num_ens = 20
 
     # Repeat almost the same code for ocean and sea ice variables
-    for var_names, file_mid, file_tail in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail]):
+    for var_names, file_mid, file_tail, year0 in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail], [year0_oce, year0_ice]):
         # Loop over variables
         for var in var_names:
             print('Processing ' + var)
