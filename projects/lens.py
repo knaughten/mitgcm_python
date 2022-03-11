@@ -223,7 +223,7 @@ def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
                 if oce:
                     dimensions += 'z'
                 dimensions += 't'
-                data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions), axis=0)
+                data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
                 data_tmp = np.mean(data_tmp, axis=0)
                 data.append(data_tmp)
                 # Keep track of min and max across all boundaries
