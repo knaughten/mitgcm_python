@@ -15,6 +15,7 @@ from ..ics_obcs import find_obcs_boundary
 from ..file_io import read_netcdf, read_binary, netcdf_time
 from ..constants import deg_string
 from ..plot_utils.windows import set_panels, finished_plot
+from ..plot_utils.colours import set_colours
 from ..interpolation import interp_slice_helper
 from ..postprocess import precompute_timeseries_coupled
 
@@ -43,7 +44,7 @@ def update_lens_timeseries (num_ens=5, base_dir='./'):
 
 
 # Plot a bunch of precomputed timeseries from ongoing LENS-forced test simulations (ensemble of 5 to start), compared to the PACE-forced ensemble mean.
-def check_lens_timeseries (num_ens=5, base_dir='./'):
+def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
@@ -55,7 +56,11 @@ def check_lens_timeseries (num_ens=5, base_dir='./'):
     start_year = 1920
 
     for var in var_names:
-        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None)
+        if fig_dir is not None:
+            fig_name = real_dir(fig_dir) + 'timeseries_LENS_' + var + '.png'
+        else:
+            fig_name=None
+        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name)
         
 
 # Compare time-averaged temperature and salinity boundary conditions from PACE over 2006-2013 (equivalent to the first 20 ensemble members of LENS actually!) to the WOA boundary conditions used for the original simulations.
@@ -175,6 +180,90 @@ def compare_bcs_ts_mean (fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             plt.suptitle(var_titles[v]+', '+bdry+' boundary', fontsize=16)
             finished_plot(fig, fig_name=fig_dir+'pace_obcs_'+pace_var[v]+'_'+str(bdry)+'.png')
+
+
+# Plot the LENS bias corrections for OBCS at all three boundaries with annual mean, for each variable.
+def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    in_dir = base_dir + 'CESM_bias_correction/obcs/'
+    bdry_loc = ['N', 'W', 'E']
+    oce_var = ['TEMP', 'SALT', 'UVEL', 'VVEL']
+    ice_var = ['aice', 'hi', 'hs', 'uvel', 'vvel']
+    gtype_oce = ['t', 't', 'u', 'v']
+    gtype_ice = ['t', 't', 't', 'u', 'v']
+    oce_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)', 'Zonal velocity (m/s)', 'Meridional velocity (m/s)']
+    ice_titles = ['Sea ice concentration', 'Sea ice thickness (m)', 'Snow thickness (m)', 'Sea ice zonal velocity (m/s)', 'Sea ice meridional velocity (m/s)']
+    file_head = in_dir + 'LENS_offset_'
+    bdry_patches = [None, None, None]
+    num_bdry = len(bdry_loc)
+
+    grid = Grid(mit_grid_dir)
+
+    # Loop over ocean and ice variables
+    for var_names, gtype, titles, oce in zip([oce_var, ice_var], [gtype_oce, gtype_ice], [oce_titles, ice_titles], [True, False]):
+        for v in range(len(var_names)):
+            data = []
+            h = []
+            vmin = 0
+            vmax = 0
+            lon, lat = grid.get_lon_lat(gtype=gtype[v], dim=1)
+            for n in range(num_bdry):
+                # Read and time-average the file (don't worry about different month lengths for plotting purposes)
+                file_path = file_head + var_names[v] + '_' + bdry_loc[n]
+                if bdry_loc[n] in ['N', 'S']:
+                    dimensions = 'x'
+                    h.append(lon)
+                    h_label = 'Longitude'
+                elif bdry_loc[n] in ['E', 'W']:
+                    dimensions = 'y'
+                    h.append(lat)
+                    h_label = 'Latitude'
+                if oce:
+                    dimensions += 'z'
+                dimensions += 't'
+                data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions), axis=0)
+                data_tmp = np.mean(data_tmp, axis=0)
+                data.append(data_tmp)
+                # Keep track of min and max across all boundaries
+                vmin = min(vmin, np.amin(data_tmp))
+                vmax = max(vmax, np.amax(data_tmp))
+            # Now plot each boundary
+            if oce:
+                fig, gs, cax = set_panels('1x3C1')
+            else:
+                fig, gs = set_panels('1x3C0')
+            cmap = set_colours(data[0], ctype='plusminus', vmin=vmin, vmax=vmax)[0]
+            for n in range(num_bdry):
+                ax = plt.subplot(gs[0,n])
+                if oce:
+                    # Simple slice plot (don't worry about partial cells or lat/lon edges vs centres)
+                    img = plt.pcolormesh(h, grid.z*1e-3, data[n], cmap=cmap, vmin=vmin, vmax=vmax)
+                    if n==0:
+                        ax.set_ylabel('Depth (km)')
+                    if n==3:
+                        plt.colorbar(img, cax=cax, orientation='horizontal')
+                else:
+                    # Line plot
+                    plt.plot(h, data[n])
+                if n==0:
+                    ax.set_xlabel(h_label)
+                ax.set_title(bdry_loc[n], fontsize=12)
+                plt.suptitle(titles[v], fontsize=16)
+                if fig_dir is not None:
+                    fig_name = real_dir(fig_dir) + 'obcs_offset_' + var_names[v] + '.png'
+                else:
+                    fig_name = None
+                finished_plot(fig, fig_name=fig_name)
+                    
+                    
+                        
+        
+        
+
+    
+    
             
             
             
