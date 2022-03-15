@@ -13,7 +13,7 @@ from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month
 from ..grid import Grid
 from ..ics_obcs import find_obcs_boundary
-from ..file_io import read_netcdf, read_binary, netcdf_time
+from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
@@ -369,7 +369,7 @@ def plot_lens_obcs_bias_corrections_monthly (fig_dir=None):
 
 
 # Calculate and plot the ensemble mean trends in the LENS ocean for the given boundary and given variable.
-def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
+def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
 
     in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'+var_name+'/'
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
@@ -396,7 +396,7 @@ def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
         sys.exit()
 
     # Read POP grid
-    grid_file = in_dir + file_head + '001' + file_tail_1
+    grid_file = in_dir + file_head + '001' + file_mid + var_name + file_tail_1
     lon = fix_lon_range(read_netcdf(grid_file, 'TLONG'))
     lat = read_netcdf(grid_file, 'TLAT')
     z = -1e-2*read_netcdf(grid_file, 'z_t')
@@ -425,52 +425,63 @@ def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
             i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lat[:,j], loc0)
         elif bdry in ['E', 'W']:
             i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0, lon=True)
+    # Interpolate the horizontal axis to this boundary
+    h = np.empty(nh)
+    for j in range(nh):
+        if bdry in ['N', 'S']:
+            h[j] = c1[j]*lon[int(i1[j]),j] + c2[j]*lon[int(i2[j]),j]
+        elif bdry in ['E', 'W']:
+            h[j] = c1[j]*lat[j,int(i1[j])] + c2[j]*lat[j,int(i2[j])]
+    # Find limits corresponding to other boundaries of MITgcm grid
+    j1 = interp_slice_helper(h, hmin, lon=(bdry in ['N', 'S']))[0]
+    j2 = interp_slice_helper(h, hmax, lon=(bdry in ['N', 'S']))[0]
+    nh_trim = j2-j1+1
+    h = h[j1:j2+1]
 
-    # Loop over ensemble members
-    for n in range(num_ens):
-        print('Processing ensemble member ' + str(n+1))
-        print('...reading data')
-        data_full = np.ma.zeros([num_years*months_per_year, nz, ny, nx])
-        if n+1 < ens_break:
-            file_path_1 = in_dir + file_head + str(n+1).zfill(3) + file_tail_1
-            data_full[:t_break,:] = read_netcdf(file_path_1, var_name)
-            file_path_2 = in_dir + file_head + str(n+1).zfill(3) + file_tail_2
-            data_full[t_break:,:] = read_netcdf(file_path_2, var_name)
-        else:
-            file_path = in_dir + file_head + str(n+1-ens_break+ens_offset).zfill(3) + file_tail_alt
-            data_full = read_netcdf(file_path, var_name)
-        print('...annually averaging')
-        data_annual = np.ma.zeros([num_years, nz, ny, nx])
-        for year in range(start_year, end_year+1):
-            ndays = np.array([days_per_month(month+1, year) for month in range(12)])
-            t0 = (year-start_year)*months_per_year
-            data_annual = np.average(data_full[t0:t0+months_per_year,:], axis=0, weights=ndays)
-        print('...extracting the boundary')
-        data_bdry = np.ma.zeros([num_years, nz, nh])
-        if n==0:
-            h = np.ma.empty([nh])
-        for j in range(nh):
-            if bdry in ['N', 'S']:
-                data_bdry[:,:,j] = c1[j]*data_annual[:,:,int(i1[j]),j] + c2[j]*data_annual[:,:,int(i2[j]),j]
-                if n==0:
-                    h[j] = c1[j]*lon[int(i1[j]),j] + c2[j]*lon[int(i2[j]),j]
-            elif bdry in ['E', 'W']:
-                data_bdry[:,:,j] = c1[j]*data_annual[:,:,j,int(i1[j])] + c2[j]*data_annual[:,:,j,int(i2[j])]
-                if n==0:
-                    h[j] = c1[j]*lat[j,int(i1[j])] + c2[j]*lat[j,int(i2[j])]
-        # Mask out anything outside the MITgcm grid
-        if n==0:            
-            j1 = interp_slice_helper(h, hmin, lon=(bdry in ['N', 'S']))[0]
-            j2 = interp_slice_helper(h, hmax, lon=(bdry in ['N', 'S']))[0]
-            nh_trim = j2-j1+1
-            h = h[j1:j2+1]
-            # Now set up arrays for trends at each point and each ensemble member
-            trends = np.ma.zeros([num_ens, nz, nh_trim])
-        data_bdry = data_bdry[:,:,j1:j2+1]
-        # Loop over each point and calculate trends
-        for k in range(nz):
-            for j in range(nh_trim):
-                trends[n,k,j] = linregress(np.arange(num_years), data_bdry[:,k,j])[0]
+    if not os.path.isfile(tmp_file):
+        # Calculate the trends
+        trends = np.ma.zeros([num_ens, nz, nh_trim])
+        # Loop over ensemble members
+        for n in range(num_ens):
+            print('Processing ensemble member ' + str(n+1))
+            data_ens = np.ma.empty([num_years, nz, nh])
+            for year in range(start_year, end_year+1):
+                # Construct the file path and starting time index
+                if n+1 < ens_break:
+                    if year < break_year:
+                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_1
+                        t0 = (year-start_year)*months_per_year
+                    else:
+                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_2
+                        t0 = (year-break_year)*months_per_year
+                else:
+                    file_path = in_dir + file_head + str(n+1-ens_break+ens_offset).zfill(3) + file_mid + var_name + file_tail_alt
+                    t0 = (year-start_year)*months_per_year
+                tf = t0+months_per_year
+                print('...processing indices '+str(t0)+'-'+str(tf-1)+' from '+file_path)
+                # Read just this year
+                data_tmp = read_netcdf(file_path, var_name, t_start=t0, t_end=tf)
+                # Annually average
+                ndays = np.array([days_per_month(month+1, year) for month in range(12)])
+                data_tmp = np.average(data_tmp, axis=0, weights=ndays)
+                # Interpolate to the boundary
+                for j in range(nh):
+                    if bdry in ['N', 'S']:
+                        data_ens[year-start_year,:,j] = c1[j]*data_tmp[:,int(i1[j]),j] + c2[j]*data_tmp[:,int(i2[j]),j]
+                    elif bdry in ['E', 'W']:
+                        data_ens[year-start_year,:,j] = c1[j]*data_tmp[:,j,int(i1[j])] + c2[j]*data_tmp[:,j,int(i2[j])]
+            # Now trim to the other boundaries
+            data_ens = data_ens[:,:,j1:j2+1]
+            # Loop over each point and calculate trends
+            print('...calculating trends')
+            for k in range(nz):
+                for j in range(nh_trim):
+                    trends[n,k,j] = linregress(np.arange(num_years), data_ens[:,k,j])[0]
+        # Save results in temporary binary file
+        write_binary(trends, tmp_file)
+    else:
+        # Trends have been precomputed; read them (hack to assume nx=ny=nh)
+        trends = read_binary(tmp_file, [nz, nh_trim, nh_trim], 'yzt')
 
     # Calculate the mean trend and significance
     mean_trend = np.mean(trends, axis=0)*1e-2
@@ -483,7 +494,7 @@ def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
     cmap, vmin, vmax = set_colours(mean_trend, ctype='plusminus')
     img = ax.pcolormesh(h, z, mean_trend, cmap=cmap, vmin=vmin, vmax=vmax)
     cbar = plt.colorbar(img)
-    plt.title(var_name+' trend at '+bdry_loc+' boundary ('+units+'/century)', fontsize=14)
+    plt.title(var_name+' trend at '+bdry+' boundary ('+units+'/century)', fontsize=14)
     finished_plot(fig, fig_name=fig_name)
     
     
