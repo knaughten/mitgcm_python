@@ -76,6 +76,8 @@ def set_panels (key, figsize=None):
             figsize = (7, 12)
         elif key == '3x4+1C1':
             figsize = (10, 8)
+        elif key == '3x4+1C0':
+            figsize = (10, 8)
         elif key == '2x4-1C7':
             figsize = (10, 6)
 
@@ -253,6 +255,10 @@ def set_panels (key, figsize=None):
         gs = plt.GridSpec(4,4)
         gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95, wspace=0.05, hspace=0.15)
         cax = fig.add_axes([0.5, 0.8, 0.23, 0.02])
+    elif key == '3x4+1C0':
+        # As above but no colourbar
+        gs = plt.GridSpec(4,4)
+        gs.update(left=0.01, right=0.99, bottom=0.01, top=0.95, wspace=0.05, hspace=0.15)
     elif key == '2x4-1C7':
         # 7 plots arranged in 2 rows and 4 columns, with an empty space at the top left for the title, and a colourbar for each plot
         gs = plt.GridSpec(2,4)

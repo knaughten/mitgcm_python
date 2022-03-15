@@ -7,15 +7,17 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import os
+from scipy.stats import linregress, ttest_1samp
 
 from ..plot_1d import read_plot_timeseries_ensemble
-from ..utils import real_dir, fix_lon_range
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month
 from ..grid import Grid
 from ..ics_obcs import find_obcs_boundary
 from ..file_io import read_netcdf, read_binary, netcdf_time
-from ..constants import deg_string
+from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
+from ..plot_utils.labels import reduce_cbar_labels
 from ..interpolation import interp_slice_helper
 from ..postprocess import precompute_timeseries_coupled
 
@@ -209,6 +211,7 @@ def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
             vmin = 0
             vmax = 0
             lon, lat = grid.get_lon_lat(gtype=gtype[v], dim=1)
+            hfac = grid.get_hfac(gtype=gtype[v])
             for n in range(num_bdry):
                 # Read and time-average the file (don't worry about different month lengths for plotting purposes)
                 file_path = file_head + var_names[v] + '_' + bdry_loc[n]
@@ -225,6 +228,18 @@ def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
                 dimensions += 't'
                 data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
                 data_tmp = np.mean(data_tmp, axis=0)
+                # Mask
+                if bdry_loc[n] == 'N':
+                    hfac_bdry = hfac[:,-1,:]
+                elif bdry_loc[n] == 'S':
+                    hfac_bdry = hfac[:,0,:]
+                elif bdry_loc[n] == 'E':
+                    hfac_bdry = hfac[:,:,-1]
+                elif bdry_loc[n] == 'W':
+                    hfac_bdry = hfac[:,:,0]
+                if not oce:
+                    hfac_bdry = hfac_bdry[0,:]
+                data_tmp = np.ma.masked_where(hfac_bdry==0, data_tmp)
                 data.append(data_tmp)
                 # Keep track of min and max across all boundaries
                 vmin = min(vmin, np.amin(data_tmp))
@@ -234,19 +249,23 @@ def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
                 fig, gs, cax = set_panels('1x3C1')
             else:
                 fig, gs = set_panels('1x3C0')
+                gs.update(left=0.05, wspace=0.1, bottom=0.1)
             cmap = set_colours(data[0], ctype='plusminus', vmin=vmin, vmax=vmax)[0]
             for n in range(num_bdry):
                 ax = plt.subplot(gs[0,n])
                 if oce:
                     # Simple slice plot (don't worry about partial cells or lat/lon edges vs centres)
-                    img = plt.pcolormesh(h, grid.z*1e-3, data[n], cmap=cmap, vmin=vmin, vmax=vmax)
+                    img = plt.pcolormesh(h[n], grid.z*1e-3, data[n], cmap=cmap, vmin=vmin, vmax=vmax)
                     if n==0:
                         ax.set_ylabel('Depth (km)')
-                    if n==3:
+                    if n==num_bdry-1:
                         plt.colorbar(img, cax=cax, orientation='horizontal')
                 else:
                     # Line plot
-                    plt.plot(h, data[n])
+                    plt.plot(h[n], data[n])
+                    ax.grid(linestyle='dotted')
+                    ax.set_ylim([vmin, vmax])
+                    ax.axhline(color='black')
                 if n==0:
                     ax.set_xlabel(h_label)
                 ax.set_title(bdry_loc[n], fontsize=12)
@@ -256,7 +275,235 @@ def plot_lens_obcs_bias_corrections_annual (fig_dir=None):
                 else:
                     fig_name = None
                 finished_plot(fig, fig_name=fig_name)
+
+
+# Now plot all months and the annual mean, for one variable and one boundary at a time.
+def plot_lens_obcs_bias_corrections_monthly (fig_dir=None):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    in_dir = base_dir + 'CESM_bias_correction/obcs/'
+    bdry_loc = ['N', 'W', 'E']
+    oce_var = ['TEMP', 'SALT', 'UVEL', 'VVEL']
+    ice_var = ['aice', 'hi', 'hs', 'uvel', 'vvel']
+    gtype_oce = ['t', 't', 'u', 'v']
+    gtype_ice = ['t', 't', 't', 'u', 'v']
+    oce_titles = ['Temperature ('+deg_string+'C)', 'Salinity (psu)', 'Zonal velocity (m/s)', 'Meridional velocity (m/s)']
+    ice_titles = ['Sea ice concentration', 'Sea ice thickness (m)', 'Snow thickness (m)', 'Sea ice zonal velocity (m/s)', 'Sea ice meridional velocity (m/s)']
+    file_head = in_dir + 'LENS_offset_'
+    bdry_patches = [None, None, None]
+    num_bdry = len(bdry_loc)
+    month_names = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+
+    grid = Grid(mit_grid_dir)
+
+    # Loop over ocean and ice variables
+    for var_names, gtype, titles, oce in zip([oce_var, ice_var], [gtype_oce, gtype_ice], [oce_titles, ice_titles], [True, False]):
+        for v in range(len(var_names)):
+            lon, lat = grid.get_lon_lat(gtype=gtype[v], dim=1)
+            hfac = grid.get_hfac(gtype=gtype[v])
+            for n in range(num_bdry):
+                # Read the file but no time-averaging
+                file_path = file_head + var_names[v] + '_' + bdry_loc[n]
+                if bdry_loc[n] in ['N', 'S']:
+                    dimensions = 'x'
+                    h = lon
+                elif bdry_loc[n] in ['E', 'W']:
+                    dimensions = 'y'
+                    h = lat
+                if oce:
+                    dimensions += 'z'
+                dimensions += 't'
+                data = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+                # Mask
+                if bdry_loc[n] == 'N':
+                    hfac_bdry = hfac[:,-1,:]
+                elif bdry_loc[n] == 'S':
+                    hfac_bdry = hfac[:,0,:]
+                elif bdry_loc[n] == 'E':
+                    hfac_bdry = hfac[:,:,-1]
+                elif bdry_loc[n] == 'W':
+                    hfac_bdry = hfac[:,:,0]
+                if not oce:
+                    hfac_bdry = hfac_bdry[0,:]
+                hfac_bdry = add_time_dim(hfac_bdry, months_per_year)
+                data = np.ma.masked_where(hfac_bdry==0, data)
+                # Now plot each month
+                if oce:
+                    fig, gs, cax = set_panels('3x4+1C1')
+                else:
+                    fig, gs = set_panels('3x4+1C0')
+                cmap, vmin, vmax = set_colours(data, ctype='plusminus')
+                for t in range(months_per_year):
+                    ax = plt.subplot(gs[t//4+1, t%4])
+                    if oce:
+                        ax.pcolormesh(h, grid.z*1e-3, data[t,:], cmap=cmap, vmin=vmin, vmax=vmax)
+                    else:
+                        ax.plot(h, data[t,:])
+                        ax.set_ylim([vmin, vmax])
+                        ax.grid(linestyle='dotted')
+                        ax.axhline(color='black')
+                    ax.set_title(month_names[t], fontsize=10)
+                    ax.set_xticklabels([])
+                    ax.set_yticklabels([])
+                # Now plot annual mean
+                ax = plt.subplot(gs[0,3])
+                if oce:
+                    img = ax.pcolormesh(h, grid.z*1e-3, np.mean(data, axis=0), cmap=cmap, vmin=vmin, vmax=vmax)
+                    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+                    reduce_cbar_labels(cbar)
+                    ax.set_yticklabels([])
+                else:
+                    ax.plot(h, np.mean(data, axis=0))
+                    ax.set_ylim([vmin, vmax])
+                    ax.grid(linestyle='dotted')
+                    ax.axhline(color='black')
+                ax.set_xticklabels([])
+                ax.set_title('Annual', fontsize=10)
+                plt.suptitle(titles[v] + ', ' + bdry_loc[n] + ' boundary', fontsize=14)
+                if fig_dir is not None:
+                    fig_name = real_dir(fig_dir) + 'obcs_offset_monthly_' + var_names[v] + '_' + bdry_loc[n] + '.png'
+                else:
+                    fig_name = None
+                finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate and plot the ensemble mean trends in the LENS ocean for the given boundary and given variable.
+def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
+
+    in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'+var_name+'/'
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.'
+    file_mid = '.pop.h.'
+    file_tail_1 = '.200601-208012.nc'
+    file_tail_2 = '.208101-210012.nc'
+    file_tail_alt = '.200601-210012.nc'
+    num_ens = 40
+    ens_break = 36
+    ens_offset = 105
+    start_year = 2006
+    end_year = 2100
+    break_year = 2081
+    t_break = (break_year-start_year)*months_per_year
+    num_years = end_year - start_year + 1
+    p0 = 0.05
+    if var_name == 'TEMP':
+        units = deg_string+'C'
+    elif var_name == 'SALT':
+        units = 'psu'
+    else:
+        print 'Error (calc_obcs_trends_lens): unknown variable ' + var_name
+        sys.exit()
+
+    # Read POP grid
+    grid_file = in_dir + file_head + '001' + file_tail_1
+    lon = fix_lon_range(read_netcdf(grid_file, 'TLONG'))
+    lat = read_netcdf(grid_file, 'TLAT')
+    z = -1e-2*read_netcdf(grid_file, 'z_t')
+    nz = z.size
+    ny = lat.shape[0]
+    nx = lon.shape[1]
+
+    # Read MITgcm grid and get boundary location
+    mit_grid = Grid(mit_grid_dir)
+    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    # Find interpolation coefficients to the POP grid
+    if bdry in ['N', 'S']:
+        nh = nx
+        hmin = find_obcs_boundary(mit_grid, 'W')[0]
+        hmax = find_obcs_boundary(mit_grid, 'E')[0]
+    elif bdry in ['E', 'W']:
+        nh = ny
+        hmin = find_obcs_boundary(mit_grid, 'S')[0]
+        hmax = find_obcs_boundary(mit_grid, 'N')[0]
+    i1 = np.empty(nh)
+    i2 = np.empty(nh)
+    c1 = np.empty(nh)
+    c2 = np.empty(nh)
+    for j in range(nh):
+        if bdry in ['N', 'S']:
+            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lat[:,j], loc0)
+        elif bdry in ['E', 'W']:
+            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0, lon=True)
+
+    # Loop over ensemble members
+    for n in range(num_ens):
+        print('Processing ensemble member ' + str(n+1))
+        print('...reading data')
+        data_full = np.ma.zeros([num_years*months_per_year, nz, ny, nx])
+        if n+1 < ens_break:
+            file_path_1 = in_dir + file_head + str(n+1).zfill(3) + file_tail_1
+            data_full[:t_break,:] = read_netcdf(file_path_1, var_name)
+            file_path_2 = in_dir + file_head + str(n+1).zfill(3) + file_tail_2
+            data_full[t_break:,:] = read_netcdf(file_path_2, var_name)
+        else:
+            file_path = in_dir + file_head + str(n+1-ens_break+ens_offset).zfill(3) + file_tail_alt
+            data_full = read_netcdf(file_path, var_name)
+        print('...annually averaging')
+        data_annual = np.ma.zeros([num_years, nz, ny, nx])
+        for year in range(start_year, end_year+1):
+            ndays = np.array([days_per_month(month+1, year) for month in range(12)])
+            t0 = (year-start_year)*months_per_year
+            data_annual = np.average(data_full[t0:t0+months_per_year,:], axis=0, weights=ndays)
+        print('...extracting the boundary')
+        data_bdry = np.ma.zeros([num_years, nz, nh])
+        if n==0:
+            h = np.ma.empty([nh])
+        for j in range(nh):
+            if bdry in ['N', 'S']:
+                data_bdry[:,:,j] = c1[j]*data_annual[:,:,int(i1[j]),j] + c2[j]*data_annual[:,:,int(i2[j]),j]
+                if n==0:
+                    h[j] = c1[j]*lon[int(i1[j]),j] + c2[j]*lon[int(i2[j]),j]
+            elif bdry in ['E', 'W']:
+                data_bdry[:,:,j] = c1[j]*data_annual[:,:,j,int(i1[j])] + c2[j]*data_annual[:,:,j,int(i2[j])]
+                if n==0:
+                    h[j] = c1[j]*lat[j,int(i1[j])] + c2[j]*lat[j,int(i2[j])]
+        # Mask out anything outside the MITgcm grid
+        if n==0:            
+            j1 = interp_slice_helper(h, hmin, lon=(bdry in ['N', 'S']))[0]
+            j2 = interp_slice_helper(h, hmax, lon=(bdry in ['N', 'S']))[0]
+            nh_trim = j2-j1+1
+            h = h[j1:j2+1]
+            # Now set up arrays for trends at each point and each ensemble member
+            trends = np.ma.zeros([num_ens, nz, nh_trim])
+        data_bdry = data_bdry[:,:,j1:j2+1]
+        # Loop over each point and calculate trends
+        for k in range(nz):
+            for j in range(nh_trim):
+                trends[n,k,j] = linregress(np.arange(num_years), data_bdry[:,k,j])[0]
+
+    # Calculate the mean trend and significance
+    mean_trend = np.mean(trends, axis=0)*1e-2
+    p_val = ttest_1samp(trends, 0, axis=0)[1]
+    # For any trends which aren't significant, fill with zeros
+    mean_trend[p_val > p0] = 0
+
+    # Plot
+    fig, ax = plt.subplots()
+    cmap, vmin, vmax = set_colours(mean_trend, ctype='plusminus')
+    img = ax.pcolormesh(h, z, mean_trend, cmap=cmap, vmin=vmin, vmax=vmax)
+    cbar = plt.colorbar(img)
+    plt.title(var_name+' trend at '+bdry_loc+' boundary ('+units+'/century)', fontsize=14)
+    finished_plot(fig, fig_name=fig_name)
+    
+    
+
+
+        
                     
+                
+            
+            
+            
+        
+
+    
+
+    
+                
+                    
+                
+
                     
                         
         
