@@ -392,7 +392,7 @@ def calc_obcs_trends_lens (var_name, bdry_loc, fig_name=None):
     elif var_name == 'SALT':
         units = 'psu'
     else:
-        print 'Error (calc_obcs_trends_lens): unknown variable ' + var_name
+        print('Error (calc_obcs_trends_lens): unknown variable ' + var_name)
         sys.exit()
 
     # Read POP grid
