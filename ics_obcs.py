@@ -1341,6 +1341,7 @@ def make_lens_bias_correction_files (out_dir='./'):
                 lens_clim_bdry = extract_slice_nonreg(lens_clim, direction, i1, i2, c1, c2)
                 lens_h = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
                 if direction == 'lon' and oce:
+                    # Throw away the northern hemisphere because the tripolar? grid causes interpolation issues
                     lens_clim_bdry, lens_h = trim_slice(lens_clim_bdry, lens_h, hmax=0, lon=True)
 
                 # Now interpolate this slice of LENS data to the MITgcm grid on the boundary, one month at a time.
