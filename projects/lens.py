@@ -401,18 +401,15 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0, direction)
     # Interpolate the horizontal axis to this boundary
     h = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
-    
-    # Find limits corresponding to other boundaries of MITgcm grid
-    j1 = interp_slice_helper(h, hmin, lon=(bdry in ['N', 'S']))[0]
-    j2 = interp_slice_helper(h, hmax, lon=(bdry in ['N', 'S']))[0]
-    nh_trim = j2-j1+1
-    h = h[j1:j2+1]
+    # Trim to MITgcm grid
+    h_trim = trim_slice_to_grid(h, h, grid, direction)[0]
+    nh = h_trim.size
 
     if not os.path.isfile(tmp_file):
         # Calculate the trends
-        trends = np.ma.zeros([num_ens, nz, nh_trim])
+        trends = np.ma.zeros([num_ens, nz, nh])
         # Loop over ensemble members
-        for n in range(35, num_ens):
+        for n in range(num_ens):
             print('Processing ensemble member ' + str(n+1))
             data_ens = np.ma.empty([num_years, nz, nh])
             for year in range(start_year, end_year+1):
@@ -440,17 +437,17 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
                 # Interpolate to the boundary
                 data_ens[year-start_year,:] = extract_slice_nonreg(data_tmp, direction, i1, i2, c1, c2)
             # Now trim to the other boundaries
-            data_ens = data_ens[:,:,j1:j2+1]
+            data_ens = trim_slice_to_grid(data_ens, h, grid, direction)[0]
             # Loop over each point and calculate trends
             print('...calculating trends')
             for k in range(nz):
-                for j in range(nh_trim):
+                for j in range(nh):
                     trends[n,k,j] = linregress(np.arange(num_years), data_ens[:,k,j])[0]
         # Save results in temporary binary file
         write_binary(trends, tmp_file)
     else:
         # Trends have been precomputed; read them (hack to assume nx=ny=nh)
-        trends = read_binary(tmp_file, [nz, nh_trim, nh_trim], 'yzt')
+        trends = read_binary(tmp_file, [nz, nh, nh], 'yzt')
 
     # Calculate the mean trend and significance
     mean_trend = np.mean(trends, axis=0)*1e-2
@@ -461,7 +458,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
     # Plot
     fig, ax = plt.subplots()
     cmap, vmin, vmax = set_colours(mean_trend, ctype='plusminus')
-    img = ax.pcolormesh(h, z, mean_trend, cmap=cmap, vmin=vmin, vmax=vmax)
+    img = ax.pcolormesh(h_trim, z, mean_trend, cmap=cmap, vmin=vmin, vmax=vmax)
     cbar = plt.colorbar(img)
     plt.title(var_name+' trend at '+bdry+' boundary ('+units+'/century)', fontsize=14)
     finished_plot(fig, fig_name=fig_name)

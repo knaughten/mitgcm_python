@@ -610,7 +610,7 @@ def interp_slice_helper_nonreg (lon, lat, loc0, direction):
         if direction == 'lat':
             i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lat[:,j], loc0)
         elif direction == 'lon':
-            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0)
+            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0, lon=True)
     return i1, i2, c1, c2
 
 
