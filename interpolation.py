@@ -584,3 +584,53 @@ def smooth_xy (data, sigma=2):
 
     from scipy.ndimage.filters import gaussian_filter
     return gaussian_filter(data, sigma)
+
+
+# Calculate the interpolation coefficients to extract a slice of constant latitude or longitude from an arbitrary (not necessarily regular) lat-lon grid.
+def interp_slice_helper_nonreg (lon, lat, loc0, direction):
+
+    # Error checking
+    if direction not in ['lat', 'lon']:
+        print('Error (interp_slice_helper_nonreg): invalid direction '+direction)
+        sys.exit()
+    # Get grid sizes
+    
+    nx = lon.shape[1]
+    ny = lat.shape[0]
+    if direction == 'lat':
+        num_pts = nx
+    elif direction == 'lon':
+        num_pts = ny
+    # Loop over the correct axis
+    i1 = np.empty(num_pts)
+    i2 = np.empty(num_pts)
+    c1 = np.empty(num_pts)
+    c2 = np.empty(num_pts)
+    for j in range(num_pts):
+        if direction == 'lat':
+            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lat[:,j], loc0)
+        elif direction == 'lon':
+            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0)
+    return i1, i2, c1, c2
+
+
+# Given these coefficients, extract the slice of the given data, which may or may not be time- or depth-dependent.
+def extract_slice_nonreg (data, direction, i1, i2, c1, c2):
+
+    # Set up an array of the correct shape, collapsing one dimension down to a single index
+    if direction == 'lat':
+        shape = data[...,0,:].shape
+    elif direction == 'lon':
+        shape = data[...,0].shape
+    else:
+        print('Error (extract_slice_nonreg): invalid direction '+direction)
+        sys.exit()
+    data_slice = np.ma.empty(shape)
+    num_pts = i1.size
+    for j in range(num_pts):
+        if direction == 'lat':
+            data_slice[...,j] = c1[j]*data[...,int(i1[j]),j] + c2*data[...,int(i2[j]),j]
+        elif direction == 'lon':
+            data_slice[...,j] = c1[j]*data[...,j,int(i1[j])] + c2[j]*data[...,j,int(i2[j])]
+    return data_slice
+

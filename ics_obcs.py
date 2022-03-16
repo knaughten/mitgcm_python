@@ -5,7 +5,7 @@
 from .grid import Grid, grid_check_split, choose_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf
-from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
 from .diagnostics import density
 
@@ -1204,6 +1204,34 @@ def calc_lens_climatology (out_dir='./'):
             id.close()
 
 
+# Trim a slice and corresponding axis to the given limits.
+def trim_slice (data, h, hmin=None, hmax=None, lon=False):
+
+    if hmin is not None:
+        j1 = interp_slice_helper(h, hmin, lon=lon)[0]
+    else:
+        j1 = 0
+    if hmax is not None:
+        j2 = interp_slice_helper(h, hmax, lon=lon)[1]
+    else:
+        j2 = h.size-1
+    return data[...,j1:j2+1], h[j1:j2+1]
+
+
+# Trim a slice and corresponding axis to the limits of the MITgcm grid.
+def trim_slice_to_grid (data, h, grid, direction):
+
+    if direction == 'lat':
+        hmin = find_obcs_boundary(grid, 'W')[0]
+        hmax = find_obcs_boundary(grid, 'E')[0]
+    elif direction == 'lon':
+        hmin = find_obcs_boundary(grid, 'S')[0]
+        hmax = find_obcs_boundary(grid, 'N')[0]
+    else:
+        print('Error (trim_slice_to_limits): invalid direction ' + direction)
+    return trim_slice(data, h, hmin=hmin, hmax=hmax)
+
+
 # Calculate bias correction files for each boundary condition, based on the LENS ensemble mean climatology compared to the WOA/SOSE fields we used previously.
 def make_lens_bias_correction_files (out_dir='./'):
 
@@ -1296,44 +1324,24 @@ def make_lens_bias_correction_files (out_dir='./'):
                     mit_hfac = mit_hfac[:,:,0]
                 if not oce:
                     mit_hfac = mit_hfac[0,:]
-                
-                # Calculate interpolation coefficients to select this boundary in LENS
                 if bdry in ['N', 'S']:
-                    lens_n = nx
+                    lens_h_2d = lens_lon
                     mit_n = mit_grid.nx
                     mit_h = mit_lon
+                    direction = 'lat'
                 elif bdry in ['E', 'W']:
-                    lens_n = ny
+                    lens_h_2d = lens_lat
                     mit_n = mit_grid.ny
                     mit_h = mit_lat
-                i1 = np.empty(lens_n)
-                i2 = np.empty(lens_n)
-                c1 = np.empty(lens_n)
-                c2 = np.empty(lens_n)
-                for j in range(lens_n):
-                    if bdry in ['N', 'S']:
-                        i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lens_lat[:,j], loc0)
-                    elif bdry in ['E', 'W']:
-                        i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lens_lon[j,:], loc0, lon=True)
+                    direction = 'lon'
+                
+                # Calculate interpolation coefficients to select this boundary in LENS
+                i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
                 # Now select the boundary in LENS
-                shape = [months_per_year]
-                if oce:
-                    shape += [oce_nz]
-                shape += [lens_n]
-                lens_clim_bdry = np.ma.zeros(shape)
-                lens_h = np.zeros([lens_n])
-                for j in range(lens_n):
-                    if bdry in ['N', 'S']:
-                        lens_clim_bdry[...,j] = c1[j]*lens_clim[...,int(i1[j]),j] + c2[j]*lens_clim[...,int(i2[j]),j]
-                        lens_h[j] = c1[j]*lens_lon[int(i1[j]),j] + c2[j]*lens_lon[int(i2[j]),j]
-                    elif bdry in ['E', 'W']:
-                        lens_clim_bdry[...,j] = c1[j]*lens_clim[...,j,int(i1[j])] + c2[j]*lens_clim[...,j,int(i2[j])]
-                        lens_h[j] = c1[j]*lens_lat[j,int(i1[j])] + c2[j]*lens_lat[j,int(i2[j])]
-                if bdry in ['E', 'W'] and oce:
-                    # Chop off the northern hemisphere because the tripolar? grid does weird things to latitude at the North Pole
-                    j_max = np.nonzero(lens_h > 0)[0][0]
-                    lens_clim_bdry = lens_clim_bdry[...,:j_max]
-                    lens_h = lens_h[:j_max]
+                lens_clim_bdry = extract_slice_nonreg(lens_clim, direction, i1, i2, c1, c2)
+                lens_h = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+                if direction == 'lon' and oce:
+                    lens_clim_bdry, lens_h = trim_slice(lens_clim_bdry, lens_h, hmax=0, lon=True)
 
                 # Now interpolate this slice of LENS data to the MITgcm grid on the boundary, one month at a time.
                 shape = [months_per_year]
@@ -1349,4 +1357,9 @@ def make_lens_bias_correction_files (out_dir='./'):
                 lens_offset = obcs_clim_bdry - lens_clim_bdry_interp
                 # Save to file
                 out_file = out_dir + 'LENS_offset_' + var_lens[v] + '_' + bdry
-                write_binary(lens_offset, out_file)   
+                write_binary(lens_offset, out_file)
+
+
+
+
+        

@@ -12,13 +12,13 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month
 from ..grid import Grid
-from ..ics_obcs import find_obcs_boundary
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
 from ..plot_utils.labels import reduce_cbar_labels
-from ..interpolation import interp_slice_helper
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg
 from ..postprocess import precompute_timeseries_coupled
 
 
@@ -63,6 +63,18 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None):
         else:
             fig_name=None
         read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name)
+
+
+# Helper function to build the POP grid, given any LENS ocean file.
+def read_pop_grid (file_path):
+
+    lon = fix_lon_range(read_netcdf(file_path, 'TLONG'))
+    lat = read_netcdf(file_path, 'TLAT')
+    z = -1e-2*read_netcdf(file_path, 'z_t')
+    nz = z.size
+    ny = lat.shape[0]
+    nx = lon.shape[1]
+    return lon, lat, z, nx, ny, nz
         
 
 # Compare time-averaged temperature and salinity boundary conditions from PACE over 2006-2013 (equivalent to the first 20 ensemble members of LENS actually!) to the WOA boundary conditions used for the original simulations.
@@ -87,14 +99,9 @@ def compare_bcs_ts_mean (fig_dir='./'):
     fig_dir = real_dir(fig_dir)
     
     # Build the grids
-    mit_grid = Grid(grid_dir)
+    mit_grid = Grid(grid_dir)    
     pace_grid_file = pace_dir + pace_var[0] + pace_file_head + '01' + pace_file_mid + pace_var[0] + pace_file_tail
-    pace_lon = fix_lon_range(read_netcdf(pace_grid_file, 'TLONG'))
-    pace_lat = read_netcdf(pace_grid_file, 'TLAT')
-    pace_z = -1*read_netcdf(pace_grid_file, 'z_t')*1e-2
-    pace_nz = pace_z.size
-    pace_ny = pace_lat.shape[0]
-    pace_nx = pace_lat.shape[1]
+    pace_lon, pace_lat, pace_z, pace_nx, pace_ny, pace_nz = read_pop_grid(pace_grid_file)
 
     # Read the PACE output to create a time-mean, ensemble-mean (no seasonal cycle for now)
     pace_data_mean_3d = np.ma.zeros([num_var, pace_nz, pace_ny, pace_nx])
@@ -112,20 +119,14 @@ def compare_bcs_ts_mean (fig_dir='./'):
         loc0 = find_obcs_boundary(mit_grid, bdry)[0]
         # Find interpolation coefficients to the PACE grid - unfortunately not a regular grid in POP
         if bdry in ['N', 'S']:
-            pace_n = pace_nx
+            direction = 'lat'
             mit_h = mit_grid.lon_1d
+            pace_h_2d = pace_lon
         elif bdry in ['E', 'W']:
-            pace_n = pace_ny
+            direction = 'lon'
             mit_h = mit_grid.lat_1d
-        i1 = np.empty(pace_n)
-        i2 = np.empty(pace_n)
-        c1 = np.empty(pace_n)
-        c2 = np.empty(pace_n)
-        for j in range(pace_n):
-            if bdry in ['N', 'S']:
-                i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(pace_lat[:,j], loc0)
-            elif bdry in ['E', 'W']:
-                i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(pace_lon[j,:], loc0, lon=True)
+            pace_h_2d = pace_lat
+        i1, i2, c1, c2 = interp_slice_helper_nonreg(pace_lon, pace_lat, loc0, direction)
         for v in range(num_var):
             # Read and time-average the existing (WOA) boundary condition file
             obcs_file = obcs_dir + obcs_file_head + bdry + obcs_var[v] + obcs_file_tail
@@ -145,27 +146,10 @@ def compare_bcs_ts_mean (fig_dir='./'):
                 bdry_hfac = mit_grid.hfac[:,:,-1]
             obcs_data_mean = np.ma.masked_where(bdry_hfac==0, obcs_data_mean)
             # Interpolate to the PACE grid
-            pace_data_mean = np.ma.empty([pace_nz, pace_n])
-            pace_h = np.ma.empty([pace_n])
-            for j in range(pace_n):
-                if bdry in ['N', 'S']:
-                    pace_data_mean[:,j] = c1[j]*pace_data_mean_3d[v,:,int(i1[j]),j] + c2[j]*pace_data_mean_3d[v,:,int(i2[j]),j]
-                    pace_h[j] = c1[j]*pace_lon[int(i1[j]),j] + c2[j]*pace_lon[int(i2[j]),j]
-                elif bdry in ['E', 'W']:
-                    pace_data_mean[:,j] = c1[j]*pace_data_mean_3d[v,:,j,int(i1[j])] + c2[j]*pace_data_mean_3d[v,:,j,int(i2[j])]
-                    pace_h[j] = c1[j]*pace_lat[j,int(i1[j])] + c2[j]*pace_lat[j,int(i2[j])]
+            pace_data_mean = extract_slice_nonreg(pace_data_mean_3d, direction, i1, i2, c1, c2)
+            pace_h = extract_slice_nonreg(pace_h_2d, direction, i1, i2, c1, c2)
             # Trim
-            if bdry in ['N', 'S']:
-                # Get limits on longitude in MITgcm
-                hmin = find_obcs_boundary(mit_grid, 'W')[0]
-                hmax = find_obcs_boundary(mit_grid, 'E')[0]
-            elif bdry in ['E', 'W']:
-                hmin = find_obcs_boundary(mit_grid, 'S')[0]
-                hmax = find_obcs_boundary(mit_grid, 'N')[0]
-            j1 = interp_slice_helper(pace_h, hmin, lon=(bdry in ['N', 'S']))[0]
-            j2 = interp_slice_helper(pace_h, hmax, lon=(bdry in ['N', 'S']))[1]
-            pace_data_mean = pace_data_mean[:,j1:j2+1]
-            pace_h = pace_h[j1:j2+1]
+            pace_data_mean, pace_h = trim_slice_to_grid(pace_data_mean, pace_h, mit_grid, direction)
             # Find bounds for colour scale
             vmin = min(np.amin(obcs_data_mean), np.amin(pace_data_mean))
             vmax = max(np.amax(obcs_data_mean), np.amax(pace_data_mean))
@@ -379,8 +363,9 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
     file_tail_2 = '.208101-210012.nc'
     file_tail_alt = '.200601-210012.nc'
     num_ens = 40
-    ens_break = 36
-    ens_offset = 105
+    ens_break = 34
+    ens_break2 = 36
+    ens_offset = 101
     start_year = 2006
     end_year = 2100
     break_year = 2081
@@ -397,41 +382,26 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
 
     # Read POP grid
     grid_file = in_dir + file_head + '001' + file_mid + var_name + file_tail_1
-    lon = fix_lon_range(read_netcdf(grid_file, 'TLONG'))
-    lat = read_netcdf(grid_file, 'TLAT')
-    z = -1e-2*read_netcdf(grid_file, 'z_t')
-    nz = z.size
-    ny = lat.shape[0]
-    nx = lon.shape[1]
+    lon, lat, z, nx, ny, nz = read_pop_grid(grid_file)
 
     # Read MITgcm grid and get boundary location
     mit_grid = Grid(mit_grid_dir)
     loc0 = find_obcs_boundary(mit_grid, bdry)[0]
     # Find interpolation coefficients to the POP grid
     if bdry in ['N', 'S']:
-        nh = nx
+        direction = 'lat'
         hmin = find_obcs_boundary(mit_grid, 'W')[0]
         hmax = find_obcs_boundary(mit_grid, 'E')[0]
+        h_2d = lon
     elif bdry in ['E', 'W']:
-        nh = ny
+        direction = 'lon'
         hmin = find_obcs_boundary(mit_grid, 'S')[0]
         hmax = find_obcs_boundary(mit_grid, 'N')[0]
-    i1 = np.empty(nh)
-    i2 = np.empty(nh)
-    c1 = np.empty(nh)
-    c2 = np.empty(nh)
-    for j in range(nh):
-        if bdry in ['N', 'S']:
-            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lat[:,j], loc0)
-        elif bdry in ['E', 'W']:
-            i1[j], i2[j], c1[j], c2[j] = interp_slice_helper(lon[j,:], loc0, lon=True)
+        h_2d = lat
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0, direction)
     # Interpolate the horizontal axis to this boundary
-    h = np.empty(nh)
-    for j in range(nh):
-        if bdry in ['N', 'S']:
-            h[j] = c1[j]*lon[int(i1[j]),j] + c2[j]*lon[int(i2[j]),j]
-        elif bdry in ['E', 'W']:
-            h[j] = c1[j]*lat[j,int(i1[j])] + c2[j]*lat[j,int(i2[j])]
+    h = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+    
     # Find limits corresponding to other boundaries of MITgcm grid
     j1 = interp_slice_helper(h, hmin, lon=(bdry in ['N', 'S']))[0]
     j2 = interp_slice_helper(h, hmax, lon=(bdry in ['N', 'S']))[0]
@@ -442,7 +412,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
         # Calculate the trends
         trends = np.ma.zeros([num_ens, nz, nh_trim])
         # Loop over ensemble members
-        for n in range(num_ens):
+        for n in range(35, num_ens):
             print('Processing ensemble member ' + str(n+1))
             data_ens = np.ma.empty([num_years, nz, nh])
             for year in range(start_year, end_year+1):
@@ -455,7 +425,10 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
                         file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_2
                         t0 = (year-break_year)*months_per_year
                 else:
-                    file_path = in_dir + file_head + str(n+1-ens_break+ens_offset).zfill(3) + file_mid + var_name + file_tail_alt
+                    if n+1 < ens_break2:
+                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_alt
+                    else:
+                        file_path = in_dir + file_head + str(n+1-ens_break2+ens_offset).zfill(3) + file_mid + var_name + file_tail_alt
                     t0 = (year-start_year)*months_per_year
                 tf = t0+months_per_year
                 print('...processing indices '+str(t0)+'-'+str(tf-1)+' from '+file_path)
@@ -465,11 +438,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
                 ndays = np.array([days_per_month(month+1, year) for month in range(12)])
                 data_tmp = np.average(data_tmp, axis=0, weights=ndays)
                 # Interpolate to the boundary
-                for j in range(nh):
-                    if bdry in ['N', 'S']:
-                        data_ens[year-start_year,:,j] = c1[j]*data_tmp[:,int(i1[j]),j] + c2[j]*data_tmp[:,int(i2[j]),j]
-                    elif bdry in ['E', 'W']:
-                        data_ens[year-start_year,:,j] = c1[j]*data_tmp[:,j,int(i1[j])] + c2[j]*data_tmp[:,j,int(i2[j])]
+                data_ens[year-start_year,:] = extract_slice_nonreg(data_tmp, direction, i1, i2, c1, c2)
             # Now trim to the other boundaries
             data_ens = data_ens[:,:,j1:j2+1]
             # Loop over each point and calculate trends
@@ -496,6 +465,31 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
     cbar = plt.colorbar(img)
     plt.title(var_name+' trend at '+bdry+' boundary ('+units+'/century)', fontsize=14)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Plot T/S profiles horizontally averaged over the eastern boundary from 70S to the coastline, for a given month and year. Show the original WOA climatology, the uncorrected LENS field from the first ensemble member, and the corrected LENS field using both annual and monthly offsets.
+def plot_obcs_profiles (year, month):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'archer2_mitgcm/PAS_grid/'
+    woa_file_head = base_dir+'ics_obcs/PAS/OBE'
+    woa_file_tail = '_woa_mon.bin'
+    woa_var = ['theta', 'salt']
+    offset_file_head = base_dir+'CESM_bias_correction/obcs/LENS_offset_'
+    offset_file_tail = '_E'
+    lens_var = ['TEMP', 'SALT']
+    lens_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
+    lens_file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.001.pop.h.'
+    lens_file_tail_1 = '.200601-208012.nc'
+    lens_file_tail_2 = '.208101-210012.nc'
+    break_year = 2081
+    ymax = -70
+
+    # Build the grids
+    grid = Grid(mit_grid_dir)
+    lens_grid_file = lens_dir + lens_file_head + lens_var[0] + lens_file_tail_1
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    
     
     
 
