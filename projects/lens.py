@@ -448,10 +448,10 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
         write_binary(trends, tmp_file)
     else:
         # Trends have been precomputed; read them (hack to assume nx=ny=nh)
-        trends = read_binary(tmp_file, [nz, nh_trim, nh_trim], 'yzt')
+        trends = read_binary(tmp_file, [nh_trim, nh_trim, nz], 'yzt')
 
     # Calculate the mean trend and significance
-    mean_trend = np.mean(trends, axis=0)*1e-2
+    mean_trend = np.mean(trends, axis=0)*1e2  # Per century
     p_val = ttest_1samp(trends, 0, axis=0)[1]
     # For any trends which aren't significant, fill with zeros
     mean_trend[p_val > p0] = 0
