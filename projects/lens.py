@@ -496,7 +496,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     grid = Grid(mit_grid_dir)
     hfac_slice = grid.hfac[:,:,-1]
     # Mask out dA north of 70S, tile in the z direction, and select the boundary
-    dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA), grid)
+    dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA)
     dA = xy_to_xyz(dA, grid)
     dA_slice = dA[:,:,-1]
     lens_grid_file = lens_dir + lens_file_head + lens_var[0] + lens_file_tail_1
