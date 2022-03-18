@@ -343,21 +343,10 @@ def plot_lens_obcs_bias_corrections_monthly (fig_dir=None):
 # Calculate and plot the ensemble mean trends in the LENS ocean for the given boundary and given variable.
 def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
 
-    in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'+var_name+'/'
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
-    file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.'
-    file_mid = '.pop.h.'
-    file_tail_1 = '.200601-208012.nc'
-    file_tail_2 = '.208101-210012.nc'
-    file_tail_alt = '.200601-210012.nc'
     num_ens = 40
-    ens_break = 34
-    ens_break2 = 36
-    ens_offset = 101
     start_year = 2006
     end_year = 2100
-    break_year = 2081
-    t_break = (break_year-start_year)*months_per_year
     num_years = end_year - start_year + 1
     p0 = 0.05
     if var_name == 'TEMP':
@@ -369,7 +358,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
         sys.exit()
 
     # Read POP grid
-    grid_file = in_dir + file_head + '001' + file_mid + var_name + file_tail_1
+    grid_file = find_lens_file(var_name, 'oce', 'monthly', 1, start_year)[0]
     lon, lat, z, nx, ny, nz = read_pop_grid(grid_file)
 
     # Read MITgcm grid and get boundary location
@@ -398,21 +387,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
             print('Processing ensemble member ' + str(n+1))
             data_ens = np.ma.empty([num_years, nz, nh])
             for year in range(start_year, end_year+1):
-                # Construct the file path and starting time index
-                if n+1 < ens_break:
-                    if year < break_year:
-                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_1
-                        t0 = (year-start_year)*months_per_year
-                    else:
-                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_2
-                        t0 = (year-break_year)*months_per_year
-                else:
-                    if n+1 < ens_break2:
-                        file_path = in_dir + file_head + str(n+1).zfill(3) + file_mid + var_name + file_tail_alt
-                    else:
-                        file_path = in_dir + file_head + str(n+1-ens_break2+ens_offset).zfill(3) + file_mid + var_name + file_tail_alt
-                    t0 = (year-start_year)*months_per_year
-                tf = t0+months_per_year
+                file_path, t0, tf = find_lens_file(var_name, 'oce', 'monthly', n+1, year)
                 print('...processing indices '+str(t0)+'-'+str(tf-1)+' from '+file_path)
                 # Read just this year
                 data_tmp = read_netcdf(file_path, var_name, t_start=t0, t_end=tf)
@@ -461,12 +436,6 @@ def plot_obcs_profiles (year, month, fig_name=None):
     offset_file_head = base_dir+'CESM_bias_correction/obcs/LENS_offset_'
     offset_file_tail = '_E'
     lens_var = ['TEMP', 'SALT']
-    lens_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
-    lens_file_head = '/b.e11.BRCP85C5CNBDRD.f09_g16.001.pop.h.'
-    lens_file_tail_1 = '.200601-208012.nc'
-    lens_file_tail_2 = '.208101-210012.nc'
-    start_year = 2006
-    break_year = 2081
     ymax = -70
     num_var = len(woa_var)
     bdry = 'E'
@@ -484,7 +453,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA)
     dA = xy_to_xyz(dA, grid)
     dA_slice = dA[:,:,-1]
-    lens_grid_file = lens_dir + lens_var[0] + lens_file_head + lens_var[0] + lens_file_tail_1
+    lens_grid_file = find_lens_file(lens_var[0], 'oce', 'monthly', 1, year)
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     # Get the interpolation coefficients from LENS to the eastern boundary
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, lon0, direction)
@@ -503,12 +472,8 @@ def plot_obcs_profiles (year, month, fig_name=None):
         woa_data = woa_data[month-1,:]
         
         # Read LENS data for this month and year
-        if year < break_year:
-            lens_file = lens_dir+lens_var[v]+lens_file_head+lens_var[v]+lens_file_tail_1
-            t0 = (year-start_year)*months_per_year + month-1
-        else:
-            lens_file = lens_dir+lens_var[v]+lens_file_head+lens_var[v]+lens_file_tail_2
-            t0 = (year-break_year)*months_per_year + month-1
+        lens_file, t0_year, tf_year = find_lens_file(lens_var[v], 'oce', 'monthly', 1, year)
+        t0 = t0_year + month-1
         lens_data_3d = read_netcdf(lens_file, lens_var[v], t_start=t0, t_end=t0+1)
         # Extract the slice
         lens_data_slice = extract_slice_nonreg(lens_data_3d, direction, i1, i2, c1, c2)

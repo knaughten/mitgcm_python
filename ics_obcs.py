@@ -5,7 +5,7 @@
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf
-from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
 from .diagnostics import density, potential_density
 
@@ -1150,39 +1150,28 @@ def calc_lens_climatology (out_dir='./'):
     in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
     oce_var = ['TEMP', 'SALT', 'UVEL', 'VVEL']
     ice_var = ['aice', 'hi', 'hs', 'uvel', 'vvel']
-    file_head = '/b.e11.BRCP85C5CNBDRD.f09_g16.'
-    oce_file_mid = '.pop.h.'
-    ice_file_mid = '.cice.h.'
-    oce_file_tail = '.201301-201712.nc'
-    ice_file_tail = '_sh.200601-208012.nc'
-    year0_oce = 2013  # in input files
-    year0_ice = 2006
     start_year = 2013  # for climatology calculation
     end_year = 2017
     num_years = end_year - start_year + 1
     num_ens = 20
 
     # Repeat almost the same code for ocean and sea ice variables
-    for var_names, file_mid, file_tail, year0 in zip([oce_var, ice_var], [oce_file_mid, ice_file_mid], [oce_file_tail, ice_file_tail], [year0_oce, year0_ice]):
+    for var_names, domain in zip([oce_var, ice_var], ['oce', 'ice']):
         # Loop over variables
         for var in var_names:
             print('Processing ' + var)
             data_clim = None
             # Loop over ensemble members and years
             for n in range(num_ens):
-                # Read the whole dataset
-                file_path = in_dir + var + file_head + str(n+1).zfill(3) + file_mid + var + file_tail
-                print('...reading ' + file_path)
-                data = read_netcdf(file_path, var)
+                print('...ensemble member '+str(n+1))
                 for year in range(start_year, end_year+1):
-                    t_start = (year-year0)*months_per_year
-                    t_end = t_start + months_per_year
+                    file_path, t_start, t_end = find_lens_file(var, domain, 'monthly', n+1, year)
+                    data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
                     if data_clim is None:
                         # Initialise the monthly climatology
-                        shape = [months_per_year] + list(data.shape[1:])
-                        data_clim = np.ma.zeros(shape)
-                    # Accumulate the monthly climatology
-                    data_clim += data[t_start:t_end,:]
+                        data_clim = data
+                    else:
+                        data_clim += data
             # Convert from integral to average
             data_clim /= num_years*num_ens
             # Unit conversions
@@ -1362,38 +1351,28 @@ def make_lens_bias_correction_files (out_dir='./'):
 
 
 # Calculate a monthly climatology of T, S, and z from LENS in normalised potential density space: ensemble mean over 40 members, climatology over 1998-2017 for comparison with WOA at each boundary.
-def calc_lens_climatology_npds (out_dir='./'):
+def calc_lens_climatology_density_space (out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
-    var_names = ['TEMP', 'SALT']
-    file_head_1 = '/b.e11.B20TRC5CNBDRD.f09_g16.'
-    file_head_2 = '/b.e11.BRCP85C5CNBDRD.f09_g16.'
-    file_tail_1a = '.185001-200512.nc'
-    file_tail_1b = '.1920-200512.nc'
-    file_tail_2a = '.200601-208012.nc'
-    file_tail_2b = '.200601-210012.nc'
-    start_year_1a = 1850  # in file
-    start_year_1b = 1920
-    break_year = 2006
-    year0 = 1998  # for climatology
-    yearf = 2017
+    var_names = ['TEMP', 'SALT', 'z']
+    start_year = 1998  # for climatology
+    end_year = 2017
+    num_years = end_year-start_year+1
     num_ens = 40
-    ens_break = 34
-    ens_break2 = 36
-    ens_offset = 101
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
-    nz_npd = 100
+    nrho = 100
     bdry_loc = ['N', 'W', 'E']
     num_bdry = len(bdry_loc)
     num_var = len(var_names)
+    out_file_head = 'LENS_climatology_density_space_'
+    out_file_tail = '_'+str(start_year)+'-'+str(end_year)
 
     # Read/generate grids
-    grid_file = in_dir + var_names[0] + file_head_1 + '001' + file_tail_1a
-    lon, lat, z, nx, ny, nz = read_pop_grid(grid_file)
+    grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    lon, lat, z_1d, nx, ny, nz = read_pop_grid(grid_file)
     mit_grid = Grid(mit_grid_dir)
     loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
-    npd = np.linspace(0, 1, num=nz_npd)
+    rho_axis = np.linspace(0, 1, num=nrho)
 
     for b in range(num_bdry):
         print 'Processing '+bdry_loc[b]+' boundary'
@@ -1408,44 +1387,43 @@ def calc_lens_climatology_npds (out_dir='./'):
         # Get interpolation coefficients to extract the slice at this boundary
         i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
         # Interpolate the horizontal axis to this boundary
-        h = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+        h_full = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+        h = trim_slice_to_grid(h_full, h_full, mit_grid, direction)[0]
+        nh = h.size
+        # Tile h and z over the slice to make them 2D
+        h = np.tile(h, (nz, 1))
+        z = np.tile(np.expand_dims(z, 1), (1, nh))
         # Set up array for monthly climatology of T, S, z in density space
-        lens_clim = np.ma.empty([num_var+1, months_per_year, nz_npd, mit_h.size])
+        lens_clim = np.ma.zeros([num_var, months_per_year, nrho, mit_h.size])
         # Loop over ensemble members and time indices
         for n in range(num_ens):
-            for year in range(year0, yearf+1):
+            for year in range(start_year, end_year+1):
                 for month in range(months_per_year):
                     # Read temperature and salinity and slice to boundary
-                    ts_slice = np.ma.empty([num_var, nz, h.size])
-                    for v in range(num_var):
-                        # Construct the file path
-                        file_path = in_dir + var_names[v]
-                        if year < break_year:
-                            file_head = file_head_1
-                            if n == 0:
-                                file_tail = file_tail_1a
-                                start_year = start_year_1a
-                            else:
-                                file_tail = file_tail_1b
-                                start_year = start_year_1b
-                        else:
-                            file_head = file_head_2
-                            start_year = break_year
-                            if n+1 < ens_break:
-                                
-
-                    
-                    
-    # Read T and S for this time index
-    # Slice to boundary
-    # Calculate potential density at this slice and normalise 0-1
-    # Regrid all 3 variables to new density axis (2D nonregular interpolation along one axis - if need to do along both axes, regrid to MITgcm horizontal axis at the same time)
-    # Accumulate monthly climatology
-    # When done loop, convert from integral to mean, and save to binary file
-    
-    
-
-
+                    ts_slice = np.ma.empty([num_var-1, nz, nh])
+                    for v in range(num_var-1):
+                        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
+                        t0 = t0_year+month
+                        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction)[0]
+                        # Fill the mask with nearest neighbours
+                        data_slice = fill_into_mask(data_slice, use_3d=False, log=False)
+                        ts_slice[v,:] = data_slice
+                    # Calculate potential density at this slice
+                    rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
+                    # Normalise to the range 0-1
+                    rho_min = np.amin(rho)
+                    rho_max = np.amax(rho)
+                    rho_norm = (rho - rho_min)/(rho_max - rho_min)
+                    # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
+                    for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
+                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
+        # Convert from integral to average
+        lens_clim /= (num_ens*num_years)
+        # Save to binary file
+        for v in range(num_var):
+            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+out_file_tail)
 
 
         

@@ -10,7 +10,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
-from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files
+from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files, find_lens_file
 from .utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
 from .interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
 from .constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
@@ -1115,59 +1115,15 @@ def lens_atm_forcing (var, ens, in_dir, out_dir):
     else:
         start_year = 1920
     end_year = 2100
-    days_per_year = 365
-    months_per_year = 12
-    ens_str = str(ens).zfill(3)
-
-    if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
-        print(('Error (lens_atm_forcing): Invalid variable ' + var))
-        sys.exit()
-
-    path = real_dir(in_dir)
-    # Decide if monthly or daily data
-    monthly = var in ['FLDS', 'FSDS']
-    if monthly:        
-        path += 'monthly/'
+    if var in ['FLDS', 'FSDS']:
+        freq = 'monthly'
     else:
-        path += 'daily/'
-    path += var + '/'
+        freq = 'daily'
 
     for year in range(start_year, end_year+1):
         print(('Processing ' + str(year)))
-        if year < 2006:
-            year0 = start_year
-            file_head = 'b.e11.B20TRC5CNBDRD.f09_g16.'
-            if monthly:
-                file_tail = '.'+str(start_year)+'01-200512.nc'
-            else:
-                file_tail = '.'+str(start_year)+'0101-20051231.nc'
-        else:
-            file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.'
-            if year < 2081:
-                year0 = 2006
-                if monthly:
-                    file_tail = '.200601-208012.nc'
-                else:
-                    file_tail = '.20060101-20801231.nc'
-            else:
-                year0 = 2081
-                if monthly:
-                    file_tail = '.208101-210012.nc'
-                else:
-                    file_tail = '.20810101-21001231.nc'
-        if monthly:
-            file_mid = '.cam.h0.'
-        else:
-            file_mid = '.cam.h1.'
-        file_path = path + file_head + ens_str + file_mid + var + file_tail
-        # Choose time indicies
-        if monthly:
-            per_year = months_per_year
-        else:
-            per_year = days_per_year
-        t_start = (year-year0)*per_year
-        t_end = t_start + per_year
-        print(('Reading indices ' + str(t_start) + '-' + str(t_end-1)))
+        file_path, t_start, t_end = find_lens_file(var, 'atm', freq, ens, year)
+        print('Reading indices ' + str(t_start) + '-' + str(t_end-1) + ' from ' + file_path)
         # Read data
         data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
         # Unit conversions

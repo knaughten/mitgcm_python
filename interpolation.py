@@ -354,6 +354,22 @@ def discard_and_fill (data, discard, fill, missing_val=-9999, use_1d=False, use_
                 sys.exit()
     return data
 
+
+# Wrapper to completely fill the mask (either provided as a separate mask/hfac where 0 means masked, or as a MaskedArray within the data)
+def fill_into_mask (data, mask=None, missing_val=-9999, use_1d=False, use_3d=True, preference='horizontal', log=True):
+
+    if mask is not None:
+        discard = mask==0
+    elif isinstance(data, np.ma.MaskedArray):
+        discard = data.mask
+    else:
+        print('Error (fill_into_mask): must provide a mask or use a MaskedArray')
+        sys.exit()
+    fill = np.ones(data.shape).astype(bool)
+    return discard_and_fill(data, discard, fill, missing_val=missing_val, use_1d=use_1d, use_3d=use_3d, preference=preference, log=log)
+    
+
+
 # Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
 # If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
 def interp_slice_helper (data, val0, lon=False):
@@ -449,9 +465,7 @@ def interp_bdry (source_h, source_z, source_data, source_hfac, target_h, target_
             source_hfac = np.concatenate((source_hfac, np.expand_dims(source_hfac[-1,:], 0)), axis=0)
 
     # Extend all the way into the mask
-    discard = source_hfac==0
-    fill = np.ones(source_data.shape).astype(bool)
-    source_data = discard_and_fill(source_data, discard, fill, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False)
+    source_data = fill_into_mask(source_data, mask=source_hfac, missing_val=missing_val, use_1d=(not depth_dependent), use_3d=False, log=False)
     
     # Interpolate
     if depth_dependent:
