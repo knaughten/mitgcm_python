@@ -18,6 +18,8 @@ sec_per_day = 24*60*60.
 sec_per_year = 365.25*sec_per_day
 # Months per year
 months_per_year = 12
+# Days per year if not leap year
+days_per_year = 365
 # Degrees to radians conversion factor
 deg2rad = np.pi/180.0
 rad2deg = 1./deg2rad
