@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
 from ..grid import Grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
@@ -478,14 +478,14 @@ def plot_obcs_profiles (year, month, fig_name=None):
     offset_file_tail = '_E'
     lens_var = ['TEMP', 'SALT']
     lens_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
-    lens_file_head = 'b.e11.BRCP85C5CNBDRD.f09_g16.001.pop.h.'
+    lens_file_head = '/b.e11.BRCP85C5CNBDRD.f09_g16.001.pop.h.'
     lens_file_tail_1 = '.200601-208012.nc'
     lens_file_tail_2 = '.208101-210012.nc'
     start_year = 2006
     break_year = 2081
     ymax = -70
     num_var = len(woa_var)
-    lon0 = find_obcs_boundary(grid, 'E')[0]
+    bdry = 'E'
     direction = 'lon'
     ndays = np.array([days_per_month(t+1, year) for t in range(12)])
     titles = ['WOA', 'LENS uncorrected', 'LENS corrected monthly', 'LENS corrected annual']
@@ -494,12 +494,13 @@ def plot_obcs_profiles (year, month, fig_name=None):
 
     # Build the grids
     grid = Grid(mit_grid_dir)
+    lon0 = find_obcs_boundary(grid, bdry)[0]
     hfac_slice = grid.hfac[:,:,-1]
     # Mask out dA north of 70S, tile in the z direction, and select the boundary
     dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA)
     dA = xy_to_xyz(dA, grid)
     dA_slice = dA[:,:,-1]
-    lens_grid_file = lens_dir + lens_file_head + lens_var[0] + lens_file_tail_1
+    lens_grid_file = lens_dir + lens_var[0] + lens_file_head + lens_var[0] + lens_file_tail_1
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     # Get the interpolation coefficients from LENS to the eastern boundary
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, lon0, direction)
@@ -519,10 +520,10 @@ def plot_obcs_profiles (year, month, fig_name=None):
         
         # Read LENS data for this month and year
         if year < break_year:
-            lens_file = lens_dir+lens_file_head+lens_var[v]+lens_file_tail_1
+            lens_file = lens_dir+lens_var[v]+lens_file_head+lens_var[v]+lens_file_tail_1
             t0 = (year-start_year)*months_per_year + month-1
         else:
-            lens_file = lense_dir+lens_file_head+lens_var[v]+lens_file_tail_2
+            lens_file = lens_dir+lens_var[v]+lens_file_head+lens_var[v]+lens_file_tail_2
             t0 = (year-break_year)*months_per_year + month-1
         lens_data_3d = read_netcdf(lens_file, lens_var[v], t_start=t0, t_end=t0+1)
         # Extract the slice
@@ -543,19 +544,22 @@ def plot_obcs_profiles (year, month, fig_name=None):
         for data_slice, n in zip([woa_data, lens_data_uncorrected, lens_data_corrected_monthly, lens_data_corrected_annual], range(num_profiles)):
             profiles[v,n,:] = np.sum(data_slice*hfac_slice*dA_slice, axis=-1)/np.sum(hfac_slice*dA_slice, axis=-1)
 
-
     # Plot
     fig, gs = set_panels('1x2C0')
+    gs.update(left=0.08, bottom=0.18, top=0.87)
     for v in range(num_var):
         ax = plt.subplot(gs[0,v])
         for n in range(num_profiles):
             ax.plot(profiles[v,n,:], grid.z, color=colours[n], label=titles[n])
         ax.grid(linestyle='dotted')
-        ax.set_title(lens_var[n], fontsize=16)
-        ax.set_xlabel(units[n])
-        if n==0:
+        ax.set_title(lens_var[v], fontsize=16)
+        ax.set_xlabel(units[v])
+        if v==0:
             ax.set_ylabel('Depth (m)')
-            ax.legend(loc='lower right', bbox_to_anchor=(1, -0.35))
+            ax.legend(loc='lower right', bbox_to_anchor=(1.7, -0.2), ncol=num_profiles)
+        else:
+            ax.set_yticklabels([])
+    plt.suptitle(bdry + ' boundary, '+str(year)+'/'+str(month).zfill(2), fontsize=16)
     finished_plot(fig, fig_name=fig_name)
     
         
