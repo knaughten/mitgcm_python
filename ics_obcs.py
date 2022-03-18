@@ -2,12 +2,12 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from .grid import Grid, grid_check_split, choose_grid
+from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
-from .diagnostics import density
+from .diagnostics import density, potential_density
 
 import numpy as np
 import os
@@ -1359,6 +1359,91 @@ def make_lens_bias_correction_files (out_dir='./'):
                 # Save to file
                 out_file = out_dir + 'LENS_offset_' + var_lens[v] + '_' + bdry
                 write_binary(lens_offset, out_file)
+
+
+# Calculate a monthly climatology of T, S, and z from LENS in normalised potential density space: ensemble mean over 40 members, climatology over 1998-2017 for comparison with WOA at each boundary.
+def calc_lens_climatology_npds (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    in_dir = '/data/oceans_input/raw_input_data/CESM/LENS/monthly/'
+    var_names = ['TEMP', 'SALT']
+    file_head_1 = '/b.e11.B20TRC5CNBDRD.f09_g16.'
+    file_head_2 = '/b.e11.BRCP85C5CNBDRD.f09_g16.'
+    file_tail_1a = '.185001-200512.nc'
+    file_tail_1b = '.1920-200512.nc'
+    file_tail_2a = '.200601-208012.nc'
+    file_tail_2b = '.200601-210012.nc'
+    start_year_1a = 1850  # in file
+    start_year_1b = 1920
+    break_year = 2006
+    year0 = 1998  # for climatology
+    yearf = 2017
+    num_ens = 40
+    ens_break = 34
+    ens_break2 = 36
+    ens_offset = 101
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    nz_npd = 100
+    bdry_loc = ['N', 'W', 'E']
+    num_bdry = len(bdry_loc)
+    num_var = len(var_names)
+
+    # Read/generate grids
+    grid_file = in_dir + var_names[0] + file_head_1 + '001' + file_tail_1a
+    lon, lat, z, nx, ny, nz = read_pop_grid(grid_file)
+    mit_grid = Grid(mit_grid_dir)
+    loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
+    npd = np.linspace(0, 1, num=nz_npd)
+
+    for b in range(num_bdry):
+        print 'Processing '+bdry_loc[b]+' boundary'
+        if bdry in ['N', 'S']:
+            direction = 'lat'
+            h_2d = lon
+            mit_h = grid.lon_1d
+        elif bdry in ['E', 'W']:
+            direction = 'lon'
+            h_2d = lat
+            mit_h = grid.lat_1d
+        # Get interpolation coefficients to extract the slice at this boundary
+        i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
+        # Interpolate the horizontal axis to this boundary
+        h = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+        # Set up array for monthly climatology of T, S, z in density space
+        lens_clim = np.ma.empty([num_var+1, months_per_year, nz_npd, mit_h.size])
+        # Loop over ensemble members and time indices
+        for n in range(num_ens):
+            for year in range(year0, yearf+1):
+                for month in range(months_per_year):
+                    # Read temperature and salinity and slice to boundary
+                    ts_slice = np.ma.empty([num_var, nz, h.size])
+                    for v in range(num_var):
+                        # Construct the file path
+                        file_path = in_dir + var_names[v]
+                        if year < break_year:
+                            file_head = file_head_1
+                            if n == 0:
+                                file_tail = file_tail_1a
+                                start_year = start_year_1a
+                            else:
+                                file_tail = file_tail_1b
+                                start_year = start_year_1b
+                        else:
+                            file_head = file_head_2
+                            start_year = break_year
+                            if n+1 < ens_break:
+                                
+
+                    
+                    
+    # Read T and S for this time index
+    # Slice to boundary
+    # Calculate potential density at this slice and normalise 0-1
+    # Regrid all 3 variables to new density axis (2D nonregular interpolation along one axis - if need to do along both axes, regrid to MITgcm horizontal axis at the same time)
+    # Accumulate monthly climatology
+    # When done loop, convert from integral to mean, and save to binary file
+    
+    
 
 
 

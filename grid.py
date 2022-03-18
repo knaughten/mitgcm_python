@@ -1077,6 +1077,18 @@ class ZGrid:
 
         self.z = z
         self.nz = z.size
+
+
+# Helper function to build the POP grid, given any LENS ocean file.
+def read_pop_grid (file_path):
+
+    lon = fix_lon_range(read_netcdf(file_path, 'TLONG'))
+    lat = read_netcdf(file_path, 'TLAT')
+    z = -1e-2*read_netcdf(file_path, 'z_t')
+    nz = z.size
+    ny = lat.shape[0]
+    nx = lon.shape[1]
+    return lon, lat, z, nx, ny, nz
         
         
 

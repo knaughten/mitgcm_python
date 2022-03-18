@@ -11,7 +11,7 @@ from scipy.stats import linregress, ttest_1samp
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
-from ..grid import Grid
+from ..grid import Grid, read_pop_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
@@ -63,19 +63,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None):
         else:
             fig_name=None
         read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name)
-
-
-# Helper function to build the POP grid, given any LENS ocean file.
-def read_pop_grid (file_path):
-
-    lon = fix_lon_range(read_netcdf(file_path, 'TLONG'))
-    lat = read_netcdf(file_path, 'TLAT')
-    z = -1e-2*read_netcdf(file_path, 'z_t')
-    nz = z.size
-    ny = lat.shape[0]
-    nx = lon.shape[1]
-    return lon, lat, z, nx, ny, nz
-        
+ 
 
 # Compare time-averaged temperature and salinity boundary conditions from PACE over 2006-2013 (equivalent to the first 20 ensemble members of LENS actually!) to the WOA boundary conditions used for the original simulations.
 def compare_bcs_ts_mean (fig_dir='./'):
@@ -390,13 +378,9 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
     # Find interpolation coefficients to the POP grid
     if bdry in ['N', 'S']:
         direction = 'lat'
-        hmin = find_obcs_boundary(mit_grid, 'W')[0]
-        hmax = find_obcs_boundary(mit_grid, 'E')[0]
         h_2d = lon
     elif bdry in ['E', 'W']:
         direction = 'lon'
-        hmin = find_obcs_boundary(mit_grid, 'S')[0]
-        hmax = find_obcs_boundary(mit_grid, 'N')[0]
         h_2d = lat
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0, direction)
     # Interpolate the horizontal axis to this boundary

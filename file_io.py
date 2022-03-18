@@ -8,6 +8,7 @@ import os
 import datetime
 
 from .utils import days_per_month, real_dir, is_depth_dependent, average_12_months
+from .constants import months_per_year, days_per_year
 
 
 # Read a single variable from a NetCDF file. The default behaviour is to read and return the entire record (all time indices), but you can also select a subset of time indices, and/or time-average - see optional keyword arguments.
@@ -679,6 +680,60 @@ def read_annual_average (var_name, file_paths, return_years=False):
     else:
         return data_annual
 
+
+# Generate the file name and starting index for a LENS variable for the given year and ensemble member.
+def find_lens_file (var_name, domain, freq, ens, year, base_dir='/data/oceans_input/raw_input_data/CESM/LENS/'):
+
+    file_path = real_dir(base_dir) + freq + '/' + var_name + '/'
+    if year < 2006:
+        file_path += 'b.e11.B20TRC5CNBDRD.f09_g16.'
+    if ens < 36:
+        file_path += str(ens).zfill(3)
+    else:
+        file_path += str(ens-35+100).zfill(3)
+    if domain == 'atm':
+        if freq == 'monthly':
+            file_path += '.cam.h0.'
+        elif freq == 'daily':
+            file_path += '.cam.h1.'
+    elif domain == 'oce':
+        file_path += '.pop.h.'
+    elif domain == 'ice':
+        file_path += '.cice.h.'
+    file_path += var_name
+    if year < 2006:
+        if ens == 1:
+            start_year = 1850
+        else:
+            start_year = 1920
+        end_year = 2005
+    elif year < 2081:
+        start_year = 2006
+        if ens < 34:
+            end_year = 2080
+        else:
+            end_year = 2100
+    else:
+        if ens >= 34:
+            start_year = 2006
+        else:
+            start_year = 2081
+        end_year = 2100
+    if freq == 'daily':
+        file_path += '.' + str(start_year) + '0101-' + str(end_year) + '1231.nc'
+        per_year = days_per_year
+    elif freq == 'monthly':
+        file_path += '.' + str(start_year) + '01-' + str(end_year) + '12.nc'
+        per_year = months_per_year
+    t0 = (year-start_year)*per_year
+    if not os.path.isfile(file_path):
+        print('Error (find_lens_file): invalid file formulation for '+var_name+', '+domain+', '+freq+', '+str(ens)+', '+str(year))
+        sys.exit()
+    return file_path, t0
+    
+        
+            
+    
 
             
 
