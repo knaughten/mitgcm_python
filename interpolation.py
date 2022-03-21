@@ -521,11 +521,16 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
 
 # Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).
 # The input lat and lon arrays should be 2D for the source grid, and either 1D (if regular) or 2D for the target grid.
-# Fill anything outside the bounds of the source grid with fill_value. If there are any such missing values within the bounds of the source grid, fill them with the average of the legitimate points as to not mess up the interpolation.
-def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999):
+# Fill anything outside the bounds of the source grid with fill_value. If fill_mask=True, fill them with the nearest neighbours instead.
+def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, fill_mask=False):
 
     from scipy.interpolate import griddata
 
+    # Check for missing values
+    missing = source_data == fill_value
+    if isinstance(source_data, np.ma.MaskedArray):
+        missing += source_data.mask
+        
     # Any missing values: fill with average
     source_data[source_data==fill_value] = np.mean(source_data[source_data!=fill_value])
 
@@ -535,14 +540,18 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
         target_lon, target_lat = np.meshgrid(target_lon, target_lat)
 
     # Set up an nx2 array containing the coordinates of each point in the source grid
-    source_points = np.stack((np.ravel(source_lon), np.ravel(source_lat)), axis=-1)
+    source_points = np.stack((np.ravel(source_lon[~missing]), np.ravel(source_lat[~missing])), axis=-1)
     # Same for the target grid
     target_points = np.stack((np.ravel(target_lon), np.ravel(target_lat)), axis=-1)
     # Also flatten the data
-    source_values = np.ravel(source_data)
+    source_values = np.ravel(source_data[~missing])
     
     # Interpolate
     data_interp = griddata(source_points, source_values, target_points, method='linear', fill_value=fill_value)
+    if fill_mask:
+        data_interp_2 = griddata(source_points, source_values, target_points, method='nearest')
+        index = data_interp==fill_value
+        data_interp[index] = data_interp_2[index]
     # Un-flatten the result
     return np.reshape(data_interp, target_lon.shape)
 

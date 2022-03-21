@@ -1409,8 +1409,6 @@ def calc_lens_climatology_density_space (out_dir='./'):
                         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
                         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
                         data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
-                        # Fill the mask with nearest neighbours
-                        data_slice = fill_into_mask(data_slice, use_3d=False, log=False)
                         ts_slice[v,:] = data_slice
                     # Calculate potential density at this slice
                     rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
@@ -1420,7 +1418,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
                     rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
                     # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
                     for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
-                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
+                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis, fill_mask=True)
         # Convert from integral to average
         lens_clim /= (num_ens*num_years)
         # Save to binary file
@@ -1442,26 +1440,41 @@ def calc_woa_density_space (out_dir='./'):
     file_tail_in = '_woa_mon.bin'
     file_head_out = out_dir + 'WOA_density_space_'
     num_var = len(var_names_out)
+    num_bdry = len(bdry_loc)
     nrho = 100
 
     grid = Grid(grid_dir)
+    rho_axis = np.linspace(0, 1, num=nrho)
 
     for b in range(num_bdry):
         print('Processing '+bdry_loc[b]+' boundary')
         if bdry_loc[b] in ['N', 'S']:
-            h = grid.lon_2d
+            h = grid.lon_1d
             nh = grid.nx
             dimensions = 'xzt'
         elif bdry_loc[b] in ['E', 'W']:
-            h = grid.lat_2d
+            h = grid.lat_1d
             nh = grid.ny
             dimensions = 'yzt'
+        h_2d = np.tile(h, (grid.nz, 1))
         z = np.tile(np.expand_dims(grid.z, 1), (1, nh))
+        if bdry_loc[b] == 'N':
+            hfac = grid.hfac[:,-1,:]
+        elif bdry_loc[b] == 'S':
+            hfac = grid.hfac[:,0,:]
+        elif bdry_loc[b] == 'E':
+            hfac = grid.hfac[:,:,-1]
+        elif bdry_loc[b] == 'W':
+            hfac = grid.hfac[:,:,0]
+        hfac = add_time_dim(hfac, months_per_year)
         # Read temperature and salinity at this boundary
         ts_bdry = np.ma.empty([num_var-1, months_per_year, grid.nz, nh])
         for v in range(num_var-1):
-            file_path = in_dir + file_head_in + bdry_loc[b] + '_' + var_names_in[v] + file_tail_in
-            ts_bdry[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+            file_path = file_head_in + bdry_loc[b] + var_names_in[v] + file_tail_in
+            woa_data = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+            # Apply land mask
+            woa_data = np.ma.masked_where(hfac==0, woa_data)
+            ts_bdry[v,:] = woa_data
         woa_clim = np.ma.zeros([num_var, months_per_year, nrho, nh])            
         for month in range(months_per_year):
             # Calculate potential density at this boundary for this month
@@ -1472,7 +1485,7 @@ def calc_woa_density_space (out_dir='./'):
             rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
             # Regrid to the new density axis
             for data, v in zip([ts_bdry[0,month,:], ts_bdry[1,month,:], z], np.arange(num_var)):
-                woa_clim[v,month,:] = interp_nonreg_xy(h, rho_norm, data, h, rho_axis)
+                woa_clim[v,month,:] = interp_nonreg_xy(h_2d, rho_norm, data, h, rho_axis, fill_mask=True)
         # Save to binary file
         for v in range(num_var):
-            write_binary(woa_clim[v,:], out_dir+file_head_out+var_names_out[v]+'_'+bdry_loc[b])
+            write_binary(woa_clim[v,:], file_head_out+var_names_out[v]+'_'+bdry_loc[b])
