@@ -1427,7 +1427,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
         lens_clim /= (num_ens*num_years)
         # Save to binary file
         for v in range(num_var):
-            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+out_file_tail)
+            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+'_'+bdry_loc[b]+out_file_tail)
 
 
         
