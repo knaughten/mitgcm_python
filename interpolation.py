@@ -643,7 +643,7 @@ def extract_slice_nonreg (data, direction, i1, i2, c1, c2):
     num_pts = i1.size
     for j in range(num_pts):
         if direction == 'lat':
-            data_slice[...,j] = c1[j]*data[...,int(i1[j]),j] + c2*data[...,int(i2[j]),j]
+            data_slice[...,j] = c1[j]*data[...,int(i1[j]),j] + c2[j]*data[...,int(i2[j]),j]
         elif direction == 'lon':
             data_slice[...,j] = c1[j]*data[...,j,int(i1[j])] + c2[j]*data[...,j,int(i2[j])]
     return data_slice

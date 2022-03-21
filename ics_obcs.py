@@ -4,7 +4,7 @@
 
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
-from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf
+from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
 from .diagnostics import density, potential_density
@@ -1376,14 +1376,14 @@ def calc_lens_climatology_density_space (out_dir='./'):
 
     for b in range(num_bdry):
         print('Processing '+bdry_loc[b]+' boundary')
-        if bdry in ['N', 'S']:
+        if bdry_loc[b] in ['N', 'S']:
             direction = 'lat'
             h_2d = lon
-            mit_h = grid.lon_1d
-        elif bdry in ['E', 'W']:
+            mit_h = mit_grid.lon_1d
+        elif bdry_loc[b] in ['E', 'W']:
             direction = 'lon'
             h_2d = lat
-            mit_h = grid.lat_1d
+            mit_h = mit_grid.lat_1d
         # Get interpolation coefficients to extract the slice at this boundary
         i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
         # Interpolate the horizontal axis to this boundary
