@@ -1412,6 +1412,8 @@ def calc_lens_climatology_density_space (out_dir='./'):
                         ts_slice[v,:] = data_slice
                     # Calculate potential density at this slice
                     rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
+                    # Apply land mask
+                    rho = np.ma.masked_where(ts_slice[1,:].mask, rho)
                     # Normalise to the range 0-1 in every water column
                     rho_min = np.amin(rho, axis=0)
                     rho_max = np.amax(rho, axis=0)
@@ -1466,19 +1468,17 @@ def calc_woa_density_space (out_dir='./'):
             hfac = grid.hfac[:,:,-1]
         elif bdry_loc[b] == 'W':
             hfac = grid.hfac[:,:,0]
-        hfac = add_time_dim(hfac, months_per_year)
         # Read temperature and salinity at this boundary
         ts_bdry = np.ma.empty([num_var-1, months_per_year, grid.nz, nh])
         for v in range(num_var-1):
             file_path = file_head_in + bdry_loc[b] + var_names_in[v] + file_tail_in
-            woa_data = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
-            # Apply land mask
-            woa_data = np.ma.masked_where(hfac==0, woa_data)
-            ts_bdry[v,:] = woa_data
+            ts_bdry[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
         woa_clim = np.ma.zeros([num_var, months_per_year, nrho, nh])            
         for month in range(months_per_year):
             # Calculate potential density at this boundary for this month
             rho = potential_density('MDJWF', ts_bdry[1,month,:], ts_bdry[0,month,:])
+            # Apply land mask
+            rho = np.ma.masked_where(hfac==0, rho)
             # Normalise to the range 0-1 in every water column
             rho_min = np.amin(rho, axis=0)
             rho_max = np.amax(rho, axis=0)
