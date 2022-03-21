@@ -1414,15 +1414,13 @@ def calc_lens_climatology_density_space (out_dir='./'):
                         ts_slice[v,:] = data_slice
                     # Calculate potential density at this slice
                     rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
-                    # Normalise to the range 0-1
-                    rho_min = np.amin(rho)
-                    rho_max = np.amax(rho)
-                    rho_norm = (rho - rho_min)/(rho_max - rho_min)
+                    # Normalise to the range 0-1 in every water column
+                    rho_min = np.amin(rho, axis=0)
+                    rho_max = np.amax(rho, axis=0)
+                    rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
                     # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
                     for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
-                        lens_clim_tmp = interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
-                        lens_clim_tmp = np.ma.masked_where(lens_clim_tmp==-9999, lens_clim_tmp)
-                        lens_clim[v,month,:] += lens_clim_tmp
+                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
         # Convert from integral to average
         lens_clim /= (num_ens*num_years)
         # Save to binary file
@@ -1430,4 +1428,51 @@ def calc_lens_climatology_density_space (out_dir='./'):
             write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+'_'+bdry_loc[b]+out_file_tail)
 
 
-        
+# Calculate the WOA climatology of T, S, and z in normalised potential density space, as above.
+def calc_woa_density_space (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    in_dir = base_dir + 'ics_obcs/PAS/'
+    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    bdry_loc = ['N', 'W', 'E']
+    var_names_in = ['theta', 'salt']
+    var_names_out = ['TEMP', 'SALT', 'z']
+    file_head_in = in_dir + 'OB'
+    file_tail_in = '_woa_mon.bin'
+    file_head_out = out_dir + 'WOA_density_space_'
+    num_var = len(var_names_out)
+    nrho = 100
+
+    grid = Grid(grid_dir)
+
+    for b in range(num_bdry):
+        print('Processing '+bdry_loc[b]+' boundary')
+        if bdry_loc[b] in ['N', 'S']:
+            h = grid.lon_2d
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry_loc[b] in ['E', 'W']:
+            h = grid.lat_2d
+            nh = grid.ny
+            dimensions = 'yzt'
+        z = np.tile(np.expand_dims(grid.z, 1), (1, nh))
+        # Read temperature and salinity at this boundary
+        ts_bdry = np.ma.empty([num_var-1, months_per_year, grid.nz, nh])
+        for v in range(num_var-1):
+            file_path = in_dir + file_head_in + bdry_loc[b] + '_' + var_names_in[v] + file_tail_in
+            ts_bdry[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+        woa_clim = np.ma.zeros([num_var, months_per_year, nrho, nh])            
+        for month in range(months_per_year):
+            # Calculate potential density at this boundary for this month
+            rho = potential_density('MDJWF', ts_bdry[1,month,:], ts_bdry[0,month,:])
+            # Normalise to the range 0-1 in every water column
+            rho_min = np.amin(rho, axis=0)
+            rho_max = np.amax(rho, axis=0)
+            rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
+            # Regrid to the new density axis
+            for data, v in zip([ts_bdry[0,month,:], ts_bdry[1,month,:], z], np.arange(num_var)):
+                woa_clim[v,month,:] = interp_nonreg_xy(h, rho_norm, data, h, rho_axis)
+        # Save to binary file
+        for v in range(num_var):
+            write_binary(woa_clim[v,:], out_dir+file_head_out+var_names_out[v]+'_'+bdry_loc[b])
