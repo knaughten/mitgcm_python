@@ -16,7 +16,6 @@ import netCDF4 as nc
 from nco import Nco
 from nco.custom import Limit
 
-
 # Helper function for make_sose_climatology and make_bsose_climatology.
 # Given an array of monthly data for multiple years, calculate the monthly climatology.
 def calc_climatology (data):
@@ -1489,3 +1488,38 @@ def calc_woa_density_space (out_dir='./'):
         # Save to binary file
         for v in range(num_var):
             write_binary(woa_clim[v,:], file_head_out+var_names_out[v]+'_'+bdry_loc[b])
+
+
+# Calculate offsets for LENS with respect to WOA
+def calc_lens_offsets_density_space (in_dir='./', out_dir='./'):
+
+    in_dir = real_dir(in_dir)
+    out_dir = real_dir(out_dir)    
+    var_names = ['TEMP', 'SALT', 'z']
+    bdry_loc = ['N', 'W', 'E']
+    lens_file_head = in_dir+'LENS_climatology_density_space_'
+    lens_file_tail = '_1998-2017'
+    woa_file_head = in_dir+'WOA_density_space_'
+    out_file_head = out_file+'LENS_offset_density_space_'
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    nrho = 100
+    
+    grid = Grid(mit_grid_dir)
+
+    for bdry in bdry_loc:
+        if bdry in ['N', 'S']:
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry] in ['E', 'W']:
+            nh = grid.ny
+            dimensions = 'yzt'
+        for var in var_names:
+            woa_data = read_binary(woa_file_head+var+'_'+bdry, [grid.nx, grid.ny, nrho], dimensions)
+            lens_data = read_binary(lens_file_head+var+'_'+bdry+lens_file_tail, [grid.nx, grid.ny, nrho], dimensions)
+            lens_offset = woa_data - lens_data
+            write_binary(lens_offset, out_file_head+var+'_'+bdry)
+
+
+    
+
+    

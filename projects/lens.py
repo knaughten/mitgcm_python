@@ -512,21 +512,65 @@ def plot_obcs_profiles (year, month, fig_name=None):
     finished_plot(fig, fig_name=fig_name)
     
         
-        
-        
-    
-    
-    
-    
+# Plot the LENS and WOA density space climatologies and the offset, for the given variable, boundary, and month (1-indexed)
+def plot_lens_offsets_density_space (var, bdry, month, in_dir='./', fig_name=None):
+
+    in_dir = real_dir(in_dir)
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    nrho = 100
+    lens_file = in_dir+'LENS_climatology_density_space_'+var+'_'+bdry+'_1998-2017'
+    woa_file = in_dir+'WOA_density_space_'+var+'_'+bdry
+    offset_file = in_dir+'LENS_offset_density_space_'+var+'_'+bdry
+    file_paths = [lens_file, woa_file, offset_file]
+    titles = ['LENS climatology', 'WOA climatology', 'LENS offset']
+    num_panels = len(titles)
+
+    grid = Grid(mit_grid_dir)
+    rho_axis = np.linspace(0, 1, num=nrho)
+    if bdry in ['N', 'S']:
+        h = grid.lon_1d
+        nh = grid.nx
+        dimensions = 'xzt'
+    elif bdry in ['E', 'W']:
+        h = grid.lat_1d
+        nh = grid.ny
+        dimensions = 'yzt'
+    if bdry == 'N':
+        hfac = grid.hfac[:,-1,:]
+    elif bdry == 'S':
+        hfac = grid.hfac[:,0,:]
+    elif bdry == 'E':
+        hfac = grid.hfac[:,:,-1]
+    elif bdry == 'W':
+        hfac = grid.hfac[:,:,0]
+    hfac_sum = np.tile(np.sum(hfac, axis=0), (nrho, 1))
+
+    data = np.ma.empty([num_panels, nrho, nh])
+    for n in range(num_panels):
+        data_tmp = read_binary(file_paths[n], [grid.nx, grid.ny, nrho], dimensions)[month-1,:]
+        data[n,:] = np.ma.masked_where(hfac_sum==0, data_tmp)
+    fig, gs, cax1, cax2 = set_panels('1x3C2')
+    cax = [cax1, None, cax2]
+    for n in range(num_panels):
+        ax = plt.subplot(gs[0,n])
+        if n < 2:
+            cmap, vmin, vmax = set_colours(data[:2,:])
+        else:
+            cmap, vmin, vmax = set_colours(data[n,:], ctype='plusminus')
+        img = ax.pcolormesh(h, rho_axis, data[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
+        if cax[n] is not None:
+            plt.cbar(img, cax=cax[n])
+        ax.set_title(titles[n], fontsize=12)
+    plt.suptitle(var+' at '+bdry+' boundary, month '+str(month), fontsize=14)
+    finished_plot(fig, fig_name=fig_name)
 
 
-        
-                    
-                
-            
-            
-            
-        
+def plot_all_offsets_density_space (in_dir='./'):
+
+    for bdry in ['N', 'W', 'E']:
+        for var in ['TEMP', 'SALT', 'z']:
+            for month in range(12):
+                plot_lens_offsets_density_space(var, bdry, month+1, in_dir=in_dir)        
 
     
 
