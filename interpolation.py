@@ -372,7 +372,7 @@ def fill_into_mask (data, mask=None, missing_val=-9999, use_1d=False, use_3d=Tru
 
 # Given a monotonically increasing 1D array "data", and a scalar value "val0", find the indicies i1, i2 and interpolation coefficients c1, c2 such that c1*data[i1] + c2*data[i2] = val0.
 # If the array is longitude and may not be strictly increasing, and/or there is the possibility of val0 in the gap between the periodic boundary, set lon=True.
-def interp_slice_helper (data, val0, lon=False):
+def interp_slice_helper (data, val0, lon=False, warn=True):
 
     if lon:
         # Transformation to make sure longitude array is strictly increasing
@@ -395,8 +395,9 @@ def interp_slice_helper (data, val0, lon=False):
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
     if i2 != i1+1:
-        print('Warning (interp_slice_helper): i1='+str(i1)+' but i2='+str(i2))
-        print('Setting i2='+str(i1+1)+', is this what you want?')
+        if warn:
+            print('Warning (interp_slice_helper): i1='+str(i1)+' but i2='+str(i2))
+            print('Setting i2='+str(i1+1)+', is this what you want?')
         i2 = i1+1
     # Calculate the weighting coefficients
     c2 = (val0 - data[i1])/(data[i2] - data[i1])

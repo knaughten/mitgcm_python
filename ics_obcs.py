@@ -5,7 +5,7 @@
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
-from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
 from .diagnostics import density, potential_density
 
@@ -1194,21 +1194,21 @@ def calc_lens_climatology (out_dir='./'):
 
 
 # Trim a slice and corresponding axis to the given limits.
-def trim_slice (data, h, hmin=None, hmax=None, lon=False):
+def trim_slice (data, h, hmin=None, hmax=None, lon=False, warn=True):
 
     if hmin is not None:
-        j1 = interp_slice_helper(h, hmin, lon=lon)[0]
+        j1 = interp_slice_helper(h, hmin, lon=lon, warn=warn)[0]
     else:
         j1 = 0
     if hmax is not None:
-        j2 = interp_slice_helper(h, hmax, lon=lon)[1]
+        j2 = interp_slice_helper(h, hmax, lon=lon, warn=warn)[1]
     else:
         j2 = h.size-1
     return data[...,j1:j2+1], h[j1:j2+1]
 
 
 # Trim a slice and corresponding axis to the limits of the MITgcm grid.
-def trim_slice_to_grid (data, h, grid, direction):
+def trim_slice_to_grid (data, h, grid, direction, warn=True):
 
     if direction == 'lat':
         hmin = find_obcs_boundary(grid, 'W')[0]
@@ -1218,7 +1218,7 @@ def trim_slice_to_grid (data, h, grid, direction):
         hmax = find_obcs_boundary(grid, 'N')[0]
     else:
         print('Error (trim_slice_to_limits): invalid direction ' + direction)
-    return trim_slice(data, h, hmin=hmin, hmax=hmax)
+    return trim_slice(data, h, hmin=hmin, hmax=hmax, warn=warn)
 
 
 # Calculate bias correction files for each boundary condition, based on the LENS ensemble mean climatology compared to the WOA/SOSE fields we used previously.
@@ -1392,12 +1392,14 @@ def calc_lens_climatology_density_space (out_dir='./'):
         nh = h.size
         # Tile h and z over the slice to make them 2D
         h = np.tile(h, (nz, 1))
-        z = np.tile(np.expand_dims(z, 1), (1, nh))
+        z = np.tile(np.expand_dims(z_1d, 1), (1, nh))
         # Set up array for monthly climatology of T, S, z in density space
         lens_clim = np.ma.zeros([num_var, months_per_year, nrho, mit_h.size])
         # Loop over ensemble members and time indices
         for n in range(num_ens):
+            print('Processing ensemble member '+str(n+1))
             for year in range(start_year, end_year+1):
+                print('...'+str(year))
                 for month in range(months_per_year):
                     # Read temperature and salinity and slice to boundary
                     ts_slice = np.ma.empty([num_var-1, nz, nh])
@@ -1406,7 +1408,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
                         t0 = t0_year+month
                         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
                         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
-                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction)[0]
+                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
                         # Fill the mask with nearest neighbours
                         data_slice = fill_into_mask(data_slice, use_3d=False, log=False)
                         ts_slice[v,:] = data_slice
@@ -1418,7 +1420,9 @@ def calc_lens_climatology_density_space (out_dir='./'):
                     rho_norm = (rho - rho_min)/(rho_max - rho_min)
                     # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
                     for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
-                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
+                        lens_clim_tmp = interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis)
+                        lens_clim_tmp = np.ma.masked_where(lens_clim_tmp==-9999, lens_clim_tmp)
+                        lens_clim[v,month,:] += lens_clim_tmp
         # Convert from integral to average
         lens_clim /= (num_ens*num_years)
         # Save to binary file
