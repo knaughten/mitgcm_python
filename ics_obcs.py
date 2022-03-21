@@ -1375,7 +1375,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
     rho_axis = np.linspace(0, 1, num=nrho)
 
     for b in range(num_bdry):
-        print 'Processing '+bdry_loc[b]+' boundary'
+        print('Processing '+bdry_loc[b]+' boundary')
         if bdry in ['N', 'S']:
             direction = 'lat'
             h_2d = lon
