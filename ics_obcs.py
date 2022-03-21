@@ -1510,7 +1510,7 @@ def calc_lens_offsets_density_space (in_dir='./', out_dir='./'):
         if bdry in ['N', 'S']:
             nh = grid.nx
             dimensions = 'xzt'
-        elif bdry] in ['E', 'W']:
+        elif bdry in ['E', 'W']:
             nh = grid.ny
             dimensions = 'yzt'
         for var in var_names:
