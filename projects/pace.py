@@ -16,7 +16,7 @@ import netCDF4 as nc
 
 from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid, ZGrid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
-from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land, axis_edges
+from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land, axis_edges, polar_stereo
 from ..plot_utils.colours import set_colours, choose_n_colours, truncate_colourmap
 from ..plot_utils.windows import finished_plot, set_panels
 from ..plot_utils.labels import reduce_cbar_labels, round_to_decimals, lon_label
@@ -25,7 +25,7 @@ from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_1d import default_colours, make_timeseries_plot_2sided, timeseries_multi_plot, make_timeseries_plot
 from ..plot_latlon import latlon_plot
 from ..plot_slices import slice_plot, make_slice_plot
-from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw
+from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw, bedmap_bdry, bedmap_res, bedmap_dim
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
 from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var, precompute_timeseries_coupled
@@ -3904,6 +3904,96 @@ def intra_ensemble_correlation (var1, var2, base_dir='./', timeseries_file1='tim
     ax.plot([x0, x1], [y0, y1], '-')
     ax.set_title('r^2='+str(r_value**2))
     fig.show()
+
+
+# Simplified advection heat map for Comms
+def plot_simple_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./', z0=-400, bedmap_file='/data/oceans_input/raw_input_data/bedmap2/bedmap2_bin/bedmap2_icemask_grounded_and_shelves.flt'):
+
+    import matplotlib.patheffects as pthe
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+
+    base_dir = real_dir(base_dir)
+    trend_dir = real_dir(trend_dir)
+    fig_dir = real_dir(fig_dir)
+    grid_path = base_dir + 'PAS_grid/'
+    grid = Grid(grid_path)
+    p0 = 0.05
+    threshold = 125
+    z_shelf = -1000
+    [x0, x1, y0, y1] = [-2.7e6, 2.8e6, -2.75e6, 2.75e6]
+
+    # Process the x and y components
+    def read_component (key):
+        # Read the trends
+        var_name = 'ADV'+key+'_TH_trend'
+        trends_3d = read_netcdf(trend_dir+var_name+'.nc', var_name)
+        # Interpolate to given depth
+        trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
+        # Calculate mean trend and fill with 0s where not significant        
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend[p_val > p0] = 0
+        return mean_trend
+    advx_trend_ugrid = read_component('x')
+    advy_trend_vgrid = read_component('y')
+    # Interpolate to tracer grid
+    advx_trend = interp_grid(advx_trend_ugrid, grid, 'u', 't')
+    advy_trend = interp_grid(advy_trend_vgrid, grid, 'v', 't')
+    # Convert to kW/m^2/century
+    # Don't worry about divide-by-zero warnings, that's just the land mask where dV=0
+    dV = interp_to_depth(grid.dV, z0, grid)
+    advx_trend *= Cp_sw*rhoConst*grid.dx_s/dV*1e2*1e-3
+    advy_trend *= Cp_sw*rhoConst*grid.dy_w/dV*1e2*1e-3
+    # Get magnitude
+    magnitude_trend = np.sqrt(advx_trend**2 + advy_trend**2)
+    # Now set vectors to 0 anywhere below the threshold, so we don't have too many arrows
+    index = magnitude_trend < threshold
+    advx_trend = np.ma.masked_where(index, advx_trend)
+    advy_trend = np.ma.masked_where(index, advy_trend)
+
+    # Read BEDMAP mask data
+    x = np.arange(-bedmap_bdry, bedmap_bdry+bedmap_res, bedmap_res)
+    y = np.copy(x)
+    mask = np.flipud(np.fromfile(bedmap_file, dtype='<f4').reshape([bedmap_dim, bedmap_dim]))
+    # Extract grounded ice and open ocean
+    grounded_mask = mask==0
+    ocean_mask = mask==-9999
+
+    # Plot
+    fig = plt.figure(figsize=(8,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.01, right=0.99, bottom=0.01, top=0.92)
+    ax = plt.subplot(gs[0,0])
+    # Plot the magnitude in red (all positive side of plusminus)
+    img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=-70, title='Movement of ocean heat towards the West Antarctic Ice Sheet', titlesize=18, vmax=500)
+    # Overlay vectors in regions with strongest trends
+    overlay_vectors(ax, advx_trend, advy_trend, grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
+    # Remove ticks and lat/lon labels
+    ax.set_xticks([])
+    ax.set_yticks([])
+    # Add simple labels
+    txt = plt.text(-123, -71.5, 'Ocean', fontsize=18, ha='center', va='center', color='MediumBlue', weight='bold')
+    txt.set_path_effects([pthe.withStroke(linewidth=1, foreground='w')])
+    txt = plt.text(-125, -75.2, 'Ice sheet', fontsize=18, ha='center', va='center', color='MediumBlue', weight='bold')
+    txt.set_path_effects([pthe.withStroke(linewidth=1, foreground='w')])
+    # Plot the whole of Antarctica to show the cutout
+    [xmin, xmax] = ax.get_xlim()
+    [ymin, ymax] = ax.get_ylim()
+    x_bdry = np.concatenate((np.linspace(xmin, xmax), xmax*np.ones([50]), np.linspace(xmax, xmin), xmin*np.ones([50])))
+    y_bdry = np.concatenate((ymax*np.ones([50]), np.linspace(ymax, ymin), ymin*np.ones([50]), np.linspace(ymin, ymax)))
+    x_bdry, y_bdry = polar_stereo(x_bdry, y_bdry)
+    ax2 = inset_axes(ax, "20%", "30%", loc='lower right', borderpad=0.2)
+    ax2.axis('equal')
+    data2 = np.ma.masked_where(np.invert(ocean_mask==1), np.ones(ocean_mask.shape))
+    # Shade the grounded ice in grey
+    ax2.pcolormesh(x, y, np.ma.masked_where(np.invert(grounded_mask), grounded_mask.astype(float)), cmap=cl.ListedColormap([(0.6, 0.6, 0.6)]), rasterized=True)
+    # Overlay the limits in a box
+    ax2.plot(x_bdry, y_bdry, color='MediumBlue')
+    ax2.set_xticks([])
+    ax2.set_yticks([])
+    ax2.set_xlim([x0, x1])
+    ax2.set_ylim([y0, y1])
+    finished_plot(fig, fig_name=fig_dir+'advection_heat_map_simple.png', dpi=300)
 
 
 
