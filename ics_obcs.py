@@ -1500,7 +1500,7 @@ def calc_lens_offsets_density_space (in_dir='./', out_dir='./'):
     lens_file_head = in_dir+'LENS_climatology_density_space_'
     lens_file_tail = '_1998-2017'
     woa_file_head = in_dir+'WOA_density_space_'
-    out_file_head = out_file+'LENS_offset_density_space_'
+    out_file_head = out_dir+'LENS_offset_density_space_'
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
     nrho = 100
     

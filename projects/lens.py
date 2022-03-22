@@ -559,7 +559,8 @@ def plot_lens_offsets_density_space (var, bdry, month, in_dir='./', fig_name=Non
             cmap, vmin, vmax = set_colours(data[n,:], ctype='plusminus')
         img = ax.pcolormesh(h, rho_axis, data[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
         if cax[n] is not None:
-            plt.cbar(img, cax=cax[n])
+            plt.colorbar(img, cax=cax[n])
+        ax.set_ylim([1, 0])  # Highest density at bottom
         ax.set_title(titles[n], fontsize=12)
     plt.suptitle(var+' at '+bdry+' boundary, month '+str(month), fontsize=14)
     finished_plot(fig, fig_name=fig_name)
