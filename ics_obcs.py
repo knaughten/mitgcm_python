@@ -1417,8 +1417,8 @@ def calc_lens_climatology_density_space (out_dir='./'):
                     rho_min = np.amin(rho, axis=0)
                     rho_max = np.amax(rho, axis=0)
                     rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
-                    # Now fill the land mask with nearest neighbours
-                    rho_norm = fill_into_mask(rho_norm, use_3d=False, log=False)
+                    # Now fill the land mask with something higher than the highest density
+                    rho_norm[ts_slice[1,:].mask] = 1.1
                     # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
                     for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
                         lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis, fill_mask=True)
@@ -1484,8 +1484,8 @@ def calc_woa_density_space (out_dir='./'):
             rho_min = np.amin(rho, axis=0)
             rho_max = np.amax(rho, axis=0)
             rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
-            # Now fill the land mask with nearest neighbours
-            rho_norm = fill_into_mask(rho_norm, use_3d=False, log=False)
+            # Now fill the land mask with something even higher than the highest density (shouldn't mess up the interpolation that way)
+            rho_norm[hfac==0] = 1.1
             # Regrid to the new density axis
             for data, v in zip([ts_bdry[0,month,:], ts_bdry[1,month,:], z], np.arange(num_var)):
                 woa_clim[v,month,:] = interp_nonreg_xy(h_2d, rho_norm, data, h, rho_axis, fill_mask=True)

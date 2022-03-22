@@ -573,7 +573,100 @@ def plot_all_offsets_density_space (in_dir='./'):
     for bdry in ['N', 'W', 'E']:
         for var in ['TEMP', 'SALT', 'z']:
             for month in range(12):
-                plot_lens_offsets_density_space(var, bdry, month+1, in_dir=in_dir)        
+                plot_lens_offsets_density_space(var, bdry, month+1, in_dir=in_dir)
+
+
+# Plot T/S profiles horizontally averaged over the eastern boundary from 70S to the coastline, for a given month (1-indexed) and year. This time do the correction in density space, and only show the corrected field using monthly offsets.
+def plot_obcs_profiles_density_space (year, month, fig_name=None):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'archer2_mitgcm/PAS_grid/'
+    in_dir = base_dir + 'CESM_bias_correction/obcs/'
+    woa_file_head = 'WOA_density_space_'
+    offset_file_head = 'LENS_offset_density_space_'
+    var_names = ['TEMP', 'SALT', 'z']
+    units = [deg_string+'C', 'psu']
+    bdry = 'E'
+    direction = 'lon'
+    ymax = -70
+    num_var = len(var_names)    
+    titles = ['WOA', 'LENS uncorrected', 'LENS corrected']
+    colours = ['blue', 'black', 'green']
+    num_profiles = len(titles)
+    nrho = 100
+
+    # Build the grids
+    grid = Grid(mit_grid_dir)
+    lon0 = find_obcs_boundary(grid, bdry)[0]
+    hfac_slice = grid.hfac[:,:,-1]
+    # Mask out dA north of 70S, tile in the z direction, and select the boundary
+    dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA)
+    dA = xy_to_xyz(dA, grid)
+    dA_slice = dA[:,:,-1]
+    lens_grid_file = find_lens_file(lens_var[0], 'oce', 'monthly', 1, year)
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    # Get the interpolation coefficients from LENS to the eastern boundary
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, lon0, direction)
+    # Extract LENS latitude to this boundary
+    lens_lat_slice_full = extract_slice_nonreg(lens_lat, direction, i1, i2, c1, c2)
+    # Throw away the northern hemisphere
+    lens_lat_slice = trim_slice(lens_lat_slice_full, lens_lat_slice_full, hmax=0, lon=True)[0]
+
+    # Read the WOA climatology and LENS offsets for this month
+    woa_clim_density = np.ma.empty([num_var, nrho, grid.ny])
+    lens_offset_density = np.ma.empty([num_var, nrho, grid.ny])
+    for v in range(num_var):
+        woa_clim_density[v,:] = read_binary(woa_file_head+var_names[v]+'_'+bdry, [grid.nx, grid.ny, nrho], 'yzt')[month-1,:]
+        lens_offset_density[v,:] = read_binary(offset_file_head+var_names[v]+'_'+bdry, [grid.nx, grid.ny, nrho], 'yzt')[month-1,:]
+
+    # Now read and correct the LENS temperature and salinity for this month
+    lens_data_z = np.ma.empty([num_var-1, lens_nz, lens_ny])
+    for v in range(num_var-1):
+        lens_file, t0_year, tf_year = find_lens_file(lens_var[v], 'oce', 'monthly', 1, year)
+        t0 = t0_year + month-1
+        lens_data_3d = read_netcdf(lens_file, lens_var[v], t_start=t0, t_end=t0+1)
+        # Extract the slice
+        lens_data_slice = extract_slice_nonreg(lens_data_3d, direction, i1, i2, c1, c2)
+        # Trim the northern boundary
+        lens_data_slice = trim_slice(lens_data_slice, lens_lat_slice_full, hmax=0, lon=True)[0]
+        lens_data_z[v,:] = lens_data_slice
+    # Calculate
+
+
+
+        
+        # Interpolate to the MITgcm grid
+        lens_data_interp = interp_bdry(lens_lat_slice, lens_z, lens_data_slice, np.invert(lens_data_slice.mask).astype(float), grid.lat_1d, grid.z, hfac_slice, lon=False, depth_dependent=True)
+        lens_data_uncorrected = lens_data_interp
+        
+        # Read the LENS offset
+        lens_offset = read_binary(offset_file_head+lens_var[v]+offset_file_tail, [grid.nx, grid.ny, grid.nz], 'yzt')
+        # Calculate corrected LENS fields using monthly and annual offsets
+        lens_data_corrected_monthly = lens_data_uncorrected + lens_offset[month-1,:]
+        lens_data_corrected_annual = lens_data_uncorrected + np.average(lens_offset, axis=0, weights=ndays)
+
+        profiles = np.ma.empty([num_var-1, num_profiles, grid.nz])
+        # Horizontally average everything south of 70S
+        for data_slice, n in zip([woa_data, lens_data_uncorrected, lens_data_corrected_monthly, lens_data_corrected_annual], range(num_profiles)):
+            profiles[v,n,:] = np.sum(data_slice*hfac_slice*dA_slice, axis=-1)/np.sum(hfac_slice*dA_slice, axis=-1)
+
+    # Plot
+    fig, gs = set_panels('1x2C0')
+    gs.update(left=0.08, bottom=0.18, top=0.87)
+    for v in range(num_var):
+        ax = plt.subplot(gs[0,v])
+        for n in range(num_profiles):
+            ax.plot(profiles[v,n,:], grid.z, color=colours[n], label=titles[n])
+        ax.grid(linestyle='dotted')
+        ax.set_title(lens_var[v], fontsize=16)
+        ax.set_xlabel(units[v])
+        if v==0:
+            ax.set_ylabel('Depth (m)')
+            ax.legend(loc='lower right', bbox_to_anchor=(1.7, -0.2), ncol=num_profiles)
+        else:
+            ax.set_yticklabels([])
+    plt.suptitle(bdry + ' boundary, '+str(year)+'/'+str(month).zfill(2), fontsize=16)
+    finished_plot(fig, fig_name=fig_name)
 
     
 
