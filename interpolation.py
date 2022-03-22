@@ -527,12 +527,10 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
     from scipy.interpolate import griddata
 
     # Check for missing values
-    missing = source_data == fill_value
     if isinstance(source_data, np.ma.MaskedArray):
-        missing += source_data.mask
-        
-    # Any missing values: fill with average
-    source_data[source_data==fill_value] = np.mean(source_data[source_data!=fill_value])
+        missing = source_data.mask + (source_data == fill_value)
+    else:
+        missing = source_data == fill_value
 
     # Figure out if target lon and lat are 1D or 2D
     if len(target_lon.shape) == 1 and len(target_lat.shape) == 1:
