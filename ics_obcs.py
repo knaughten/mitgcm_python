@@ -1413,10 +1413,10 @@ def calc_lens_climatology_density_space (out_dir='./'):
                     rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
                     # Apply land mask
                     rho = np.ma.masked_where(ts_slice[1,:].mask, rho)
-                    # Normalise to the range 0-1 in every water column
-                    rho_min = np.amin(rho, axis=0)
-                    rho_max = np.amax(rho, axis=0)
-                    rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
+                    # Normalise to the range 0-1
+                    rho_min = np.amin(rho)
+                    rho_max = np.amax(rho)
+                    rho_norm = (rho - rho_min)/(rho_max - rho_min)
                     # Now fill the land mask with something higher than the highest density
                     rho_norm[ts_slice[1,:].mask] = 1.1
                     # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
@@ -1480,10 +1480,10 @@ def calc_woa_density_space (out_dir='./'):
             rho = potential_density('MDJWF', ts_bdry[1,month,:], ts_bdry[0,month,:])
             # Apply land mask
             rho = np.ma.masked_where(hfac==0, rho)
-            # Normalise to the range 0-1 in every water column
-            rho_min = np.amin(rho, axis=0)
-            rho_max = np.amax(rho, axis=0)
-            rho_norm = (rho - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
+            # Normalise to the range 0-1
+            rho_min = np.amin(rho)
+            rho_max = np.amax(rho)
+            rho_norm = (rho - rho_min)/(rho_max - rho_min)
             # Now fill the land mask with something even higher than the highest density (shouldn't mess up the interpolation that way)
             rho_norm[hfac==0] = 1.1
             # Regrid to the new density axis
