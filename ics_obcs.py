@@ -1524,6 +1524,91 @@ def calc_lens_offsets_density_space (in_dir='./', out_dir='./'):
             write_binary(lens_offset, out_file_head+var+'_'+bdry)
 
 
+# Helper function to read and correct the LENS temperature and salinity for a given year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
+def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False):
+
+    in_dir = real_dir(in_dir)
+    file_head = in_dir+'LENS_offset_density_space_'
+    var_names = ['TEMP', 'SALT', 'z']
+    num_var = len(var_names)
+    nrho = 100
+
+    # Read the grids and slice to boundary
+    grid = Grid(mit_grid_dir)
+    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    loc0 = find_obcs_boundary(grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        lens_h_2d = lens_lon
+        mit_h = grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        lens_h_2d = lens_lat
+        mit_h = grid.lat_1d
+    if bdry == 'N':
+        hfac = grid.hfac[:,-1,:]
+    elif bdry == 'S':
+        hfac = grid.hfac[:,0,:]
+    elif bdry == 'E':
+        hfac = grid.hfac[:,:,-1]
+    elif bdry == 'W':
+        hfac = grid.hfac[:,:,0]
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction)[0]
+    lens_nh = lens_h.size
+    lens_h = np.tile(lens_h, (lens_nz, 1))
+    lens_z = np.tile(np.expand_dims(lens_z, 1), (1, lens_nh))
+    rho_axis = np.linspace(0, 1, num=nrho)
+    mit_h_2d = np.tile(mit_h, (nrho, 1))
+
+    # Read and slice temperature and salinity for this month
+    lens_ts_z = np.ma.empty([num_var-1, lens_nz, lens_nh])
+    for v in range(num_var-1):
+        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        t0 = t0_year + month-1
+        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+        data_slice = trim_slice_to_grid(data_slice, lens_h_full, grid, direction, warn=False)[0]
+        lens_ts_z[v,:] = data_slice
+    # Calculate potential density, mask, normalise, and fill as before
+    lens_rho_z = potential_density('MDJWF', lens_ts_z[1,:], lens_ts_z[0,:])
+    lens_mask = lens_ts_z[1,:].mask
+    lens_rho_z = np.ma.masked_where(lens_mask, lens_rho_z)
+    rho_min = np.amin(lens_rho_z, axis=0)
+    rho_max = np.amax(lens_rho_z, axis=0)
+    lens_rho_norm = (lens_rho_z - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
+    lens_rho_norm[lens_mask] = 1.1
+    # Regrid each variable to the new density axis and the MITgcm horizontal axis, then apply corrections
+    lens_corrected_density = np.ma.empty([num_var, nrho, mit_h.size])
+    for data, v in zip([lens_ts_z[0,:], lens_ts_z[1,:], lens_z], np.arange(num_var)):
+        data_interp_density = interp_nonreg_xy(lens_h, lens_rho_norm, data, mit_h, rho_axis, fill_mask=True)
+        file_path_corr = file_head + var_names[v] + '_' + bdry
+        corr = read_binary(file_path_corr, [mit_h.size, mit_h.size, nrho], dimensions)[month-1,:]
+        lens_corrected_density[v,:] = data_interp_density + corr
+    # Now regrid back to z-space on the MITgcm grid and apply the land mask
+    lens_corrected_z = np.ma.empty([num_var, grid.nz, mit_h.size])
+    for v in range(num_var-1):
+        data_interp_z = interp_nonreg_xy(mit_h_2d, lens_corrected_density[-1,:], lens_corrected_density[v,:], mit_h, grid.z, fill_mask=True)
+        lens_corrected_z[v,:] = np.ma.masked_where(hfac==0, data_interp_z)
+
+    if return_raw:
+        return lens_corrected_z[0,:], lens_corrected_z[1,:], lens_ts_z[0,:], lens_ts_z[1,:], lens_h, lens_z
+    else:
+        return lens_corrected_z[0,:], lens_corrected_z[1,:]
+
+    
+
+    
+
+    
+
+    
+
+
     
 
     
