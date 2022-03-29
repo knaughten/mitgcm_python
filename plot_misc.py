@@ -25,9 +25,9 @@ from .timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
 
 
 # Helper function to split temperature and salinity in the given region (set by mask) into bins, to get the volume in m^3 of each bin. The arrays can be time-dependent if you want. You can set the bounds of the bins, but they must be at least as permissive as the bounds of the data in that region.
-def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmin=None, tmax=None, smin=None, smax=None):
+def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmin=None, tmax=None, smin=None, smax=None, bdry=False):
 
-    if len(mask.shape)==2:
+    if len(mask.shape)==2 and not bdry:
         # Get 3D version of 2D mask
         mask = mask_2d_to_3d(mask, grid)
     if time_dependent:

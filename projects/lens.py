@@ -12,12 +12,13 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
 from ..grid import Grid, read_pop_grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
 from ..plot_utils.labels import reduce_cbar_labels
+from ..plot_misc import ts_binning
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry
 from ..postprocess import precompute_timeseries_coupled
 
@@ -124,14 +125,7 @@ def compare_bcs_ts_mean (fig_dir='./'):
                 dimensions = 'yzt'
             obcs_data_mean = np.mean(read_binary(obcs_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions), axis=0)
             # Apply land mask
-            if bdry == 'N':
-                bdry_hfac = mit_grid.hfac[:,-1,:]
-            elif bdry == 'S':
-                bdry_hfac = mit_grid.hfac[:,0,:]
-            elif bdry == 'W':
-                bdry_hfac = mit_grid.hfac[:,:,0]
-            elif bdry == 'E':
-                bdry_hfac = mit_grid.hfac[:,:,-1]
+            bdry_hfac = get_hfac_bdry(mit_grid, bdry)
             obcs_data_mean = np.ma.masked_where(bdry_hfac==0, obcs_data_mean)
             # Interpolate to the PACE grid
             pace_data_mean = extract_slice_nonreg(pace_data_mean_3d, direction, i1, i2, c1, c2)
@@ -535,14 +529,7 @@ def plot_lens_offsets_density_space (var, bdry, month, in_dir='./', fig_name=Non
         h = grid.lat_1d
         nh = grid.ny
         dimensions = 'yzt'
-    if bdry == 'N':
-        hfac = grid.hfac[:,-1,:]
-    elif bdry == 'S':
-        hfac = grid.hfac[:,0,:]
-    elif bdry == 'E':
-        hfac = grid.hfac[:,:,-1]
-    elif bdry == 'W':
-        hfac = grid.hfac[:,:,0]
+    hfac = get_hfac_bdry(grid, bdry)
     hfac_sum = np.tile(np.sum(hfac, axis=0), (nrho, 1))
 
     data = np.ma.empty([num_panels, nrho, nh])
@@ -600,14 +587,7 @@ def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
     elif bdry in ['E', 'W']:
         mit_h = grid.lat_1d
         dimensions = 'yzt'
-    if bdry == 'N':
-        hfac = grid.hfac[:,-1,:]
-    elif bdry == 'S':
-        hfac = grid.hfac[:,0,:]
-    elif bdry == 'E':
-        hfac = grid.hfac[:,:,-1]
-    elif bdry == 'W':
-        hfac = grid.hfac[:,:,0]
+    hfac = get_hfac_bdry(grid, bdry)
 
     # Read the corrected and uncorrected LENS fields
     lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_density_space(bdry, ens, year, month, return_raw=True)
@@ -640,3 +620,94 @@ def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
         ax.set_title(titles[n], fontsize=14)
     plt.suptitle(var_title+' at '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=18)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Plot T/S diagrams of the WOA and LENS climatologies at the given boundary and month, and the difference in volumes between the two.
+def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    lens_dir = base_dir + 'CESM_bias_correction/obcs/'
+    woa_dir = base_dir + 'ics_obcs/PAS/'
+    var_lens = ['TEMP', 'SALT']
+    var_woa = ['theta', 'salt']
+    file_head_woa = woa_dir + 'OB'
+    file_tail_woa = '_woa_mon.bin'
+    file_head_lens = lens_dir + 'LENS_climatology_'
+    file_tail_lens = '_1998-2017'
+    num_sources = 2
+    num_var = len(var_lens)
+
+    # Build the grids
+    grid = Grid(mit_grid_dir)
+    hfac = get_hfac_bdry(grid, bdry)
+    mask = np.invert(hfac==0)
+    if bdry in ['N', 'S']:
+        nh = grid.nx
+        dimensions = 'xzt'
+    elif bdry in ['E', 'W']:
+        nh = grid.ny
+        dimensions = 'yzt'
+    # Read the data
+    ts_data = np.ma.empty([num_sources, num_var, grid.nz, nh])
+    for n in range(num_sources):
+        for v in range(num_var):
+            if n == 0:
+                # WOA
+                file_path = file_head_woa + bdry + var_woa[v] + file_tail_woa
+            else:
+                # LENS
+                file_path = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
+            ts_data[n,v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+
+    # Bin T and S
+    volume = []
+    tmin = np.amin(ts_data[:,0,:])
+    tmax = np.amax(ts_data[:,0,:])
+    smin = np.amin(ts_data[:,1,:])
+    smax = np.amax(ts_data[:,1,:])
+    for n in range(num_sources):
+        volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(ts_data[n,0,:], ts_data[n,1,:], grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True)
+        volume.append(volume_tmp)
+    # Get difference in volume
+    volume.append(volume[1]-volume[0])
+    vmin_abs = min(np.amin(volume[0]), np.amin(volume[1]))
+    vmax_abs = max(np.amax(volume[0]), np.amax(volume[1]))
+    # Prepare to plot density
+    salt_2d, temp_2d = np.meshgrid(np.linspace(smin, smax), np.linspace(tmin, tmax))
+    density = potential_density('MDJWF', salt_2d, temp_2d)
+
+    # Plot
+    fig, gs, cax1, cax2 = set_panels('1x3C2')
+    cax = [cax1, None, cax2]
+    cmap_abs = set_colours(volume[0], vmin=vmin_abs, vmax=vmax_abs)[0]
+    cmap_diff, vmin_diff, vmax_diff = set_colours(volume[2], ctype='plusminus')
+    cmap = [cmap_abs, cmap_abs, cmap_diff]
+    vmin = [vmin_abs, vmin_abs, vmin_diff]
+    vmax = [vmax_abs, vmax_abs, vmax_diff]
+    titles = ['WOA', 'LENS', 'Difference']
+    for n in range(num_sources+1):
+        ax = plt.subplot(gs[0,n])
+        plt.contour(salt_2d, temp_2d, density, colors='DarkGrey', linestyles='dotted')
+        img = plt.pcolor(salt_centres, temp_centres, volume[n], vmin=vmin[n], vmax=vmax[n], cmap=cmap[n])
+        ax.set_xlim([smin, smax])
+        ax.set_ylim([tmin, tmax])
+        if n == 0:
+            plt.xlabel('Salinity (psu)')
+            plt.ylabel('Temperature ('+deg_string+'C)')
+        if cax[n] is not None:
+            plt.colorbar(img, cax=cax[n])
+        ax.set_title(titles[n])
+    plt.suptitle('Volumes at '+bdry+' boundary, month '+str(month))
+    finished_plot(fig, fig_name=fig_name)
+        
+    
+    
+
+            
+        
+
+    
+    
+
+    
