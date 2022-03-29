@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
 from ..grid import Grid, read_pop_grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space, get_hfac_bdry, read_correct_lens_scaled
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
@@ -149,6 +149,191 @@ def compare_bcs_ts_mean (fig_dir='./'):
             plt.colorbar(img, cax=cax, orientation='horizontal')
             plt.suptitle(var_titles[v]+', '+bdry+' boundary', fontsize=16)
             finished_plot(fig, fig_name=fig_dir+'pace_obcs_'+pace_var[v]+'_'+str(bdry)+'.png')
+
+
+# Calculate a monthly climatology of T and S from the LENS simulations of CESM over each boundary.
+def calc_lens_climatology (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    var_names = ['TEMP', 'SALT']
+    start_year = 1998
+    end_year = 2017
+    num_years = end_year - start_year + 1
+    num_ens = 40
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    bdry_loc = ['N', 'W', 'E']
+    num_bdry = len(bdry_loc)
+    num_var = len(var_names)
+    out_file_head = 'LENS_climatology_'
+    out_file_tail = '_'+str(start_year)+'-'+str(end_year)
+
+    # Read/generate grids
+    grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    lon, lat, z_1d, nx, ny, nz = read_pop_grid(grid_file)
+    mit_grid = Grid(mit_grid_dir)
+    loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
+
+    for b in range(num_bdry):
+        print('Processing '+bdry_loc[b]+' boundary')
+        if bdry_loc[b] in ['N', 'S']:
+            direction = 'lat'
+            h_2d = lon
+            mit_h = mit_grid.lon_1d
+        elif bdry_loc[b] in ['E', 'W']:
+            direction = 'lon'
+            h_2d = lat
+            mit_h = mit_grid.lat_1d
+        # Get interpolation coefficients to extract the slice at this boundary
+        i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
+        # Interpolate the horizontal axis to this boundary
+        h_full = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+        h = trim_slice_to_grid(h_full, h_full, mit_grid, direction)[0]
+        nh = h.size
+        # Tile h and z over the slice to make them 2D
+        h = np.tile(h, (nz, 1))
+        z = np.tile(np.expand_dims(z_1d, 1), (1, nh))
+        # Set up array for monthly climatology
+        lens_clim = np.ma.zeros([num_var, months_per_year, mit_grid.nz, mit_h.size])
+        # Loop over ensemble members and time indices
+        for n in range(num_ens):
+            print('Processing ensemble member '+str(n+1))
+            for year in range(start_year, end_year+1):
+                print('...'+str(year))
+                for month in range(months_per_year):
+                    for v in range(num_var):
+                        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
+                        t0 = t0_year+month
+                        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
+                        # Regrid to MITgcm grid and accumulate climatology
+                        lens_clim[v,month,:] += interp_nonreg_xy(h, z, data_slice, mit_h, mit_grid.z, fill_mask=True)
+        # Convert from integral to average
+        lens_clim /= (num_ens*num_years)
+        # Save to binary file
+        for v in range(num_var):
+            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+'_'+bdry_loc[b]+out_file_tail)
+
+
+# Calculate bias correction files for each boundary condition, based on the LENS ensemble mean climatology compared to the WOA/SOSE fields we used previously.
+def make_lens_bias_correction_files (out_dir='./'):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    lens_dir = base_dir + 'CESM_bias_correction/obcs/'
+    obcs_dir = base_dir + 'ics_obcs/PAS/'
+    bdry_loc = ['N', 'W', 'E']
+    var_obcs_oce = ['theta_woa_mon', 'salt_woa_mon', 'uvel_sose', 'vvel_sose']
+    var_obcs_ice = ['area_sose', 'heff_sose', 'hsnow_sose', 'uice_sose', 'vice_sose']
+    obcs_gtype_oce = ['t', 't', 'u', 'v']
+    obcs_gtype_ice = ['t', 't', 't', 'u', 'v']
+    obcs_file_head = obcs_dir + 'OB'
+    obcs_file_tail = '.bin'
+    var_lens_oce = ['TEMP', 'SALT', 'UVEL', 'VVEL']
+    var_lens_ice = ['aice', 'hi', 'hs', 'uvel', 'vvel']
+    num_var_oce = len(var_lens_oce)
+    num_var_ice = len(var_lens_ice)
+    lens_gtype_oce = ['t', 't', 'u', 'u']
+    lens_gtype_ice = ['t', 't', 't', 'u', 'u']
+    lens_file_head = lens_dir + 'LENS_climatology_'
+    lens_file_tail = '_2013-2017.nc'
+    out_dir = real_dir(out_dir)
+
+    # Read the grids
+    mit_grid = Grid(mit_grid_dir)
+    oce_grid_file = lens_file_head + var_lens_oce[0] + lens_file_tail
+    oce_tlat = read_netcdf(oce_grid_file, 'TLAT')
+    oce_tlon = fix_lon_range(read_netcdf(oce_grid_file, 'TLONG'))
+    oce_ulat = read_netcdf(oce_grid_file, 'ULAT')
+    oce_ulon = fix_lon_range(read_netcdf(oce_grid_file, 'ULONG'))
+    oce_z = -1*read_netcdf(oce_grid_file, 'z_t')*1e-2
+    oce_nx = oce_tlon.shape[1]
+    oce_ny = oce_tlat.shape[0]
+    oce_nz = oce_z.size
+    ice_grid_file = lens_file_head + var_lens_ice[0] + lens_file_tail
+    ice_tlat = read_netcdf(ice_grid_file, 'TLAT')
+    ice_tlon = fix_lon_range(read_netcdf(ice_grid_file, 'TLON'))
+    ice_ulat = read_netcdf(ice_grid_file, 'ULAT')
+    ice_ulon = fix_lon_range(read_netcdf(ice_grid_file, 'ULON'))
+    ice_nx = ice_tlon.shape[1]
+    ice_ny = ice_tlat.shape[0]
+
+    # Loop over boundaries
+    for bdry in bdry_loc:
+        # Find the location of this boundary (lat/lon)
+        loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
+        # Loop over domains (ocean + ice)
+        for var_obcs, obcs_gtype, var_lens, lens_gtype, tlat, tlon, ulat, ulon, nx, ny, num_var, oce in zip([var_obcs_oce, var_obcs_ice], [obcs_gtype_oce, obcs_gtype_ice], [var_lens_oce, var_lens_ice], [lens_gtype_oce, lens_gtype_ice], [oce_tlat, ice_tlat], [oce_tlon, ice_tlon], [oce_ulat, ice_ulat], [oce_ulon, ice_ulon], [oce_nx, ice_nx], [oce_ny, ice_ny], [num_var_oce, num_var_ice], [True, False]):
+            # Loop over variables
+            for v in range(num_var):
+                print('Processing ' + var_lens[v] + ' on ' + bdry + ' boundary')
+                
+                # Read the data from LENS and OBCS
+                lens_file = lens_file_head + var_lens[v] + lens_file_tail
+                lens_clim = read_netcdf(lens_file, var_lens[v])
+                obcs_file = obcs_file_head + bdry + var_obcs[v] + obcs_file_tail
+                if bdry in ['N', 'S']:
+                    dimensions = 'x'
+                elif bdry in ['E', 'W']:
+                    dimensions = 'y'
+                if oce:
+                    dimensions += 'z'
+                dimensions += 't'
+                obcs_clim_bdry = read_binary(obcs_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+                    
+                # Select the correct grid type in LENS
+                if lens_gtype[v] == 't':
+                    lens_lat = tlat
+                    lens_lon = tlon
+                elif lens_gtype[v] == 'u':
+                    lens_lat = ulat
+                    lens_lon = ulon
+                # Select the correct boundary location in MITgcm
+                if bdry in ['N', 'S'] and obcs_gtype[v] == 'v':
+                    loc0 = loc0_edge
+                elif bdry in ['E', 'W'] and obcs_gtype[v] == 'u':
+                    loc0 = loc0_edge
+                else:
+                    loc0 = loc0_centre
+                mit_lon, mit_lat = mit_grid.get_lon_lat(gtype=obcs_gtype[v], dim=1)
+                mit_hfac = get_hfac_bdry(mit_grid, bdry, gtype=obcs_gtype[v])
+                if not oce:
+                    mit_hfac = mit_hfac[0,:]
+                if bdry in ['N', 'S']:
+                    lens_h_2d = lens_lon
+                    mit_n = mit_grid.nx
+                    mit_h = mit_lon
+                    direction = 'lat'
+                elif bdry in ['E', 'W']:
+                    lens_h_2d = lens_lat
+                    mit_n = mit_grid.ny
+                    mit_h = mit_lat
+                    direction = 'lon'
+                
+                # Calculate interpolation coefficients to select this boundary in LENS
+                i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+                # Now select the boundary in LENS
+                lens_clim_bdry = extract_slice_nonreg(lens_clim, direction, i1, i2, c1, c2)
+                lens_h = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+                if direction == 'lon' and oce:
+                    # Throw away the northern hemisphere because the tripolar? grid causes interpolation issues
+                    lens_clim_bdry, lens_h = trim_slice(lens_clim_bdry, lens_h, hmax=0, lon=True)
+
+                # Now interpolate this slice of LENS data to the MITgcm grid on the boundary, one month at a time.
+                shape = [months_per_year]
+                if oce:
+                    shape += [mit_grid.nz]
+                shape += [mit_n]
+                lens_clim_bdry_interp = np.zeros(shape)
+                for t in range(months_per_year):
+                    print('...interpolating month '+str(t+1)+' of '+str(months_per_year))
+                    lens_clim_bdry_interp[t,:] = interp_bdry(lens_h, oce_z, lens_clim_bdry[t,:], np.invert(lens_clim_bdry[t,:].mask).astype(float), mit_h, mit_grid.z, mit_hfac, lon=(bdry in ['N', 'S']), depth_dependent=oce)
+                    
+                # Now get the bias correction
+                lens_offset = obcs_clim_bdry - lens_clim_bdry_interp
+                # Save to file
+                out_file = out_dir + 'LENS_offset_' + var_lens[v] + '_' + bdry
+                write_binary(lens_offset, out_file)
 
 
 # Plot the LENS bias corrections for OBCS at all three boundaries with annual mean, for each variable.
@@ -505,6 +690,251 @@ def plot_obcs_profiles (year, month, fig_name=None):
             ax.set_yticklabels([])
     plt.suptitle(bdry + ' boundary, '+str(year)+'/'+str(month).zfill(2), fontsize=16)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate a monthly climatology of T, S, and z from LENS in normalised potential density space: ensemble mean over 40 members, climatology over 1998-2017 for comparison with WOA at each boundary.
+def calc_lens_climatology_density_space (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    var_names = ['TEMP', 'SALT', 'z']
+    start_year = 1998  # for climatology
+    end_year = 2017
+    num_years = end_year-start_year+1
+    num_ens = 40
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    nrho = 100
+    bdry_loc = ['N', 'W', 'E']
+    num_bdry = len(bdry_loc)
+    num_var = len(var_names)
+    out_file_head = 'LENS_climatology_density_space_'
+    out_file_tail = '_'+str(start_year)+'-'+str(end_year)
+
+    # Read/generate grids
+    grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    lon, lat, z_1d, nx, ny, nz = read_pop_grid(grid_file)
+    mit_grid = Grid(mit_grid_dir)
+    loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
+    rho_axis = np.linspace(0, 1, num=nrho)
+
+    for b in range(num_bdry):
+        print('Processing '+bdry_loc[b]+' boundary')
+        if bdry_loc[b] in ['N', 'S']:
+            direction = 'lat'
+            h_2d = lon
+            mit_h = mit_grid.lon_1d
+        elif bdry_loc[b] in ['E', 'W']:
+            direction = 'lon'
+            h_2d = lat
+            mit_h = mit_grid.lat_1d
+        # Get interpolation coefficients to extract the slice at this boundary
+        i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
+        # Interpolate the horizontal axis to this boundary
+        h_full = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+        h = trim_slice_to_grid(h_full, h_full, mit_grid, direction)[0]
+        nh = h.size
+        # Tile h and z over the slice to make them 2D
+        h = np.tile(h, (nz, 1))
+        z = np.tile(np.expand_dims(z_1d, 1), (1, nh))
+        # Set up array for monthly climatology of T, S, z in density space
+        lens_clim = np.ma.zeros([num_var, months_per_year, nrho, mit_h.size])
+        # Loop over ensemble members and time indices
+        for n in range(num_ens):
+            print('Processing ensemble member '+str(n+1))
+            for year in range(start_year, end_year+1):
+                print('...'+str(year))
+                for month in range(months_per_year):
+                    # Read temperature and salinity and slice to boundary
+                    ts_slice = np.ma.empty([num_var-1, nz, nh])
+                    for v in range(num_var-1):
+                        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
+                        t0 = t0_year+month
+                        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
+                        ts_slice[v,:] = data_slice
+                    # Calculate potential density at this slice
+                    rho = potential_density('MDJWF', ts_slice[1,:], ts_slice[0,:])
+                    # Apply land mask
+                    rho = np.ma.masked_where(ts_slice[1,:].mask, rho)
+                    # Normalise to the range 0-1
+                    rho_min = np.amin(rho)
+                    rho_max = np.amax(rho)
+                    rho_norm = (rho - rho_min)/(rho_max - rho_min)
+                    # Now fill the land mask with something higher than the highest density
+                    rho_norm[ts_slice[1,:].mask] = 1.1
+                    # Regrid each variable to the new density axis, at the same time as to the MITgcm horizontal axis, and accumulate climatology
+                    for data, v in zip([ts_slice[0,:], ts_slice[1,:], z], np.arange(num_var)):
+                        lens_clim[v,month,:] += interp_nonreg_xy(h, rho_norm, data, mit_h, rho_axis, fill_mask=True)
+        # Convert from integral to average
+        lens_clim /= (num_ens*num_years)
+        # Save to binary file
+        for v in range(num_var):
+            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+'_'+bdry_loc[b]+out_file_tail)
+
+
+# Calculate the WOA climatology of T, S, and z in normalised potential density space, as above.
+def calc_woa_density_space (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    in_dir = base_dir + 'ics_obcs/PAS/'
+    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    bdry_loc = ['N', 'W', 'E']
+    var_names_in = ['theta', 'salt']
+    var_names_out = ['TEMP', 'SALT', 'z']
+    file_head_in = in_dir + 'OB'
+    file_tail_in = '_woa_mon.bin'
+    file_head_out = out_dir + 'WOA_density_space_'
+    num_var = len(var_names_out)
+    num_bdry = len(bdry_loc)
+    nrho = 100
+
+    grid = Grid(grid_dir)
+    rho_axis = np.linspace(0, 1, num=nrho)
+
+    for b in range(num_bdry):
+        print('Processing '+bdry_loc[b]+' boundary')
+        if bdry_loc[b] in ['N', 'S']:
+            h = grid.lon_1d
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry_loc[b] in ['E', 'W']:
+            h = grid.lat_1d
+            nh = grid.ny
+            dimensions = 'yzt'
+        h_2d = np.tile(h, (grid.nz, 1))
+        z = np.tile(np.expand_dims(grid.z, 1), (1, nh))
+        if bdry_loc[b] == 'N':
+            hfac = grid.hfac[:,-1,:]
+        elif bdry_loc[b] == 'S':
+            hfac = grid.hfac[:,0,:]
+        elif bdry_loc[b] == 'E':
+            hfac = grid.hfac[:,:,-1]
+        elif bdry_loc[b] == 'W':
+            hfac = grid.hfac[:,:,0]
+        # Read temperature and salinity at this boundary
+        ts_bdry = np.ma.empty([num_var-1, months_per_year, grid.nz, nh])
+        for v in range(num_var-1):
+            file_path = file_head_in + bdry_loc[b] + var_names_in[v] + file_tail_in
+            ts_bdry[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+        woa_clim = np.ma.zeros([num_var, months_per_year, nrho, nh])            
+        for month in range(months_per_year):
+            # Calculate potential density at this boundary for this month
+            rho = potential_density('MDJWF', ts_bdry[1,month,:], ts_bdry[0,month,:])
+            # Apply land mask
+            rho = np.ma.masked_where(hfac==0, rho)
+            # Normalise to the range 0-1
+            rho_min = np.amin(rho)
+            rho_max = np.amax(rho)
+            rho_norm = (rho - rho_min)/(rho_max - rho_min)
+            # Now fill the land mask with something even higher than the highest density (shouldn't mess up the interpolation that way)
+            rho_norm[hfac==0] = 1.1
+            # Regrid to the new density axis
+            for data, v in zip([ts_bdry[0,month,:], ts_bdry[1,month,:], z], np.arange(num_var)):
+                woa_clim[v,month,:] = interp_nonreg_xy(h_2d, rho_norm, data, h, rho_axis, fill_mask=True)
+        # Save to binary file
+        for v in range(num_var):
+            write_binary(woa_clim[v,:], file_head_out+var_names_out[v]+'_'+bdry_loc[b])
+
+
+# Calculate offsets for LENS with respect to WOA
+def calc_lens_offsets_density_space (in_dir='./', out_dir='./'):
+
+    in_dir = real_dir(in_dir)
+    out_dir = real_dir(out_dir)    
+    var_names = ['TEMP', 'SALT', 'z']
+    bdry_loc = ['N', 'W', 'E']
+    lens_file_head = in_dir+'LENS_climatology_density_space_'
+    lens_file_tail = '_1998-2017'
+    woa_file_head = in_dir+'WOA_density_space_'
+    out_file_head = out_dir+'LENS_offset_density_space_'
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    nrho = 100
+    
+    grid = Grid(mit_grid_dir)
+
+    for bdry in bdry_loc:
+        if bdry in ['N', 'S']:
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry in ['E', 'W']:
+            nh = grid.ny
+            dimensions = 'yzt'
+        for var in var_names:
+            woa_data = read_binary(woa_file_head+var+'_'+bdry, [grid.nx, grid.ny, nrho], dimensions)
+            lens_data = read_binary(lens_file_head+var+'_'+bdry+lens_file_tail, [grid.nx, grid.ny, nrho], dimensions)
+            lens_offset = woa_data - lens_data
+            write_binary(lens_offset, out_file_head+var+'_'+bdry)
+
+
+# Helper function to read and correct the LENS temperature and salinity for a given year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
+def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False):
+
+    in_dir = real_dir(in_dir)
+    file_head = in_dir+'LENS_offset_density_space_'
+    var_names = ['TEMP', 'SALT', 'z']
+    num_var = len(var_names)
+    nrho = 100
+
+    # Read the grids and slice to boundary
+    grid = Grid(mit_grid_dir)
+    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    loc0 = find_obcs_boundary(grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        lens_h_2d = lens_lon
+        mit_h = grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        lens_h_2d = lens_lat
+        mit_h = grid.lat_1d
+    hfac = get_hfac_bdry(grid, bdry)
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction)[0]
+    lens_nh = lens_h.size
+    lens_h = np.tile(lens_h, (lens_nz, 1))
+    lens_z = np.tile(np.expand_dims(lens_z, 1), (1, lens_nh))
+    rho_axis = np.linspace(0, 1, num=nrho)
+    mit_h_2d = np.tile(mit_h, (nrho, 1))
+
+    # Read and slice temperature and salinity for this month
+    lens_ts_z = np.ma.empty([num_var-1, lens_nz, lens_nh])
+    for v in range(num_var-1):
+        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        t0 = t0_year + month-1
+        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+        data_slice = trim_slice_to_grid(data_slice, lens_h_full, grid, direction, warn=False)[0]
+        lens_ts_z[v,:] = data_slice
+    # Calculate potential density, mask, normalise, and fill as before
+    lens_rho_z = potential_density('MDJWF', lens_ts_z[1,:], lens_ts_z[0,:])
+    lens_mask = lens_ts_z[1,:].mask
+    lens_rho_z = np.ma.masked_where(lens_mask, lens_rho_z)
+    rho_min = np.amin(lens_rho_z, axis=0)
+    rho_max = np.amax(lens_rho_z, axis=0)
+    lens_rho_norm = (lens_rho_z - rho_min[None,:])/(rho_max[None,:] - rho_min[None,:])
+    lens_rho_norm[lens_mask] = 1.1
+    # Regrid each variable to the new density axis and the MITgcm horizontal axis, then apply corrections
+    lens_corrected_density = np.ma.empty([num_var, nrho, mit_h.size])
+    for data, v in zip([lens_ts_z[0,:], lens_ts_z[1,:], lens_z], np.arange(num_var)):
+        data_interp_density = interp_nonreg_xy(lens_h, lens_rho_norm, data, mit_h, rho_axis, fill_mask=True)
+        file_path_corr = file_head + var_names[v] + '_' + bdry
+        corr = read_binary(file_path_corr, [mit_h.size, mit_h.size, nrho], dimensions)[month-1,:]
+        lens_corrected_density[v,:] = data_interp_density + corr
+    # Now regrid back to z-space on the MITgcm grid and apply the land mask
+    lens_corrected_z = np.ma.empty([num_var, grid.nz, mit_h.size])
+    for v in range(num_var-1):
+        data_interp_z = interp_nonreg_xy(mit_h_2d, lens_corrected_density[-1,:], lens_corrected_density[v,:], mit_h, grid.z, fill_mask=True)
+        lens_corrected_z[v,:] = np.ma.masked_where(hfac==0, data_interp_z)
+
+    if return_raw:
+        return lens_corrected_z[0,:], lens_corrected_z[1,:], lens_ts_z[0,:], lens_ts_z[1,:], lens_h, lens_z
+    else:
+        return lens_corrected_z[0,:], lens_corrected_z[1,:]
     
         
 # Plot the LENS and WOA density space climatologies and the offset, for the given variable, boundary, and month (1-indexed)
@@ -562,6 +992,159 @@ def plot_all_offsets_density_space (in_dir='./'):
         for var in ['TEMP', 'SALT', 'z']:
             for month in range(12):
                 plot_lens_offsets_density_space(var, bdry, month+1, in_dir=in_dir)
+
+
+# As above but using scaling instead of density correction
+def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False):
+
+    in_dir = real_dir(in_dir)
+    file_head = 'LENS_climatology_'
+    file_head_corr = 'LENS_climatology_scaled_'
+    file_tail = '_1998-2017'
+    var_names = ['TEMP', 'SALT']
+    num_var = len(var_names)
+
+    # Read the grids and slice to boundary
+    grid = Grid(mit_grid_dir)
+    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    loc0 = find_obcs_boundary(grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        lens_h_2d = lens_lon
+        mit_h = grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        lens_h_2d = lens_lat
+        mit_h = grid.lat_1d
+    hfac = get_hfac_bdry(grid, bdry)
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction)[0]
+    lens_nh = lens_h.size
+    lens_h = np.tile(lens_h, (lens_nz, 1))
+    lens_z = np.tile(np.expand_dims(lens_z, 1), (1, lens_nh))
+
+    # Loop over variables
+    lens_raw = np.ma.empty([num_var, lens_nz, lens_nh])
+    lens_corrected = np.ma.empty([num_var, grid.nz, mit_h.size])
+    for v in range(num_var):
+        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        t0 = t0_year + month-1
+        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+        data_slice = trim_slice_to_grid(data_slice, lens_h_full, grid, direction, warn=False)[0]
+        lens_raw[v,:] = data_slice
+        # Interpolate to the MITgcm grid
+        data_interp = interp_nonreg_xy(lens_h, lens_z, data_slice, mit_h, grid.z, fill_mask=True)
+        # Now read baseline climatology and scaled climatology
+        lens_clim = read_binary(in_dir + file_head + var_names[v] + '_' + bdry + file_tail, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+        lens_clim_corr = read_binary(in_dir + file_head_corr + var_names[v] + '_' + bdry, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+        lens_corrected[v,:] = np.ma.masked_where(hfac==0, data_interp - lens_clim + lens_clim_corr)
+    if return_raw:
+        return lens_corrected[0,:], lens_corrected[1,:], lens_raw[0,:], lens_raw[1,:], lens_h, lens_z
+    else:
+        return lens_corrected[0,:], lens_corrected[1,:]
+                
+
+# Scale temperature and salinity in the LENS climatology for each boundary, so the given min and max annual mean T and S over each boundary become the same as WOA.
+def scale_lens_climatology (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    lens_dir = base_dir + 'CESM_bias_correction/obcs/'
+    woa_dir = base_dir + 'ics_obcs/PAS/'
+    var_lens = ['TEMP', 'SALT']
+    var_woa = ['theta', 'salt']
+    file_head_woa = woa_dir + 'OB'
+    file_tail_woa = '_woa_mon.bin'
+    file_head_lens = lens_dir + 'LENS_climatology_'
+    file_tail_lens = '_1998-2017'
+    file_head_lens_out = lens_dir + 'LENS_climatology_scaled_'
+    sources = ['WOA', 'LENS']
+    num_sources = 2
+    num_var = len(var_lens)
+    ndays = np.array([days_per_month(t+1, 1998) for t in range(12)])
+    bdry_loc = ['N', 'W', 'E']
+    num_bdry = len(bdry_loc)
+
+    grid = Grid(mit_grid_dir)
+
+    # Loop over boundaries
+    for bdry in bdry_loc:
+        print(bdry + ' boundary:')
+        hfac = get_hfac_bdry(grid, bdry)
+        if bdry in ['N', 'S']:
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry in ['E', 'W']:
+            nh = grid.ny
+            dimensions = 'yzt'
+        if bdry == 'N':
+            dV_bdry = grid.dV[:,-1,:]
+        elif bdry == 'S':
+            dV_bdry = grid.dV[:,0,:]
+        elif bdry == 'E':
+            dV_bdry = grid.dV[:,:,-1]
+        elif bdry == 'W':
+            dV_bdry = grid.dV[:,:,0]
+        hfac_time = add_time_dim(hfac, months_per_year)
+        # Read the data
+        ts_data = np.ma.empty([num_sources, num_var, months_per_year, grid.nz, nh])
+        for n in range(num_sources):
+            for v in range(num_var):
+                if n == 0:
+                    # WOA
+                    file_path = file_head_woa + bdry + var_woa[v] + file_tail_woa
+                else:
+                    # LENS
+                    file_path = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
+                data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+                ts_data[n,v,:] = np.ma.masked_where(hfac_time==0, data_tmp)
+        # Correct based on annual mean
+        ts_annual_mean = np.average(ts_data, axis=2, weights=ndays)
+        ts_min = np.amin(ts_annual_mean, axis=(-2,-1))
+        ts_max = np.amax(ts_annual_mean, axis=(-2,-1))
+        for v in range(num_var):
+            # Normalise the full LENS data
+            lens_data = ts_data[1,v,:]
+            lens_data_norm = (lens_data - ts_min[1,v])/(ts_max[1,v] - ts_min[1,v])
+            # Invert the normalisation using the WOA limits
+            lens_data_scaled_final = lens_data_norm*(ts_max[0,v] - ts_min[0,v]) + ts_min[0,v]
+            # Write to file
+            file_path = file_head_lens_out + var_lens[v] + '_' + bdry
+            write_binary(lens_data_scaled_final, file_path)
+        '''# Correct one month at a time
+        for v in range(num_var):                 
+            # Correct one month at a time
+            lens_data_scaled_final = np.ma.empty(ts_data.shape[2:])
+            for t in range(months_per_year):
+                # Calculate min, max, and volume-mean for each source
+                vmin = np.amin(ts_data[:,v,t,:,:], axis=(-2,-1))
+                vmax = np.amax(ts_data[:,v,t,:,:], axis=(-2,-1))
+                vmean = np.empty([num_sources])
+                for n in range(num_sources):
+                    vmean[n] = np.sum(ts_data[n,v,t,:,:]*hfac*dV_bdry)/np.sum(hfac*dV_bdry)
+                # Piecewise-normalise the LENS data
+                lens_data = ts_data[1,v,t,:]
+                lens_data_scaled_full = np.ma.empty(lens_data.shape)
+                # Start with everything below the mean
+                index = lens_data < vmean[1]
+                lens_data_norm = (lens_data - vmin[1])/(vmean[1] - vmin[1])
+                lens_data_scaled = lens_data_norm*(vmean[0] - vmin[0]) + vmin[0]
+                lens_data_scaled_full[index] = lens_data_scaled[index]
+                # Now everything above the mean
+                index = lens_data >= vmean[1]
+                lens_data_norm = (lens_data - vmean[1])/(vmax[1] - vmean[1])
+                lens_data_scaled = lens_data_norm*(vmax[0] - vmean[0]) + vmean[0]
+                lens_data_scaled_full[index] = lens_data_scaled[index]
+                lens_data_scaled_final[t,:] = lens_data_scaled_full
+            # Write to file
+            file_path = file_head_lens_out + var_lens[v] + '_' + bdry
+            write_binary(lens_data_scaled_final, file_path)'''
     
 
 # For a given year, month, variable, boundary, and ensemble member, plot the uncorrected and corrected LENS fields as well as the WOA climatology.
