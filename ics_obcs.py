@@ -1613,6 +1613,71 @@ def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/ocean
     else:
         return lens_corrected_z[0,:], lens_corrected_z[1,:]
 
+
+# Scale temperature and salinity in the LENS climatology for each boundary, so the given min and max annual mean T and S over each boundary become the same as WOA.
+def scale_lens_climatology (out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    lens_dir = base_dir + 'CESM_bias_correction/obcs/'
+    woa_dir = base_dir + 'ics_obcs/PAS/'
+    var_lens = ['TEMP', 'SALT']
+    var_woa = ['theta', 'salt']
+    file_head_woa = woa_dir + 'OB'
+    file_tail_woa = '_woa_mon.bin'
+    file_head_lens = lens_dir + 'LENS_climatology_'
+    file_tail_lens = '_1998-2017'
+    file_head_lens_out = lens_dir + 'LENS_climatology_scaled_'
+    sources = ['WOA', 'LENS']
+    num_sources = 2
+    num_var = len(var_lens)
+    ndays = np.array([days_per_month(t+1, 1998) for t in range(12)])
+    bdry_loc = ['N', 'W', 'E']
+    num_bdry = len(bdry_loc)
+
+    grid = Grid(mit_grid_dir)
+
+    # Loop over boundaries
+    for bdry in bdry_loc:
+        print(bdry + ' boundary:')
+        hfac = get_hfac_bdry(grid, bdry)
+        if bdry in ['N', 'S']:
+            nh = grid.nx
+            dimensions = 'xzt'
+        elif bdry in ['E', 'W']:
+            nh = grid.ny
+            dimensions = 'yzt'
+        # Read the data
+        ts_data = np.ma.empty([num_sources, num_var, months_per_year, grid.nz, nh])
+        for n in range(num_sources):
+            for v in range(num_var):
+                if n == 0:
+                    # WOA
+                    file_path = file_head_woa + bdry + var_woa[v] + file_tail_woa
+                else:
+                    # LENS
+                    file_path = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
+                ts_data[n,v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+        # Now calculate min and max annual mean T and S for each source
+        ts_annual_mean = np.average(ts_data, axis=2, weights=ndays)
+        ts_min = np.amin(ts_annual_mean, axis=(2,3))
+        ts_max = np.amax(ts_annual_mean, axis=(2,3))
+        for v in range(num_var):
+            print(var_lens[v])+':')
+            for n in range(num_sources):
+                print(sources[n]+': '+str(ts_min[n,v])+' to '+str(ts_max[n,v]))
+            # Normalise the full LENS data
+            lens_data = ts_data[1,v,:]
+            lens_data_norm = (lens_data - ts_min[1,v])/(ts_max[1,v] - ts_min[1,v])
+            # Now un-normalise using the WOA limits
+            lens_data_scaled = lens_data_norm*(ts_max[0,v] - ts_min[0,v]) + ts_min[0,v]
+            # Write to file
+            file_path = file_head_lens_out + var_lens[v] + '_' + bdry
+            write_binary(lens_data_scaled, file_path)
+
+    
+
     
 
     

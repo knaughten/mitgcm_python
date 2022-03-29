@@ -25,7 +25,7 @@ from .timeseries import trim_and_diff, timeseries_ismr, calc_annual_averages
 
 
 # Helper function to split temperature and salinity in the given region (set by mask) into bins, to get the volume in m^3 of each bin. The arrays can be time-dependent if you want. You can set the bounds of the bins, but they must be at least as permissive as the bounds of the data in that region.
-def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmin=None, tmax=None, smin=None, smax=None, bdry=False):
+def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmin=None, tmax=None, smin=None, smax=None, bdry=False, dV_bdry=None):
 
     if len(mask.shape)==2 and not bdry:
         # Get 3D version of 2D mask
@@ -34,6 +34,13 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
         num_time = time.size
     else:
         num_time = 1
+    if bdry:
+        dV = dV_bdry
+        if dV_bdry is None:
+            print('Error (ts_binning): must set dV_bdry if bdry=True')
+            sys.exit()
+    else:
+        dV = grid.dV            
 
     # Inner function to get min and max values in region
     def get_vmin_vmax (data):
@@ -94,7 +101,7 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
         else:
             temp_tmp = temp
             salt_tmp = salt
-        for temp_val, salt_val, grid_val in zip(temp_tmp[mask], salt_tmp[mask], grid.dV[mask]):
+        for temp_val, salt_val, grid_val in zip(temp_tmp[mask], salt_tmp[mask], dV[mask]):
             temp_index = np.nonzero(temp_edges > temp_val)[0][0]-1
             salt_index = np.nonzero(salt_edges > salt_val)[0][0]-1
             if time_dependent:

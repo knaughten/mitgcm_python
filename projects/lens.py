@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
 from ..grid import Grid, read_pop_grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space, get_hfac_bdry
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
@@ -21,6 +21,7 @@ from ..plot_utils.labels import reduce_cbar_labels
 from ..plot_misc import ts_binning
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry
 from ..postprocess import precompute_timeseries_coupled
+from ..diagnostics import potential_density
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -622,8 +623,8 @@ def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-# Plot T/S diagrams of the WOA and LENS climatologies at the given boundary and month, and the difference in volumes between the two.
-def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
+# Plot T/S diagrams of the WOA and LENS climatologies at the given boundary and month (set month=None for annual mean), and the difference in volumes between the two.
+def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
@@ -637,11 +638,20 @@ def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
     file_tail_lens = '_1998-2017'
     num_sources = 2
     num_var = len(var_lens)
+    ndays = np.array([days_per_month(t+1, 1998) for t in range(12)])
 
     # Build the grids
     grid = Grid(mit_grid_dir)
     hfac = get_hfac_bdry(grid, bdry)
     mask = np.invert(hfac==0)
+    if bdry == 'N':
+        dV_bdry = grid.dV[:,-1,:]
+    elif bdry == 'S':
+        dV_bdry = grid.dV[:,0,:]
+    elif bdry == 'E':
+        dV_bdry = grid.dV[:,:,-1]
+    elif bdry == 'W':
+        dV_bdry = grid.dV[:,:,0]
     if bdry in ['N', 'S']:
         nh = grid.nx
         dimensions = 'xzt'
@@ -658,7 +668,14 @@ def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
             else:
                 # LENS
                 file_path = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
-            ts_data[n,v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+            data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+            if month is None:
+                # Annual mean
+                ts_data[n,v,:] = np.average(data_tmp, axis=0, weights=ndays)
+                month_str = ', annual mean'
+            else:
+                ts_data[n,v,:] = data_tmp[month-1,:]
+                month_str = ', month '+str(month)
 
     # Bin T and S
     volume = []
@@ -667,10 +684,11 @@ def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
     smin = np.amin(ts_data[:,1,:])
     smax = np.amax(ts_data[:,1,:])
     for n in range(num_sources):
-        volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(ts_data[n,0,:], ts_data[n,1,:], grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True)
-        volume.append(volume_tmp)
+        volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(ts_data[n,0,:], ts_data[n,1,:], grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True, dV_bdry=dV_bdry)
+        volume.append(np.log(volume_tmp))
     # Get difference in volume
-    volume.append(volume[1]-volume[0])
+    volume_diff = volume[1].data - volume[0].data
+    volume.append(np.ma.masked_where(volume_diff==0, volume_diff))
     vmin_abs = min(np.amin(volume[0]), np.amin(volume[1]))
     vmax_abs = max(np.amax(volume[0]), np.amax(volume[1]))
     # Prepare to plot density
@@ -698,7 +716,7 @@ def plot_obcs_ts_lens_woa (bdry, month, num_bins=100, fig_name=None):
         if cax[n] is not None:
             plt.colorbar(img, cax=cax[n])
         ax.set_title(titles[n])
-    plt.suptitle('Volumes at '+bdry+' boundary, month '+str(month))
+    plt.suptitle('Log of volumes at '+bdry+' boundary' + month_str)
     finished_plot(fig, fig_name=fig_name)
         
     
