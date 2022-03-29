@@ -1664,7 +1664,7 @@ def scale_lens_climatology (out_dir='./'):
         ts_min = np.amin(ts_annual_mean, axis=(2,3))
         ts_max = np.amax(ts_annual_mean, axis=(2,3))
         for v in range(num_var):
-            print(var_lens[v])+':')
+            print(var_lens[v]+':')
             for n in range(num_sources):
                 print(sources[n]+': '+str(ts_min[n,v])+' to '+str(ts_max[n,v]))
             # Normalise the full LENS data
