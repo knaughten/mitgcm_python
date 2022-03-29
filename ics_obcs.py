@@ -3,7 +3,7 @@
 ###########################################################
 
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
-from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent
+from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year
@@ -1614,6 +1614,60 @@ def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/ocean
         return lens_corrected_z[0,:], lens_corrected_z[1,:]
 
 
+# As above but using scaling instead of density correction
+def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False):
+
+    in_dir = real_dir(in_dir)
+    file_head = 'LENS_climatology_'
+    file_head_corr = 'LENS_climatology_scaled_'
+    file_tail = '_1998-2017'
+    var_names = ['TEMP', 'SALT']
+    num_var = len(var_names)
+
+    # Read the grids and slice to boundary
+    grid = Grid(mit_grid_dir)
+    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    loc0 = find_obcs_boundary(grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        lens_h_2d = lens_lon
+        mit_h = grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        lens_h_2d = lens_lat
+        mit_h = grid.lat_1d
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction)[0]
+    lens_nh = lens_h.size
+    lens_h = np.tile(lens_h, (lens_nz, 1))
+    lens_z = np.tile(np.expand_dims(lens_z, 1), (1, lens_nh))
+
+    # Loop over variables
+    lens_raw = np.ma.empty([num_var, lens_nz, lens_nh])
+    lens_corrected = np.ma.empty([num_var, grid.nz, mit_h.size])
+    for v in range(num_var):
+        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        t0 = t0_year + month-1
+        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+        data_slice = trim_slice_to_grid(data_slice, lens_h_full, grid, direction, warn=False)[0]
+        lens_raw[v,:] = data_slice
+        # Interpolate to the MITgcm grid
+        data_interp = interp_nonreg_xy(lens_h, lens_z, data_slice, mit_h, grid.z, fill_mask=True)
+        # Now read baseline climatology and scaled climatology
+        lens_clim = read_binary(in_dir + file_head + var_names[v] + '_' + bdry + file_tail, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+        lens_clim_corr = read_binary(in_dir + file_head_corr + var_names[v] + '_' + bdry, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+        lens_corrected[v,:] = data_interp - lens_clim + lens_clim_corr
+    if return_raw:
+        return lens_corrected[0,:], lens_corrected[1,:], lens_raw[0,:], lens_raw[1,:], lens_h, lens_z
+    else:
+        return lens_corrected[0,:], lens_corrected[1,:]
+                
+
 # Scale temperature and salinity in the LENS climatology for each boundary, so the given min and max annual mean T and S over each boundary become the same as WOA.
 def scale_lens_climatology (out_dir='./'):
 
@@ -1648,6 +1702,15 @@ def scale_lens_climatology (out_dir='./'):
         elif bdry in ['E', 'W']:
             nh = grid.ny
             dimensions = 'yzt'
+        if bdry == 'N':
+            dV_bdry = grid.dV[:,-1,:]
+        elif bdry == 'S':
+            dV_bdry = grid.dV[:,0,:]
+        elif bdry == 'E':
+            dV_bdry = grid.dV[:,:,-1]
+        elif bdry == 'W':
+            dV_bdry = grid.dV[:,:,0]
+        hfac_time = add_time_dim(hfac, months_per_year)
         # Read the data
         ts_data = np.ma.empty([num_sources, num_var, months_per_year, grid.nz, nh])
         for n in range(num_sources):
@@ -1658,23 +1721,50 @@ def scale_lens_climatology (out_dir='./'):
                 else:
                     # LENS
                     file_path = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
-                ts_data[n,v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
-        # Now calculate min and max annual mean T and S for each source
+                data_tmp = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)
+                ts_data[n,v,:] = np.ma.masked_where(hfac_time==0, data_tmp)
+        # Correct based on annual mean
         ts_annual_mean = np.average(ts_data, axis=2, weights=ndays)
-        ts_min = np.amin(ts_annual_mean, axis=(2,3))
-        ts_max = np.amax(ts_annual_mean, axis=(2,3))
+        ts_min = np.amin(ts_annual_mean, axis=(-2,-1))
+        ts_max = np.amax(ts_annual_mean, axis=(-2,-1))
         for v in range(num_var):
-            print(var_lens[v]+':')
-            for n in range(num_sources):
-                print(sources[n]+': '+str(ts_min[n,v])+' to '+str(ts_max[n,v]))
             # Normalise the full LENS data
             lens_data = ts_data[1,v,:]
             lens_data_norm = (lens_data - ts_min[1,v])/(ts_max[1,v] - ts_min[1,v])
-            # Now un-normalise using the WOA limits
-            lens_data_scaled = lens_data_norm*(ts_max[0,v] - ts_min[0,v]) + ts_min[0,v]
+            # Invert the normalisation using the WOA limits
+            lens_data_scaled_final = lens_data_norm*(ts_max[0,v] - ts_min[0,v]) + ts_min[0,v]
             # Write to file
             file_path = file_head_lens_out + var_lens[v] + '_' + bdry
-            write_binary(lens_data_scaled, file_path)
+            write_binary(lens_data_scaled_final, file_path)
+        '''# Correct one month at a time
+        for v in range(num_var):                 
+            # Correct one month at a time
+            lens_data_scaled_final = np.ma.empty(ts_data.shape[2:])
+            for t in range(months_per_year):
+                # Calculate min, max, and volume-mean for each source
+                vmin = np.amin(ts_data[:,v,t,:,:], axis=(-2,-1))
+                vmax = np.amax(ts_data[:,v,t,:,:], axis=(-2,-1))
+                vmean = np.empty([num_sources])
+                for n in range(num_sources):
+                    vmean[n] = np.sum(ts_data[n,v,t,:,:]*hfac*dV_bdry)/np.sum(hfac*dV_bdry)
+                # Piecewise-normalise the LENS data
+                lens_data = ts_data[1,v,t,:]
+                lens_data_scaled_full = np.ma.empty(lens_data.shape)
+                # Start with everything below the mean
+                index = lens_data < vmean[1]
+                lens_data_norm = (lens_data - vmin[1])/(vmean[1] - vmin[1])
+                lens_data_scaled = lens_data_norm*(vmean[0] - vmin[0]) + vmin[0]
+                lens_data_scaled_full[index] = lens_data_scaled[index]
+                # Now everything above the mean
+                index = lens_data >= vmean[1]
+                lens_data_norm = (lens_data - vmean[1])/(vmax[1] - vmean[1])
+                lens_data_scaled = lens_data_norm*(vmax[0] - vmean[0]) + vmean[0]
+                lens_data_scaled_full[index] = lens_data_scaled[index]
+                lens_data_scaled_final[t,:] = lens_data_scaled_full
+            # Write to file
+            file_path = file_head_lens_out + var_lens[v] + '_' + bdry
+            write_binary(lens_data_scaled_final, file_path)'''
+            
 
     
 

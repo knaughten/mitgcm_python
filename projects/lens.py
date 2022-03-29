@@ -12,7 +12,7 @@ from scipy.stats import linregress, ttest_1samp
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz
 from ..grid import Grid, read_pop_grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space, get_hfac_bdry
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, read_correct_lens_density_space, get_hfac_bdry, read_correct_lens_scaled
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary
 from ..constants import deg_string, months_per_year
 from ..plot_utils.windows import set_panels, finished_plot
@@ -565,7 +565,7 @@ def plot_all_offsets_density_space (in_dir='./'):
     
 
 # For a given year, month, variable, boundary, and ensemble member, plot the uncorrected and corrected LENS fields as well as the WOA climatology.
-def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
+def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='scaled'):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     obcs_dir = base_dir + 'ics_obcs/PAS/'
@@ -591,7 +591,10 @@ def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
     hfac = get_hfac_bdry(grid, bdry)
 
     # Read the corrected and uncorrected LENS fields
-    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_density_space(bdry, ens, year, month, return_raw=True)
+    if option == 'density':
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_density_space(bdry, ens, year, month, return_raw=True)
+    elif option == 'scaled':
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_scaled(bdry, ens, year, month, return_raw=True)
     if var == 'TEMP':
         lens_data_corr = lens_temp_corr
         lens_data_raw = lens_temp_raw
@@ -624,7 +627,7 @@ def plot_obcs_density_corrected (var, bdry, ens, year, month, fig_name=None):
 
 
 # Plot T/S diagrams of the WOA and LENS climatologies at the given boundary and month (set month=None for annual mean), and the difference in volumes between the two.
-def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None):
+def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=False):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     mit_grid_dir = base_dir + 'mitgcm/PAS_grid/'
@@ -634,8 +637,12 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None):
     var_woa = ['theta', 'salt']
     file_head_woa = woa_dir + 'OB'
     file_tail_woa = '_woa_mon.bin'
-    file_head_lens = lens_dir + 'LENS_climatology_'
-    file_tail_lens = '_1998-2017'
+    if corr:
+        file_head_lens = lens_dir + 'LENS_climatology_scaled_'
+        file_tail_lens = ''
+    else:
+        file_head_lens = lens_dir + 'LENS_climatology_'
+        file_tail_lens = '_1998-2017'
     num_sources = 2
     num_var = len(var_lens)
     ndays = np.array([days_per_month(t+1, 1998) for t in range(12)])
