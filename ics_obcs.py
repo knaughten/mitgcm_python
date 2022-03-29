@@ -1639,6 +1639,7 @@ def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_outpu
         dimensions = 'yzt'
         lens_h_2d = lens_lat
         mit_h = grid.lat_1d
+    hfac = get_hfac_bdry(grid, bdry)
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
     lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
     lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction)[0]
@@ -1661,7 +1662,7 @@ def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_outpu
         # Now read baseline climatology and scaled climatology
         lens_clim = read_binary(in_dir + file_head + var_names[v] + '_' + bdry + file_tail, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
         lens_clim_corr = read_binary(in_dir + file_head_corr + var_names[v] + '_' + bdry, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
-        lens_corrected[v,:] = data_interp - lens_clim + lens_clim_corr
+        lens_corrected[v,:] = np.ma.masked_where(hfac==0, data_interp - lens_clim + lens_clim_corr)
     if return_raw:
         return lens_corrected[0,:], lens_corrected[1,:], lens_raw[0,:], lens_raw[1,:], lens_h, lens_z
     else:
