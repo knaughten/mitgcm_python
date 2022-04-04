@@ -1247,27 +1247,27 @@ def plot_obcs_profiles (year, month, fig_name=None):
     direction = 'lon'
     ndays = np.array([days_per_month(t+1, year) for t in range(12)])
     titles = ['WOA', 'LENS uncorrected', 'LENS corrected']
-    colours = ['blue', 'black', 'green']
+    colours = ['blue', 'black', 'red']
     num_profiles = len(titles)
 
     # Build the grids
-    grid = Grid(mit_grid_dir)    
+    grid = Grid(grid_dir)    
     lon0 = find_obcs_boundary(grid, bdry)[0]
-    hfac = get_hfac_bdry(grid, bdry)
+    hfac_slice = get_hfac_bdry(grid, bdry)
     # Mask out dA north of 70S, tile in the z direction, and select the boundary
     dA = np.ma.masked_where(grid.lat_2d > ymax, grid.dA)
     dA = xy_to_xyz(dA, grid)
     dA_slice = dA[:,:,-1]
 
     # Read the corrected and uncorrected LENS fields
-    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, ens, year, month, return_raw=True) 
+    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, 1, year, month, return_raw=True) 
     
     profiles = np.ma.empty([num_var, num_profiles, grid.nz])
     # Loop over variables
     for v in range(num_var):
         
         # Read WOA climatology
-        woa_data = read_binary(woa_file_head+woa_var[v]+woa_file_tail, [grid.nx, grid.ny, grid.nz], 'yzt')
+        woa_data = read_binary(woa_file_head+bdry+woa_var[v]+woa_file_tail, [grid.nx, grid.ny, grid.nz], 'yzt')
         # Extract the right month
         woa_data = woa_data[month-1,:]
 

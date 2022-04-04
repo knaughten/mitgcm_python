@@ -1225,7 +1225,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     hfac = get_hfac_bdry(mit_grid, bdry)
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
     lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction)[0]
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
     lens_nh = lens_h.size
     lens_dV_bdry = extract_slice_nonreg(lens_dV, direction, i1, i2, c1, c2)
     lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, mit_grid, direction, warn=False)[0]
@@ -1305,7 +1305,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             sum_window = np.sum(lens_volume_perbin[j,i_start:i_end])
         if sum_window == lens_volume_perbin[j,i]:
             # No valid neighbours for 10% of the boundary on either side; delete
-            print('Deleting bin j,i = '+str(j)+','+str(i))
+            #print('Deleting bin j,i = '+str(j)+','+str(i))
             lens_volume_perbin[j,i] = 0    
     lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
     lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)    
@@ -1408,6 +1408,41 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         return data_corrected[0,:], data_corrected[1,:], lens_data[0,:], lens_data[1,:], lens_h, lens_z
     else:
         return data_corrected[0,:], data_corrected[1,:]
+
+
+# Read and correct T/S boundary conditions for all months and years, for a single ensemble member in LENS.
+def process_lens_obcs_ts (ens, out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    start_year = 1920
+    end_year = 2100
+    var_names = ['TEMP', 'SALT']
+    num_var = len(var_names)
+    bdry_loc = ['N', 'E', 'W']
+    file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
+
+    for year in range(start_year, end_year+1):
+        for bdry in bdry_loc:
+            print('Processing '+str(year)+', '+bdry+' boundary')
+            year_data = None
+            # Process each month individually
+            for month in range(months_per_year):
+                print('...month '+str(month+1))
+                temp_month, salt_month = read_correct_lens_ts_space(bdry, ens, year, month+1)
+                month_data = [temp_month, salt_month]                        
+                if year_data is None:
+                    # Set up master array for the year now that we know the array sizes
+                    year_data = np.empty([num_var, months_per_year, temp_month.shape[0], temp_month.shape[1]])
+                # Fill land mask with nearest neighbours
+                for v in range(num_var):
+                    year_data[v,month,:,:] = fill_into_mask(month_data[v], use_3d=False, log=False)
+            # Now write the whole year to file
+            for v in range(num_var):
+                file_path = out_dir + file_head + var_names[v] + '_' + bdry + '_' + str(year)
+                write_binary(year_data[v,:], file_path)
+            
+                
+                    
             
 
     
