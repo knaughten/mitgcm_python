@@ -8,6 +8,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import os
 from scipy.stats import linregress, ttest_1samp
+from scipy.ndimage.filters import gaussian_filter
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz
@@ -19,7 +20,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
 from ..plot_utils.labels import reduce_cbar_labels
 from ..plot_misc import ts_binning
-from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours
 from ..postprocess import precompute_timeseries_coupled
 from ..diagnostics import potential_density
 
@@ -1414,6 +1415,24 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         anom_val = [temp_anom, salt_anom]
         for v in range(num_var):
             lens_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
+    # Remove outliers on boundaries
+    i_vals, j_vals = np.meshgrid(np.arange(num_bins), np.arange(num_bins))
+    ts_bdry = ((i_vals==0) + (i_vals==num_bins-1) + (j_vals==0) + (j_vals==num_bins-1)).astype(bool)
+    index = (ts_bdry)*(lens_volume_perbin > 0)
+    window = int(num_bins//10)
+    for i, j in zip(i_vals[index], j_vals[index]):
+        if i==0 or i==num_bins-1:
+            j_start = max(0, j-window)
+            j_end = min(num_bins, j+window)
+            sum_window = np.sum(lens_volume_perbin[j_start:j_end,i])
+        elif j==0 or j==num_bins-1:
+            i_start = max(0, i-window)
+            i_end = min(num_bins, i+window)
+            sum_window = np.sum(lens_volume_perbin[j,i_start:i_end])
+        if sum_window == lens_volume_perbin[j,i]:
+            # No valid neighbours for 10% of the boundary on either side; delete
+            print('Deleting bin j,i = '+str(j)+','+str(i))
+            lens_volume_perbin[j,i] = 0    
     lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
     lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)    
     lens_anom_ts_space = lens_anom_integral_perbin/lens_volume_perbin
@@ -1423,7 +1442,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
             cmap, vmin, vmax = set_colours(lens_anom_ts_space[v,:], ctype='plusminus')
-            img = plt.pcolormesh(bin_centres, bin_centres, lens_anom_ts_space[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
+            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts_space[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
             if v == 0:
                 plt.xlabel('Normalised salinity')
                 plt.ylabel('Normalised temperature')
@@ -1433,17 +1452,17 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         finished_plot(fig)
 
     # Now fill empty spaces in the normalised T/S space
-    # First try: average of nearest neighbours
-    lens_anom_ts_space_filled = np.empty(lens_anom_ts_space.shape)
+    lens_anom_ts_space_filled = np.zeros(lens_anom_ts_space.shape)
     for v in range(num_var):
-        lens_anom_ts_space_filled[v,:] = fill_into_mask(np.ma.copy(lens_anom_ts_space[v,:]), use_3d=False, log=False)
+        # Distance-weighted mean of 10 nearest neighbours, plus Gaussian filter of radius 2
+        lens_anom_ts_space_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), num_neighbours=10), 2)
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
             cmap, vmin, vmax = set_colours(lens_anom_ts_space_filled[v,:], ctype='plusminus')
-            img = plt.pcolormesh(bin_centres, bin_centres, lens_anom_ts_space_filled[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
+            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts_space_filled[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
             if v == 0:
                 plt.xlabel('Normalised salinity')
                 plt.ylabel('Normalised temperature')
