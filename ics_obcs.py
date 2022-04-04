@@ -19,8 +19,8 @@ from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_b
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year, Tf_ref
 from .diagnostics import density, potential_density
-from ..plot_utils.colors import set_colours
-from ..plot_utils.windows import set_panels, finished_plot
+from .plot_utils.colors import set_colours
+from .plot_utils.windows import set_panels, finished_plot
 
 # Helper function for make_sose_climatology and make_bsose_climatology.
 # Given an array of monthly data for multiple years, calculate the monthly climatology.
