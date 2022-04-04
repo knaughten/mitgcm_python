@@ -2,19 +2,25 @@
 # Generate initial conditions and open boundary conditions.
 ###########################################################
 
-from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
-from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month
-from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
-from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask
-from .constants import sec_per_year, gravity, sec_per_day, months_per_year
-from .diagnostics import density, potential_density
-
 import numpy as np
 import os
 import sys
 import netCDF4 as nc
 from nco import Nco
 from nco.custom import Limit
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+from scipy.ndimage.filters import gaussian_filter
+
+from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
+from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month
+from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
+from .constants import sec_per_year, gravity, sec_per_day, months_per_year, Tf_ref
+from .diagnostics import density, potential_density
+from ..plot_utils.colors import set_colours
+from ..plot_utils.windows import set_panels, finished_plot
 
 # Helper function for make_sose_climatology and make_bsose_climatology.
 # Given an array of monthly data for multiple years, calculate the monthly climatology.
@@ -1184,7 +1190,224 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
         return grid.hfac[:,:,0]
 
 
+# Helper function to read and correct the LENS temperature and salinity in T/S space for a given year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
+def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
 
+    lens_file_head = in_dir + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
+    lens_var_names = ['TEMP', 'SALT']
+    obcs_dir = real_dir(obcs_dir)
+    woa_file_head = obcs_dir + 'OB'
+    woa_file_tail = '_woa_mon.bin'
+    woa_var_names = ['theta', 'salt']
+    num_var = len(woa_var_names)
+    num_bins = 100
+
+    # Read the grids and slice to boundary
+    mit_grid = Grid(mit_grid_dir)
+    lens_grid_file = find_lens_file(lens_var_names[0], 'oce', 'monthly', ens, year)[0]
+    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    # Need a few more fields to get the volume integrand
+    lens_dA = read_netcdf(lens_grid_file, 'TAREA')*1e-4
+    lens_dz = read_netcdf(lens_grid_file, 'dz')*1e-2
+    lens_dV = xy_to_xyz(lens_dA, [lens_nx, lens_ny, lens_nz])*z_to_xyz(lens_dz, [lens_nx, lens_ny, lens_z])
+    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        lens_h_2d = lens_lon
+        mit_h = mit_grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        lens_h_2d = lens_lat
+        mit_h = mit_grid.lat_1d
+    hfac = get_hfac_bdry(mit_grid, bdry)
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction)[0]
+    lens_nh = lens_h.size
+    lens_dV_bdry = extract_slice_nonreg(lens_dV, direction, i1, i2, c1, c2)
+    lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, mit_grid, direction, warn=False)[0]
+
+    # Read LENS data for this month and year and slice to boundary
+    lens_data = np.ma.empty([num_var, lens_nz, lens_nh])
+    for v in range(num_var):
+        file_path, t0_year, tf_year = find_lens_file(lens_var_names[v], 'oce', 'monthly', ens, year)
+        t0 = t0_year + month-1
+        data_3d = read_netcdf(file_path, lens_var_names[v], t_start=t0, t_end=t0+1)
+        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+        data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
+        lens_data[v,:] = data_slice
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(lens_data[v,:])
+            img = ax.pcolormesh(lens_h, lens_z*1e-3, lens_data[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('LENS raw output on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+    
+    # Read LENS climatology for this month
+    lens_clim = np.ma.empty([num_var, lens_nz, lens_nh])
+    for v in range(num_var):
+        file_path = lens_file_head + lens_var_names[v] + '_' + bdry + lens_file_tail
+        lens_clim[v,:] = read_binary(file_path, [lens_nh, lens_nh, lens_nz], dimensions)[month-1,:]
+    # Calculate anomalies from the climatology
+    lens_anom = lens_data - lens_clim
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(lens_anom[v,:], ctype='plusminus')
+            img = ax.pcolormesh(lens_h, lens_z*1e-3, lens_anom[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+
+    # Normalise T and S in the climatology to the range 0 (coldest/freshest on boundary) to 1 (warmest/saltiest)
+    lens_clim = np.ma.masked_where(lens_anom.mask, lens_clim)
+    lens_vmin = np.amin(lens_clim, axis=(1,2))
+    lens_vmax = np.amax(lens_clim, axis=(1,2))
+    lens_clim_norm = (lens_clim - lens_vmin[:,None,None])/(lens_vmax[:,None,None] - lens_vmin[:,None,None])
+    # Set up T/S bins
+    bin_edges = np.linspace(0, 1, num=num_bins+1)
+    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
+    # Integrate volume and volume-weighted anomalies in each bin
+    lens_volume_perbin = np.zeros([num_bins, num_bins])
+    lens_anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
+    valid = np.invert(lens_data[0,:].mask)
+    for temp_val, salt_val, dV_val, temp_anom, salt_anom in zip(lens_clim_norm[0,:][valid], lens_clim_norm[1,:][valid], lens_dV_bdry[valid], lens_anom[0,:][valid], lens_anom[1,:][valid]):
+        temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
+        salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
+        lens_volume_perbin[temp_index, salt_index] += dV_val
+        anom_val = [temp_anom, salt_anom]
+        for v in range(num_var):
+            lens_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
+    # Remove outliers on boundaries
+    i_vals, j_vals = np.meshgrid(np.arange(num_bins), np.arange(num_bins))
+    ts_bdry = ((i_vals==0) + (i_vals==num_bins-1) + (j_vals==0) + (j_vals==num_bins-1)).astype(bool)
+    index = (ts_bdry)*(lens_volume_perbin > 0)
+    window = int(num_bins//10)
+    for i, j in zip(i_vals[index], j_vals[index]):
+        if i==0 or i==num_bins-1:
+            j_start = max(0, j-window)
+            j_end = min(num_bins, j+window)
+            sum_window = np.sum(lens_volume_perbin[j_start:j_end,i])
+        elif j==0 or j==num_bins-1:
+            i_start = max(0, i-window)
+            i_end = min(num_bins, i+window)
+            sum_window = np.sum(lens_volume_perbin[j,i_start:i_end])
+        if sum_window == lens_volume_perbin[j,i]:
+            # No valid neighbours for 10% of the boundary on either side; delete
+            print('Deleting bin j,i = '+str(j)+','+str(i))
+            lens_volume_perbin[j,i] = 0    
+    lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
+    lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)    
+    lens_anom_ts_space = lens_anom_integral_perbin/lens_volume_perbin
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(lens_anom_ts_space[v,:], ctype='plusminus')
+            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts_space[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
+            if v == 0:
+                plt.xlabel('Normalised salinity')
+                plt.ylabel('Normalised temperature')
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+
+    # Now fill empty spaces in the normalised T/S space
+    lens_anom_ts_space_filled = np.zeros(lens_anom_ts_space.shape)
+    for v in range(num_var):
+        # Distance-weighted mean of 10 nearest neighbours, plus Gaussian filter of radius 2
+        lens_anom_ts_space_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), num_neighbours=10), 2)
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(lens_anom_ts_space_filled[v,:], ctype='plusminus')
+            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts_space_filled[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
+            if v == 0:
+                plt.xlabel('Normalised salinity')
+                plt.ylabel('Normalised temperature')
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+
+    # Read WOA climatology for this month
+    woa_clim = np.ma.empty([num_var, mit_grid.nz, mit_h.size])
+    for v in range(num_var):
+        file_path = woa_file_head + bdry + woa_var_names[v] + woa_file_tail
+        woa_data_tmp = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)[month-1,:]
+        woa_clim[v,:] = np.ma.masked_where(hfac==0, woa_data_tmp)
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(woa_clim[v,:])
+            img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, woa_clim[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('WOA climatology on '+bdry+' boundary, month '+str(month), fontsize=16)
+        finished_plot(fig)
+        
+    # Normalise T and S
+    woa_vmin = np.amin(woa_clim, axis=(1,2))
+    woa_vmax = np.amax(woa_clim, axis=(1,2))
+    woa_clim_norm = (woa_clim - woa_vmin[:,None,None])/(woa_vmax[:,None,None] - woa_vmin[:,None,None])
+    # Loop over points and find corresponding anomaly in normalised T/S space
+    woa_anom = np.zeros(woa_clim.shape)
+    j, k = np.meshgrid(np.arange(mit_h.size), np.arange(mit_grid.nz))
+    valid = np.invert(woa_clim[0,:].mask)
+    for temp_val, salt_val, k, j in zip(woa_clim_norm[0,:][valid], woa_clim_norm[1,:][valid], k[valid], j[valid]):
+        temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
+        salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
+        for v in range(num_var):
+            anom_from_lens = lens_anom_ts_space_filled[v, temp_index, salt_index]
+            woa_anom[v,k,j] = anom_from_lens
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(woa_anom[v,:], ctype='plusminus')
+            img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, woa_anom[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('WOA anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+    # Add anomaly field to climatology for final corrected fields
+    data_corrected = woa_clim + woa_anom
+    # Set minimum temperature to not go below surface freezing point
+    data_corrected[0,:] = np.maximum(data_corrected[0,:], Tf_ref)
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        for v in range(num_var):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(data_corrected[v,:])
+            img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, data_corrected[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(lens_var_names[v])
+        plt.suptitle('Final corrected fields on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
+
+    if return_raw:
+        return data_corrected[0,:], data_corrected[1,:], lens_data[0,:], lens_data[1,:], lens_h, lens_z
+    else:
+        return data_corrected[0,:], data_corrected[1,:]
             
 
     
