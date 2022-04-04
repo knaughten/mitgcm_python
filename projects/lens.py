@@ -1151,68 +1151,6 @@ def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_outpu
         return lens_corrected[0,:], lens_corrected[1,:], lens_raw[0,:], lens_raw[1,:], lens_h, lens_z
     else:
         return lens_corrected[0,:], lens_corrected[1,:]
-    
-
-# For a given year, month, variable, boundary, and ensemble member, plot the uncorrected and corrected LENS fields as well as the WOA climatology.
-def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='scaled'):
-
-    base_dir = '/data/oceans_output/shelf/kaight/'
-    obcs_dir = base_dir + 'ics_obcs/PAS/'
-    grid_dir = base_dir + 'mitgcm/PAS_grid/'
-    woa_file_head = obcs_dir + 'OB'
-    woa_file_tail = '_woa_mon.bin'
-    if var == 'TEMP':
-        woa_var = 'theta'
-        var_title = 'Temperature ('+deg_string+'C)'
-    elif var == 'SALT':
-        woa_var = 'salt'
-        var_title = 'Salinity (psu)'
-    titles = ['WOA', 'LENS', 'LENS corrected']
-    num_panels = len(titles)
-
-    grid = Grid(grid_dir)
-    if bdry in ['N', 'S']:
-        mit_h = grid.lon_1d
-        dimensions = 'xzt'
-    elif bdry in ['E', 'W']:
-        mit_h = grid.lat_1d
-        dimensions = 'yzt'
-    hfac = get_hfac_bdry(grid, bdry)
-
-    # Read the corrected and uncorrected LENS fields
-    if option == 'density':
-        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_density_space(bdry, ens, year, month, return_raw=True)
-    elif option == 'scaled':
-        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_scaled(bdry, ens, year, month, return_raw=True)
-    if var == 'TEMP':
-        lens_data_corr = lens_temp_corr
-        lens_data_raw = lens_temp_raw
-    elif var == 'SALT':
-        lens_data_corr = lens_salt_corr
-        lens_data_raw = lens_salt_raw
-    # Read the WOA fields
-    woa_file = woa_file_head + bdry + woa_var + woa_file_tail
-    woa_data = read_binary(woa_file, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
-    woa_data = np.ma.masked_where(hfac==0, woa_data)
-
-    # Wrap up for plotting
-    data = [woa_data, lens_data_raw, lens_data_corr]
-    h = [mit_h, lens_h, mit_h]
-    z = [grid.z, lens_z, grid.z]
-    vmin = min(min(np.amin(woa_data), np.amin(lens_data_raw)), np.amin(lens_data_corr))
-    vmax = max(max(np.amax(woa_data), np.amax(lens_data_raw)), np.amax(lens_data_corr))
-    cmap = set_colours(data[0], vmin=vmin, vmax=vmax)[0]
-    fig, gs, cax = set_panels('1x3C1')
-    for n in range(num_panels):
-        ax = plt.subplot(gs[0,n])
-        img = ax.pcolormesh(h[n], z[n], data[n], cmap=cmap, vmin=vmin, vmax=vmax)
-        if n==2:
-            plt.colorbar(img, cax=cax, orientation='horizontal')
-        if n > 0:
-            ax.set_yticklabels([])
-        ax.set_title(titles[n], fontsize=14)
-    plt.suptitle(var_title+' at '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
 
 
 # Plot T/S diagrams of the WOA and LENS climatologies at the given boundary and month (set month=None for annual mean), and the difference in volumes between the two.
@@ -1532,6 +1470,70 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         return data_corrected[0,:], data_corrected[1,:], lens_data[0,:], lens_data[1,:], lens_h, lens_z
     else:
         return data_corrected[0,:], data_corrected[1,:]
+
+
+# For a given year, month, variable, boundary, and ensemble member, plot the uncorrected and corrected LENS fields as well as the WOA climatology.
+def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'):
+
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    obcs_dir = base_dir + 'ics_obcs/PAS/'
+    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    woa_file_head = obcs_dir + 'OB'
+    woa_file_tail = '_woa_mon.bin'
+    if var == 'TEMP':
+        woa_var = 'theta'
+        var_title = 'Temperature ('+deg_string+'C)'
+    elif var == 'SALT':
+        woa_var = 'salt'
+        var_title = 'Salinity (psu)'
+    titles = ['WOA', 'LENS', 'LENS corrected']
+    num_panels = len(titles)
+
+    grid = Grid(grid_dir)
+    if bdry in ['N', 'S']:
+        mit_h = grid.lon_1d
+        dimensions = 'xzt'
+    elif bdry in ['E', 'W']:
+        mit_h = grid.lat_1d
+        dimensions = 'yzt'
+    hfac = get_hfac_bdry(grid, bdry)
+
+    # Read the corrected and uncorrected LENS fields
+    if option == 'density':
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_density_space(bdry, ens, year, month, return_raw=True)
+    elif option == 'scaled':
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_scaled(bdry, ens, year, month, return_raw=True)
+    elif option == 'ts':
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, ens, year, month, return_raw=True)
+    if var == 'TEMP':
+        lens_data_corr = lens_temp_corr
+        lens_data_raw = lens_temp_raw
+    elif var == 'SALT':
+        lens_data_corr = lens_salt_corr
+        lens_data_raw = lens_salt_raw
+    # Read the WOA fields
+    woa_file = woa_file_head + bdry + woa_var + woa_file_tail
+    woa_data = read_binary(woa_file, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
+    woa_data = np.ma.masked_where(hfac==0, woa_data)
+
+    # Wrap up for plotting
+    data = [woa_data, lens_data_raw, lens_data_corr]
+    h = [mit_h, lens_h, mit_h]
+    z = [grid.z, lens_z, grid.z]
+    vmin = min(min(np.amin(woa_data), np.amin(lens_data_raw)), np.amin(lens_data_corr))
+    vmax = max(max(np.amax(woa_data), np.amax(lens_data_raw)), np.amax(lens_data_corr))
+    cmap = set_colours(data[0], vmin=vmin, vmax=vmax)[0]
+    fig, gs, cax = set_panels('1x3C1')
+    for n in range(num_panels):
+        ax = plt.subplot(gs[0,n])
+        img = ax.pcolormesh(h[n], z[n], data[n], cmap=cmap, vmin=vmin, vmax=vmax)
+        if n==2:
+            plt.colorbar(img, cax=cax, orientation='horizontal')
+        if n > 0:
+            ax.set_yticklabels([])
+        ax.set_title(titles[n], fontsize=14)
+    plt.suptitle(var_title+' at '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
 
     
         
