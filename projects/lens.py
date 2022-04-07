@@ -26,11 +26,12 @@ from ..diagnostics import potential_density
 
 
 # Update the timeseries calculations from wherever they left off before.
-def update_lens_timeseries (num_ens=5, base_dir='./'):
+def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
     timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
-    sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '/output/' for n in range(num_ens)]
+    if sim_dir is None:
+        sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '/output/' for n in range(num_ens)]
     timeseries_file = 'timeseries.nc'
 
     for n in range(num_ens):
