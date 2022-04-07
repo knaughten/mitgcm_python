@@ -32,30 +32,40 @@ def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
     base_dir = real_dir(base_dir)
     if sim_dir is None:
         sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '/output/' for n in range(num_ens)]
+    else:
+        num_ens = len(sim_dir)
     timeseries_file = 'timeseries.nc'
 
     for n in range(num_ens):
-        # Work out the first year based on where the timeseries file left off
-        start_year = netcdf_time(sim_dir[n]+timeseries_file, monthly=False)[-1].year+1
-        # Work on the last year based on the contents of the output directory
-        sim_years = []
-        for fname in os.listdir(sim_dir[n]):
-            if os.path.isdir(sim_dir[n]+fname) and fname.endswith('01'):
-                sim_years.append(int(fname))
-        sim_years.sort()
-        end_year = sim_years[-1]//100
-        print('Processing years '+str(start_year)+'-'+str(end_year))
-        segment_dir = [str(year)+'01' for year in range(start_year, end_year+1)]
+        if not os.path.isfile(sim_dir[n]+timeseries_file):
+            # Start fresh
+            segment_dir = None
+        else:
+            # Work out the first year based on where the timeseries file left off
+            start_year = netcdf_time(sim_dir[n]+timeseries_file, monthly=False)[-1].year+1
+            # Work on the last year based on the contents of the output directory
+            sim_years = []
+            for fname in os.listdir(sim_dir[n]):
+                if os.path.isdir(sim_dir[n]+fname) and fname.endswith('01'):
+                    sim_years.append(int(fname))
+            sim_years.sort()
+            end_year = sim_years[-1]//100
+            print('Processing years '+str(start_year)+'-'+str(end_year))
+            segment_dir = [str(year)+'01' for year in range(start_year, end_year+1)]
         precompute_timeseries_coupled(output_dir=sim_dir[n], segment_dir=segment_dir, timeseries_types=timeseries_types, hovmoller_loc=[], timeseries_file=timeseries_file, key='PAS')        
 
 
 # Plot a bunch of precomputed timeseries from ongoing LENS-forced test simulations (ensemble of 5 to start), compared to the PACE-forced ensemble mean.
-def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None):
+def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
     pace_file = base_dir+'timeseries_pace_mean.nc'
-    file_paths = ['PAS_LENS'+str(n+1).zfill(3)+'/output/timeseries.nc' for n in range(num_ens)] + [pace_file]
+    if sim_dir is None:
+        sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'/output/' for n in range(num_ens)]
+    else:
+        num_ens = len(sim_dir)
+    file_paths = [sd+'timeseries.nc' for sd in sim_dir] + [pace_file]
     sim_names = ['LENS ensemble'] + [None for n in range(num_ens-1)] + ['PACE mean']
     colours = ['DarkGrey' for n in range(num_ens)] + ['blue']
     smooth = 24
