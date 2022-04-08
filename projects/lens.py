@@ -1284,7 +1284,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     direction = 'lon'
     ndays = np.array([days_per_month(t+1, year) for t in range(12)])
     titles = ['WOA', 'LENS climatology', 'LENS uncorrected', 'LENS corrected']
-    colours = ['blue', 'green', 'black', 'red']
+    colours = ['blue', 'black', 'green', 'red']
     num_profiles = len(titles)
 
     # Build the grids

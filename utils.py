@@ -891,6 +891,14 @@ def depth_of_isoline (data, z, val0, z0=None):
     # Mask where the entire water column is above val0
     depth_iso = np.ma.masked_where(mask_above, depth_iso)
     return depth_iso
+
+
+# Normalise the given array to the range 0-1.
+def normalise (data):
+
+    vmin = np.amin(data)
+    vmax = np.amax(data)
+    return (data - vmin)/(vmax - vmin)
     
 
     
