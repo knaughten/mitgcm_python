@@ -16,7 +16,7 @@ from scipy.ndimage.filters import gaussian_filter
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
-from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, drho_weighted_nearest_neighbours
+from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year, Tf_ref
 from .diagnostics import density, potential_density
 from .plot_utils.colours import set_colours
@@ -1310,6 +1310,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
     lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)    
     lens_anom_ts_space = lens_anom_integral_perbin/lens_volume_perbin
+    temp_centres_2d = np.meshgrid(bin_centres, bin_centres)[1]*(lens_vmax[0] - lens_vmin[0]) + lens_vmin[0]
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
@@ -1324,28 +1325,13 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             ax.set_title(lens_var_names[v])
         plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
-
-    # Calculate potential density of each bin
-    temp_centres = bin_centres*(lens_vmax[0] - lens_vmin[0]) + lens_vmin[0]
-    salt_centres = bin_centres*(lens_vmax[1] - lens_vmin[1]) + lens_vmin[1]
-    temp_centres_2d, salt_centres_2d = np.meshgrid(temp_centres, salt_centres)
-    lens_density = potential_density('MDJWF', salt_centres_2d, temp_centres_2d)
-    if plot:
-        temp_edges = bin_edges*(lens_vmax[0] - lens_vmin[0]) + lens_vmin[0]
-        salt_edges = bin_edges*(lens_vmax[1] - lens_vmin[1]) + lens_vmin[1]
-        fig, ax = plt.subplots()
-        img = plt.pcolormesh(temp_edges, salt_edges, lens_density, cmap='jet')
-        plt.colorbar(img)
-        plt.xlabel('Salinity')
-        plt.ylabel('Temperature')
-        plt.title('Density in LENS T/S space', fontsize=16)
-        finished_plot(fig)
         
     # Now fill empty spaces in the normalised T/S space
     lens_anom_ts_space_filled = np.zeros(lens_anom_ts_space.shape)
     for v in range(num_var):
-        # Density gradient-weighted mean of 10 nearest neighbours, plus Gaussian filter of radius 2
-        lens_anom_ts_space_filled[v,:] = gaussian_filter(drho_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), lens_density, num_neighbours=10), 2)
+        # Distance-weighted mean of 25 nearest neighbours, plus Gaussian filter of radius 2
+        # Also weight with volume and difference from freezing point
+        lens_anom_ts_space_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), weights=lens_volume_perbin/(temp_centres_2d-Tf_ref), num_neighbours=25), 2)
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
