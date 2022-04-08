@@ -669,7 +669,7 @@ def distance_weighted_nearest_neighbours (data, weights=None, num_neighbours=10,
         mask = data==missing_val
     if weights is None:
         weights = np.ones(data.shape)
-    i_vals, j_vals = np.meshgrid(np.arange(data.shape[0]), np.arange(data.shape[1]))
+    i_vals, j_vals = np.meshgrid(np.arange(data.shape[1]), np.arange(data.shape[0]))
     data_filled = np.empty(data.shape)
     # Loop over missing points
     for i0, j0 in zip(i_vals[mask], j_vals[mask]):
