@@ -1115,30 +1115,28 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
     elif bdry in ['E', 'W']:
         nh = grid.ny
         dimensions = 'yzt'
-    lens_grid_file = find_lens_file(lens_var_names[0], 'oce', 'monthly', 1, 1998)[0]
+    lens_grid_file = find_lens_file(var_lens[0], 'oce', 'monthly', 1, 1998)[0]
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     # Need a few more fields to get the volume integrand
     lens_dA = read_netcdf(lens_grid_file, 'TAREA')*1e-4
     lens_dz = read_netcdf(lens_grid_file, 'dz')*1e-2
     lens_dV = xy_to_xyz(lens_dA, [lens_nx, lens_ny, lens_nz])*z_to_xyz(lens_dz, [lens_nx, lens_ny, lens_z])
-    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    loc0 = find_obcs_boundary(grid, bdry)[0]
     if bdry in ['N', 'S']:
         direction = 'lat'
         dimensions = 'xzt'
         lens_h_2d = lens_lon
-        mit_h = mit_grid.lon_1d
     elif bdry in ['E', 'W']:
         direction = 'lon'
         dimensions = 'yzt'
         lens_h_2d = lens_lat
-        mit_h = mit_grid.lat_1d
-    hfac = get_hfac_bdry(mit_grid, bdry)
+    hfac = get_hfac_bdry(grid, bdry)
     i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
     lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, grid, direction, warn=False)[0]
     lens_nh = lens_h.size
     lens_dV_bdry = extract_slice_nonreg(lens_dV, direction, i1, i2, c1, c2)
-    lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, grid, direction, warn=False)[0]
         
     # Read the data
     ts_data_woa = np.ma.empty([num_var, grid.nz, nh])
@@ -1148,6 +1146,7 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
         woa_data = read_binary(woa_file, [grid.nx, grid.ny, grid.nz], dimensions)
         lens_file = file_head_lens + var_lens[v] + '_' + bdry + file_tail_lens
         lens_data = read_binary(lens_file, [lens_nh, lens_nh, lens_nz], dimensions)
+        lens_data = np.ma.masked_where(lens_data==0, lens_data)
         if month is None:
             # Annual mean
             ts_data_woa[v,:] = np.average(woa_data, axis=0, weights=ndays)
@@ -1157,7 +1156,7 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
             ts_data_woa[v,:] = woa_data[month-1,:]
             ts_data_lens[v,:] = lens_data[month-1,:]
             month_str = ', month '+str(month)
-    mask_lens = ts_data_lens[0,:].mask
+    mask_lens = np.invert(ts_data_lens[0,:].mask)
 
     # Bin T and S
     tmin = min(np.amin(ts_data_woa[0,:]), np.amin(ts_data_lens[0,:]))
@@ -1165,7 +1164,7 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
     smin = min(np.amin(ts_data_woa[1,:]), np.amin(ts_data_lens[1,:]))
     smax = max(np.amax(ts_data_woa[1,:]), np.amax(ts_data_lens[1,:]))
     volume_woa, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(ts_data_woa[0,:], ts_data_woa[1,:], grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True, dV_bdry=dV_bdry)
-    volume_lens = ts_binning(ts_data_lens[0,:], ts_data_lens[1,:], None, mask_lens, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True, dV_bdry=lens_dV_bdry)
+    volume_lens = ts_binning(ts_data_lens[0,:], ts_data_lens[1,:], None, mask_lens, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax, bdry=True, dV_bdry=lens_dV_bdry)[0]
     volume = [volume_woa, volume_lens]
     # Get difference in volume
     volume_diff = volume[1].data - volume[0].data

@@ -660,7 +660,7 @@ def extract_slice_nonreg (data, direction, i1, i2, c1, c2):
 # Fill missing values in the given array with a distance-weighted mean of its num_neighbours nearest neighbours (default 10).
 # For now only works with a 2D array and using index values as distance (rather than lat/lon or Cartesian distance or something), for the purposes of T/S space.
 # You can either pass a MaskedArray or set a specific missing value.
-def distance_weighted_nearest_neighbours (data, num_neighbours=10, missing_val=-9999):
+def drho_weighted_nearest_neighbours (data, density, num_neighbours=10, missing_val=-9999):
 
     if isinstance(data, np.ma.MaskedArray):
         mask = data.mask
@@ -670,14 +670,14 @@ def distance_weighted_nearest_neighbours (data, num_neighbours=10, missing_val=-
     data_filled = np.empty(data.shape)
     # Loop over missing points
     for i0, j0 in zip(i_vals[mask], j_vals[mask]):
-        # Get the distance of every other point to this point
-        distance = np.sqrt((i_vals-i0)**2 + (j_vals-j0)**2)
+        # Get the absolute density gradient between every other point and this point
+        drho = np.abs(density - density[j0,i0])
         # Apply the mask so we only consider distances to valid points
-        distance = np.ma.masked_where(mask, distance)
+        drho = np.ma.masked_where(mask, drho)
         # Select the num_neighbours closest points
-        neighbours = distance <= np.sort(distance[~mask])[num_neighbours-1]
-        # Calculate the distance-weighted mean over these points
-        data_filled[j0,i0] = np.sum(data[neighbours]*distance[neighbours])/np.sum(distance[neighbours])
+        neighbours = drho <= np.sort(drho[~mask])[num_neighbours-1]
+        # Calculate the density-gradient-weighted mean over these points
+        data_filled[j0,i0] = np.sum(data[neighbours]*drho[neighbours])/np.sum(drho[neighbours])
     data_filled[~mask] = data[~mask]
     return data_filled
     
