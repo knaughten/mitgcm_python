@@ -1229,6 +1229,8 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     lens_nh = lens_h.size
     lens_dV_bdry = extract_slice_nonreg(lens_dV, direction, i1, i2, c1, c2)
     lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_sfc_flag = np.zeros(lens_dV_bdry.shape)
+    lens_sfc_flag[0,:] = 1
 
     # Read LENS data for this month and year and slice to boundary
     lens_data = np.ma.empty([num_var, lens_nz, lens_nh])
@@ -1281,11 +1283,14 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     # Integrate volume and volume-weighted anomalies in each bin
     lens_volume_perbin = np.zeros([num_bins, num_bins])
     lens_anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
+    # Also fraction of each bin which is surface water
+    lens_sfc_fraction_perbin = np.zeros([num_bins, num_bins])
     valid = np.invert(lens_data[0,:].mask)
-    for temp_val, salt_val, dV_val, temp_anom, salt_anom in zip(lens_clim_norm[0,:][valid], lens_clim_norm[1,:][valid], lens_dV_bdry[valid], lens_anom[0,:][valid], lens_anom[1,:][valid]):
+    for temp_val, salt_val, dV_val, temp_anom, salt_anom, sfc_val in zip(lens_clim_norm[0,:][valid], lens_clim_norm[1,:][valid], lens_dV_bdry[valid], lens_anom[0,:][valid], lens_anom[1,:][valid], lens_sfc_flag[valid]):
         temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
         salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
         lens_volume_perbin[temp_index, salt_index] += dV_val
+        lens_sfc_fraction_perbin[temp_index, salt_index] += dV_val*sfc_val
         anom_val = [temp_anom, salt_anom]
         for v in range(num_var):
             lens_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
@@ -1310,7 +1315,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
     lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)    
     lens_anom_ts_space = lens_anom_integral_perbin/lens_volume_perbin
-    temp_centres_2d = np.meshgrid(bin_centres, bin_centres)[1]*(lens_vmax[0] - lens_vmin[0]) + lens_vmin[0]
+    lens_sfc_fraction_perbin = lens_sfc_fraction_perbin/lens_volume_perbin
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
@@ -1325,13 +1330,29 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             ax.set_title(lens_var_names[v])
         plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
+    if plot:
+        fig, gs, cax1, cax2 = set_panels('1x2C2')
+        cax = [cax1, cax2]
+        data_plot = [np.log(lens_volume_perbin), lens_sfc_fraction_perbin]
+        title_plot = ['Volume (log)', 'Surface water fraction']
+        for v in range(2):
+            ax = plt.subplot(gs[0,v])
+            cmap, vmin, vmax = set_colours(data_plot[v])
+            img = plt.pcolormesh(bin_edges, bin_edges, data_plot[v], vmin=vmin, vmax=vmax, cmap=cmap)
+            if v == 0:
+                plt.xlabel('Normalised salinity')
+                plt.ylabel('Normalised temperature')
+            plt.colorbar(img, cax=cax[v], orientation='horizontal')
+            ax.set_title(title_plot[v])
+        plt.suptitle('LENS water masses on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        finished_plot(fig)
         
     # Now fill empty spaces in the normalised T/S space
     lens_anom_ts_space_filled = np.zeros(lens_anom_ts_space.shape)
     for v in range(num_var):
         # Distance-weighted mean of 25 nearest neighbours, plus Gaussian filter of radius 2
-        # Also weight with volume and difference from freezing point
-        lens_anom_ts_space_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), weights=lens_volume_perbin/(temp_centres_2d-Tf_ref), num_neighbours=25), 2)
+        # Also weight with volume and amount of surface water
+        lens_anom_ts_space_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(np.ma.copy(lens_anom_ts_space[v,:]), weights=lens_volume_perbin*(0.001+lens_sfc_fraction_perbin), num_neighbours=25), 2)
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]

@@ -1264,14 +1264,17 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
     finished_plot(fig, fig_name=fig_name)
 
 
-# Plot T/S profiles horizontally averaged over the eastern boundary from 70S to the coastline, for a given month (1-indexed) and year. Show the original WOA climatology, the uncorrected LENS field from the first ensemble member, and the corrected LENS field using both annual and monthly offsets.
+# Plot T/S profiles horizontally averaged over the eastern boundary from 70S to the coastline, for a given month (1-indexed) and year. Show the original WOA climatology, the LENS climatology, the uncorrected LENS field from the first ensemble member, and the corrected LENS field.
 def plot_obcs_profiles (year, month, fig_name=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     obcs_dir = base_dir + 'ics_obcs/PAS/'
+    clim_dir = base_dir + 'CESM_bias_correction/obcs/'
     grid_dir = base_dir + 'mitgcm/PAS_grid/'
     woa_file_head = obcs_dir + 'OB'
     woa_file_tail = '_woa_mon.bin'
+    lens_file_head = clim_dir + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
     bdry = 'E'
     woa_var = ['theta', 'salt']
     lens_var = ['TEMP', 'SALT']
@@ -1280,8 +1283,8 @@ def plot_obcs_profiles (year, month, fig_name=None):
     num_var = len(woa_var)
     direction = 'lon'
     ndays = np.array([days_per_month(t+1, year) for t in range(12)])
-    titles = ['WOA', 'LENS uncorrected', 'LENS corrected']
-    colours = ['blue', 'black', 'red']
+    titles = ['WOA', 'LENS climatology', 'LENS uncorrected', 'LENS corrected']
+    colours = ['blue', 'green', 'black', 'red']
     num_profiles = len(titles)
 
     # Build the grids
@@ -1312,11 +1315,18 @@ def plot_obcs_profiles (year, month, fig_name=None):
         elif lens_var[v] == 'SALT':
             lens_data_uncorrected = lens_salt_raw
             lens_data_corrected = lens_salt_corr
+        lens_mask = np.invert(lens_data_uncorrected.mask).astype(float)
         # Interpolate the LENS slice to the MITgcm grid
-        lens_data_uncorrected = interp_bdry(lens_h, lens_z, lens_data_uncorrected, np.invert(lens_data_uncorrected.mask).astype(float), grid.lat_1d, grid.z, hfac_slice, lon=False, depth_dependent=True)
+        lens_data_uncorrected = interp_bdry(lens_h, lens_z, lens_data_uncorrected, lens_mask, grid.lat_1d, grid.z, hfac_slice, lon=False, depth_dependent=True)
+
+        # Read LENS climatology
+        lens_clim_raw = read_binary(lens_file_head+lens_var[v]+'_'+bdry+lens_file_tail, [lens_h.size, lens_h.size, lens_z.size], 'yzt')
+        lens_clim_raw = lens_clim_raw[month-1,:]
+        # Interpolate to the MITgcm grid
+        lens_clim = interp_bdry(lens_h, lens_z, lens_clim_raw, lens_mask, grid.lat_1d, grid.z, hfac_slice, lon=False, depth_dependent=True)
 
         # Horizontally average everything south of 70S
-        for data_slice, n in zip([woa_data, lens_data_uncorrected, lens_data_corrected], range(num_profiles)):
+        for data_slice, n in zip([woa_data, lens_clim, lens_data_uncorrected, lens_data_corrected], range(num_profiles)):
             profiles[v,n,:] = np.sum(data_slice*hfac_slice*dA_slice, axis=-1)/np.sum(hfac_slice*dA_slice, axis=-1)
 
     # Plot
