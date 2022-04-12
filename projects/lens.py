@@ -20,7 +20,7 @@ from ..constants import deg_string, months_per_year, Tf_ref, region_names
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours
 from ..plot_utils.labels import reduce_cbar_labels
-from ..plot_misc import ts_binning
+from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours
 from ..postprocess import precompute_timeseries_coupled
 from ..diagnostics import potential_density
@@ -1360,15 +1360,21 @@ def plot_hovmoller_lens_ensemble (var, region, num_ens=5, base_dir='./', fig_nam
     var_name = region + '_' + var
     if var == 'temp':
         var_title = 'Temperature ('+deg_string+'C)'
+        vmin = -1.6
+        vmax = 1.4
     elif var == 'salt':
         var_title = 'Salinity (psu)'
+        vmin = 34
+        vmax = 34.8
     suptitle = var_title + ' in ' + region_names[region]
     smooth = 12
     start_year = 1920
     end_year = 2100
-    titles = ['LENS '+str(n+1).zfill(3) for n in range(num_ens)] + ['LENS mean', 'PACE mean']
+    titles = ['LENS '+str(n+1).zfill(3) for n in range(num_ens)] + ['LENS\nmean', 'PACE\nmean']
     
     grid = Grid('PAS_grid/')
+    all_data = []
+    all_time = []
     for n in range(num_ens+2):
         data = read_netcdf(file_paths[n], var_name)
         time = netcdf_time(file_paths[n], monthly=False)
@@ -1376,20 +1382,21 @@ def plot_hovmoller_lens_ensemble (var, region, num_ens=5, base_dir='./', fig_nam
         data = data[t_start:]
         time = time[t_start:]
         if n == 0:
-            all_data = np.empty([num_ens+2, data.shape[0], data.shape[1]])
-            all_time = np.empty([num_ens+2, time.size])
-        all_data[n,:] = data
-        all_time[n,:] = time
-    vmin = np.amin(all_data)
-    vmax = np.amax(all_data)
+            mask = data[0,:].mask
+        else:
+            if not isinstance(data, np.ma.MaskedArray):
+                mask_full = add_time_dim(mask, data.shape[0])
+                data = np.ma.masked_where(mask_full, data)
+        all_data.append(data)
+        all_time.append(time)
 
     fig = plt.figure(figsize=(6,12))
-    gs = plt.GridSpec(num_ens+2,2)
-    gs.update(left=0.07, right=0.87, bottom=0.04, top=0.95, hspace=0.08)
+    gs = plt.GridSpec(num_ens+2,1)
+    gs.update(left=0.07, right=0.85, bottom=0.04, top=0.95, hspace=0.08)
     cax = fig.add_axes([0.75, 0.96, 0.24, 0.012])
     for n in range(num_ens+2):
         ax = plt.subplot(gs[n,0])
-        img = hovmoller_plot(all_data[n,:], all_time[n,:], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax)
+        img = hovmoller_plot(all_data[n], all_time[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax)
         ax.set_xlim([datetime.date(start_year, 1, 1), datetime.date(end_year, 12, 31)])
         ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_year, end_year, 20)])
         if n == 0:
@@ -1398,14 +1405,15 @@ def plot_hovmoller_lens_ensemble (var, region, num_ens=5, base_dir='./', fig_nam
             ax.set_ylabel('')
         else:
             ax.set_yticks([])
+            ax.set_ylabel('')
         if n == 1:
             ax.set_ylabel('Depth (km)', fontsize=10)
         if n != num_ens+1:
             ax.set_xticklabels([])
         ax.set_xlabel('')
-        plt.text(1.01, 0.5, titles[n], ha='left', va='center', transform=ax.transAxes, fontsize=12)
+        plt.text(1.01, 0.5, titles[n], ha='left', va='center', transform=ax.transAxes, fontsize=11)
     plt.suptitle(suptitle, fontsize=16, x=0.05, ha='left')
-    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
     cax.xaxis.set_ticks_position('top')
     reduce_cbar_labels(cbar)
     finished_plot(fig, fig_name=fig_name)
