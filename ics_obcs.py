@@ -1203,6 +1203,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     num_var = len(woa_var_names)
     num_bins = 100
     t0_sw = -1.75
+    drho0 = 0.1  # Threshold density for mixed layer in WOA
 
     # Read the grids and slice to boundary
     mit_grid = Grid(mit_grid_dir)
@@ -1309,41 +1310,66 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             ax.set_title(lens_var_names[v])
         plt.suptitle('WOA climatology on '+bdry+' boundary, month '+str(month), fontsize=16)
         finished_plot(fig)
+    # Select mixed layer
+    woa_rho = potential_density('MDJWF', woa_clim[1,:], woa_clim[0,:])
+    woa_drho = woa_rho - woa_rho[0,:]
+    woa_mixed_layer = woa_drho < drho0
+    if plot:
+        fig, ax = plt.subplots()
+        ax.pcolormesh(mit_h, mit_grid.z*1e-3, woa_mixed_layer)
+        ax.set_title('WOA mixed layer on '+bdry+' boundary, month '+str(month), fontsize=16)
+        finished_plot(fig)
 
-    # Calculate volume and volume-weighted anomaly in T/S space
     bin_edges = np.linspace(0, 1, num=num_bins+1)
     bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    lens_temp_norm = normalise(lens_clim[0,:])
-    lens_salt_norm = normalise(lens_clim[1,:])
-    lens_volume_perbin = np.zeros([num_bins, num_bins])
-    lens_anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
-    valid = np.invert(lens_mask)
-    for temp_val, salt_val, dV_val, temp_anom, salt_anom in zip(lens_temp_norm[valid], lens_salt_norm[valid], lens_dV_bdry[valid], lens_anom[0,:][valid], lens_anom[1,:][valid]):
-        temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
-        salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
-        lens_volume_perbin[temp_index, salt_index] += dV_val
-        anom_val = [temp_anom, salt_anom]
+    # Inner function to calculate volume and volume-weighted anomaly in T/S space in LENS (either full depth or just surface)    
+    def lens_ts_space (temp, salt, temp_anom, salt_anom, dV, mask):
+        temp_norm = normalise(temp)
+        salt_norm = normalise(salt)
+        volume_perbin = np.zeros([num_bins, num_bins])
+        anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
+        valid = np.invert(mask)
+        for temp_val, salt_val, dV_val, temp_anom_val, salt_anom_val in zip(temp_norm[valid], salt_norm[valid], dV[valid], temp_anom[valid], salt_anom[valid]):
+            temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
+            salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
+            volume_perbin[temp_index, salt_index] += dV_val
+            anom_val = [temp_anom_val, salt_anom_val]
+            for v in range(num_var):
+                anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
+        volume_perbin = np.ma.masked_where(volume_perbin==0, volume_perbin)
+        anom_integral_perbin = np.ma.masked_where(anom_integral_perbin==0, anom_integral_perbin)
+        anom_ts = anom_integral_perbin/volume_perbin        
+        # Now fill the missing spaces
+        anom_ts_filled = np.zeros(anom_ts.shape)
         for v in range(num_var):
-            lens_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
-    lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
-    lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)
-    lens_anom_ts = lens_anom_integral_perbin/lens_volume_perbin
-    if plot:
-        # Calculate volume of T/S distribution in WOA for plotting purposes only
-        woa_temp_norm = normalise(woa_clim[0,:])
-        woa_salt_norm = normalise(woa_clim[1,:])
+            # Distance-weighted mean of 10 nearest neighbours, then apply Gaussian filter of radius 2
+            anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(anom_ts[v,:], num_neighbours=10), 2)
+        return anom_ts, anom_ts_filled, volume_perbin
+    
+    # Do this for both full-depth and surface
+    lens_anom_ts, lens_anom_ts_filled, lens_volume_perbin = lens_ts_space(lens_clim[0,:], lens_clim[1,:], lens_anom[0,:], lens_anom[1,:], lens_dV_bdry, lens_mask)
+    lens_anom_ts_sfc, lens_anom_ts_filled_sfc, lens_volume_perbin_sfc = lens_ts_space(lens_clim[0,0,:], lens_clim[1,0,:], lens_anom[0,0,:], lens_anom[1,0,:], lens_dV_bdry[0,:], lens_mask[0,:])
+    
+    # Inner function to plot volume of T/S distribution for both LENS and WOA
+    def plot_ts_volume (lens_volume, woa_temp, woa_salt, sfc=False):
+        # First have to calculate WOA volumes
+        woa_temp_norm = normalise(woa_temp)
+        woa_salt_norm = normalise(woa_salt)
         woa_volume_perbin = np.zeros([num_bins, num_bins])
         valid = np.invert(woa_temp_norm.mask)
         for temp_val, salt_val, dV_val in zip(woa_temp_norm[valid], woa_salt_norm[valid], woa_dV_bdry[valid]):
             temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
             salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
             woa_volume_perbin[temp_index, salt_index] += dV_val
-        woa_volume_perbin = np.ma.masked_where(woa_volume_perbin==0, woa_volume_perbin)
-        # Plot volume of T/S distribution for both LENS and WOA    
+        woa_volume_perbin = np.ma.masked_where(volume_perbin==0, volume_perbin)
+        # Now plot
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
-        data_plot = [np.log(lens_volume_perbin), np.log(woa_volume_perbin)]
-        titles_plot = ['LENS', 'WOA']
+        data_plot = [np.log(lens_volume), np.log(woa_volume)]
+        if sfc:
+            titles_plot = ['LENS (surface)', 'WOA (mixed layer)']
+        else:
+            titles_plot = ['LENS', 'WOA']
         for v in range(len(titles_plot)):
             ax = plt.subplot(gs[0,v])
             cmap, vmin, vmax = set_colours(data_plot[v])
@@ -1355,65 +1381,71 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             ax.set_title(titles_plot[v])
         plt.suptitle('Log of volume on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)        
-        # Plot T/S anomalies for LENS
+    
+    if plot:
+        # Do this for both full-depth and surface/mixed layer
+        plot_ts_volume(lens_volume_perbin, woa_clim[0,:], woa_clim[1,:])
+        plot_ts_volume(lens_volume_perbin_sfc, np.ma.masked_where(np.invert(woa_mixed_layer), woa_clim[0,:]), np.ma.masked_where(np.invert(woa_mixed_layer), woa_clim[1,:]), sfc=True)
+
+    # Inner function to plot T/S anomalies for LENS (filled or not)
+    def plot_lens_anom_ts (anom_ts, sfc=False):
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
-            cmap, vmin, vmax = set_colours(lens_anom_ts[v,:], ctype='plusminus')
-            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
+            cmap, vmin, vmax = set_colours(anom_ts[v,:], ctype='plusminus')
+            img = plt.pcolormesh(bin_edges, bin_edges, anom_ts[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
             if v == 0:
                 plt.xlabel('Normalised salinity')
                 plt.ylabel('Normalised temperature')
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
             ax.set_title(lens_var_names[v])
-        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+        suptitle = 'LENS anomalies on '+bdry+' boundary'
+        if sfc:
+            suptitle += ' (surface)'
+        suptitle += ', '+str(year)+'/'+str(month)
+        plt.suptitle(suptitile, fontsize=16)
         finished_plot(fig)
 
-    # Now fill empty spaces in the normalised T/S space
-    lens_anom_ts_filled = np.zeros(lens_anom_ts.shape)
-    tmin = np.amin(lens_clim[0,:])
-    '''if tmin < t0_sw:
-        # There are water masses colder than -1.75. We want to alias them together regardless of salinity.
-        tmax = np.amax(lens_clim[0,:])
-        temp_centres = bin_centres*(tmax - tmin) + tmin
-        jmax = np.where(temp_centres >= t0_sw)[0][0]'''
-    for v in range(num_var):
-        '''if tmin < t0_sw:
-            # Fill coldest rows separately
-            # Distance-weighted mean of 5 nearest neighbours
-            lens_anom_ts[v,:jmax,:] = distance_weighted_nearest_neighbours(lens_anom_ts[v,:jmax,:], num_neighbours=5)'''
-        # Fill the rest with distance-weighted mean of 10 nearest neighbours, then apply Gaussian filter of radius 2
-        lens_anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(lens_anom_ts[v,:], num_neighbours=10), 2)
     if plot:
-        fig, gs, cax1, cax2 = set_panels('1x2C2')
-        cax = [cax1, cax2]
-        for v in range(num_var):
-            ax = plt.subplot(gs[0,v])
-            cmap, vmin, vmax = set_colours(lens_anom_ts_filled[v,:], ctype='plusminus')
-            img = plt.pcolormesh(bin_edges, bin_edges, lens_anom_ts_filled[v,:], vmin=vmin, vmax=vmax, cmap=cmap)
-            if v == 0:
-                plt.xlabel('Normalised salinity')
-                plt.ylabel('Normalised temperature')
-            plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
-        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
-        finished_plot(fig)
+        # Do this for both full-depth and surface, filled and not filled
+        plot_lens_anom_ts(lens_anom_ts)
+        plot_lens_anom_ts(lens_anom_ts_filled)
+        plot_lens_anom_ts(lens_anom_ts_sfc, sfc=True)
+        plot_lens_anom_ts(lens_anom_ts_filled_sfc, sfc=True)
 
-    # Normalise WOA T and S
-    woa_clim_norm = np.ma.empty(woa_clim.shape)
-    for v in range(num_var):
-        woa_clim_norm[v,:] = normalise(woa_clim[v,:])
-    # Loop over points and find corresponding anomaly in normalised T/S space
-    woa_anom = np.zeros(woa_clim.shape)
-    j, k = np.meshgrid(np.arange(mit_h.size), np.arange(mit_grid.nz))
-    valid = np.invert(woa_clim[0,:].mask)
-    for temp_val, salt_val, k, j in zip(woa_clim_norm[0,:][valid], woa_clim_norm[1,:][valid], k[valid], j[valid]):
-        temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
-        salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
-        for v in range(num_var):
-            woa_anom[v,k,j] = lens_anom_ts_filled[v, temp_index, salt_index]
+    # Inner function to calculate anomalies in WOA given the filled LENS anomalies in T/S space, either full depth or surface/mixed-layer
+    def select_woa_anom (woa_temp, woa_salt, lens_anom_filled):
+        woa_temp_norm = normalise(woa_temp)
+        woa_salt_norm = normalise(woa_salt)
+        # Loop over points and find corresponding anomaly in normalised T/S space
+        woa_anom = np.zeros(woa_clim.shape)
+        j, k = np.meshgrid(np.arange(mit_h.size), np.arange(mit_grid.nz))
+        valid = np.invert(woa_temp_norm.mask)
+        for temp_val, salt_val, k, j in zip(woa_temp_norm[valid], woa_salt_norm[valid], k[valid], j[valid]):
+            temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
+            salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
+            for v in range(num_var):
+                woa_anom[v,k,j] = lens_anom_filled[v, temp_index, salt_index]
+        return woa_anom
+
+    woa_anom_fulldepth = select_woa_anom(woa_clim[0,:], woa_clim[1,:], lens_anom_ts_filled)
+    woa_anom_ml = select_woa_anom(np.ma.masked_where(np.invert(woa_mixed_layer), woa_clim[0,:]), np.ma.masked_where(np.invert(woa_mixed_layer), woa_clim[1,:]), lens_anom_ts_filled_sfc)
+    # Now combine these in the mixed layer, weighting from 1 at surface dropping off inversely with depth
+    woa_depth = np.tile(np.expand_dims(np.copy(mit_grid.z), 1), (1, mit_h.size))
+    weight = mit_grid.z[0]/woa_depth
+    weight[np.invert(woa_mixed_layer)] = 0
+    woa_anom = weight*woa_anom_ml + (1-weight)*woa_anom_fulldepth
+    
     if plot:
+        # Plot weights to make sure they work
+        fig, ax = plt.subplots()
+        cmap, vmin, vmax = set_colours(weight)
+        img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, weight, cmap=cmap, vmin=vmin, vmax=vmax)
+        plt.colorbar(img)
+        ax.set_title('Weighting towards surface anomalies')
+        finished_plot(fig)
+        # Plot final anomalies
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
@@ -1424,6 +1456,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             ax.set_title(lens_var_names[v])
         plt.suptitle('WOA anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
+        
     # Add anomaly field to climatology for final corrected fields
     data_corrected = woa_clim + woa_anom
     # Set minimum temperature to not go below surface freezing point
