@@ -1350,10 +1350,11 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         # Distance-weighted mean of 10 nearest neighbours, then apply Gaussian filter of radius 2
         lens_anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(lens_anom_ts[v,:], num_neighbours=10), 2)
 
+    # Normalise T and S in WOA
+    woa_temp_norm = normalise(woa_clim[0,:])
+    woa_salt_norm = normalise(woa_clim[1,:])
     if plot:
-        # Calculate volume of T/S distribution in WOA for plotting purposes only
-        woa_temp_norm = normalise(woa_clim[0,:])
-        woa_salt_norm = normalise(woa_clim[1,:])
+        # Calculate volume of T/S distribution in WOA for plotting purposes only        
         woa_volume_perbin = np.zeros([num_bins, num_bins])
         valid = np.invert(woa_temp_norm.mask)
         for temp_val, salt_val, dV_val in zip(woa_temp_norm[valid], woa_salt_norm[valid], woa_dV_bdry[valid]):
