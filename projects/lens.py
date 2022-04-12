@@ -56,7 +56,7 @@ def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
 
 # Plot a bunch of precomputed timeseries from ongoing LENS-forced test simulations (ensemble of 5 to start), compared to the PACE-forced ensemble mean.
-def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None):
+def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None, finished=False):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
@@ -76,7 +76,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None)
             fig_name = real_dir(fig_dir) + 'timeseries_LENS_' + var + '.png'
         else:
             fig_name=None
-        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name, plot_mean=True, first_in_mean=False)
+        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name, plot_mean=finished, first_in_mean=False)
  
 
 # Compare time-averaged temperature and salinity boundary conditions from PACE over 2006-2013 (equivalent to the first 20 ensemble members of LENS actually!) to the WOA boundary conditions used for the original simulations.

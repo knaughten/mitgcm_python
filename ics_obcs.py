@@ -1373,16 +1373,16 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
     # Now fill empty spaces in the normalised T/S space
     lens_anom_ts_filled = np.zeros(lens_anom_ts.shape)
     tmin = np.amin(lens_clim[0,:])
-    if tmin < t0_sw:
+    '''if tmin < t0_sw:
         # There are water masses colder than -1.75. We want to alias them together regardless of salinity.
         tmax = np.amax(lens_clim[0,:])
         temp_centres = bin_centres*(tmax - tmin) + tmin
-        jmax = np.where(temp_centres >= t0_sw)[0][0]
+        jmax = np.where(temp_centres >= t0_sw)[0][0]'''
     for v in range(num_var):
-        if tmin < t0_sw:
+        '''if tmin < t0_sw:
             # Fill coldest rows separately
             # Distance-weighted mean of 5 nearest neighbours
-            lens_anom_ts[v,:jmax,:] = distance_weighted_nearest_neighbours(lens_anom_ts[v,:jmax,:], num_neighbours=5)
+            lens_anom_ts[v,:jmax,:] = distance_weighted_nearest_neighbours(lens_anom_ts[v,:jmax,:], num_neighbours=5)'''
         # Fill the rest with distance-weighted mean of 10 nearest neighbours, then apply Gaussian filter of radius 2
         lens_anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(lens_anom_ts[v,:], num_neighbours=10), 2)
     if plot:

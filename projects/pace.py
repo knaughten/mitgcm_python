@@ -2028,7 +2028,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
 
     num_ens = 20
     var_names = ['amundsen_shelf_break_uwind_avg', 'amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
-    var_titles = [r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Basal melt flux from ice shelves']
+    var_titles = ['Shelf break zonal wind', 'Ocean temperature (200-700m)', 'Ice shelf melting'] #[r'$\bf{a}$. Zonal wind over shelf break', r'$\bf{b}$. Temperature on shelf (200-700m)', r'$\bf{c}$. Basal melt flux from ice shelves']
     var_units = [' m/s', deg_string+'C', ' Gt/y']
     num_var = len(var_names)
     sim_dir = [base_dir+'PAS_PACE'+str(n+1).zfill(2)+'/output/' for n in range(num_ens)] + [base_dir+'PAS_ERA5/output/']
@@ -2126,7 +2126,7 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         # Plot ensemble mean in thicker solid blue, but make sure it will be on above ERA5 at the end
         ax.plot_date(pace_time, pace_mean[v,:], '-', color='blue', label='PACE mean', linewidth=2, zorder=(num_ens+1))
         # Plot ERA5 in thicker solid red
-        ax.plot_date(era5_time, era5_data[v,:], '-', color='red', label='ERA5', linewidth=1.5, zorder=(num_ens))
+        #ax.plot_date(era5_time, era5_data[v,:], '-', color='red', label='ERA5', linewidth=1.5, zorder=(num_ens))
         # Plot trend in thin black on top
         trend_vals = slopes[v]*time_cent + intercepts[v]
         ax.plot_date(pace_time, trend_vals, '-', color='black', linewidth=1, zorder=(num_ens+2))
@@ -2164,9 +2164,9 @@ def plot_timeseries_3var (base_dir='./', timeseries_file='timeseries_final.nc', 
         ax2 = ax.twinx()
         ax2.tick_params(direction='in')
         ax2.set_ylim(std_limits)
-        if v==0:
+        if True: #v==0:
             ax2.set_ylabel('anomaly in standard deviations', fontsize=12)    
-    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=30)
+    finished_plot(fig, fig_name=fig_dir+'timeseries_3var.png', dpi=300)
 
 
 # Calculate the mean trend and ensemble significance for a whole bunch of variables.
@@ -3099,7 +3099,7 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     # Plot bathymetry
     fig, ax = plt.subplots(figsize=(6,5))
     img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    # Now trace and label the regions
+    '''# Now trace and label the regions
     for n in range(len(regions)):
         mask = grid.get_region_mask(regions[n])
         if regions[n] == 'amundsen_shelf':
@@ -3109,7 +3109,7 @@ def plot_region_map (base_dir='./', fig_dir='./'):
                 index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
                 mask[index] = 1
         ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1)
-        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha=region_ha[n], va='center', color=region_colours[n])
+        plt.text(region_label_x[n], region_label_y[n], region_labels[n], fontsize=14, ha=region_ha[n], va='center', color=region_colours[n])'''
     # Add transect as dashed line
     # First find southernmost unmasked point at this longitude
     i1, i2, c1, c2 = interp_slice_helper(grid.lon_1d, transect_x0)
@@ -3117,14 +3117,14 @@ def plot_region_map (base_dir='./', fig_dir='./'):
     mask_slice = np.ceil(c1*land_mask[:,i1] + c2*land_mask[:,i2])
     jmin = np.argwhere(mask_slice == 0)[0][0]
     transect_ymin = grid.lat_1d[jmin]    
-    ax.plot([transect_x0, transect_x0], [transect_ymin, transect_ymax], color='blue', linestyle='dashed')
+    ax.plot([transect_x0, transect_x0], [transect_ymin, transect_ymax], color='red', linestyle='dashed', linewidth=5) #blue', linestyle='dashed')
     # Add little colourbar for bathymetry
-    cax = inset_axes(ax, "3%", "20%", loc=4)
+    '''cax = inset_axes(ax, "3%", "20%", loc=4)
     cbar = plt.colorbar(img, cax=cax, ticks=[-2, -1, -0.5, 0])
     cax.yaxis.set_ticks_position('left')
     cbar.ax.set_yticklabels(['2', '1', '0.5', '0'])
     cbar.ax.tick_params(labelsize=10)
-    ax.set_title('Regions used in analysis', fontsize=18)
+    ax.set_title('Regions used in analysis', fontsize=18)'''
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_dir+'region_map.png', dpi=300)
 
@@ -3135,10 +3135,10 @@ def plot_sfc_trends (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     trend_dir = real_dir(trend_dir)
     grid_dir = real_dir(grid_dir)
     fig_dir = real_dir(fig_dir)
-    var_names = ['EXFatemp', 'EXFvwind', 'SIfwfrz', 'SIfwmelt', 'SIheff', 'oceFWflx', 'sst', 'sss']
-    factor = [1, 1, sec_per_year/rho_fw, sec_per_year/rho_fw, 1, sec_per_year/rho_fw, 1, 1]
+    var_names = ['EXFatemp', 'EXFvwind', 'SIfwfrz', 'SIfwmelt', 'EXFpreci', 'oceFWflx', 'sst', 'sss'] #'SIheff', 'oceFWflx', 'sst', 'sss']
+    factor = [1, 1, -sec_per_year/rho_fw, sec_per_year/rho_fw, sec_per_year/rho_fw, 1, 1] #[1, 1, sec_per_year/rho_fw, sec_per_year/rho_fw, 1, sec_per_year/rho_fw, 1, 1]
     units = [deg_string+'C', 'm/s', 'm/y', 'm/y', 'm', 'm/y', deg_string+'C', 'psu']
-    titles = [r'$\bf{a}$. Surface air temperature', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Sea ice freezing FW flux', r'$\bf{d}$. Sea ice melting FW flux', r'$\bf{e}$. Sea ice thickness', r'$\bf{f}$. Surface freshwater flux', r'$\bf{g}$. Sea surface temperature', r'$\bf{h}$. Sea surface salinity']
+    titles = ['Surface atmosphere warms', 'Precipitation increases', 'Coastal winds weaken', 'Sea ice freezing weakens', 'Sea ice melting weakens', 'Precipitation', 'Freshwater into ocean', 'SST', 'SSS'] #[r'$\bf{a}$. Surface air temperature', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Sea ice freezing FW flux', r'$\bf{d}$. Sea ice melting FW flux', r'$\bf{e}$. Sea ice thickness', r'$\bf{f}$. Surface freshwater flux', r'$\bf{g}$. Sea surface temperature', r'$\bf{h}$. Sea surface salinity']
     file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
     vmin = [None, None, None, -0.8, -0.75, None, None, None]
     vmax = [None, None, 2.5, 0.5, None, 2, None, None]
@@ -3996,6 +3996,80 @@ def plot_simple_advection_heat_map (base_dir='./', trend_dir='./', fig_dir='./',
     finished_plot(fig, fig_name=fig_dir+'advection_heat_map_simple.png', dpi=300)
 
 
+def plot_shelf_break_map (base_dir='./', fig_dir='./'):
+
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.colors as cl
+
+    grid_path = real_dir(base_dir)+'PAS_grid/'
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(grid_path)
+    bathy = mask_land(grid.bathy, grid)*1e-3
+    bounds = np.concatenate((np.linspace(-4, -2, num=3), np.linspace(-2, -1, num=10), np.linspace(-1, -0.75, num=5), np.linspace(-0.75, -0.5, num=10), np.linspace(-0.5, 0, num=20)))
+    norm = cl.BoundaryNorm(boundaries=bounds, ncolors=256)
+
+    # Plot bathymetry
+    fig, ax = plt.subplots(figsize=(8,5))
+    img = latlon_plot(bathy, grid, ax=ax, ctype='plusminus', norm=norm, make_cbar=False, ymax=-65)
+    mask = grid.get_region_mask('amundsen_shelf_break')    
+    #ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('Gold'), linewidths=2)
+    #plt.text(-108.5, -70.2, 'Shelf break', fontsize=14, ha='center', va='bottom', color='Gold')
+    ax.set_title('Amundsen Sea', fontsize=18)
+    plt.tight_layout()
+    finished_plot(fig, fig_name=fig_dir+'shelf_break_map.png', dpi=300)
+
+
+def plot_sfc_trends_alt (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
+
+    trend_dir = real_dir(trend_dir)
+    grid_dir = real_dir(grid_dir)
+    fig_dir = real_dir(fig_dir)
+    var_names = ['EXFatemp', 'EXFpreci', 'EXFvwind', 'SIfwfrz', 'SIfwmelt', 'oceFWflx', 'sst', 'sss']
+    factor = [1, sec_per_year, 1, -sec_per_year/rho_fw, sec_per_year/rho_fw, sec_per_year/rho_fw, 1, 1]
+    titles = ['Surface atmosphere warms', 'Precipitation increases', 'Coastal winds weaken', 'Sea ice freezing weakens', 'Sea ice melting weakens', 'More freshwater into ocean', '', '']
+    file_paths = [trend_dir+v+'_trend.nc' for v in var_names]
+    vmin = [None, None, None, -2.5, -0.8, None, None, None]
+    vmax = [None, None, None, None, 0.5, 2, None, None]
+    val0 = [1, None, None, None, None, None, None, None]
+    extend = ['neither', 'neither', 'neither', 'min', 'both', 'max', 'neither', 'neither']
+    num_var = len(var_names)
+    grid = Grid(grid_dir)
+    [xmin, xmax, ymin, ymax] = [-136, -85, None, -68]
+    p0 = 0.05
+
+    # Read the data and calculate mean trend and significance
+    data_plot = np.ma.empty([num_var, grid.ny, grid.nx])
+    for n in range(num_var):
+        trends = read_netcdf(file_paths[n], var_names[n]+'_trend')*factor[n]*100  # Trend per century
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        # Fill anything below 95% significance with zeros
+        mean_trend[p_val > p0] = 0
+        # Also mask out the ice shelves and land
+        mean_trend = mask_land_ice(mean_trend, grid)
+        data_plot[n,:] = mean_trend
+
+    # Plot
+    fig = plt.figure(figsize=(7,10))
+    gs = plt.GridSpec(4,2)
+    gs.update(left=0.11, right=0.89, bottom=0.02, top=0.915, wspace=0.03, hspace=0.25)
+    x0 = [0.07, 0.91]
+    y0 = [0.745, 0.507, 0.273, 0.04]
+    cax = []
+    for j in range(4):
+        for i in range(2):
+            cax_tmp = fig.add_axes([x0[i], y0[j], 0.02, 0.15])
+            cax.append(cax_tmp)
+    for n in range(num_var):
+        ax = plt.subplot(gs[n//2, n%2])
+        img = latlon_plot(data_plot[n,:], grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=titles[n], titlesize=12, vmin=vmin[n], vmax=vmax[n], val0=val0[n])
+        cbar = plt.colorbar(img, cax=cax[n], extend=extend[n])
+        if n%2 == 0:
+            cax[n].yaxis.set_ticks_position('left')
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.suptitle('Trends per century in surface variables', fontsize=18)
+    finished_plot(fig, fig_name=fig_dir+'sfc_trends_alt.png', dpi=300)
 
 
 
