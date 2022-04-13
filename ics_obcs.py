@@ -1431,9 +1431,9 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         # Now mask out the land mask in WOA
         woa_anom_tmp = np.ma.masked_where(hfac[0,:]==0, woa_anom_tmp)
         woa_anom_sfc[v,:] = woa_anom_tmp
-    # Linearly combine the surface anomalies with the T/S anomalies in the mixed layer, weighting from 1 at surface dropping off linearly with depth to 0 at the base of the mixed layer
+    # Linearly combine the surface anomalies with the T/S anomalies in the mixed layer, weighting from 1 at surface dropping off logarithmically with depth to 0 at the base of the mixed layer
     woa_depth = np.tile(np.expand_dims(np.copy(mit_grid.z), 1), (1, mit_h.size))
-    weight = (woa_depth - woa_mld[None,:])/(mit_grid.z[0] - woa_mld[None,:])
+    weight = np.log(woa_mld[None,:] + 1 - woa_depth)/np.log(woa_mld[None,:] + 1 - mit_grid.z[0])
     weight[np.invert(woa_mixed_layer)] = 0
     woa_anom = weight[None,:,:]*woa_anom_sfc[:,None,:] + (1-weight[None,:,:])*woa_anom_fulldepth
     if plot:
