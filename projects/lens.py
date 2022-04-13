@@ -1420,9 +1420,10 @@ def plot_hovmoller_lens_ensemble (var, region, num_ens=5, base_dir='./', fig_nam
 
 
 # For a given year, month, boundary, and ensemble member, plot the raw anomalies in LENS and the corrected anomalies as applied to WOA, for both temperature and salinity.
-def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None):
+def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
+    in_dir = '/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/'
     obcs_dir = base_dir + 'ics_obcs/PAS/'
     grid_dir = base_dir + 'mitgcm/PAS_grid/'
     woa_file_head = obcs_dir + 'OB'
@@ -1460,10 +1461,10 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None):
     dsalt_uncorr = lens_salt_raw - lens_clim[1,:]
 
     # Read the WOA climatology
-    woa_clim = np.ma.empty([num_var, mit_grid.nz, mit_h.size])
+    woa_clim = np.ma.empty([num_var, grid.nz, mit_h.size])
     for v in range(num_var):
-        file_path = woa_file_head + bdry + woa_var_names[v] + woa_file_tail
-        woa_clim[v,:] = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)[month-1,:]
+        file_path = woa_file_head + bdry + woa_var[v] + woa_file_tail
+        woa_clim[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
     # Calculate corrected anomalies
     dtemp_corr = temp_corr - woa_clim[0,:]
     dsalt_corr = salt_corr - woa_clim[1,:]
@@ -1474,17 +1475,22 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None):
     z = [lens_z, grid.z]
     vmin = [min(np.amin(dtemp_uncorr), np.amin(dtemp_corr)), min(np.amin(dsalt_uncorr), np.amin(dsalt_corr))]
     vmax = [max(np.amax(dtemp_uncorr), np.amax(dtemp_corr)), max(np.amax(dsalt_uncorr), np.amax(dsalt_corr))]
-    cmap = [set_colours(dtemp_uncorr, vmin=vmin, vmax=vmax, ctype='plusminus')[0], set_colours(dsalt_uncorr, vmin=vmin, vmax=vmax, ctype='plusminus')[0]]
+    cmap = [set_colours(dtemp_uncorr, vmin=vmin[0], vmax=vmax[0], ctype='plusminus')[0], set_colours(dsalt_uncorr, vmin=vmin[1], vmax=vmax[1], ctype='plusminus')[0]]
     fig, gs, cax1, cax2 = set_panels('2x2C2')
     cax = [cax1, cax2]
     for v in range(num_var):
         for n in range(num_sources):
             ax = plt.subplot(gs[v,n])
-            img = ax.pcolormesh(h[n], z[n], data[v][n], cmap=cmap[v], vmin=vmin[v], vmax=vmax[v])
+            img = ax.pcolormesh(h[n], z[n], data[v][n], cmap=cmap[v], vmin=vmin[v], vmax=vmax[v])                
             if n == num_sources-1:
-                plt.colorbar(img, cax=cax[n])
+                plt.colorbar(img, cax=cax[v])
+                ax.set_yticks([])
+            if v == 0:
+                ax.set_xticklabels([])
             ax.set_title(source_titles[n], fontsize=14)
-        plt.text(0, 0.95-0.5*v, var_titles[v], fontsize=16, ha='center', va='center', transform=fig.transFigure)
+            if zmin is not None:
+                ax.set_ylim([zmin, 0])
+        plt.text(0.45, 0.97-0.49*v, var_titles[v]+' on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16, ha='center', va='center', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
                 
             
