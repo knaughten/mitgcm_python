@@ -1579,12 +1579,15 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                     data_full *= 1e-2
                 data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
                 data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
-                lens_mask = data_slice.mask
-                # Interpolate each month in turn
+                try:
+                    lens_mask = np.invert(data_slice.mask[0,:])
+                except(IndexError):
+                    # No special land mask for some sea ice variables
+                    lens_mask = np.ones(data_slice[0,:].shape)                    
                 if dim[v] == 3:
-                    data_interp = np.zeros([months_per_year, mit_grid.nz, mit_h.size])
+                    data_interp = np.ma.zeros([months_per_year, mit_grid.nz, mit_h.size])
                 elif dim[v] == 2:
-                    data_interp = np.zeros([months_per_year, mit_h.size])
+                    data_interp = np.ma.zeros([months_per_year, mit_h.size])
                 for month in range(months_per_year):
                     data_interp_tmp = interp_bdry(lens_h, pop_z, data_slice[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(dim[v]==3))
                     # Fill MITgcm land mask with zeros
