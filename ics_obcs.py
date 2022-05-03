@@ -8,9 +8,6 @@ import sys
 import netCDF4 as nc
 from nco import Nco
 from nco.custom import Limit
-import matplotlib
-matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import interp1d
 
@@ -20,8 +17,6 @@ from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_b
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year, Tf_ref
 from .diagnostics import density, potential_density
-from .plot_utils.colours import set_colours
-from .plot_utils.windows import set_panels, finished_plot
 
 # Helper function for make_sose_climatology and make_bsose_climatology.
 # Given an array of monthly data for multiple years, calculate the monthly climatology.
@@ -1193,6 +1188,13 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
 
 # Helper function to read and correct the LENS temperature and salinity in T/S space for a given year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
 def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
+
+    if plot:
+        import matplotlib
+        matplotlib.use('TkAgg')
+        import matplotlib.pyplot as plt
+        from .plot_utils.colours import set_colours
+        from .plot_utils.windows import set_panels, finished_plot
 
     lens_file_head = in_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
