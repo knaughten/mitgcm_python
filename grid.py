@@ -1080,15 +1080,37 @@ class ZGrid:
 
 
 # Helper function to build the POP grid, given any LENS ocean file.
-def read_pop_grid (file_path):
-
+def read_pop_grid (file_path, return_ugrid=False):
+    
     lon = fix_lon_range(read_netcdf(file_path, 'TLONG'))
     lat = read_netcdf(file_path, 'TLAT')
+    if return_ugrid:
+        ulon = fix_lon_range(read_netcdf(file_path, 'ULONG'))
+        ulat = read_netcdf(file_path, 'ULAT')
     z = -1e-2*read_netcdf(file_path, 'z_t')
     nz = z.size
     ny = lat.shape[0]
     nx = lon.shape[1]
-    return lon, lat, z, nx, ny, nz
+    if return_ugrid:
+        return lon, lat, ulon, ulat, z, nx, ny, nz
+    else:
+        return lon, lat, z, nx, ny, nz
+
+
+# Similarly for CICE
+def read_cice_grid (file_path, return_ugrid=False):
+
+    lon = fix_lon_range(read_netcdf(file_path, 'TLON'))
+    lat = read_netcdf(file_path, 'TLAT')
+    if return_ugrid:
+        ulon = fix_lon_range(read_netcdf(file_path, 'ULON'))
+        ulat = read_netcdf(file_path, 'ULAT')
+    ny = lat.shape[0]
+    nx = lon.shape[1]
+    if return_ugrid:
+        return lon, lat, ulon, ulat, nx, ny
+    else:
+        return lon, lat, nx, ny
         
         
 

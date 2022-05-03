@@ -11,7 +11,7 @@ from nco.custom import Limit
 from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import interp1d
 
-from .grid import Grid, grid_check_split, choose_grid, read_pop_grid
+from .grid import Grid, grid_check_split, choose_grid, read_pop_grid, read_cice_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month, normalise
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
@@ -1481,11 +1481,9 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
 
 
 # Read and correct T/S boundary conditions for all months and years, for a single ensemble member in LENS.
-def process_lens_obcs_ts (ens, out_dir='./'):
+def process_lens_obcs_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    start_year = 1920
-    end_year = 2100
     var_names = ['TEMP', 'SALT']
     num_var = len(var_names)
     bdry_loc = ['N', 'E', 'W']
@@ -1510,6 +1508,97 @@ def process_lens_obcs_ts (ens, out_dir='./'):
             for v in range(num_var):
                 file_path = out_dir + file_head + var_names[v] + '_' + bdry + '_' + str(year)
                 write_binary(year_data[v,:], file_path)
+
+
+# Read and process all the other OBCS variables (besides T and S) for a given ensemble member and boundary in LENS.
+def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', out_dir='./'):
+
+    out_dir = real_dir(out_dir)
+    var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    num_var = len(var_names)
+    dim = [3, 3, 2, 2, 2, 2, 2]
+    gtype = ['u', 'v', 't', 't', 't', 'u', 'v']
+    domain = ['oce', 'oce', 'ice', 'ice', 'ice', 'ice', 'ice']
+    file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
+
+    # Read the grids
+    mit_grid = Grid(mit_grid_dir)
+    pop_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', ens, start_year)[0]
+    pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z, pop_nx, pop_ny, pop_nz = read_pop_grid(pop_grid_file, return_ugrid=True)
+    cice_grid_file = find_lens_file(var_names[-1], 'ice', 'monthly', ens, start_year)[0]
+    cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
+
+    for bdry in bdry_loc:
+        for v in range(num_var):
+            print('Processing '+var_names[v]+' on '+bdry+' boundary')
+            # Slice to boundary: depends on domain (ocean/ice) and grid type
+            loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
+            if (bdry in ['N', 'S'] and gtype[v] == 'v') or (bdry in ['E', 'W'] and gtype[v] == 'u'):
+                loc0 = loc0_edge
+            else:
+                loc0 = loc0_centre
+            if domain[v] == 'oce':
+                if gtype[v] == 't':
+                    lens_lon = pop_tlon
+                    lens_lat = pop_tlat
+                else:
+                    lens_lon = pop_ulon
+                    lens_lat = pop_ulat
+            else:
+                if gtype[v] == 't':
+                    lens_lon = cice_tlon
+                    lens_lat = cice_tlat
+                else:
+                    lens_lon = cice_ulon
+                    lens_lat = cice_tlat
+            if bdry in ['N', 'S']:
+                direction = 'lat'
+                dimensions = 'xzt'
+                lens_h_2d = lens_lon
+                mit_h = mit_grid.lon_1d
+            elif bdry in ['E', 'W']:
+                direction = 'lon'
+                dimensions = 'yzt'
+                lens_h_2d = lens_lat
+                mit_h = mit_grid.lat_1d
+            hfac = get_hfac_bdry(mit_grid, bdry, gtype=gtype[v])
+            if dim[v] == 2:
+                hfac = hfac[0,:]
+            i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+            lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+            lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
+            lens_nh = lens_h.size
+
+            # Loop over years
+            for year in range(start_year, end_year+1):
+                print('...'+str(year))
+                file_path, t_start, t_end = find_lens_file(var_names[v], domain[v], 'monthly', ens, year)
+                data_full = read_netcdf(file_path, var_names[v], t_start=t_start, t_end=t_end)
+                if var_names[v] in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
+                    # Convert from cm/s to m/s, or percent to fraction
+                    data_full *= 1e-2
+                data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
+                data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
+                lens_mask = data_slice.mask
+                # Interpolate each month in turn
+                if dim[v] == 3:
+                    data_interp = np.zeros([months_per_year, mit_grid.nz, mit_h.size])
+                elif dim[v] == 2:
+                    data_interp = np.zeros([months_per_year, mit_h.size])
+                for month in range(months_per_year):
+                    data_interp_tmp = interp_bdry(lens_h, pop_z, data_slice[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(dim[v]==3))
+                    # Fill MITgcm land mask with zeros
+                    index = hfac==0
+                    data_interp_tmp[index] = 0
+                    data_interp[month,:] = data_interp_tmp
+                # Write to binary
+                file_path = out_dir + file_head + var_names[v] + '_' + bdry + '_' + str(year)
+                write_binary(data_interp, file_path)
+            
+        
+        
+
+    
             
                 
                     
