@@ -22,7 +22,7 @@ from ..plot_utils.colours import set_colours
 from ..plot_utils.labels import reduce_cbar_labels
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours
-from ..postprocess import precompute_timeseries_coupled, make_trend_file, trend_region_plots
+from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 
 
