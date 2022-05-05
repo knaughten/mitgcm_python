@@ -1535,18 +1535,23 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.mean(data_time, axis=0)
                 long_name = 'thermocline depth'
                 units = 'm'
-            elif var_name.startswith('temp_btw') or var_name.startswith('temp_below'):
-                temp, long_name, units = read_netcdf(file_paths[t], 'THETA', time_average=True, return_info=True)
-                if var_name.startswith('temp_btw'):
-                    z_vals = var_name[len('temp_btw_'):-1]
+            elif var_name.startswith('temp_btw') or var_name.startswith('temp_below') or var_name.startswith('salt_btw') or var_name.startswith('salt_below'):
+                var_name_tmp = var_name[:var_name.index('_')]
+                if var_name_tmp == 'temp':
+                    var_name_read = 'THETA'
+                else:
+                    var_name_read = 'SALT'
+                data_raw, long_name, units = read_netcdf(file_paths[t], var_name_read, time_average=True, return_info=True)
+                if var_name.startswith(var_name_tmp+'_btw'):
+                    z_vals = var_name[len(var_name_tmp+'_btw_'):-1]
                     z_shallow = -1*int(z_vals[:z_vals.index('_')])
                     z_deep = -1*int(z_vals[z_vals.index('_')+1:])
-                elif var_name.startswith('temp_below'):
-                    z_shallow = -1*int(var_name[len('temp_below_'):-1])
+                elif var_name.startswith(var_name_tmp+'_below'):
+                    z_shallow = -1*int(var_name[len(var_name_tmp+'_below_'):-1])
                     z_deep = None
                 mask_3d = mask_2d_to_3d(mask, grid, zmin=z_deep, zmax=z_shallow)
-                temp = apply_mask(temp, np.invert(mask_3d))
-                data = vertical_average(temp, grid)                
+                data_raw = apply_mask(data_raw, np.invert(mask_3d))
+                data = vertical_average(data_raw, grid)                
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
