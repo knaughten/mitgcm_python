@@ -1631,7 +1631,7 @@ def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_g
         for zoom in [True, False]:
             if zoom:
                 ymax = -70
-                file_tail = '_zoom.png')
+                file_tail = '_zoom.png'
             else:
                 ymax = None
                 file_tail = '.png'
