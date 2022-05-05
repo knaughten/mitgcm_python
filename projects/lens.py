@@ -165,73 +165,87 @@ def compare_bcs_ts_mean (fig_dir='./'):
             finished_plot(fig, fig_name=fig_dir+'pace_obcs_'+pace_var[v]+'_'+str(bdry)+'.png')
 
 
-# Calculate a monthly climatology of T and S from the LENS simulations of CESM over each boundary.
-def calc_lens_climatology (out_dir='./', regrid=False):
+# Calculate a monthly climatology of each variable from the LENS simulations of CESM over each boundary.
+def calc_lens_climatology (out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    var_names = ['TEMP', 'SALT']
+    var_names = ['TEMP', 'SALT', 'UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    gtype = ['t', 't', 'u', 'v', 't', 't', 't', 'u', 'v']
+    domain = ['oce', 'oce', 'oce', 'oce', 'ice', 'ice', 'ice', 'ice', 'ice']
+    num_var_oce = len(var_names_oce)
+    num_var_ice = len(var_names_ice)
     start_year = 1998
     end_year = 2017
     num_years = end_year - start_year + 1
     num_ens = 40
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
     bdry_loc = ['N', 'W', 'E']
-    num_bdry = len(bdry_loc)
     num_var = len(var_names)
     out_file_head = 'LENS_climatology_'
     out_file_tail = '_'+str(start_year)+'-'+str(end_year)
 
     # Read/generate grids
-    grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
-    lon, lat, z_1d, nx, ny, nz = read_pop_grid(grid_file)
+    pop_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z_1d, pop_nx, pop_ny, pop_nz = read_pop_grid(grid_file, return_ugrid=True)
+    cice_grid_file = find_lens_file(var_names[-1], 'ice', 'monthly', 1, start_year)[0]
+    cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
     mit_grid = Grid(mit_grid_dir)
-    loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
 
-    for b in range(num_bdry):
-        print('Processing '+bdry_loc[b]+' boundary')
-        if bdry_loc[b] in ['N', 'S']:
-            direction = 'lat'
-            h_2d = lon
-            mit_h = mit_grid.lon_1d
-        elif bdry_loc[b] in ['E', 'W']:
-            direction = 'lon'
-            h_2d = lat
-            mit_h = mit_grid.lat_1d
-        # Get interpolation coefficients to extract the slice at this boundary
-        i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0[b], direction)
-        # Interpolate the horizontal axis to this boundary
-        h_full = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
-        h = trim_slice_to_grid(h_full, h_full, mit_grid, direction)[0]
-        nh = h.size
-        if regrid:
-            # Tile h and z over the slice to make them 2D
-            h = np.tile(h, (nz, 1))
-            z = np.tile(np.expand_dims(z_1d, 1), (1, nh))
-        # Set up array for monthly climatology
-        if regrid:
-            lens_clim = np.ma.zeros([num_var, months_per_year, mit_grid.nz, mit_h.size])
-        else:
-            lens_clim = np.ma.zeros([num_var, months_per_year, nz, nh])
-        # Loop over ensemble members and time indices
-        for n in range(num_ens):
-            print('Processing ensemble member '+str(n+1))
-            for year in range(start_year, end_year+1):
-                print('...'+str(year))
-                for month in range(months_per_year):
-                    for v in range(num_var):
-                        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
-                        t0 = t0_year+month
-                        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
-                        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
-                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
-                        if regrid:
-                            data_slice = interp_nonreg_xy(h, z, data_slice, mit_h, mit_grid.z, fill_mask=True)
-                        lens_clim[v,month,:] += data_slice
-        # Convert from integral to average
-        lens_clim /= (num_ens*num_years)
-        # Save to binary file
-        for v in range(num_var):
-            write_binary(lens_clim[v,:], out_dir+out_file_head+var_names[v]+'_'+bdry_loc[b]+out_file_tail)
+    for bdry in bdry_loc:
+        for v in range(2, num_var):  # Skip T and S for now because calculated those earlier
+            print('Processing '+var_names[v]+' on '+bdry+' boundary')
+            loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
+            if (bdry in ['N', 'S'] and gtype[v] == 'v') or (bdry in ['E', 'W'] and gtype[v] == 'u'):
+                loc0 = loc0_edge
+            else:
+                loc0 = loc0_centre
+            if domain[v] == 'oce':
+                if gtype[v] == 't':
+                    lon = pop_tlon
+                    lat = pop_tlat
+                else:
+                    lon = pop_ulon
+                    lat = pop_ulat
+            else:
+                if gtype[v] == 't':
+                    lon = cice_tlon
+                    lat = cice_tlat
+                else:
+                    lon = cice_ulon
+                    lat = cice_tlat
+            if bdry in ['N', 'S']:
+                direction = 'lat'
+                h_2d = lon
+            elif bdry in ['E', 'W']:
+                direction = 'lon'
+                h_2d = lat
+            i1, i2, c1, c2 = interp_slice_helper_nonreg(lon, lat, loc0, direction)
+            h_full = extract_slice_nonreg(h_2d, direction, i1, i2, c1, c2)
+            h = trim_slice_to_grid(h_full, h_full, mit_grid, direction)[0]
+            nh = h.size
+            # Set up array for monthly climatology
+            if domain[v] == 'oce':
+                shape = [months_per_year, nz, nh]
+            else:
+                shape = [months_per_year, nh]
+            lens_clim = np.ma.zeros(shape)
+            # Loop over ensemble members and time indices
+            for n in range(num_ens):
+                print('Processing ensemble member '+str(n+1))
+                for year in range(start_year, end_year+1):
+                    print('...'+str(year))
+                    for month in range(months_per_year):
+                        for v in range(num_var):
+                            file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
+                            t0 = t0_year+month
+                            data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                            data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+                            data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
+                            lens_clim[month,:] += data_slice
+            # Convert from integral to average
+            lens_clim /= (num_ens*num_years)
+            # Save to binary file
+            write_binary(lens_clim, out_dir+out_file_head+var_names[v]+'_'+bdry+out_file_tail)
 
 
 # Calculate bias correction files for each boundary condition, based on the LENS ensemble mean climatology compared to the WOA/SOSE fields we used previously.
