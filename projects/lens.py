@@ -1640,7 +1640,7 @@ def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_g
             data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
             for t in range(num_periods):
                 file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'
-                trends, long_name, units = read_netcdf(file_path, var_name+'_trend', return_info=True)
+                trends, long_name, units = read_netcdf(file_path, var +'_trend', return_info=True)
                 mean_trend = np.mean(trends, axis=0)
                 t_val, p_val = ttest_1samp(trends, 0, axis=0)
                 mean_trend[p_val > p0] = 0
@@ -1651,8 +1651,12 @@ def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_g
             for t in range(num_periods):
                 ax = plt.subplot(gs[0,t])
                 img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, ymax=ymax, title=periods[t], titlesize=14)
-            plt.suptitle('Trends in '+long_name+'('+units[:-2]+'/century)', fontsize=20)
-            fig_name = fig_dir + var_name + '_trends' + file_tail
+                if t != 0:
+                    ax.set_xticklabels([])
+                    ax.set_yticklabels([])
+            plt.colorbar(img, cax=cax, orientation='horizontal')
+            plt.suptitle('Trends in '+long_name+' ('+units[:-2]+'/century)', fontsize=20)
+            fig_name = fig_dir + var + '_trends' + file_tail
             finished_plot(fig, fig_name=fig_name)
                 
                 
