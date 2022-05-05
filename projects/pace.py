@@ -2623,6 +2623,65 @@ def plot_warm_cold_years (base_dir='./', timeseries_file='timeseries_final.nc', 
     finished_plot(fig, fig_name=fig_dir+'warm_cold_years.png', dpi=300)
 
 
+# Make plots from the trend file created in make_trend_file.
+def trend_region_plots (in_file, var_name, region, grid_dir, fig_dir='./', dim=3, gtype='t', zmin=None, zmax=None, sign='positive', lon0_slices=[], vmin=None, vmax=None):
+
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(grid_dir)
+    lon, lat = grid.get_lon_lat(gtype=gtype)
+    if dim == 3:
+        z_3d = z_to_xyz(grid.z, grid)
+    # Get x-y bounds on region
+    if region == 'all':
+        [xmin, xmax, ymin, ymax] = [None, None, None, None]
+    elif region == 'ice':
+        ice_mask = grid.get_ice_mask(gtype=gtype)
+        xmin = np.amin(lon[ice_mask])
+        xmax = np.amax(lon[ice_mask])
+        ymin = np.amin(lat[ice_mask])
+        ymax = np.amax(lat[ice_mask])
+    else:
+        [xmin, xmax, ymin, ymax] = region_bounds[region]
+
+    # Read data
+    trends, long_name, units = read_netcdf(in_file, var_name+'_trend', return_info=True)
+    # Calculate mean trend and significance along first axis (ensemble member)
+    mean_trend = np.mean(trends, axis=0)
+    t_val, p_val = ttest_1samp(trends, 0, axis=0)
+    sig = (1-p_val)*100
+    # For any trends which aren't significant, fill with zeros for now
+    mean_trend[sig < 95] = 0
+    if dim == 3:
+        # Also mask out depths we don't care about
+        if zmin is not None:
+            mean_trend = np.ma.masked_where(z_3d<zmin, mean_trend)
+        if zmax is not None:
+            mean_trend = np.ma.masked_where(z_3d>zmax, mean_trend)
+
+    if dim == 2:
+        # Plot the mean trend that's significant
+        latlon_plot(mean_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=vmin, vmax=vmax, title=long_name+',\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend.png')
+    else:
+        # Select maximum significant trend over depth, and the depth at which this occurs
+        if sign == 'positive':
+            k_max = np.argmax(mean_trend, axis=0)
+        elif sign == 'negative':
+            k_max = np.argmin(mean_trend, axis=0)
+        k, j, i = k_max, np.arange(grid.ny)[:,None], np.arange(grid.nx)
+        max_trend = mean_trend[k,j,i]
+        max_trend_depth = z_3d[k,j,i]
+        # Now mask out anything with 0 trend
+        max_trend = np.ma.masked_where(max_trend==0, max_trend)
+        max_trend_depth = np.ma.masked_where(max_trend==0, max_trend_depth)
+        # Plot both of them
+        latlon_plot(max_trend, grid, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title='Maximum '+long_name+' over depth,\n'+region_names[region]+' ('+units+')', titlesize=14, fig_name=fig_dir+var_name+'_trend_max.png', vmin=vmin, vmax=vmax)
+        latlon_plot(max_trend_depth, grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, vmin=zmin, vmax=zmax, title='Depth of maximum '+long_name+',\n'+region_names[region]+' (m)', titlesize=14, fig_name=fig_dir+var_name+'_trend_depth.png')
+    
+        # Now plot trend at every integer longitude within the domain (lat-depth slices)
+        for lon0 in lon0_slices:
+            slice_plot(mean_trend, grid, gtype=gtype, lon0=lon0, ctype='plusminus', zmin=zmin, zmax=zmax, title=long_name+' \n('+units+')', titlesize=14, hmin=ymin, hmax=ymax, vmin=vmin, vmax=vmax, fig_name=fig_dir+var_name+'_trend_'+str(lon0)+'.png')
+
+
 # Precompute trends in heat advection across the ensemble. Call for key='x', 'y'
 def precompute_adv_trend (key, base_dir='./'):
 

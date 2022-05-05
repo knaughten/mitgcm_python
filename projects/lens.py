@@ -1611,6 +1611,9 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
             print('Calculating '+periods[t]+' trends in '+var)
             out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
             make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t])
+
+
+def plot_trend_maps (trend_dir='precomputed_trends/', fig_dir='./'
                  
     
                 
