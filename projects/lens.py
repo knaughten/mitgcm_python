@@ -1613,7 +1613,7 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
             make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t])
 
 
-def plot_trend_maps (trend_dir='precomputed_trends/', fig_dir='./'
+#def plot_trend_maps (trend_dir='precomputed_trends/', fig_dir='./'
                  
     
                 
