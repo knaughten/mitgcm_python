@@ -12,6 +12,7 @@ from scipy.ndimage.filters import gaussian_filter
 import datetime
 
 from ..plot_1d import read_plot_timeseries_ensemble
+from ..plot_latlon import latlon_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start
 from ..grid import Grid, read_pop_grid, read_cice_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_lens_ts_space
@@ -1614,9 +1615,47 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
 
 
 # Plot the historical and future trends in each lat-lon variable.
-def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_dir='./'):
+def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_grid/', fig_dir='./'):
 
     var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
+    trend_dir = real_dir(trend_dir)
+    fig_dir = real_dir(fig_dir)
+    grid = Grid(grid_dir)
+    start_years = [1920, 2006]
+    end_years = [2005, 2100]
+    periods = ['historical', 'future']
+    num_periods = len(periods)
+    p0 = 0.05
+
+    for var in var_names:
+        for zoom in [True, False]:
+            if zoom:
+                ymax = -70
+                file_tail = '_zoom.png')
+            else:
+                ymax = None
+                file_tail = '.png'
+                if var == 'ismr':
+                    continue
+            data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
+            for t in range(num_periods):
+                file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'
+                trends, long_name, units = read_netcdf(file_path, var_name+'_trend', return_info=True)
+                mean_trend = np.mean(trends, axis=0)
+                t_val, p_val = ttest_1samp(trends, 0, axis=0)
+                mean_trend[p_val > p0] = 0
+                data_plot[t,:] = mean_trend
+            vmin = np.amin(data_plot)
+            vmax = np.amax(data_plot)
+            fig, gs, cax = set_panels('1x2C1')
+            for t in range(num_periods):
+                ax = plt.subplot(gs[0,t])
+                img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, ymax=ymax, title=periods[t], titlesize=14)
+            plt.suptitle('Trends in '+long_name+'('+units[:-2]+'/century)', fontsize=20)
+            fig_name = fig_dir + var_name + '_trends' + file_tail
+            finished_plot(fig, fig_name=fig_name)
+                
+                
                  
     
                 
