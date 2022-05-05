@@ -172,8 +172,7 @@ def calc_lens_climatology (out_dir='./'):
     var_names = ['TEMP', 'SALT', 'UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
     gtype = ['t', 't', 'u', 'v', 't', 't', 't', 'u', 'v']
     domain = ['oce', 'oce', 'oce', 'oce', 'ice', 'ice', 'ice', 'ice', 'ice']
-    num_var_oce = len(var_names_oce)
-    num_var_ice = len(var_names_ice)
+    num_var = len(var_names)
     start_year = 1998
     end_year = 2017
     num_years = end_year - start_year + 1
@@ -186,7 +185,7 @@ def calc_lens_climatology (out_dir='./'):
 
     # Read/generate grids
     pop_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
-    pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z_1d, pop_nx, pop_ny, pop_nz = read_pop_grid(grid_file, return_ugrid=True)
+    pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z_1d, pop_nx, pop_ny, nz = read_pop_grid(pop_grid_file, return_ugrid=True)
     cice_grid_file = find_lens_file(var_names[-1], 'ice', 'monthly', 1, start_year)[0]
     cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
     mit_grid = Grid(mit_grid_dir)
@@ -235,13 +234,12 @@ def calc_lens_climatology (out_dir='./'):
                 for year in range(start_year, end_year+1):
                     print('...'+str(year))
                     for month in range(months_per_year):
-                        for v in range(num_var):
-                            file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
-                            t0 = t0_year+month
-                            data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
-                            data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
-                            data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
-                            lens_clim[month,:] += data_slice
+                        file_path, t0_year, tf_year = find_lens_file(var_names[v], domain[v], 'monthly', n+1, year)
+                        t0 = t0_year+month
+                        data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                        data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
+                        data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
+                        lens_clim[month,:] += data_slice
             # Convert from integral to average
             lens_clim /= (num_ens*num_years)
             # Save to binary file
