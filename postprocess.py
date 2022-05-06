@@ -11,7 +11,7 @@ import netCDF4 as nc
 from .grid import Grid
 from .file_io import NCfile, netcdf_time, find_time_index, read_netcdf, read_iceprod
 from .timeseries import calc_timeseries, calc_special_timeseries, set_parameters
-from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask, convert_ismr
+from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask, convert_ismr, mask_2d_to_3d
 from .constants import deg_string, region_names
 from .calculus import area_average
 from .diagnostics import density
