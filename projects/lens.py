@@ -1515,7 +1515,7 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
     out_dir = real_dir(out_dir)
     base_dir = '/data/oceans_output/shelf/kaight/'
     mit_grid_dir = base_dir+'archer2_mitgcm/PAS_grid/'
-    lens_dir = base_dir+'CESM_bias_corrections/obcs/'
+    lens_dir = base_dir+'CESM_bias_correction/obcs/'
     obcs_dir = base_dir+'ics_obcs/PAS/'
     var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
     var_names_sose = ['uvel', 'vvel', 'area', 'heff', 'hsnow', 'uice', 'vice']
@@ -1527,6 +1527,7 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
     lens_file_tail = '_1998-2017'
     obcs_file_head = obcs_dir + 'OB'
     obcs_file_tail = '_sose.bin'
+    obcs_file_tail_alt = '_sose_corr.bin'
     out_file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
 
     # Read the grids
@@ -1600,8 +1601,12 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                 lens_clim = read_binary(file_path, [lens_nh, lens_nh, pop_nz], dimensions)
                 data_slice -= lens_clim
                 # Read SOSE climatology
-                file_path = obcs_file_head + bdry + var_names_sose[v] + obcs_file_tail
-                sose_clim = read_binary(file_path, [mit_grid.nx, mit_grid.nx, mit_grid.nz], dimensions)
+                if (bdry=='N' and var_names[v]=='VVEL') or (bdry in ['E', 'W'] and var_names[v]=='UVEL'):
+                    obcs_file_tail_tmp = obcs_file_tail_alt
+                else:
+                    obcs_file_tail_tmp = obcs_file_tail
+                file_path = obcs_file_head + bdry + var_names_sose[v] + obcs_file_tail_tmp
+                sose_clim = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
                 if dim[v] == 3:
                     data_interp = np.ma.zeros([months_per_year, mit_grid.nz, mit_h.size])
                 elif dim[v] == 2:
@@ -1609,7 +1614,7 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                 for month in range(months_per_year):
                     data_interp_tmp = interp_bdry(lens_h, pop_z, data_slice[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(dim[v]==3))
                     # Add SOSE climatology
-                    data_interp_tmp += sose_clim
+                    data_interp_tmp += sose_clim[month,:]
                     # Fill MITgcm land mask with zeros
                     index = hfac==0
                     data_interp_tmp[index] = 0
