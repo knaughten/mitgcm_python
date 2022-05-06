@@ -1521,8 +1521,8 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 long_name = 'wind speed'
                 units = 'm/s'
             elif var_name == 'speed':
-                u = interp_grid(read_netcdf(file_paths[t], 'UVEL'), grid, 'u', 't', time_dependent=True, mask_with_zeros=True)
-                v = interp_grid(read_netcdf(file_paths[t], 'VVEL'), grid, 'v', 't', time_dependent=True, mask_with_zeros=True)
+                u = interp_grid(read_netcdf(file_paths[t], 'UVEL'), grid, 'u', 't', time_dependent=True, mask=False)
+                v = interp_grid(read_netcdf(file_paths[t], 'VVEL'), grid, 'v', 't', time_dependent=True, mask=False)
                 data = np.mean(np.sqrt(u**2 + v**2), axis=0)
                 long_name = 'speed of ocean velocity'
                 units = 'm/s'
