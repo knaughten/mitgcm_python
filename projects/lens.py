@@ -1510,15 +1510,24 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 
 
 # Read and process all the other OBCS variables (besides T and S) for a given ensemble member and boundary in LENS.
-def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', out_dir='./'):
+def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
 
     out_dir = real_dir(out_dir)
+    base_dir = '/data/oceans_output/shelf/kaight/'
+    mit_grid_dir = base_dir+'archer2_mitgcm/PAS_grid/'
+    lens_dir = base_dir+'CESM_bias_corrections/obcs/'
+    obcs_dir = base_dir+'ics_obcs/PAS/'
     var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    var_names_sose = ['uvel', 'vvel', 'area', 'heff', 'hsnow', 'uice', 'vice']
     num_var = len(var_names)
     dim = [3, 3, 2, 2, 2, 2, 2]
     gtype = ['u', 'v', 't', 't', 't', 'u', 'v']
     domain = ['oce', 'oce', 'ice', 'ice', 'ice', 'ice', 'ice']
-    file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
+    lens_file_head = lens_dir + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
+    obcs_file_head = obcs_dir + 'OB'
+    obcs_file_tail = '_sose.bin'
+    out_file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
 
     # Read the grids
     mit_grid = Grid(mit_grid_dir)
@@ -1552,14 +1561,17 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                     lens_lat = cice_tlat
             if bdry in ['N', 'S']:
                 direction = 'lat'
-                dimensions = 'xzt'
+                dimensions = 'x'
                 lens_h_2d = lens_lon
                 mit_h = mit_grid.lon_1d
             elif bdry in ['E', 'W']:
                 direction = 'lon'
-                dimensions = 'yzt'
+                dimensions = 'y'
                 lens_h_2d = lens_lat
                 mit_h = mit_grid.lat_1d
+            if domain[v] == 'oce':
+                dimensions += 'z'
+            dimensions += 't'
             hfac = get_hfac_bdry(mit_grid, bdry, gtype=gtype[v])
             if dim[v] == 2:
                 hfac = hfac[0,:]
@@ -1582,19 +1594,28 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                     lens_mask = np.invert(data_slice.mask[0,:])
                 except(IndexError):
                     # No special land mask for some sea ice variables
-                    lens_mask = np.ones(data_slice[0,:].shape)                    
+                    lens_mask = np.ones(data_slice[0,:].shape)
+                # Read and subtract LENS climatology
+                file_path = lens_file_head + var_names[v] + '_' + bdry + lens_file_tail
+                lens_clim = read_binary(file_path, [lens_nh, lens_nh, pop_nz], dimensions)
+                data_slice -= lens_clim
+                # Read SOSE climatology
+                file_path = obcs_file_head + bdry + var_names_sose[v] + obcs_file_tail
+                sose_clim = read_binary(file_path, [mit_grid.nx, mit_grid.nx, mit_grid.nz], dimensions)
                 if dim[v] == 3:
                     data_interp = np.ma.zeros([months_per_year, mit_grid.nz, mit_h.size])
                 elif dim[v] == 2:
                     data_interp = np.ma.zeros([months_per_year, mit_h.size])
                 for month in range(months_per_year):
                     data_interp_tmp = interp_bdry(lens_h, pop_z, data_slice[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(dim[v]==3))
+                    # Add SOSE climatology
+                    data_interp_tmp += sose_clim
                     # Fill MITgcm land mask with zeros
                     index = hfac==0
                     data_interp_tmp[index] = 0
                     data_interp[month,:] = data_interp_tmp
                 # Write to binary
-                file_path = out_dir + file_head + var_names[v] + '_' + bdry + '_' + str(year)
+                file_path = out_dir + out_file_head + var_names[v] + '_' + bdry + '_' + str(year)
                 write_binary(data_interp, file_path)
 
 
@@ -1651,7 +1672,7 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
             else:
                 ymax = None
                 file_tail = '.png'
-                if var in ['ismr', 'temp_btw_200_700m']:
+                if var in ['ismr', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m']:
                     continue
             data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
             for t in range(num_periods):
