@@ -13,14 +13,16 @@ import datetime
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
+from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start
 from ..grid import Grid, read_pop_grid, read_cice_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_lens_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_lens_file
 from ..constants import deg_string, months_per_year, Tf_ref, region_names
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.colours import set_colours
-from ..plot_utils.labels import reduce_cbar_labels
+from ..plot_utils.colours import set_colours, get_extend
+from ..plot_utils.labels import reduce_cbar_labels, lon_label
+from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
@@ -1627,7 +1629,7 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
 
 
 # Plot the historical and future trends in each lat-lon variable.
-def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_grid/', fig_dir='./'):
+def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_dir='./'):
 
     var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
     trend_dir = real_dir(trend_dir)
@@ -1644,6 +1646,8 @@ def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_g
             if zoom:
                 ymax = -70
                 file_tail = '_zoom.png'
+                if var in ['sst', 'sss']:
+                    continue
             else:
                 ymax = None
                 file_tail = '.png'
@@ -1667,9 +1671,73 @@ def plot_trend_maps (trend_dir='precomputed_trends/', num_ens=5, grid_dir='PAS_g
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
             plt.colorbar(img, cax=cax, orientation='horizontal')
-            plt.suptitle('Trends in '+long_name+' ('+units[:-2]+'/century)', fontsize=20)
+            plt.suptitle(long_name+' ('+units[:-2]+'/century)', fontsize=20)
             fig_name = fig_dir + var + '_trends' + file_tail
-            finished_plot(fig, fig_name=fig_name)
+            finished_plot(fig) #, fig_name=fig_name)
+
+
+# Plot historical and future temperature and salinity trends as a slice through any longitude.
+def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=None, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_name=None):
+
+    trend_dir = real_dir(trend_dir)
+    grid = Grid(grid_dir)
+    start_years = [1920, 2006]
+    end_years = [2005, 2100]
+    periods = ['historical', 'future']
+    num_periods = len(periods)
+    p0 = 0.05
+    var_names = ['THETA_trend', 'SALT_trend']
+    var_titles = [' temperature ('+deg_string+'C)', ' salinity (psu)']
+    num_var = len(var_names)
+
+    mean_trends = np.ma.empty([num_var, num_periods, grid.nz, grid.ny, grid.nx])
+    for v in range(num_var):
+        for t in range(num_periods):
+            file_path = trend_dir + var_names[v] + '_' + periods[t] + '.nc'
+            trends = read_netcdf(file_path, var_names[v])*1e2
+            mean_trend_tmp = np.mean(trends, axis=0)
+            t_val, p_val = ttest_1samp(trends, 0, axis=0)
+            mean_trend_tmp[p_val > p0] = 0
+            mean_trends[v,t,:] = mean_trend_tmp
+    values = []
+    vmin = [tmin, smin]
+    vmax = [tmax, smax]
+    for v in range(num_var):
+        for t in range(num_periods):
+            if v==0 and t==0:
+                patches, values_tmp, lon0, ymin, ymax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above = slice_patches(mean_trends[v,t,:], grid, lon0=lon0, hmax=ymax, return_bdry=True)
+            else:
+                values_tmp, vmin_tmp, vmax_tmp = slice_values(mean_trends[v,t,:], grid, left, right, below, above, ymin, ymax, zmin, zmax, lon0=lon0)
+            values.append(values_tmp)
+            if vmin[v] is None:
+                vmin[v] = vmin_tmp
+            elif (v==0 and tmin is None) or (v==1 and smin is None):
+                vmin[v] = min(vmin[v], vmin_tmp)
+            if vmax[v] is None:
+                vmax[v] = vmax_tmp
+            elif (v==0 and tmax is None) or (v==1 and smax is None):
+                vmax[v] = max(vmax[v], vmax_tmp)
+    fig, gs, cax1, cax2 = set_panels('2x2C2')
+    cax = [cax1, cax2]
+    extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
+    for v in range(num_var):
+        for t in range(num_periods):
+            ax = plt.subplot(gs[v,t])
+            img = make_slice_plot(patches, values[v*num_periods+t], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
+            if v==0 and t==0:
+                ax.set_ylabel('Depth (m)', fontsize=12)
+            else:
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                ax.set_xlabel('')
+                ax.set_ylabel('')
+            ax.set_title(periods[t] + var_titles[v], fontsize=14)
+        plt.colorbar(img, cax=cax[v], extend=extend[v])
+    plt.suptitle('Trends per century through '+lon_label(lon0), fontsize=16)
+    finished_plot(fig, fig_name=fig_name)
+        
+    
+                
                 
                 
                  
