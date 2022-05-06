@@ -1601,7 +1601,7 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and future (2006-2100).
 def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline'] #['ismr', 'THETA', 'SALT', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
+    var_names = ['speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline', 'ADVx_TH', 'ADVy_TH'] #['ismr', 'THETA', 'SALT', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline', 'ADVx_TH', 'ADVy_TH']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     if sim_dir is None:
@@ -1618,7 +1618,7 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
             region = 'ice'
         else:
             region = 'all'
-        if var in ['THETA', 'SALT']:
+        if var in ['THETA', 'SALT', 'speed', 'ADVx_TH', 'ADVy_TH']:
             dim = 3
         else:
             dim = 2
@@ -1631,7 +1631,7 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
 # Plot the historical and future trends in each lat-lon variable.
 def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_dir='./'):
 
-    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
+    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
     trend_dir = real_dir(trend_dir)
     fig_dir = real_dir(fig_dir)
     grid = Grid(grid_dir)
@@ -1651,7 +1651,7 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
             else:
                 ymax = None
                 file_tail = '.png'
-                if var == 'ismr':
+                if var in ['ismr', 'temp_btw_200_700m']:
                     continue
             data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
             for t in range(num_periods):
@@ -1690,6 +1690,7 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
     var_titles = [' temperature ('+deg_string+'C)', ' salinity (psu)']
     num_var = len(var_names)
 
+    # Read dat and calculate significant mean trends
     mean_trends = np.ma.empty([num_var, num_periods, grid.nz, grid.ny, grid.nx])
     for v in range(num_var):
         for t in range(num_periods):
@@ -1699,6 +1700,7 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
             t_val, p_val = ttest_1samp(trends, 0, axis=0)
             mean_trend_tmp[p_val > p0] = 0
             mean_trends[v,t,:] = mean_trend_tmp
+    # Prepare patches and values for slice plots
     values = []
     vmin = [tmin, smin]
     vmax = [tmax, smax]
@@ -1717,6 +1719,8 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
                 vmax[v] = vmax_tmp
             elif (v==0 and tmax is None) or (v==1 and smax is None):
                 vmax[v] = max(vmax[v], vmax_tmp)
+
+    # Plot
     fig, gs, cax1, cax2 = set_panels('2x2C2')
     cax = [cax1, cax2]
     extend = [get_extend(vmin=tmin, vmax=tmax), get_extend(vmin=smin, vmax=smax)]
@@ -1725,7 +1729,7 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
             ax = plt.subplot(gs[v,t])
             img = make_slice_plot(patches, values[v*num_periods+t], lon0, ymin, ymax, zmin, zmax, vmin[v], vmax[v], lon0=lon0, ax=ax, make_cbar=False, ctype='plusminus', title=None)
             if v==0 and t==0:
-                ax.set_ylabel('Depth (m)', fontsize=12)
+                ax.set_ylabel('Depth (m)', fontsize=10)
             else:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
