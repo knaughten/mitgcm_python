@@ -1687,14 +1687,14 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
             else:
                 xmin = None
                 xmax = None
-            data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
+            data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])
             for t in range(num_periods):
                 file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'
                 trends, long_name, units = read_netcdf(file_path, var +'_trend', return_info=True)
                 mean_trend = np.mean(trends, axis=0)
                 t_val, p_val = ttest_1samp(trends, 0, axis=0)
                 mean_trend[p_val > p0] = 0
-                data_plot[t,:] = mean_trend
+                data_plot[t,:] = mean_trend*1e2
             vmin = np.amin([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[0] for t in range(num_periods)])
             vmax = np.amax([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[1] for t in range(num_periods)])
             fig, gs, cax = set_panels('1x2C1')
@@ -1707,7 +1707,7 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
             plt.colorbar(img, cax=cax, orientation='horizontal')
             plt.suptitle(long_name+' ('+units[:-2]+'/century)', fontsize=20)
             fig_name = fig_dir + var + '_trends' + file_tail
-            finished_plot(fig) #, fig_name=fig_name)
+            finished_plot(fig, fig_name=fig_name)
 
 
 # Plot historical and future temperature and salinity trends as a slice through any longitude.
