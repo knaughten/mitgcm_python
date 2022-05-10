@@ -1627,7 +1627,7 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and future (2006-2100).
 def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['thermocline', 'ADVx_TH', 'ADVy_TH'] #['ismr', 'THETA', 'SALT', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline', 'ADVx_TH', 'ADVy_TH']
+    var_names = ['ADVx_TH', 'ADVy_TH'] #['ismr', 'THETA', 'SALT', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline', 'ADVx_TH', 'ADVy_TH']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     if sim_dir is None:
