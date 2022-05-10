@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max
 from ..grid import Grid, read_pop_grid, read_cice_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_lens_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_lens_file
@@ -1672,13 +1672,21 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
             if zoom:
                 ymax = -70
                 file_tail = '_zoom.png'
-                if var in ['sst', 'sss']:
+                if var in ['sst', 'sss', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed']:
+                    # No need to zoom in
                     continue
             else:
                 ymax = None
                 file_tail = '.png'
                 if var in ['ismr', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m']:
+                    # No need to zoom out
                     continue
+            if var in ['SIfwmelt', 'oceFWflx']:
+                xmin = -138
+                xmax = -82
+            else:
+                xmin = None
+                xmax = None
             data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])*1e2
             for t in range(num_periods):
                 file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'
@@ -1687,12 +1695,12 @@ def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_
                 t_val, p_val = ttest_1samp(trends, 0, axis=0)
                 mean_trend[p_val > p0] = 0
                 data_plot[t,:] = mean_trend
-            vmin = np.amin(data_plot)
-            vmax = np.amax(data_plot)
+            vmin = np.amin([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[0] for t in range(num_periods)])
+            vmax = np.amax([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[1] for t in range(num_periods)])
             fig, gs, cax = set_panels('1x2C1')
             for t in range(num_periods):
                 ax = plt.subplot(gs[0,t])
-                img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, ymax=ymax, title=periods[t], titlesize=14)
+                img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, ymax=ymax, xmin=xmin, xmax=xmax, title=periods[t], titlesize=14)
                 if t != 0:
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
