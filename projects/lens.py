@@ -1514,9 +1514,9 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 
 
 # Helper function to read and correct the given variable in LENS (other than temperature or salinity) for a given year, boundary, and ensemble member.
-def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
+def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
 
-    lens_file_head = lens_dir + 'LENS_climatology_'
+    lens_file_head = in_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
     if var == 'UVEL':
         sose_var = 'uvel'
@@ -1527,16 +1527,16 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
     elif var == 'hi':
         sose_var = 'heff'
     elif var == 'hs':
-        sose_var = 'hs'
+        sose_var = 'hsnow'
     elif var == 'uvel':
         sose_var = 'uice'
     elif var == 'vvel':
         sose_var = 'vice'
-    sose_file = real_dir(in_dir) + 'OB' + bdry + sose_var
+    sose_file = real_dir(obcs_dir) + 'OB' + bdry + sose_var
     if (bdry=='N' and var=='VVEL') or (bdry in ['E', 'W'] and var=='UVEL'):
         sose_file += '_sose_corr.bin'
     else:
-        sose_file += 'sose.bin'
+        sose_file += '_sose.bin'
     if var in ['UVEL', 'VVEL']:
         domain = 'oce'
     else:
@@ -1564,6 +1564,7 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
         lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)
     else:
         lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_ugrid=True)
+        lens_z = None
         lens_nz = 1
     if gtype in ['u', 'v']:
         lens_lon = lens_ulon
@@ -1628,7 +1629,7 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
     # Set physical limits
     if var in ['aice', 'hi', 'hs']:
         data_interp = np.maximum(data_interp, 0)
-    if var_names[v] == 'aice':
+    if var == 'aice':
         data_interp = np.minimum(data_interp, 1)
 
     if return_raw:
