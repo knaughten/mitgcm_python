@@ -1555,9 +1555,9 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
         hfac = hfac[0,:]
     loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
     if (bdry in ['N', 'S'] and gtype == 'v') or (bdry in ['E', 'W'] and gtype == 'u'):
-            loc0 = loc0_edge
-        else:
-            loc0 = loc0_centre
+        loc0 = loc0_edge
+    else:
+        loc0 = loc0_centre
     
     lens_grid_file = find_lens_file(var, domain, 'monthly', ens, year)[0]
     if domain == 'oce':
