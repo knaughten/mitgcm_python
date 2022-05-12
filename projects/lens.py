@@ -240,6 +240,9 @@ def calc_lens_climatology (out_dir='./'):
                         file_path, t0_year, tf_year = find_lens_file(var_names[v], domain[v], 'monthly', n+1, year)
                         t0 = t0_year+month
                         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
+                        if var_names[v] in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
+                            # Convert from cm/s to m/s, or percent to fraction
+                            data_3d *= 1e-2
                         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
                         data_slice = trim_slice_to_grid(data_slice, h_full, mit_grid, direction, warn=False)[0]
                         lens_clim[month,:] += data_slice
@@ -1620,6 +1623,11 @@ def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, en
                     index = hfac==0
                     data_interp_tmp[index] = 0
                     data_interp[month,:] = data_interp_tmp
+                # Set physical limits
+                if var_names[v] in ['aice', 'hi', 'hs']:
+                    data_interp = np.maximum(data_interp, 0)
+                if var_names[v] == 'aice':
+                    data_interp = np.minimum(data_interp, 1)
                 # Write to binary
                 file_path = out_dir + out_file_head + var_names[v] + '_' + bdry + '_' + str(year)
                 write_binary(data_interp, file_path)
@@ -1777,15 +1785,15 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
 # Recreate the PACE advection trend map for the historical and future trends in LENS, side by side
 def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_name=None):
 
-    trend_dir = real_dir(fig_dir)
+    trend_dir = real_dir(trend_dir)
     grid = Grid(grid_dir)
     p0 = 0.05
-    threshold = 125
+    threshold = [125, 500]
     z_shelf = -1000
     periods = ['historical', 'future']
     num_periods = len(periods)
     ymax = -70
-    vmax = 500
+    vmax = 1000
 
     dV = interp_to_depth(grid.dV, z0, grid)
     bathy = grid.bathy
@@ -1795,7 +1803,7 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
     
     def read_component (key, period):
         var_name = 'ADV'+key+'_TH_trend'
-        trends_3d = read_netcdf(trend_dir+var_name+'_trend_'+period+'.nc', var_name)
+        trends_3d = read_netcdf(trend_dir+var_name+'_'+period+'.nc', var_name)
         trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
         mean_trend = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
@@ -1816,7 +1824,7 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
         advx_trend_tmp = read_component('x', periods[t])
         advy_trend_tmp = read_component('y', periods[t])
         magnitude_trend[t,:] = np.sqrt(advx_trend_tmp**2 + advy_trend_tmp**2)
-        index = magnitude_trend[t,:] < threshold
+        index = magnitude_trend[t,:] < threshold[t]
         advx_trend[t,:] = np.ma.masked_where(index, advx_trend_tmp)
         advy_trend[t,:] = np.ma.masked_where(index, advy_trend_tmp)
 
@@ -1826,6 +1834,9 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
         img = latlon_plot(magnitude_trend[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=ymax, title=periods[t], titlesize=14, vmax=vmax)
         ax.contour(grid.lon_2d, grid.lat_2d, bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
         overlay_vectors(ax, advx_trend[t,:], advy_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
+        if t > 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
     plt.colorbar(img, cax=cax, extend='max', orientation='horizontal')
     plt.suptitle('Trends in horizontal heat transport at '+str(-z0)+r'm (kW/m$^2$/century)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
