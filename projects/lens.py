@@ -1513,123 +1513,149 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     finished_plot(fig, fig_name=fig_name)
 
 
+# Helper function to read and correct the given variable in LENS (other than temperature or salinity) for a given year, boundary, and ensemble member.
+def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
+
+    lens_file_head = lens_dir + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
+    if var == 'UVEL':
+        sose_var = 'uvel'
+    elif var == 'VVEL':
+        sose_var = 'vvel'
+    elif var == 'aice':
+        sose_var = 'area'
+    elif var == 'hi':
+        sose_var = 'heff'
+    elif var == 'hs':
+        sose_var = 'hs'
+    elif var == 'uvel':
+        sose_var = 'uice'
+    elif var == 'vvel':
+        sose_var = 'vice'
+    sose_file = real_dir(in_dir) + 'OB' + bdry + sose_var
+    if (bdry=='N' and var=='VVEL') or (bdry in ['E', 'W'] and var=='UVEL'):
+        sose_file += '_sose_corr.bin'
+    else:
+        sose_file += 'sose.bin'
+    if var in ['UVEL', 'VVEL']:
+        domain = 'oce'
+    else:
+        domain = 'ice'
+    if var in ['UVEL', 'uvel']:
+        gtype = 'u'
+    elif var in ['VVEL', 'vvel']:
+        gtype = 'v'
+    else:
+        gtype = 't'
+
+    mit_grid = Grid(mit_grid_dir)
+    mit_lon, mit_lat = mit_grid.get_lon_lat(gtype=gtype, dim=1)
+    hfac = get_hfac_bdry(mit_grid, bdry, gtype=gtype)
+    if domain == 'ice':
+        hfac = hfac[0,:]
+    loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
+    if (bdry in ['N', 'S'] and gtype == 'v') or (bdry in ['E', 'W'] and gtype == 'u'):
+            loc0 = loc0_edge
+        else:
+            loc0 = loc0_centre
+    
+    lens_grid_file = find_lens_file(var, domain, 'monthly', ens, year)[0]
+    if domain == 'oce':
+        lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)
+    else:
+        lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_ugrid=True)
+        lens_nz = 1
+    if gtype in ['u', 'v']:
+        lens_lon = lens_ulon
+        lens_lat = lens_ulat
+    else:
+        lens_lon = lens_tlon
+        lens_lat = lens_tlat
+    
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'x'
+        lens_h_2d = lens_lon
+        mit_h = mit_lon
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'y'
+        lens_h_2d = lens_lat
+        mit_h = mit_lat
+    if domain == 'oce':
+        dimensions += 'z'
+    dimensions += 't'
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_nh = lens_h.size
+
+    # Read LENS data and extract slice
+    file_path, t_start, t_end = find_lens_file(var, domain, 'monthly', ens, year)
+    data_full = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+    if var in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
+        # Convert from cm/s to m/s, or percent to fraction
+        data_full *= 1e-2
+    data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
+    data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
+    try:
+        lens_mask = np.invert(data_slice.mask[0,:])
+    except(IndexError):
+        # No special land mask for some sea ice variables
+        lens_mask = np.ones(data_slice[0,:].shape)
+
+    # Read and subtract LENS climatology
+    file_path = lens_file_head + var + '_' + bdry + lens_file_tail
+    lens_clim = read_binary(file_path, [lens_nh, lens_nh, lens_nz], dimensions)
+    data_slice_anom = data_slice - lens_clim
+
+    # Read SOSE climatology
+    sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+
+    # Interpolate to MIT grid
+    if domain == 'oce':
+        data_interp = np.ma.zeros([months_per_year, mit_grid.nz, mit_h.size])
+    elif domain == 'ice':
+        data_interp = np.ma.zeros([months_per_year, mit_h.size])
+    for month in range(months_per_year):
+        data_interp_tmp = interp_bdry(lens_h, lens_z, data_slice_anom[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(domain=='oce'))
+        # Add SOSE climatology
+        data_interp_tmp += sose_clim[month,:]
+        # Fill MITgcm land mask with zeros
+        index = hfac==0
+        data_interp_tmp[index] = 0
+        data_interp[month,:] = data_interp_tmp
+    # Set physical limits
+    if var in ['aice', 'hi', 'hs']:
+        data_interp = np.maximum(data_interp, 0)
+    if var_names[v] == 'aice':
+        data_interp = np.minimum(data_interp, 1)
+
+    if return_raw:
+        if return_sose_clim:
+            return data_interp, data_slice, lens_h, lens_z, sose_clim
+        else:
+            return data_interp, data_slice, lens_h, lens_z
+    else:
+        if return_sose_clim:
+            return data_interp, sose_clim
+        else:
+            return sose_clim    
+
+
 # Read and process all the other OBCS variables (besides T and S) for a given ensemble member and boundary in LENS.
 def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    base_dir = '/data/oceans_output/shelf/kaight/'
-    mit_grid_dir = base_dir+'archer2_mitgcm/PAS_grid/'
-    lens_dir = base_dir+'CESM_bias_correction/obcs/'
-    obcs_dir = base_dir+'ics_obcs/PAS/'
     var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
-    var_names_sose = ['uvel', 'vvel', 'area', 'heff', 'hsnow', 'uice', 'vice']
-    num_var = len(var_names)
-    dim = [3, 3, 2, 2, 2, 2, 2]
-    gtype = ['u', 'v', 't', 't', 't', 'u', 'v']
-    domain = ['oce', 'oce', 'ice', 'ice', 'ice', 'ice', 'ice']
-    lens_file_head = lens_dir + 'LENS_climatology_'
-    lens_file_tail = '_1998-2017'
-    obcs_file_head = obcs_dir + 'OB'
-    obcs_file_tail = '_sose.bin'
-    obcs_file_tail_alt = '_sose_corr.bin'
     out_file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
 
-    # Read the grids
-    mit_grid = Grid(mit_grid_dir)
-    pop_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', ens, start_year)[0]
-    pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z, pop_nx, pop_ny, pop_nz = read_pop_grid(pop_grid_file, return_ugrid=True)
-    cice_grid_file = find_lens_file(var_names[-1], 'ice', 'monthly', ens, start_year)[0]
-    cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
-
     for bdry in bdry_loc:
-        for v in range(num_var):
-            print('Processing '+var_names[v]+' on '+bdry+' boundary')
-            # Slice to boundary: depends on domain (ocean/ice) and grid type
-            loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
-            if (bdry in ['N', 'S'] and gtype[v] == 'v') or (bdry in ['E', 'W'] and gtype[v] == 'u'):
-                loc0 = loc0_edge
-            else:
-                loc0 = loc0_centre
-            if domain[v] == 'oce':
-                if gtype[v] == 't':
-                    lens_lon = pop_tlon
-                    lens_lat = pop_tlat
-                else:
-                    lens_lon = pop_ulon
-                    lens_lat = pop_ulat
-            else:
-                if gtype[v] == 't':
-                    lens_lon = cice_tlon
-                    lens_lat = cice_tlat
-                else:
-                    lens_lon = cice_ulon
-                    lens_lat = cice_tlat
-            if bdry in ['N', 'S']:
-                direction = 'lat'
-                dimensions = 'x'
-                lens_h_2d = lens_lon
-                mit_h = mit_grid.lon_1d
-            elif bdry in ['E', 'W']:
-                direction = 'lon'
-                dimensions = 'y'
-                lens_h_2d = lens_lat
-                mit_h = mit_grid.lat_1d
-            if domain[v] == 'oce':
-                dimensions += 'z'
-            dimensions += 't'
-            hfac = get_hfac_bdry(mit_grid, bdry, gtype=gtype[v])
-            if dim[v] == 2:
-                hfac = hfac[0,:]
-            i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
-            lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-            lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
-            lens_nh = lens_h.size
-
-            # Loop over years
+        for var in var_names:
+            print('Processing '+var+' on '+bdry+' boundary')
             for year in range(start_year, end_year+1):
-                print('...'+str(year))
-                file_path, t_start, t_end = find_lens_file(var_names[v], domain[v], 'monthly', ens, year)
-                data_full = read_netcdf(file_path, var_names[v], t_start=t_start, t_end=t_end)
-                if var_names[v] in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
-                    # Convert from cm/s to m/s, or percent to fraction
-                    data_full *= 1e-2
-                data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
-                data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
-                try:
-                    lens_mask = np.invert(data_slice.mask[0,:])
-                except(IndexError):
-                    # No special land mask for some sea ice variables
-                    lens_mask = np.ones(data_slice[0,:].shape)
-                # Read and subtract LENS climatology
-                file_path = lens_file_head + var_names[v] + '_' + bdry + lens_file_tail
-                lens_clim = read_binary(file_path, [lens_nh, lens_nh, pop_nz], dimensions)
-                data_slice -= lens_clim
-                # Read SOSE climatology
-                if (bdry=='N' and var_names[v]=='VVEL') or (bdry in ['E', 'W'] and var_names[v]=='UVEL'):
-                    obcs_file_tail_tmp = obcs_file_tail_alt
-                else:
-                    obcs_file_tail_tmp = obcs_file_tail
-                file_path = obcs_file_head + bdry + var_names_sose[v] + obcs_file_tail_tmp
-                sose_clim = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
-                if dim[v] == 3:
-                    data_interp = np.ma.zeros([months_per_year, mit_grid.nz, mit_h.size])
-                elif dim[v] == 2:
-                    data_interp = np.ma.zeros([months_per_year, mit_h.size])
-                for month in range(months_per_year):
-                    data_interp_tmp = interp_bdry(lens_h, pop_z, data_slice[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(dim[v]==3))
-                    # Add SOSE climatology
-                    data_interp_tmp += sose_clim[month,:]
-                    # Fill MITgcm land mask with zeros
-                    index = hfac==0
-                    data_interp_tmp[index] = 0
-                    data_interp[month,:] = data_interp_tmp
-                # Set physical limits
-                if var_names[v] in ['aice', 'hi', 'hs']:
-                    data_interp = np.maximum(data_interp, 0)
-                if var_names[v] == 'aice':
-                    data_interp = np.minimum(data_interp, 1)
-                # Write to binary
-                file_path = out_dir + out_file_head + var_names[v] + '_' + bdry + '_' + str(year)
+                data_interp = read_correct_lens_non_ts(var, bdry, ens, year)
+                file_path = out_dir + out_file_head + var + '_' + bdry + '_' + str(year)
                 write_binary(data_interp, file_path)
 
 
@@ -1840,19 +1866,13 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
     plt.colorbar(img, cax=cax, extend='max', orientation='horizontal')
     plt.suptitle('Trends in horizontal heat transport at '+str(-z0)+r'm (kW/m$^2$/century)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
-        
-    
 
-    
-        
-    
-                
-                
-                
-                 
-    
-                
 
+# For the given variable, boundary, ensemble member, year, and month: plot the uncorrected and corrected LENS fields as well as the SOSE climatology.
+def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, fig_name=None):
+
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    
 
     
 
