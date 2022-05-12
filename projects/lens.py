@@ -1872,7 +1872,63 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
 # For the given variable, boundary, ensemble member, year, and month: plot the uncorrected and corrected LENS fields as well as the SOSE climatology.
 def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, fig_name=None):
 
+    if var == 'UVEL':
+        var_title = 'Zonal velocity (m/s)'
+    elif var == 'VVEL':
+        var_title = 'Meridional velocity (m/s)'
+    elif var == 'aice':
+        var_title = 'Sea ice area (fraction)'
+    elif var == 'hi':
+        var_title = 'Sea ice thickness (m)'
+    elif var == 'hs':
+        var_title = 'Snow thickness (m)'
+    elif var == 'uvel':
+        var_title = 'Sea ice zonal velocity (m/s)'
+    elif var == 'vvel':
+        var_title = 'Sea ice meridional velocity (m/s)'
+    if var in ['UVEL', 'VVEL']:
+        domain = 'oce'
+    else:
+        domain = 'ice'
+    if var in ['aice', 'hi', 'hs']:
+        ctype = 'basic'
+    else:
+        ctype = 'plusminus'
+    titles = ['SOSE climatology', 'LENS', 'LENS corrected']
+    colours = ['blue', 'green', 'red']
+    num_sources = len(titles)
+    main_title = var_title+' at '+bdry+' boundary, '+str(year)+'/'+str(month)
+    
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    grid = Grid(mit_grid_dir)
+
+    lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_lens_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
+    data = [sose_clim, lens_uncorr, lens_corr]
+    h = [mit_h, lens_h, mit_h]
+    if domain == 'oce':               
+        z = [mit_z, lens_z, mit_z]
+        vmin = min(min(np.amin(sose_clim), np.amin(lens_uncorr)), np.amin(lens_corr))
+        vmax = max(max(np.amax(sose_clim), np.amax(lens_uncorr)), np.amax(lens_corr))
+        cmap = set_colours(data[0], vmin=vmin, vmax=vmax, ctype=ctype)[0]
+        fig, gs, cax = set_panels('1x3C1')
+        for n in range(num_sources):
+            ax = plt.subplot(gs[0,n])
+            img = ax.pcolormesh(h[n], z[n], data[n][month-1,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            if n==2:
+                plt.colorbar(img, cax=cax, orientation='horizontal')
+            if n>0:
+                ax.set_yticklabels([])
+            ax.set_title(titles[n], fontsize=14)
+        plt.suptitle(main_title, fontsize=18)
+    elif domain == 'ice':
+        fig, ax = plt.subplots()
+        for n in range(num_sources):
+            ax = plt.plot(h[n], data[n][month-1,:], color=colours[n], label=titles[n])
+        ax.set_title(main_title, fontsize=16)
+        ax.grid(linestyle='dotted')
+        ax.legend()        
+    finished_plot(fig, fig_name=fig_name)
+        
     
 
     
