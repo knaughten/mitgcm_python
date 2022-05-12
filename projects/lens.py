@@ -1612,6 +1612,8 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
 
     # Read SOSE climatology
     sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+    for month in range(months_per_year):
+        sose_clim[hfac==0] = 0
 
     # Interpolate to MIT grid
     if domain == 'oce':
@@ -1923,7 +1925,7 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, fig_name=None):
     elif domain == 'ice':
         fig, ax = plt.subplots()
         for n in range(num_sources):
-            ax = plt.plot(h[n], data[n][month-1,:], color=colours[n], label=titles[n])
+            ax.plot(h[n], data[n][month-1,:], color=colours[n], label=titles[n])
         ax.set_title(main_title, fontsize=16)
         ax.grid(linestyle='dotted')
         ax.legend()        
