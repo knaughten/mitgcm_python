@@ -1634,14 +1634,14 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
 
     if return_raw:
         if return_sose_clim:
-            return data_interp, data_slice, lens_h, lens_z, sose_clim
+            return data_interp, data_slice, lens_h, lens_z, sose_clim, mit_h, mit_grid.z
         else:
             return data_interp, data_slice, lens_h, lens_z
     else:
         if return_sose_clim:
-            return data_interp, sose_clim
+            return data_interp, sose_clim, mit_h, mit_grid.z
         else:
-            return sose_clim    
+            return data_interp    
 
 
 # Read and process all the other OBCS variables (besides T and S) for a given ensemble member and boundary in LENS.
