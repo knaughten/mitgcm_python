@@ -1613,7 +1613,9 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
     # Read SOSE climatology
     sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
     for month in range(months_per_year):
-        sose_clim[hfac==0] = 0
+        sose_clim_tmp = sose_clim[month,:]
+        sose_clim_tmp[hfac==0] = 0
+        sose_clim[month,:] = sose_clim_tmp
 
     # Interpolate to MIT grid
     if domain == 'oce':
