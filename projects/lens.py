@@ -1635,6 +1635,10 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
         data_interp = np.maximum(data_interp, 0)
     if var == 'aice':
         data_interp = np.minimum(data_interp, 1)
+    if var in ['hi', 'hs', 'uvel', 'vvel']:
+        # Set to zero if (corrected) sea ice concentration is zero
+        aice = read_correct_lens_non_ts('aice', bdry, ens, year, in_dir=in_dir, obcs_dir=obcs_dir, mit_grid_dir=mit_grid_dir)
+        data_interp[aice==0] = 0
 
     if return_raw:
         if return_sose_clim:
@@ -1871,86 +1875,6 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
     plt.colorbar(img, cax=cax, extend='max', orientation='horizontal')
     plt.suptitle('Trends in horizontal heat transport at '+str(-z0)+r'm (kW/m$^2$/century)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
-
-
-# Helper function to read and correct the LENS sea ice tracer variables for OBCS: linear bias correction with respect to SOSE climatology
-def read_correct_lens_seaice_tracer (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_clim=False, return_sose_clim=False):
-
-    lens_file_head = in_dir + 'LENS_climatology_'
-    lens_file_tail = '_1998-2017'
-    if var == 'aice':
-        sose_var = 'area'
-    elif var == 'hi':
-        sose_var = 'heff'
-    elif var == 'hs':
-        sose_var = 'hsnow'
-    sose_file = real_dir(obcs_dir) + 'OB' + bdry + sose_var + '_sose.bin'
-
-    mit_grid = Grid(mit_grid_dir)
-    hfac = get_hfac_bdry(mit_grid, bdry)[0,:]
-    hfac_months = add_time_dim(hfac, months_per_year)
-    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
-    lens_grid_file = find_lens_file(var, 'ice', 'monthly', ens, year)[0]
-    lens_lon, lens_lat, lens_nx, lens_ny = read_cice_grid(lens_grid_file)
-
-    if bdry in ['N', 'S']:
-        direction = 'lat'
-        dimensions = 'xt'
-        lens_h_2d = lens_lon
-        mit_h = mit_grid.lon_1d
-    elif bdry in ['E', 'W']:
-        direction = 'lon'
-        dimensions = 'yt'
-        lens_h_2d = lens_lat
-        mit_h = mit_grid.lat_1d
-    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
-    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
-    lens_nh = lens_h.size
-
-    # Read LENS data and extract slice
-    file_path, t_start, t_end = find_lens_file(var, 'ice', 'monthly', ens, year)
-    data_full = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
-    if var == 'aice':
-        data_full *= 1e-2
-    data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
-    data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
-    lens_mask = np.invert(data_slice.mask[0,:])
-
-    # Read and subtract LENS climatology
-    file_path = lens_file_head + var + '_' + bdry + lens_file_tail
-    lens_clim = read_binary(file_path, [lens_nh, lens_nh], dimensions)
-    data_slice_anom = data_slice - lens_clim
-
-    # Read SOSE climatology
-    sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
-    sose_clim[hfac_months==0] = 0
-
-    # Interpolate to MIT grid
-    data_interp = np.ma.zeros([months_per_year, mit_h.size])
-    for month in range(months_per_year):
-        data_interp_tmp = interp_bdry(lens_h, None, data_slice_anom[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=False)
-        # Add SOSE climatology
-        data_interp_tmp += sose_clim[month,:]
-        # Fill MITgcm land mask with zeros
-        data_interp_tmp[hfac==0] = 0
-        data_interp[month,:] = data_interp_tmp
-    # Set physical limits
-    if var in ['aice', 'hi', 'hs']:
-        data_interp = np.maximum(data_interp, 0)
-    if var == 'aice':
-        data_interp = np.minimum(data_interp, 1)
-
-    return_vars = [data_interp]
-    if return_raw:
-        return_vars += [data_slice]
-    if return_clim:
-        return_vars += [lens_clim]
-    if return_raw or return_clim:
-        return_vars += [lens_h]
-    if return_sose_clim:
-        return_vars += [sose_clim]
-    return return_vars
 
 
 # Helper function to read and correct the LENS velocity variables (ocean or sea ice) for OBCS: correction in polar coordinates with respect to SOSE climatology
