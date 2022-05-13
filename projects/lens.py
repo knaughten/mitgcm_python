@@ -1985,7 +1985,7 @@ def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/d
     if domain == 'oce':
         lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)[2:]
     elif domain == 'ice':
-        lens_lon, lens_lat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_grid=True)[2:]
+        lens_lon, lens_lat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_ugrid=True)[2:]
         lens_z = None
         lens_nz = 1
     if bdry in ['N', 'S']:
