@@ -1873,8 +1873,216 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
     finished_plot(fig, fig_name=fig_name)
 
 
+# Helper function to read and correct the LENS sea ice tracer variables for OBCS: linear bias correction with respect to SOSE climatology
+def read_correct_lens_seaice_tracer (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_clim=False, return_sose_clim=False):
+
+    lens_file_head = in_dir + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
+    elif var == 'aice':
+        sose_var = 'area'
+    elif var == 'hi':
+        sose_var = 'heff'
+    elif var == 'hs':
+        sose_var = 'hsnow'
+    sose_file = real_dir(obcs_dir) + 'OB' + bdry + sose_var + '_sose.bin'
+
+    mit_grid = Grid(mit_grid_dir)
+    hfac = get_hfac_bdry(mit_grid, bdry)[0,:]
+    hfac_months = add_time_dim(hfac, months_per_year)
+    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    lens_grid_file = find_lens_file(var, 'ice', 'monthly', ens, year)[0]
+    lens_lon, lens_lat, lens_nx, lens_ny = read_cice_grid(lens_grid_file)
+
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xt'
+        lens_h_2d = lens_lon
+        mit_h = mit_grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yt'
+        lens_h_2d = lens_lat
+        mit_h = mit_grid.lat_1d
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_nh = lens_h.size
+
+    # Read LENS data and extract slice
+    file_path, t_start, t_end = find_lens_file(var, 'ice', 'monthly', ens, year)
+    data_full = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+    if var == 'aice':
+        data_full *= 1e-2
+    data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
+    data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_mask = np.invert(data_slice.mask[0,:])
+
+    # Read and subtract LENS climatology
+    file_path = lens_file_head + var + '_' + bdry + lens_file_tail
+    lens_clim = read_binary(file_path, [lens_nh, lens_nh], dimensions)
+    data_slice_anom = data_slice - lens_clim
+
+    # Read SOSE climatology
+    sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+    sose_clim[hfac_months==0] = 0
+
+    # Interpolate to MIT grid
+    data_interp = np.ma.zeros([months_per_year, mit_h.size])
+    for month in range(months_per_year):
+        data_interp_tmp = interp_bdry(lens_h, None, data_slice_anom[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=False)
+        # Add SOSE climatology
+        data_interp_tmp += sose_clim[month,:]
+        # Fill MITgcm land mask with zeros
+        data_interp_tmp[hfac==0] = 0
+        data_interp[month,:] = data_interp_tmp
+    # Set physical limits
+    if var in ['aice', 'hi', 'hs']:
+        data_interp = np.maximum(data_interp, 0)
+    if var == 'aice':
+        data_interp = np.minimum(data_interp, 1)
+
+    return_vars = [data_interp]
+    if return_raw:
+        return_vars += [data_slice]
+    if return_clim:
+        return_vars += [lens_clim]
+    if return_raw or return_clim:
+        return_vars += [lens_h, lens_z]
+    if return_sose:
+        return_vars += [sose_clim]
+    return return_vars
+
+
+# Helper function to read and correct the LENS velocity variables (ocean or sea ice) for OBCS: correction in polar coordinates with respect to SOSE climatology
+def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_clim=False, return_sose_clim=False):
+
+    if domain == 'oce':
+        var_names = ['UVEL', 'VVEL']
+        var_sose = ['uvel', 'vvel']
+    elif domain == 'ice':
+        var_names = ['uvel', 'vvel']
+        var_sose = ['uice', 'vice']
+    num_cmp = len(var_names)
+    lens_file_head = real_dir(in_dir) + 'LENS_climatology_'
+    lens_file_tail = '_1998-2017'
+    sose_file_head = real_dir(obcs_dir) + 'OB' + bdry
+    sose_file_tail = '_sose.bin'
+    sose_file_tail_alt = '_sose_corr.bin'
+    scale_cap = 3
+
+    # Read grids
+    # Will do almost everything on the MITgcm tracer grid - introduces negligible errors
+    mit_grid = Grid(mit_grid_dir)
+    hfac = []  # Get on all 3 grids
+    for gtype in ['t', 'u', 'v']:
+        hfac_tmp = get_hfac_bdry(mit_grid, bdry)
+        if domain == 'ice':
+            hfac_tmp = hfac_tmp[0,:]
+        hfac_tmp = add_time_dim(hfac_tmp, months_per_year)
+        hfac.append(hfac_tmp)
+    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    lens_grid_file = find_lens_file(var_names[0], domain, 'monthly', ens, year)[0]
+    if domain == 'oce':
+        lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)[2:]
+    elif domain == 'ice':
+        lens_lon, lens_lat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_grid=True)[2:]
+        lens_z = None
+        lens_nz = 1
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'x'
+        lens_h_2d = lens_lon
+        mit_h = mit_grid.lon_1d
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'y'
+        lens_h_2d = lens_lat
+        mit_h = mit_grid.lat_1d
+    if domain == 'oce':
+        dimensions += 'z'
+    dimensions += 't'
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
+    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
+    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
+    lens_nh = lens_h.size
+
+    # Read LENS u and v components and slice to boundary
+    data_slice = []
+    for v in range(num_cmp):
+        file_path, t_start, t_end = find_lens_file(var_names[v], domain, 'monthly', ens, year)
+        data_full_cmp = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)*1e-2
+        data_slice_cmp = extract_slice_nonreg(data_full_cmp, direction, i1, i2, c1, c2)
+        data_slice_cmp = trim_slice_to_grid(data_slice_cmp, lens_h_full, mit_grid, direction, warn=False)[0]
+        data_slice.append(data_slice_cmp)
+    try:
+        lens_mask = np.invert(data_slice[0].mask[0,:])
+    except(IndexError):
+        lens_mask = np.ones(data_slice[0][0,:].shape)
+    # Calculate magnitude and angle
+    lens_magnitude = np.sqrt(data_slice[0]**2 + data_slice[1]**2)
+    lens_angle = np.arctan2(data_slice[1], data_slice[0])
+
+    # Read LENS climatology and calculate magnitude and angle
+    data_clim = []
+    for v in range(num_cmp):
+        file_path = lens_file_head + var_names[v] + '_' + bdry + lens_file_tail
+        data_clim.append(read_binary(file_path, [lens_nh, lens_nh, lens_nz], dimensions))
+    lens_clim_magnitude = np.sqrt(data_clim[0]**2 + data_clim[1]**2)
+    lens_clim_angle = np.arctan2(data_clim[1], data_clim[0])
+
+    # Calculate scaling factor (subject to cap) and rotation angle (take mod 2pi when necessary)
+    scale = np.minimum(lens_magnitude/lens_clim_magnitude, scale_cap)
+    rotate = lens_angle - lens_clim_angle
+    rotate[rotate < -np.pi] += 2*np.pi
+    rotate[rotate > np.pi] -= 2*np.pi
+
+    # Interpolate to MITgcm tracer grid
+    shape = [months_per_year]
+    if domain == 'oce':
+        shape += [mit_grid.nz]
+    shape += [mit_h.size]
+    scale_interp = np.ma.zeros(shape)
+    rotate_interp = np.ma.zeros(shape)
+    for month in range(months_per_year):
+        for in_data, out_data in zip([scale, rotate], [scale_interp, rotate_interp]):
+            out_data[month,:] = interp_bdry(lens_h, lens_z, in_data[month,:], lens_mask, mit_h, mit_grid.z, hfac[0][0,:], lon=(direction=='lat'), depth_dependent=(domain=='oce'))
+
+    # Read SOSE climatology and calculate magnitude and angle
+    sose_clim = []
+    for v in range(num_cmp):
+        file_path = sose_file_head + var_sose[v]
+        if (bdry=='N' and var_names[v]=='VVEL') or (bdry in ['E','W'] and var_names[v]=='UVEL'):
+            file_path += sose_file_tail_alt
+        else:
+            file_path += sose_file_tail
+        sose_clim_tmp = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
+        # Fill land mask on correct grid with zeros
+        sose_clim_tmp[hfac[v+1]==0] = 0
+        sose_clim.append(sose_clim_tmp)
+    sose_magnitude = np.sqrt(sose_clim[0]**2 + sose_clim[1]**2)
+    sose_angle = np.arctan2(sose_clim[1], sose_clim[0])
+
+    # Now scale magnitude and rotate angle
+    new_magnitude = sose_magnitude*scale_interp
+    new_angle = sose_angle + rotate_interp
+    # Convert back to u and v components
+    new_u = new_magnitude*np.cos(new_angle)
+    new_v = new_mangitude*np.sin(new_angle)
+
+    return_vars = [new_u, new_v]
+    if return_raw:
+        return_vars += [data_slice[0], data_slice[1]]
+    if return_clim:
+        return_vars += [data_clim[0], data_clim[1]]
+    if return_raw or return_clim:
+        return_vars += [lens_h, lens_z]
+    if return_sose:
+        return_vars += [sose_clim[0], sose_clim[1]]
+    return return_vars
+
+
 # For the given variable, boundary, ensemble member, year, and month: plot the uncorrected and corrected LENS fields as well as the SOSE climatology.
-def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, fig_name=None):
+def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=True, fig_name=None):
 
     if var == 'UVEL':
         var_title = 'Zonal velocity (m/s)'
@@ -1906,7 +2114,26 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, fig_name=None):
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
     grid = Grid(mit_grid_dir)
 
-    lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_lens_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
+    if polar_coordinates:
+        if var in ['aice', 'hi', 'hs']:
+            lens_corr, lens_uncorr, lens_h, lens_z, sose_clim = read_correct_lens_seaice_tracer(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
+        else:
+            lens_corr_u, lens_corr_v, lens_uncorr_u, lens_uncorr_v, lens_h, lens_z, sose_clim_u, sose_clim_v = read_correct_lens_vel_polar_coordinates(domain, bdry, ens, year, return_raw=True, return_sose_clim=True)
+            if var in ['UVEL', 'uvel']:
+                lens_corr = lens_corr_u
+                lens_uncorr = lens_uncorr_u
+                sose_clim = sose_clim_u
+            elif var in ['VVEL', 'vvel']:
+                lens_corr = lens_corr_v
+                lens_uncorr = lens_uncorr_v
+                sose_clim = sose_clim_v
+        if bdry in ['N', 'S']:
+            mit_h = grid.lon_1d
+        else:
+            mit_h = grid.lat_1d
+        mit_z = grid.z
+    else:
+        lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_lens_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
     data = [sose_clim, lens_uncorr, lens_corr]
     h = [mit_h, lens_h, mit_h]
     if domain == 'oce':               
