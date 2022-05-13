@@ -1878,7 +1878,7 @@ def read_correct_lens_seaice_tracer (var, bdry, ens, year, in_dir='/data/oceans_
 
     lens_file_head = in_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
-    elif var == 'aice':
+    if var == 'aice':
         sose_var = 'area'
     elif var == 'hi':
         sose_var = 'heff'
