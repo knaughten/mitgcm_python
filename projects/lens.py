@@ -2010,7 +2010,7 @@ def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/d
     data_slice = []
     for v in range(num_cmp):
         file_path, t_start, t_end = find_lens_file(var_names[v], domain, 'monthly', ens, year)
-        data_full_cmp = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)*1e-2
+        data_full_cmp = read_netcdf(file_path, var_names[v], t_start=t_start, t_end=t_end)*1e-2
         data_slice_cmp = extract_slice_nonreg(data_full_cmp, direction, i1, i2, c1, c2)
         data_slice_cmp = trim_slice_to_grid(data_slice_cmp, lens_h_full, mit_grid, direction, warn=False)[0]
         data_slice.append(data_slice_cmp)
@@ -2067,7 +2067,7 @@ def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/d
     new_angle = sose_angle + rotate_interp
     # Convert back to u and v components
     new_u = new_magnitude*np.cos(new_angle)
-    new_v = new_mangitude*np.sin(new_angle)
+    new_v = new_magnitude*np.sin(new_angle)
 
     return_vars = [new_u, new_v]
     if return_raw:
