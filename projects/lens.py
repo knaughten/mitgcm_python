@@ -2038,19 +2038,16 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
     mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
     grid = Grid(mit_grid_dir)
 
-    if polar_coordinates:
-        if var in ['aice', 'hi', 'hs']:
-            lens_corr, lens_uncorr, lens_h, sose_clim = read_correct_lens_seaice_tracer(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
-        else:
-            lens_corr_u, lens_corr_v, lens_uncorr_u, lens_uncorr_v, lens_h, lens_z, sose_clim_u, sose_clim_v = read_correct_lens_vel_polar_coordinates(domain, bdry, ens, year, return_raw=True, return_sose_clim=True)
-            if var in ['UVEL', 'uvel']:
-                lens_corr = lens_corr_u
-                lens_uncorr = lens_uncorr_u
-                sose_clim = sose_clim_u
-            elif var in ['VVEL', 'vvel']:
-                lens_corr = lens_corr_v
-                lens_uncorr = lens_uncorr_v
-                sose_clim = sose_clim_v
+    if polar_coordinates and var in ['UVEL', 'VVEL', 'uvel', 'vvel']:
+        lens_corr_u, lens_corr_v, lens_uncorr_u, lens_uncorr_v, lens_h, lens_z, sose_clim_u, sose_clim_v = read_correct_lens_vel_polar_coordinates(domain, bdry, ens, year, return_raw=True, return_sose_clim=True)
+        if var in ['UVEL', 'uvel']:
+            lens_corr = lens_corr_u
+            lens_uncorr = lens_uncorr_u
+            sose_clim = sose_clim_u
+        elif var in ['VVEL', 'vvel']:
+            lens_corr = lens_corr_v
+            lens_uncorr = lens_uncorr_v
+            sose_clim = sose_clim_v
         if bdry in ['N', 'S']:
             mit_h = grid.lon_1d
         else:
