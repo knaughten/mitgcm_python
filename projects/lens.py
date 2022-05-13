@@ -1656,7 +1656,7 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
 def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    var_names = ['hi', 'hs', 'uvel', 'vvel'] #['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
     out_file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
 
     for bdry in bdry_loc:
