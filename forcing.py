@@ -1137,7 +1137,7 @@ def lens_atm_forcing (var, ens, in_dir, out_dir):
             # Convert from mixing ratio to specific humidity
             data = data/(1.0 + data)
         # Write data
-        out_file = real_dir(out_dir) + 'LENS_ens' + ens_str + '_' + var + '_' + str(year)
+        out_file = real_dir(out_dir) + 'LENS_ens' + str(ens).zfill(3) + '_' + var + '_' + str(year)
         write_binary(data, out_file)
 
 
