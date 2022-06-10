@@ -1107,14 +1107,13 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
 
 
 # Process atmospheric forcing from LENS (same conventions as PACE) for a single variable and single ensemble member.
-def lens_atm_forcing (var, ens, in_dir, out_dir):
+def lens_atm_forcing (var, ens, in_dir, out_dir, end_year=2100):
 
     import netCDF4 as nc
     if ens == 1:
         start_year = 1850
     else:
         start_year = 1920
-    end_year = 2100
     if var in ['FLDS', 'FSDS']:
         freq = 'monthly'
     else:
