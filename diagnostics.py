@@ -287,7 +287,7 @@ def parallel_vector (u, v, grid, point0, point1, time_dependent=False):
     return rotate_vector(u, v, grid, point0, point1, option='parallel', time_dependent=time_dependent)
 
 
-# Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east"). If shore='net', return the net transport.
+# Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east")
 def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=False):
 
     [lon0, lat0] = point0
@@ -330,8 +330,6 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
         dh = add_time_dim(dh, num_time)
         dz = add_time_dim(dh, num_time)
     # Integrate and convert to Sv
-    if shore == 'net':
-        return np.sum(u_norm_trans*dh*dz*1e-6, axis=(-2,-1))
     trans_S = np.sum(np.ma.minimum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     trans_N = np.sum(np.ma.maximum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     # Retrn onshore, then offshore transport

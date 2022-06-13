@@ -408,8 +408,8 @@ def timeseries_domain_volume (file_path, grid, time_index=None, t_start=None, t_
     return np.array(timeseries)
 
 
-# Calculate timeseries of the transport across the transect given by the two points. The sign convention is to assume point0 is "west" and point1 is "east", returning the "meridional" transport in the local coordinate system based on whether you want the total northward transport (direction='N'), southward (direction='S'), or net (direction='net') transport.
-def timeseries_transport_transect (file_path, grid, point0, point1, direction='net', time_index=None, t_start=None, t_end=None, time_average=False):
+# Calculate timeseries of the transport across the transect given by the two points. The sign convention is to assume point0 is "west" and point1 is "east", returning the "meridional" transport in the local coordinate system based on whether you want the net northward transport (direction='N') or southward (direction='S').
+def timeseries_transport_transect (file_path, grid, point0, point1, direction='N', time_index=None, t_start=None, t_end=None, time_average=False):
 
     # Read u and v
     u = mask_3d(read_netcdf(file_path, 'UVEL', time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average), grid, gtype='u', time_dependent=True)
@@ -634,7 +634,7 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
 # tmin, tmax, smin, smax: as in function timeseries_watermass_volume. Only matters for 'watermass'.
 # point0, point1: endpoints of transect, each in form (lon, lat). Only matters for 'transport_transect' or 'delta_rho'.
 # z0: specific depth for some timeseries types (negative, in metres)
-# direction: 'N', 'S', or 'net', as in function timeseries_transport_transect. Only matters for 'transport_transect'.
+# direction: 'N' or 'S' as in function timeseries_transport_transect. Only matters for 'transport_transect'.
 # monthly: as in function netcdf_time
 # rho: precomputed density field
 # factor: constant value to multiply the timeseries by (default 1)
@@ -646,7 +646,7 @@ def timeseries_icefront_max (file_path, var_name, grid, shelf, time_index=None, 
 # Otherwise, returns two 1D arrays of time and the relevant timeseries.
 
 
-def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='net', monthly=True, rho=None, time_average=False, factor=1, offset=0):
+def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None, region='fris', bdry=None, mass_balance=False, result='massloss', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, time_average=False, factor=1, offset=0):
 
     if option not in ['time', 'ismr', 'wed_gyre_trans', 'watermass', 'volume', 'transport_transect', 'iceprod', 'pmepr', 'res_time', 'delta_rho', 'thermocline'] and var_name is None:
         print('Error (calc_timeseries): must specify var_name')
@@ -809,7 +809,7 @@ def trim_and_diff (time_1, time_2, data_1, data_2):
 
 
 # Call calc_timeseries twice, for two simulations, and calculate the difference in the timeseries. Doesn't work for the complicated case of timeseries_ismr with mass_balance=True.
-def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='net', monthly=True, rho=None, factor=1, offset=0):
+def calc_timeseries_diff (file_path_1, file_path_2, option=None, region='fris', bdry=None, mass_balance=False, result='massloss', var_name=None, grid=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, val0=None, lon0=None, lat0=None, tmin=None, tmax=None, smin=None, smax=None, point0=None, point1=None, z0=None, direction='N', monthly=True, rho=None, factor=1, offset=0):
 
     if option == 'ismr' and mass_balance:
         print("Error (calc_timeseries_diff): this function can't be used for ice shelf mass balance")
@@ -1116,7 +1116,7 @@ def set_parameters (var):
         title = 'Transport through PITE trough'
         point0 = (-107, -73)
         point1 = (-105, -73)
-        direction = 'net'
+        direction = 'N'
     elif var.endswith('atemp_avg'):
         option = 'avg_sfc'
         var_name = 'EXFatemp'
