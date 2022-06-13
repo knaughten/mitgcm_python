@@ -17,7 +17,7 @@ from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max
 from ..grid import Grid, read_pop_grid, read_cice_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_lens_ts_space
-from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_lens_file
+from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
@@ -187,9 +187,9 @@ def calc_lens_climatology (out_dir='./'):
     out_file_tail = '_'+str(start_year)+'-'+str(end_year)
 
     # Read/generate grids
-    pop_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    pop_grid_file = find_cesm_file('LENS', var_names[0], 'oce', 'monthly', 1, start_year)[0]
     pop_tlon, pop_tlat, pop_ulon, pop_ulat, pop_z_1d, pop_nx, pop_ny, nz = read_pop_grid(pop_grid_file, return_ugrid=True)
-    cice_grid_file = find_lens_file(var_names[-1], 'ice', 'monthly', 1, start_year)[0]
+    cice_grid_file = find_cesm_file('LENS', var_names[-1], 'ice', 'monthly', 1, start_year)[0]
     cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
     mit_grid = Grid(mit_grid_dir)
 
@@ -237,7 +237,7 @@ def calc_lens_climatology (out_dir='./'):
                 for year in range(start_year, end_year+1):
                     print('...'+str(year))
                     for month in range(months_per_year):
-                        file_path, t0_year, tf_year = find_lens_file(var_names[v], domain[v], 'monthly', n+1, year)
+                        file_path, t0_year, tf_year = find_cesm_file('LENS', var_names[v], domain[v], 'monthly', n+1, year)
                         t0 = t0_year+month
                         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
                         if var_names[v] in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
@@ -575,7 +575,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
         sys.exit()
 
     # Read POP grid
-    grid_file = find_lens_file(var_name, 'oce', 'monthly', 1, start_year)[0]
+    grid_file = find_cesm_file('LENS', var_name, 'oce', 'monthly', 1, start_year)[0]
     lon, lat, z, nx, ny, nz = read_pop_grid(grid_file)
 
     # Read MITgcm grid and get boundary location
@@ -604,7 +604,7 @@ def calc_obcs_trends_lens (var_name, bdry, tmp_file, fig_name=None):
             print('Processing ensemble member ' + str(n+1))
             data_ens = np.ma.empty([num_years, nz, nh])
             for year in range(start_year, end_year+1):
-                file_path, t0, tf = find_lens_file(var_name, 'oce', 'monthly', n+1, year)
+                file_path, t0, tf = find_cesm_file('LENS', var_name, 'oce', 'monthly', n+1, year)
                 print('...processing indices '+str(t0)+'-'+str(tf-1)+' from '+file_path)
                 # Read just this year
                 data_tmp = read_netcdf(file_path, var_name, t_start=t0, t_end=tf)
@@ -659,7 +659,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
     out_file_tail = '_'+str(start_year)+'-'+str(end_year)
 
     # Read/generate grids
-    grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, start_year)[0]
+    grid_file = find_cesm_file('LENS', var_names[0], 'oce', 'monthly', 1, start_year)[0]
     lon, lat, z_1d, nx, ny, nz = read_pop_grid(grid_file)
     mit_grid = Grid(mit_grid_dir)
     loc0 = [find_obcs_boundary(mit_grid, bdry)[0] for bdry in bdry_loc]
@@ -695,7 +695,7 @@ def calc_lens_climatology_density_space (out_dir='./'):
                     # Read temperature and salinity and slice to boundary
                     ts_slice = np.ma.empty([num_var-1, nz, nh])
                     for v in range(num_var-1):
-                        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', n+1, year)
+                        file_path, t0_year, tf_year = find_cesm_file('LENS', var_names[v], 'oce', 'monthly', n+1, year)
                         t0 = t0_year+month
                         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
                         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
@@ -827,7 +827,7 @@ def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/ocean
 
     # Read the grids and slice to boundary
     grid = Grid(mit_grid_dir)
-    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_grid_file = find_cesm_file('LENS', var_names[0], 'oce', 'monthly', 1, year)[0]
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     loc0 = find_obcs_boundary(grid, bdry)[0]
     if bdry in ['N', 'S']:
@@ -853,7 +853,7 @@ def read_correct_lens_density_space (bdry, ens, year, month, in_dir='/data/ocean
     # Read and slice temperature and salinity for this month
     lens_ts_z = np.ma.empty([num_var-1, lens_nz, lens_nh])
     for v in range(num_var-1):
-        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        file_path, t0_year, tf_year = find_cesm_file('LENS', var_names[v], 'oce', 'monthly', ens, year)
         t0 = t0_year + month-1
         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
@@ -1053,7 +1053,7 @@ def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_outpu
 
     # Read the grids and slice to boundary
     grid = Grid(mit_grid_dir)
-    lens_grid_file = find_lens_file(var_names[0], 'oce', 'monthly', 1, year)[0]
+    lens_grid_file = find_cesm_file('LENS', var_names[0], 'oce', 'monthly', 1, year)[0]
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     loc0 = find_obcs_boundary(grid, bdry)[0]
     if bdry in ['N', 'S']:
@@ -1078,7 +1078,7 @@ def read_correct_lens_scaled (bdry, ens, year, month, in_dir='/data/oceans_outpu
     lens_raw = np.ma.empty([num_var, lens_nz, lens_nh])
     lens_corrected = np.ma.empty([num_var, grid.nz, mit_h.size])
     for v in range(num_var):
-        file_path, t0_year, tf_year = find_lens_file(var_names[v], 'oce', 'monthly', ens, year)
+        file_path, t0_year, tf_year = find_cesm_file('LENS', var_names[v], 'oce', 'monthly', ens, year)
         t0 = t0_year + month-1
         data_3d = read_netcdf(file_path, var_names[v], t_start=t0, t_end=t0+1)
         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
@@ -1135,7 +1135,7 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
     elif bdry in ['E', 'W']:
         nh = grid.ny
         dimensions = 'yzt'
-    lens_grid_file = find_lens_file(var_lens[0], 'oce', 'monthly', 1, 1998)[0]
+    lens_grid_file = find_cesm_file('LENS', var_lens[0], 'oce', 'monthly', 1, 1998)[0]
     lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
     # Need a few more fields to get the volume integrand
     lens_dA = read_netcdf(lens_grid_file, 'TAREA')*1e-4
@@ -1750,7 +1750,7 @@ def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/d
         hfac_tmp = add_time_dim(hfac_tmp, months_per_year)
         hfac.append(hfac_tmp)
     loc0 = find_obcs_boundary(mit_grid, bdry)[0]
-    lens_grid_file = find_lens_file(var_names[0], domain, 'monthly', ens, year)[0]
+    lens_grid_file = find_cesm_file('LENS', var_names[0], domain, 'monthly', ens, year)[0]
     if domain == 'oce':
         lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)[2:]
     elif domain == 'ice':
@@ -1778,7 +1778,7 @@ def read_correct_lens_vel_polar_coordinates (domain, bdry, ens, year, in_dir='/d
     # Read LENS u and v components and slice to boundary
     data_slice = []
     for v in range(num_cmp):
-        file_path, t_start, t_end = find_lens_file(var_names[v], domain, 'monthly', ens, year)
+        file_path, t_start, t_end = find_cesm_file('LENS', var_names[v], domain, 'monthly', ens, year)
         data_full_cmp = read_netcdf(file_path, var_names[v], t_start=t_start, t_end=t_end)*1e-2
         data_slice_cmp = extract_slice_nonreg(data_full_cmp, direction, i1, i2, c1, c2)
         data_slice_cmp = trim_slice_to_grid(data_slice_cmp, lens_h_full, mit_grid, direction, warn=False)[0]

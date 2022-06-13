@@ -13,7 +13,7 @@ from scipy.interpolate import interp1d
 
 from .grid import Grid, grid_check_split, choose_grid, read_pop_grid, read_cice_grid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month, normalise
-from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_lens_file
+from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_cesm_file
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
 from .constants import sec_per_year, gravity, sec_per_day, months_per_year, Tf_ref
 from .diagnostics import density, potential_density
@@ -1186,8 +1186,8 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
         return grid.hfac[:,:,0]
 
 
-# Helper function to read and correct the LENS temperature and salinity in T/S space for a given year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
-def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
+# Helper function to read and correct the CESM temperature and salinity in T/S space for a given experiment, year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
+def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
 
     if plot:
         import matplotlib
@@ -1196,9 +1196,9 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         from .plot_utils.colours import set_colours
         from .plot_utils.windows import set_panels, finished_plot
 
-    lens_file_head = in_dir + 'LENS_climatology_'
-    lens_file_tail = '_1998-2017'
-    lens_var_names = ['TEMP', 'SALT']
+    cesm_file_head = in_dir + 'LENS_climatology_'
+    cesm_file_tail = '_1998-2017'
+    cesm_var_names = ['TEMP', 'SALT']
     obcs_dir = real_dir(obcs_dir)
     woa_file_head = obcs_dir + 'OB'
     woa_file_tail = '_woa_mon.bin'
@@ -1209,22 +1209,22 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
 
     # Read the grids and slice to boundary
     mit_grid = Grid(mit_grid_dir)
-    lens_grid_file = find_lens_file(lens_var_names[0], 'oce', 'monthly', ens, year)[0]
-    lens_lon, lens_lat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file)
+    cesm_grid_file = find_cesm_file(expt, cesm_var_names[0], 'oce', 'monthly', ens, year)[0]
+    cesm_lon, cesm_lat, cesm_z, cesm_nx, cesm_ny, cesm_nz = read_pop_grid(cesm_grid_file)
     # Need a few more fields to get the volume integrand
-    lens_dA = read_netcdf(lens_grid_file, 'TAREA')*1e-4
-    lens_dz = read_netcdf(lens_grid_file, 'dz')*1e-2
-    lens_dV = xy_to_xyz(lens_dA, [lens_nx, lens_ny, lens_nz])*z_to_xyz(lens_dz, [lens_nx, lens_ny, lens_z])
+    cesm_dA = read_netcdf(cesm_grid_file, 'TAREA')*1e-4
+    cesm_dz = read_netcdf(cesm_grid_file, 'dz')*1e-2
+    cesm_dV = xy_to_xyz(cesm_dA, [cesm_nx, cesm_ny, cesm_nz])*z_to_xyz(cesm_dz, [cesm_nx, cesm_ny, cesm_z])
     loc0 = find_obcs_boundary(mit_grid, bdry)[0]
     if bdry in ['N', 'S']:
         direction = 'lat'
         dimensions = 'xzt'
-        lens_h_2d = lens_lon
+        cesm_h_2d = cesm_lon
         mit_h = mit_grid.lon_1d
     elif bdry in ['E', 'W']:
         direction = 'lon'
         dimensions = 'yzt'
-        lens_h_2d = lens_lat
+        cesm_h_2d = cesm_lat
         mit_h = mit_grid.lat_1d
     hfac = get_hfac_bdry(mit_grid, bdry)
     if bdry == 'N':
@@ -1235,52 +1235,52 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         woa_dV_bdry = mit_grid.dV[:,:,-1]
     elif bdry == 'W':
         woa_dV_bdry = mit_grid.dV[:,:,0]
-    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
-    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
-    lens_nh = lens_h.size
-    lens_dV_bdry = extract_slice_nonreg(lens_dV, direction, i1, i2, c1, c2)
-    lens_dV_bdry = trim_slice_to_grid(lens_dV_bdry, lens_h_full, mit_grid, direction, warn=False)[0]
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(cesm_lon, cesm_lat, loc0, direction)
+    cesm_h_full = extract_slice_nonreg(cesm_h_2d, direction, i1, i2, c1, c2)
+    cesm_h = trim_slice_to_grid(cesm_h_full, cesm_h_full, mit_grid, direction, warn=False)[0]
+    cesm_nh = cesm_h.size
+    cesm_dV_bdry = extract_slice_nonreg(cesm_dV, direction, i1, i2, c1, c2)
+    cesm_dV_bdry = trim_slice_to_grid(cesm_dV_bdry, cesm_h_full, mit_grid, direction, warn=False)[0]
 
-    # Read LENS data for this month and year and slice to boundary
-    lens_data = np.ma.empty([num_var, lens_nz, lens_nh])
+    # Read CESM data for this month and year and slice to boundary
+    cesm_data = np.ma.empty([num_var, cesm_nz, cesm_nh])
     for v in range(num_var):
-        file_path, t0_year, tf_year = find_lens_file(lens_var_names[v], 'oce', 'monthly', ens, year)
+        file_path, t0_year, tf_year = find_cesm_file(expt, cesm_var_names[v], 'oce', 'monthly', ens, year)
         t0 = t0_year + month-1
-        data_3d = read_netcdf(file_path, lens_var_names[v], t_start=t0, t_end=t0+1)
+        data_3d = read_netcdf(file_path, cesm_var_names[v], t_start=t0, t_end=t0+1)
         data_slice = extract_slice_nonreg(data_3d, direction, i1, i2, c1, c2)
-        data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
-        lens_data[v,:] = data_slice
-        lens_mask = data_slice.mask
+        data_slice = trim_slice_to_grid(data_slice, cesm_h_full, mit_grid, direction, warn=False)[0]
+        cesm_data[v,:] = data_slice
+        cesm_mask = data_slice.mask
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
-            cmap, vmin, vmax = set_colours(lens_data[v,:])
-            img = ax.pcolormesh(lens_h, lens_z*1e-3, lens_data[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            cmap, vmin, vmax = set_colours(cesm_data[v,:])
+            img = ax.pcolormesh(cesm_h, cesm_z*1e-3, cesm_data[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
-        plt.suptitle('LENS raw output on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+            ax.set_title(cesm_var_names[v])
+        plt.suptitle('CESM raw output on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
     
     # Read LENS climatology for this month
-    lens_clim = np.ma.empty([num_var, lens_nz, lens_nh])
+    cesm_clim = np.ma.empty([num_var, cesm_nz, cesm_nh])
     for v in range(num_var):
-        file_path = lens_file_head + lens_var_names[v] + '_' + bdry + lens_file_tail
-        lens_clim_tmp = read_binary(file_path, [lens_nh, lens_nh, lens_nz], dimensions)[month-1,:]
-        lens_clim[v,:] = np.ma.masked_where(lens_mask, lens_clim_tmp)
+        file_path = cesm_file_head + cesm_var_names[v] + '_' + bdry + cesm_file_tail
+        cesm_clim_tmp = read_binary(file_path, [cesm_nh, cesm_nh, cesm_nz], dimensions)[month-1,:]
+        cesm_clim[v,:] = np.ma.masked_where(cesm_mask, cesm_clim_tmp)
     # Calculate anomalies from the climatology
-    lens_anom = lens_data - lens_clim
+    cesm_anom = cesm_data - cesm_clim
     if plot:
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
-            cmap, vmin, vmax = set_colours(lens_clim[v,:])
-            img = ax.pcolormesh(lens_h, lens_z*1e-3, lens_clim[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            cmap, vmin, vmax = set_colours(cesm_clim[v,:])
+            img = ax.pcolormesh(cesm_h, cesm_z*1e-3, cesm_clim[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
+            ax.set_title(cesm_var_names[v])
         plt.suptitle('LENS climatology on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)   
     if plot:
@@ -1288,11 +1288,11 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         cax = [cax1, cax2]
         for v in range(num_var):
             ax = plt.subplot(gs[0,v])
-            cmap, vmin, vmax = set_colours(lens_anom[v,:], ctype='plusminus')
-            img = ax.pcolormesh(lens_h, lens_z*1e-3, lens_anom[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            cmap, vmin, vmax = set_colours(cesm_anom[v,:], ctype='plusminus')
+            img = ax.pcolormesh(cesm_h, cesm_z*1e-3, cesm_anom[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
-        plt.suptitle('LENS anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
+            ax.set_title(cesm_var_names[v])
+        plt.suptitle('CESM anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)    
 
     # Read WOA climatology for this month
@@ -1309,7 +1309,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             cmap, vmin, vmax = set_colours(woa_clim[v,:])
             img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, woa_clim[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
+            ax.set_title(cesm_var_names[v])
         plt.suptitle('WOA climatology on '+bdry+' boundary, month '+str(month), fontsize=16)
         finished_plot(fig)
     # Select mixed layer
@@ -1328,29 +1328,29 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         ax.set_title('WOA mixed layer on '+bdry+' boundary, month '+str(month), fontsize=16)
         finished_plot(fig)
 
-    # Calculate LENS volume and volume-weighted anomaly in T/S space
+    # Calculate CESM volume and volume-weighted anomaly in T/S space
     bin_edges = np.linspace(0, 1, num=num_bins+1)
     bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    lens_temp_norm = normalise(lens_clim[0,:])
-    lens_salt_norm = normalise(lens_clim[1,:])
-    lens_volume_perbin = np.zeros([num_bins, num_bins])
-    lens_anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
-    valid = np.invert(lens_mask)
-    for temp_val, salt_val, dV_val, temp_anom_val, salt_anom_val in zip(lens_temp_norm[valid], lens_salt_norm[valid], lens_dV_bdry[valid], lens_anom[0,:][valid], lens_anom[1,:][valid]):
+    cesm_temp_norm = normalise(cesm_clim[0,:])
+    cesm_salt_norm = normalise(cesm_clim[1,:])
+    cesm_volume_perbin = np.zeros([num_bins, num_bins])
+    cesm_anom_integral_perbin = np.zeros([num_var, num_bins, num_bins])
+    valid = np.invert(cesm_mask)
+    for temp_val, salt_val, dV_val, temp_anom_val, salt_anom_val in zip(cesm_temp_norm[valid], cesm_salt_norm[valid], cesm_dV_bdry[valid], cesm_anom[0,:][valid], cesm_anom[1,:][valid]):
         temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
         salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
-        lens_volume_perbin[temp_index, salt_index] += dV_val
+        cesm_volume_perbin[temp_index, salt_index] += dV_val
         anom_val = [temp_anom_val, salt_anom_val]
         for v in range(num_var):
-            lens_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
-    lens_volume_perbin = np.ma.masked_where(lens_volume_perbin==0, lens_volume_perbin)
-    lens_anom_integral_perbin = np.ma.masked_where(lens_anom_integral_perbin==0, lens_anom_integral_perbin)
-    lens_anom_ts = lens_anom_integral_perbin/lens_volume_perbin        
+            cesm_anom_integral_perbin[v, temp_index, salt_index] += anom_val[v]*dV_val
+    cesm_volume_perbin = np.ma.masked_where(cesm_volume_perbin==0, cesm_volume_perbin)
+    cesm_anom_integral_perbin = np.ma.masked_where(cesm_anom_integral_perbin==0, cesm_anom_integral_perbin)
+    cesm_anom_ts = cesm_anom_integral_perbin/cesm_volume_perbin        
     # Now fill the missing spaces
-    lens_anom_ts_filled = np.zeros(lens_anom_ts.shape)
+    cesm_anom_ts_filled = np.zeros(cesm_anom_ts.shape)
     for v in range(num_var):
         # Distance-weighted mean of 10 nearest neighbours, then apply Gaussian filter of radius 2
-        lens_anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(lens_anom_ts[v,:], num_neighbours=10), 2)
+        cesm_anom_ts_filled[v,:] = gaussian_filter(distance_weighted_nearest_neighbours(cesm_anom_ts[v,:], num_neighbours=10), 2)
 
     # Normalise T and S in WOA
     woa_temp_norm = normalise(woa_clim[0,:])
@@ -1367,8 +1367,8 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         # Now plot
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
-        data_plot = [np.log(lens_volume_perbin), np.log(woa_volume_perbin)]
-        titles_plot = ['LENS', 'WOA']
+        data_plot = [np.log(cesm_volume_perbin), np.log(woa_volume_perbin)]
+        titles_plot = ['CESM', 'WOA']
         for v in range(len(titles_plot)):
             ax = plt.subplot(gs[0,v])
             cmap, vmin, vmax = set_colours(data_plot[v])
@@ -1381,8 +1381,8 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         plt.suptitle('Log of volume on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
         
-    # Inner function to plot T/S anomalies for LENS (filled or not)
-    def plot_lens_anom_ts (anom_ts, sfc=False):
+    # Inner function to plot T/S anomalies for CESM (filled or not)
+    def plot_cesm_anom_ts (anom_ts, sfc=False):
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
         for v in range(num_var):
@@ -1393,8 +1393,8 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
                 plt.xlabel('Normalised salinity')
                 plt.ylabel('Normalised temperature')
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
-        suptitle = 'LENS anomalies on '+bdry+' boundary'
+            ax.set_title(cesm_var_names[v])
+        suptitle = 'CESM anomalies on '+bdry+' boundary'
         if sfc:
             suptitle += ' (surface)'
         suptitle += ', '+str(year)+'/'+str(month)
@@ -1403,8 +1403,8 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
 
     if plot:
         # Do this for both filled and not filled
-        plot_lens_anom_ts(lens_anom_ts)
-        plot_lens_anom_ts(lens_anom_ts_filled)
+        plot_cesm_anom_ts(cesm_anom_ts)
+        plot_cesm_anom_ts(cesm_anom_ts_filled)
 
     # Normalise WOA T and S
     woa_clim_norm = np.ma.empty(woa_clim.shape)
@@ -1418,15 +1418,15 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
         temp_index = np.nonzero(bin_edges >= temp_val)[0][0]-1
         salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
         for v in range(num_var):
-            woa_anom_fulldepth[v,k,j] = lens_anom_ts_filled[v, temp_index, salt_index]
+            woa_anom_fulldepth[v,k,j] = cesm_anom_ts_filled[v, temp_index, salt_index]
 
-    # Now get raw surface anomalies, interpolated from LENS horizontal grid to WOA
+    # Now get raw surface anomalies, interpolated from CESM horizontal grid to WOA
     woa_anom_sfc = np.ma.empty(woa_clim[:,0,:].shape)
-    valid = np.invert(lens_anom[0,0,:].mask)
+    valid = np.invert(cesm_anom[0,0,:].mask)
     fill_value = -9999
     for v in range(num_var):
-        # First do linear interpolation within the bounds of LENS land mask
-        interp_f = interp1d(lens_h[valid], lens_anom[v,0,:][valid], kind='linear', fill_value=fill_value, bounds_error=False)
+        # First do linear interpolation within the bounds of CESM land mask
+        interp_f = interp1d(cesm_h[valid], cesm_anom[v,0,:][valid], kind='linear', fill_value=fill_value, bounds_error=False)
         woa_anom_tmp = interp_f(mit_h)
         # Do nearest-neighbour interpolation in the land mask
         woa_anom_tmp = fill_into_mask(np.ma.masked_where(woa_anom_tmp==fill_value, woa_anom_tmp), use_1d=True, use_3d=False, log=False)
@@ -1454,7 +1454,7 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             cmap, vmin, vmax = set_colours(woa_anom[v,:], ctype='plusminus')
             img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, woa_anom[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
+            ax.set_title(cesm_var_names[v])
         plt.suptitle('WOA anomalies on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
         
@@ -1470,24 +1470,34 @@ def read_correct_lens_ts_space (bdry, ens, year, month, in_dir='/data/oceans_out
             cmap, vmin, vmax = set_colours(data_corrected[v,:])
             img = ax.pcolormesh(mit_h, mit_grid.z*1e-3, data_corrected[v,:], cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(img, cax=cax[v], orientation='horizontal')
-            ax.set_title(lens_var_names[v])
+            ax.set_title(cesm_var_names[v])
         plt.suptitle('Final corrected fields on '+bdry+' boundary, '+str(year)+'/'+str(month), fontsize=16)
         finished_plot(fig)
 
     if return_raw:
-        return data_corrected[0,:], data_corrected[1,:], lens_data[0,:], lens_data[1,:], lens_h, lens_z
+        return data_corrected[0,:], data_corrected[1,:], cesm_data[0,:], cesm_data[1,:], cesm_h, cesm_z
     else:
         return data_corrected[0,:], data_corrected[1,:]
 
 
-# Read and correct T/S boundary conditions for all months and years, for a single ensemble member in LENS.
-def process_lens_obcs_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
+# Read and correct T/S boundary conditions for all months and years, for a single ensemble member and experiment in CESM.
+def process_cesm_obcs_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, end_year=None, out_dir='./'):
 
     out_dir = real_dir(out_dir)
     var_names = ['TEMP', 'SALT']
     num_var = len(var_names)
     bdry_loc = ['N', 'E', 'W']
-    file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
+    file_head = out_dir + expt + '_ens' + str(ens).zfill(3) + '_'
+    if start_year is None:
+        if expt == 'LENS':
+            start_year = 1920
+        else:
+            start_year = 2005
+    if end_year is None:
+        if expt == 'MENS':
+            end_year = 2080
+        else:
+            end_year = 2100
 
     for year in range(start_year, end_year+1):
         for bdry in bdry_loc:
@@ -1496,7 +1506,7 @@ def process_lens_obcs_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_ye
             # Process each month individually
             for month in range(months_per_year):
                 print('...month '+str(month+1))
-                temp_month, salt_month = read_correct_lens_ts_space(bdry, ens, year, month+1)
+                temp_month, salt_month = read_correct_cesm_ts_space(bdry, ens, year, month+1)
                 month_data = [temp_month, salt_month]                        
                 if year_data is None:
                     # Set up master array for the year now that we know the array sizes
@@ -1509,11 +1519,12 @@ def process_lens_obcs_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_ye
                 file_path = out_dir + file_head + var_names[v] + '_' + bdry + '_' + str(year)
                 write_binary(year_data[v,:], file_path)
 
-# Helper function to read and correct the given variable in LENS (other than temperature or salinity) for a given year, boundary, and ensemble member.
-def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
+                
+# Helper function to read and correct the given variable in CESM (other than temperature or salinity) for a given year, boundary, and ensemble member.
+def read_correct_cesm_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
 
-    lens_file_head = in_dir + 'LENS_climatology_'
-    lens_file_tail = '_1998-2017'
+    cesm_file_head = in_dir + 'LENS_climatology_'
+    cesm_file_tail = '_1998-2017'
     if var == 'UVEL':
         sose_var = 'uvel'
     elif var == 'VVEL':
@@ -1555,56 +1566,56 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
     else:
         loc0 = loc0_centre
     
-    lens_grid_file = find_lens_file(var, domain, 'monthly', ens, year)[0]
+    cesm_grid_file = find_cesm_file(expt, var, domain, 'monthly', ens, year)[0]
     if domain == 'oce':
-        lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_z, lens_nx, lens_ny, lens_nz = read_pop_grid(lens_grid_file, return_ugrid=True)
+        cesm_tlon, cesm_tlat, cesm_ulon, cesm_ulat, cesm_z, cesm_nx, cesm_ny, cesm_nz = read_pop_grid(cesm_grid_file, return_ugrid=True)
     else:
-        lens_tlon, lens_tlat, lens_ulon, lens_ulat, lens_nx, lens_ny = read_cice_grid(lens_grid_file, return_ugrid=True)
-        lens_z = None
-        lens_nz = 1
+        cesm_tlon, cesm_tlat, cesm_ulon, cesm_ulat, cesm_nx, cesm_ny = read_cice_grid(cesm_grid_file, return_ugrid=True)
+        cesm_z = None
+        cesm_nz = 1
     if gtype in ['u', 'v']:
-        lens_lon = lens_ulon
-        lens_lat = lens_ulat
+        cesm_lon = cesm_ulon
+        cesm_lat = cesm_ulat
     else:
-        lens_lon = lens_tlon
-        lens_lat = lens_tlat
+        cesm_lon = cesm_tlon
+        cesm_lat = cesm_tlat
     
     if bdry in ['N', 'S']:
         direction = 'lat'
         dimensions = 'x'
-        lens_h_2d = lens_lon
+        cesm_h_2d = cesm_lon
         mit_h = mit_lon
     elif bdry in ['E', 'W']:
         direction = 'lon'
         dimensions = 'y'
-        lens_h_2d = lens_lat
+        cesm_h_2d = cesm_lat
         mit_h = mit_lat
     if domain == 'oce':
         dimensions += 'z'
     dimensions += 't'
-    i1, i2, c1, c2 = interp_slice_helper_nonreg(lens_lon, lens_lat, loc0, direction)
-    lens_h_full = extract_slice_nonreg(lens_h_2d, direction, i1, i2, c1, c2)
-    lens_h = trim_slice_to_grid(lens_h_full, lens_h_full, mit_grid, direction, warn=False)[0]
-    lens_nh = lens_h.size
+    i1, i2, c1, c2 = interp_slice_helper_nonreg(cesm_lon, cesm_lat, loc0, direction)
+    cesm_h_full = extract_slice_nonreg(cesm_h_2d, direction, i1, i2, c1, c2)
+    cesm_h = trim_slice_to_grid(cesm_h_full, cesm_h_full, mit_grid, direction, warn=False)[0]
+    cesm_nh = cesm_h.size
 
-    # Read LENS data and extract slice
-    file_path, t_start, t_end = find_lens_file(var, domain, 'monthly', ens, year)
+    # Read CESM data and extract slice
+    file_path, t_start, t_end = find_cesm_file('CESM', var, domain, 'monthly', ens, year)
     data_full = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
     if var in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
         # Convert from cm/s to m/s, or percent to fraction
         data_full *= 1e-2
     data_slice = extract_slice_nonreg(data_full, direction, i1, i2, c1, c2)
-    data_slice = trim_slice_to_grid(data_slice, lens_h_full, mit_grid, direction, warn=False)[0]
+    data_slice = trim_slice_to_grid(data_slice, cesm_h_full, mit_grid, direction, warn=False)[0]
     try:
-        lens_mask = np.invert(data_slice.mask[0,:])
+        cesm_mask = np.invert(data_slice.mask[0,:])
     except(IndexError):
         # No special land mask for some sea ice variables
-        lens_mask = np.ones(data_slice[0,:].shape)
+        cesm_mask = np.ones(data_slice[0,:].shape)
 
     # Read and subtract LENS climatology
-    file_path = lens_file_head + var + '_' + bdry + lens_file_tail
-    lens_clim = read_binary(file_path, [lens_nh, lens_nh, lens_nz], dimensions)
-    data_slice_anom = data_slice - lens_clim
+    file_path = cesm_file_head + var + '_' + bdry + cesm_file_tail
+    cesm_clim = read_binary(file_path, [cesm_nh, cesm_nh, cesm_nz], dimensions)
+    data_slice_anom = data_slice - cesm_clim
 
     # Read SOSE climatology
     sose_clim = read_binary(sose_file, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)
@@ -1619,7 +1630,7 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
     elif domain == 'ice':
         data_interp = np.ma.zeros([months_per_year, mit_h.size])
     for month in range(months_per_year):
-        data_interp_tmp = interp_bdry(lens_h, lens_z, data_slice_anom[month,:], lens_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(domain=='oce'))
+        data_interp_tmp = interp_bdry(cesm_h, cesm_z, data_slice_anom[month,:], cesm_mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=(domain=='oce'))
         # Add SOSE climatology
         data_interp_tmp += sose_clim[month,:]
         # Fill MITgcm land mask with zeros
@@ -1633,14 +1644,14 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
         data_interp = np.minimum(data_interp, 1)
     if var in ['hi', 'hs', 'uvel', 'vvel']:
         # Set to zero if (corrected) sea ice concentration is zero
-        aice = read_correct_lens_non_ts('aice', bdry, ens, year, in_dir=in_dir, obcs_dir=obcs_dir, mit_grid_dir=mit_grid_dir)
+        aice = read_correct_cesm_non_ts('aice', bdry, ens, year, in_dir=in_dir, obcs_dir=obcs_dir, mit_grid_dir=mit_grid_dir)
         data_interp[aice==0] = 0
 
     if return_raw:
         if return_sose_clim:
-            return data_interp, data_slice, lens_h, lens_z, sose_clim, mit_h, mit_grid.z
+            return data_interp, data_slice, cesm_h, cesm_z, sose_clim, mit_h, mit_grid.z
         else:
-            return data_interp, data_slice, lens_h, lens_z
+            return data_interp, data_slice, cesm_h, cesm_z
     else:
         if return_sose_clim:
             return data_interp, sose_clim, mit_h, mit_grid.z
@@ -1648,18 +1659,28 @@ def read_correct_lens_non_ts (var, bdry, ens, year, in_dir='/data/oceans_output/
             return data_interp    
 
 
-# Read and process all the other OBCS variables (besides T and S) for a given ensemble member and boundary in LENS.
-def process_lens_obcs_non_ts (ens, bdry_loc=['N', 'E', 'W'], start_year=1920, end_year=2100, out_dir='./'):
+# Read and process all the other OBCS variables (besides T and S) for a given experiment, ensemble member and boundary in CESM.
+def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, end_year=None, out_dir='./'):
 
     out_dir = real_dir(out_dir)
     var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
-    out_file_head = out_dir + 'LENS_ens' + str(ens).zfill(3) + '_'
+    out_file_head = out_dir + expt + '_ens' + str(ens).zfill(3) + '_'
+    if start_year is None:
+        if expt == 'LENS':
+            start_year = 1920
+        else:
+            start_year = 2005
+    if end_year is None:
+        if expt == 'MENS':
+            end_year = 2080
+        else:
+            end_year = 2100
 
     for bdry in bdry_loc:
         for var in var_names:
             print('Processing '+var+' on '+bdry+' boundary')
             for year in range(start_year, end_year+1):
-                data_interp = read_correct_lens_non_ts(var, bdry, ens, year)
+                data_interp = read_correct_cesm_non_ts(var, bdry, ens, year)
                 file_path = out_dir + out_file_head + var + '_' + bdry + '_' + str(year)
                 write_binary(data_interp, file_path)
 

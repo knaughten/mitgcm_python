@@ -10,7 +10,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
-from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files, find_lens_file
+from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files, find_cesm_file
 from .utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
 from .interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
 from .constants import temp_C2K, Lv, Rv, es0, sh_coeff, rho_fw, sec_per_year, kg_per_Gt
@@ -585,65 +585,30 @@ def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
 
 
 # Process atmospheric forcing from PACE for a single variable and single ensemble member.
-def pace_atm_forcing (var, ens, in_dir, out_dir):
+def pace_atm_forcing (var, ens, out_dir):
 
     import netCDF4 as nc
-    start_year = 1920
-    end_year = 2013
-    days_per_year = 365
-    months_per_year = 12
-    ens_str = str(ens).zfill(2)
 
     if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
         print(('Error (pace_atm_forcing): Invalid variable ' + var))
         sys.exit()
 
-    path = real_dir(in_dir)
-    # Decide if monthly or daily data
-    monthly = var in ['FLDS', 'FSDS']
-    if monthly:        
-        path += 'monthly/'
+    if var in ['FLDS', 'FSDS']:
+        freq = 'monthly'
     else:
-        path += 'daily/'
-    path += var + '/'
+        freq = 'daily'
 
     for year in range(start_year, end_year+1):
         print(('Processing ' + str(year)))
-        # Construct the file based on the year (after 2006 use RCP 8.5) and whether it's monthly or daily
-        if year < 2006:
-            file_head = 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'
-            if monthly:
-                file_tail = '.192001-200512.nc'
-            else:
-                file_tail = '.19200101-20051231.nc'
-        else:
-            file_head = 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'
-            if monthly:
-                file_tail = '.200601-201312.nc'
-            else:
-                file_tail = '.20060101-20131231.nc'
-        if monthly:
-            file_mid = '.cam.h0.'
-        else:
-            file_mid = '.cam.h1.'
-        file_path = path + file_head + ens_str + file_mid + var + file_tail
-        # Choose time indicies
-        if monthly:
-            per_year = months_per_year
-        else:
-            per_year = days_per_year
-        t_start = (year-start_year)*per_year
-        if year >= 2006:
-            # Reset the count
-            t_start = (year-2006)*per_year
-        if ens == 13 and not monthly and year < 2006:
+        file_path, t_start, t_end = find_cesm_file('PPACE', var, 'atm', freq, ens, year)
+        if ens == 13 and freq == 'daily' and year < 2006:
             # Missing all but the first day of 1988.
             if year == 1988:
                 # Just repeat 1987
                 t_start -= per_year
             elif year > 1988:
                 t_start -= per_year - 1
-        t_end = t_start + per_year
+            t_end = t_start + days_per_year
         print(('Reading indices ' + str(t_start) + '-' + str(t_end-1)))
         # Read data
         data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
@@ -1106,14 +1071,35 @@ def merino_meltwater_addmass (in_file, out_file, grid_dir, seasonal=False):
     write_binary(mflux_3d, out_file, prec=64)
 
 
-# Process atmospheric forcing from LENS (same conventions as PACE) for a single variable and single ensemble member.
-def lens_atm_forcing (var, ens, in_dir, out_dir, end_year=2100):
+# Process atmospheric forcing from CESM scenarios (PPACE, LENS, MENS, LW1.5, LW2.0) for a single variable and single ensemble member.
+def cesm_atm_forcing (expt, var, ens, out_dir, end_year=None):
 
     import netCDF4 as nc
-    if ens == 1:
-        start_year = 1850
-    else:
+    if expt == 'LENS':
+        if ens == 1:
+            start_year = 1850
+        else:
+            start_year = 1920
+        end_year_default = 2100
+    elif expt == 'PPACE':
         start_year = 1920
+        end_year_default = 2013
+    elif expt == 'MENS':
+        start_year = 2006
+        end_year_default = 2080
+    elif expt in ['LW1.5', 'LW2.0']:
+        start_year = 2006
+        end_year_default = 2100
+    else:
+        print('Error (cesm_atm_forcing): invalid experiment '+expt)
+        sys.exit()
+    if expt == 'PPACE':
+        ens_str = str(ens).zfill(2)
+    else:
+        ens_str = str(ens).zfill(3)
+        
+    if end_year is None:
+        end_year = end_year_default        
     if var in ['FLDS', 'FSDS']:
         freq = 'monthly'
     else:
@@ -1121,7 +1107,15 @@ def lens_atm_forcing (var, ens, in_dir, out_dir, end_year=2100):
 
     for year in range(start_year, end_year+1):
         print(('Processing ' + str(year)))
-        file_path, t_start, t_end = find_lens_file(var, 'atm', freq, ens, year)
+        file_path, t_start, t_end = find_cesm_file(expt, var, 'atm', freq, ens, year)
+        if expt == 'PPACE' and ens == 13 and freq == 'daily' and year < 2006:
+            # Missing all but the first day of 1988.
+            if year == 1988:
+                # Just repeat 1987
+                t_start -= days_per_year
+            elif year > 1988:
+                t_start -= days_per_year - 1
+            t_end = t_start + days_per_year        
         print('Reading indices ' + str(t_start) + '-' + str(t_end-1) + ' from ' + file_path)
         # Read data
         data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
@@ -1136,12 +1130,24 @@ def lens_atm_forcing (var, ens, in_dir, out_dir, end_year=2100):
             # Convert from mixing ratio to specific humidity
             data = data/(1.0 + data)
         # Write data
-        out_file = real_dir(out_dir) + 'LENS_ens' + str(ens).zfill(3) + '_' + var + '_' + str(year)
+        out_file = real_dir(out_dir) + expt + '_ens' + ens_str + '_' + var + '_' + str(year)
         write_binary(data, out_file)
 
 
-# Call lens_atm_forcing for all variables and the first n ensemble members (default 20, there are over 100 available to download)
-def lens_all (in_dir='/data/oceans_input/raw_input_data/CESM/LENS/', out_dir='/data/oceans_input/processed_input_data/CESM/LENS/', num_ens=20):
+# Create PPACE atmospheric forcing for all variables and ensemble members.
+def pace_all (out_dir):
+
+    var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
+
+    for ens in range(1,20+1):
+        print(('Processing ensemble member ' + str(ens)))
+        for var in var_names:
+            print(('Processing ' + var))
+            cesm_atm_forcing('PPACE', var, ens, out_dir)
+
+
+# Create LENS atmospheric forcing for all variables and the first n ensemble members (default 10, there are 40 available to download)
+def lens_all (out_dir='/data/oceans_input/processed_input_data/CESM/LENS/', num_ens=10):
 
     var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
 
@@ -1149,7 +1155,7 @@ def lens_all (in_dir='/data/oceans_input/raw_input_data/CESM/LENS/', out_dir='/d
         print(('Processing ensemble member ' + str(ens)))
         for var in var_names:
             print(('Processing ' + var))
-            lens_atm_forcing(var, ens, in_dir, out_dir)
+            cesm_atm_forcing('LENS', var, ens, out_dir)
                 
     
             

@@ -681,18 +681,70 @@ def read_annual_average (var_name, file_paths, return_years=False):
         return data_annual
 
 
-# Generate the file name and starting/ending index for a LENS variable for the given year and ensemble member.
-def find_lens_file (var_name, domain, freq, ens, year, base_dir='/data/oceans_input/raw_input_data/CESM/LENS/'):
+# Generate the file name and starting/ending index for a CESM variable for the given experiment, year and ensemble member.
+def find_cesm_file (expt, var_name, domain, freq, ens, year, base_dir='/data/oceans_input/raw_input_data/CESM/'):
 
-    file_path = real_dir(base_dir) + freq + '/' + var_name + '/'
-    if year < 2006:
-        file_path += 'b.e11.B20TRC5CNBDRD.f09_g16.'
+    if expt not in ['LENS', 'PPACE', 'MENS', 'LW1.5', 'LW2.0']:
+        print('Error (find_cesm_file): invalid experiment ' + expt)
+        sys.exit()
+    if expt in ['LW1.5', 'LW2.0']:
+        expt_string = 'lowarm'
     else:
-        file_path += 'b.e11.BRCP85C5CNBDRD.f09_g16.'
-    if ens < 36:
-        file_path += str(ens).zfill(3)
-    else:
-        file_path += str(ens-35+100).zfill(3)
+        expt_string = expt
+    file_path = real_dir(base_dir) + '/' + expt_string + '/' + freq + '/' + var_name + '/'
+    
+    if expt == 'LENS':    
+        if year < 2006:
+            file_path += 'b.e11.B20TRC5CNBDRD.f09_g16.'
+        else:
+            file_path += 'b.e11.BRCP85C5CNBDRD.f09_g16.'
+        if ens < 36:
+            file_path += str(ens).zfill(3)
+        else:
+            file_path += str(ens-35+100).zfill(3)
+        if year < 2006:
+            if ens == 1:
+                start_year = 1850
+            else:
+                start_year = 1920
+            end_year = 2005
+        elif year < 2081:
+            start_year = 2006
+            if ens < 34:
+                end_year = 2080
+            else:
+                end_year = 2100
+        else:
+            if ens >= 34:
+                start_year = 2006
+            else:
+                start_year = 2081
+            end_year = 2100
+    elif expt == 'PPACE':
+        if year < 2006:
+            file_path += 'b.e11.B20TRLENS.f09_g16.SST.restoring.ens'
+        else:
+            file_path += 'b.e11.BRCP85LENS.f09_g16.SST.restoring.ens'
+        file_path += str(ens).zfill(2)
+        if year < 2006:
+            start_year = 1920
+            end_year = 2005
+        else:
+            start_year = 2006
+            end_year = 2013
+    elif expt == 'MENS':
+        file_path += 'b.e11.BRCP45C5CNBDRD.f09_g16.' + str(ens).zfill(3)
+        start_year = 2006
+        end_year = 2080
+    elif expt == 'LW1.5':
+        file_path += 'b.e11.BRCP26C5CNBDRD.f09_g16.1pt5degC.' + str(ens).zfill(3)
+        start_year = 2006
+        end_year = 2100
+    elif expt == 'LW2.0':
+        file_path += 'b.e11.BRCP26C5CNBDRD.f09_g16.2pt0degC.' + str(ens).zfill(3)
+        start_year = 2006
+        end_year = 2100
+        
     if domain == 'atm':
         if freq == 'monthly':
             file_path += '.cam.h0.'
@@ -705,24 +757,7 @@ def find_lens_file (var_name, domain, freq, ens, year, base_dir='/data/oceans_in
     file_path += var_name
     if domain == 'ice':
         file_path += '_sh'
-    if year < 2006:
-        if ens == 1:
-            start_year = 1850
-        else:
-            start_year = 1920
-        end_year = 2005
-    elif year < 2081:
-        start_year = 2006
-        if ens < 34:
-            end_year = 2080
-        else:
-            end_year = 2100
-    else:
-        if ens >= 34:
-            start_year = 2006
-        else:
-            start_year = 2081
-        end_year = 2100
+
     if freq == 'daily':
         file_path += '.' + str(start_year) + '0101-' + str(end_year) + '1231.nc'
         per_year = days_per_year
@@ -731,7 +766,7 @@ def find_lens_file (var_name, domain, freq, ens, year, base_dir='/data/oceans_in
         per_year = months_per_year
     t0 = (year-start_year)*per_year
     if not os.path.isfile(file_path):
-        print('Error (find_lens_file): invalid file formulation for '+var_name+', '+domain+', '+freq+', '+str(ens)+', '+str(year))
+        print('Error (find_cesm_file): invalid file formulation for '+var_name+', '+domain+', '+freq+', '+str(ens)+', '+str(year))+'. Maybe the file does not exist on the server?'
         sys.exit()
     return file_path, t0, t0+per_year
     
