@@ -8,7 +8,7 @@ import sys
 from .constants import rho_ice, region_bounds, Cp_sw, Tf_ref
 from .utils import z_to_xyz, add_time_dim, xy_to_xyz, var_min_max, check_time_dependent, mask_land, depth_of_max, mask_3d
 from .calculus import area_integral, vertical_integral, indefinite_ns_integral
-from .plot_utils.slices import get_transect
+from .plot_utils.slices import get_transect, get_slice_values
 from .interpolation import interp_grid
 
 
@@ -237,9 +237,24 @@ def heat_content_freezing (temp, salt, grid, eosType='MDJWF', rhoConst=None, Tre
 # Helper function for normal_vector and parallel_vector.
 def rotate_vector (u, v, grid, point0, point1, option='both', time_dependent=False):
     
-    # Find angle between east and the transect (intersecting at point0)
     [lon0, lat0] = point0
     [lon1, lat1] = point1
+    if lon0 == lon1:
+        if option == 'normal':
+            return u
+        elif option == 'parallel':
+            return v
+        elif option == 'both':
+            return v, u
+    if lat0 == lat1:
+        if option == 'normal':
+            return v
+        elif option == 'parallel':
+            return u
+        elif option == 'both':
+            return u, v
+
+    # Find angle between east and the transect (intersecting at point0)
     x = np.cos(lat1)*np.sin(lon1-lon0)
     y = np.cos(lat0)*np.sin(lat1) - np.sin(lat0)*np.cos(lat1)*np.cos(lon1-lon0)
     angle = np.arctan2(y, x)
@@ -275,21 +290,46 @@ def parallel_vector (u, v, grid, point0, point1, time_dependent=False):
 # Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east").
 def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=False):
 
-    # Calculate normal velocity
-    u_norm = normal_vector(u, v, grid, point0, point1, time_dependent=time_dependent)
-    # Extract the transect
-    u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1, time_dependent=time_dependent)
-    # Calculate integrands
-    dh = (right - left)*1e3  # Convert from km to m
-    dz = above - below
+    [lon0, lat0] = point0
+    [lon1, lat1] = point1
+    
+    if lon0 == lon1:
+        # Special case of line of constant longitude.
+        u_norm = u
+        u_norm_trans, h_bdry, hfac, loc0 = get_slice_values(u_norm, grid, gtype='u', lon0=lon0, return_grid_vars=True)
+        lat = grid.get_lon_lat(gtype='u', dim=1)[1]
+        j_start = np.where(lat > min(lat0,lat1))[0][0]-1
+        j_end = np.where(lat > max(lat0,lat1))[0][0]
+        u_norm_trans = u_norm_trans[j_start:j_end,:]
+        dh = grid.dy_w[j_start:j_end,:]
+        dz = z_to_xyz(grid.dz, grid)[:,j_start:j_end,0]*hfac
+    if lat0 == lat1:
+        # Special case of line of constant latitude.
+        u_norm = v
+        u_norm_trans, h_bdry, hfac, loc0 = get_slice_values(u_norm, grid, gtype='v', lat0=lat0, return_grid_vars=True)        
+        lon = grid.get_lon_lat(gtype='v', dim=1)[0]
+        i_start = np.where(lon > min(lon0,lon1))[0][0]-1
+        i_end = np.where(lon > max(lon0,lon1))[0][0]
+        u_norm_trans = u_norm_trans[:,i_start:i_end]
+        dh = grid.dx_s[:,i_start:i_end]
+        dz = z_to_xyz(grid.dz, grid)[:,0,i_start:i_end]*hfac
+    else:
+        # General case of sloped line    
+        # Calculate normal velocity
+        u_norm = normal_vector(u, v, grid, point0, point1, time_dependent=time_dependent)
+        # Extract the transect
+        u_norm_trans, left, right, below, above = get_transect(u_norm, grid, point0, point1, time_dependent=time_dependent)
+        # Calculate integrands
+        dh = (right - left)*1e3  # Convert from km to m
+        dz = above - below
     if time_dependent:
         # Make them 3D
         num_time = u.shape[0]
         dh = add_time_dim(dh, num_time)
         dz = add_time_dim(dh, num_time)
     # Integrate and convert to Sv
-    trans_S = np.sum(np.minimum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
-    trans_N = np.sum(np.maximum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
+    trans_S = np.sum(np.ma.minimum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
+    trans_N = np.sum(np.ma.maximum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     # Retrn onshore, then offshore transport
     if shore == 'S':
         return trans_S, trans_N

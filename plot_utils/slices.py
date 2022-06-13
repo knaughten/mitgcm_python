@@ -324,10 +324,10 @@ def get_transect (data, grid, point0, point1, gtype='t', return_grid_vars=True, 
     
     # Some error checking
     if lon0 == lon1:
-        print('Error (get_transect): This is a line of constant longitude. Use the regular slice scripts instead.')
+        print('Error (get_transect): This is a line of constant longitude. Use the regular slice functions instead.')
         sys.exit()
     if lat0 == lat1:
-        print('Error (get_transect): This is a line of constant latitude. Use the regular slice scripts instead.')
+        print('Error (get_transect): This is a line of constant latitude. Use the regular slice functions instead.')
         sys.exit()
     if min(lon0, lon1) < np.amin(grid.lon_corners_1d) or max(lon0, lon1) > np.amax(grid.lon_1d) or lat0 < np.amin(grid.lat_corners_1d) or lat1 > np.amax(grid.lat_1d):
         print('Error (get_transect): This line falls outside of the domain.')
