@@ -1110,6 +1110,13 @@ def set_parameters (var):
         point0 = (-45, -78.05)
         point1 = (-34.8, -78.2)
         direction = 'S'
+    elif var == 'PITE_trans':
+        option = 'transport_transect'
+        units = 'Sv'
+        title = 'Transport through PITE trough'
+        point0 = (-107, -73)
+        point1 = (-105, -73)
+        direction = 'S'
     elif var.endswith('atemp_avg'):
         option = 'avg_sfc'
         var_name = 'EXFatemp'

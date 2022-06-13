@@ -1662,13 +1662,13 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
     finished_plot(fig, fig_name=fig_name)
 
 
-# Recreate the PACE advection trend map for the historical and future trends in LENS, side by side
-def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_name=None):
+# Recreate the PACE advection trend map for the historical and future trends in LENS, side by side - now using velocity not advection
+def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_name=None):
 
     trend_dir = real_dir(trend_dir)
     grid = Grid(grid_dir)
     p0 = 0.05
-    threshold = [125, 500]
+    threshold = [0, 0]
     z_shelf = -1000
     periods = ['historical', 'future']
     num_periods = len(periods)
@@ -1682,43 +1682,43 @@ def plot_advection_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_di
     bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
     
     def read_component (key, period):
-        var_name = 'ADV'+key+'_TH_trend'
+        var_name = key+'VEL' 
         trends_3d = read_netcdf(trend_dir+var_name+'_'+period+'.nc', var_name)
         trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
         mean_trend = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
         mean_trend[p_val > p0] = 0
-        if key == 'x':
+        if key == 'U': 
             gtype = 'u'
             dh = grid.dx_s
-        elif key == 'y':
+        elif key == 'V':
             gtype = 'v'
             dh = grid.dy_w
         trend_interp = interp_grid(mean_trend, grid, gtype, 't')
-        trend_convert = trend_interp*Cp_sw*rhoConst*dh/dV*1e2*1e-3
-        return trend_convert
+        #trend_convert = trend_interp*Cp_sw*rhoConst*dh/dV*1e2*1e-3
+        return trend_interp  #trend_convert
     magnitude_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
-    advx_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
-    advy_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
+    uvel_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
+    vvel_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
     for t in range(num_periods):
-        advx_trend_tmp = read_component('x', periods[t])
-        advy_trend_tmp = read_component('y', periods[t])
-        magnitude_trend[t,:] = np.sqrt(advx_trend_tmp**2 + advy_trend_tmp**2)
+        uvel_trend_tmp = read_component('U', periods[t])
+        vvel_trend_tmp = read_component('V', periods[t])
+        magnitude_trend[t,:] = np.sqrt(uvel_trend_tmp**2 + vvel_trend_tmp**2)
         index = magnitude_trend[t,:] < threshold[t]
-        advx_trend[t,:] = np.ma.masked_where(index, advx_trend_tmp)
-        advy_trend[t,:] = np.ma.masked_where(index, advy_trend_tmp)
+        uvel_trend[t,:] = np.ma.masked_where(index, uvel_trend_tmp)
+        vvel_trend[t,:] = np.ma.masked_where(index, vvel_trend_tmp)
 
     fig, gs, cax = set_panels('1x2C1')
     for t in range(num_periods):
         ax = plt.subplot(gs[0,t])
         img = latlon_plot(magnitude_trend[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=ymax, title=periods[t], titlesize=14, vmax=vmax)
         ax.contour(grid.lon_2d, grid.lat_2d, bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
-        overlay_vectors(ax, advx_trend[t,:], advy_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
+        overlay_vectors(ax, uvel_trend[t,:], vvel_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
         if t > 0:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
     plt.colorbar(img, cax=cax, extend='max', orientation='horizontal')
-    plt.suptitle('Trends in horizontal heat transport at '+str(-z0)+r'm (kW/m$^2$/century)', fontsize=18)
+    plt.suptitle('Trends in ocean velocity at '+str(-z0)+r'm (m/s/century)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
 
