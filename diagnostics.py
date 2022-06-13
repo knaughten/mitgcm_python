@@ -287,7 +287,7 @@ def parallel_vector (u, v, grid, point0, point1, time_dependent=False):
     return rotate_vector(u, v, grid, point0, point1, option='parallel', time_dependent=time_dependent)
 
 
-# Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east").
+# Calculate the total onshore and offshore transport with respect to the given transect. Default is for the shore to be to the "south" of the line from point0 ("west") to point1 ("east"). If shore='net', return the net transport.
 def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=False):
 
     [lon0, lat0] = point0
@@ -301,7 +301,8 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
         j_start = np.where(lat > min(lat0,lat1))[0][0]-1
         j_end = np.where(lat > max(lat0,lat1))[0][0]
         u_norm_trans = u_norm_trans[j_start:j_end,:]
-        dh = grid.dy_w[j_start:j_end,:]
+        hfac = hfac[:,j_start:j_end]
+        dh = grid.dy_w[j_start:j_end,0]
         dz = z_to_xyz(grid.dz, grid)[:,j_start:j_end,0]*hfac
     if lat0 == lat1:
         # Special case of line of constant latitude.
@@ -311,7 +312,8 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
         i_start = np.where(lon > min(lon0,lon1))[0][0]-1
         i_end = np.where(lon > max(lon0,lon1))[0][0]
         u_norm_trans = u_norm_trans[:,i_start:i_end]
-        dh = grid.dx_s[:,i_start:i_end]
+        hfac = hfac[:,i_start:i_end]
+        dh = np.tile(grid.dx_s[0,i_start:i_end], (grid.nz, 1))
         dz = z_to_xyz(grid.dz, grid)[:,0,i_start:i_end]*hfac
     else:
         # General case of sloped line    
@@ -328,6 +330,8 @@ def transport_transect (u, v, grid, point0, point1, shore='S', time_dependent=Fa
         dh = add_time_dim(dh, num_time)
         dz = add_time_dim(dh, num_time)
     # Integrate and convert to Sv
+    if shore == 'net':
+        return np.sum(u_norm_trans*dh*dz*1e-6, axis=(-2,-1))
     trans_S = np.sum(np.ma.minimum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     trans_N = np.sum(np.ma.maximum(u_norm_trans,0)*dh*dz*1e-6, axis=(-2,-1))
     # Retrn onshore, then offshore transport
