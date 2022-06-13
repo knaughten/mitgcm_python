@@ -1533,7 +1533,7 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
             region = 'ice'
         else:
             region = 'all'
-        if var in ['THETA', 'SALT', 'speed', 'ADVx_TH', 'ADVy_TH']:
+        if var in ['THETA', 'SALT', 'speed', 'ADVx_TH', 'ADVy_TH', 'UVEL', 'VVEL']:
             dim = 3
         else:
             dim = 2
