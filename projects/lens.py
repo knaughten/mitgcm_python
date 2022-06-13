@@ -16,7 +16,7 @@ from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max
 from ..grid import Grid, read_pop_grid, read_cice_grid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_lens_ts_space
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst
 from ..plot_utils.windows import set_panels, finished_plot
