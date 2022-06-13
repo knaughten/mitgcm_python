@@ -423,11 +423,11 @@ def timeseries_transport_transect (file_path, grid, point0, point1, direction='N
     for t in range(u.shape[0]):
         # Get the "southward" and "northward" components
         trans_S, trans_N =  transport_transect(u[t,:], v[t,:], grid, point0, point1)
-        # Combine them
+        # Combine them        
         if direction == 'N':
-            trans = trans_N - trans_S
+            trans = trans_N + trans_S
         elif direction == 'S':
-            trans = trans_S - trans_N
+            trans = -trans_N - trans_S
         else:
             print(('Error (timeseries_transport_transect): invalid direction ' + direction))
             sys.exit()
