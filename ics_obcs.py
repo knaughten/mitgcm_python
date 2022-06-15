@@ -1492,7 +1492,7 @@ def process_cesm_obcs_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, 
         if expt == 'LENS':
             start_year = 1920
         else:
-            start_year = 2005
+            start_year = 2006
     if end_year is None:
         if expt == 'MENS':
             end_year = 2080
@@ -1669,7 +1669,7 @@ def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=No
         if expt == 'LENS':
             start_year = 1920
         else:
-            start_year = 2005
+            start_year = 2006
     if end_year is None:
         if expt == 'MENS':
             end_year = 2080
