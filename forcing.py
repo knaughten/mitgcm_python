@@ -1079,20 +1079,25 @@ def cesm_atm_forcing (expt, var, ens, out_dir, end_year=None):
         write_binary(data, out_file)
 
 
-# Create PPACE atmospheric forcing for all variables and ensemble members.
-def pace_all (out_dir):
+# Create CESM atmospheric forcing for the given scenario, for all variables and ensemble members.
+def cesm_expt_all_atm_forcing (expt, num_ens=None, out_dir=None):
 
-    var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
-
-    for ens in range(1,20+1):
-        print(('Processing ensemble member ' + str(ens)))
-        for var in var_names:
-            print(('Processing ' + var))
-            cesm_atm_forcing('PPACE', var, ens, out_dir)
-
-
-# Create LENS atmospheric forcing for all variables and the first n ensemble members (default 10, there are 40 available to download)
-def lens_all (out_dir='/data/oceans_input/processed_input_data/CESM/LENS/', num_ens=10):
+    out_dir_prefix = '/data/oceans_input/processed_input_data/CESM/'
+    if expt == 'PPACE':
+        if num_ens is None:
+            num_ens = 20
+        if out_dir is None:
+            out_dir = out_dir_prefix + 'PACE_new/'
+    elif expt == 'LENS':
+        if num_ens is None:
+            num_ens = 40
+        if out_dir is None:
+            out_dir = out_dir_prefix + 'LENS/'
+    elif expt in ['LW1.5', 'LW2.0', 'MENS']:
+        if num_ens is None:
+            num_ens = 5
+        if out_dir is None:
+            out_dir = out_dir_prefix + expt + '/'
 
     var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
 
@@ -1100,19 +1105,7 @@ def lens_all (out_dir='/data/oceans_input/processed_input_data/CESM/LENS/', num_
         print(('Processing ensemble member ' + str(ens)))
         for var in var_names:
             print(('Processing ' + var))
-            cesm_atm_forcing('LENS', var, ens, out_dir)
-                
-    
-            
-        
-
-    
-
-    
-
-    
-
-    
+            cesm_atm_forcing(expt, var, ens, out_dir)    
 
                 
         
