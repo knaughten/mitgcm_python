@@ -1599,7 +1599,7 @@ def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_o
     cesm_nh = cesm_h.size
 
     # Read CESM data and extract slice
-    file_path, t_start, t_end = find_cesm_file('CESM', var, domain, 'monthly', ens, year)
+    file_path, t_start, t_end = find_cesm_file(expt, var, domain, 'monthly', ens, year)
     data_full = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
     if var in ['UVEL', 'VVEL', 'uvel', 'vvel', 'aice']:
         # Convert from cm/s to m/s, or percent to fraction
