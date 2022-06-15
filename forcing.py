@@ -582,62 +582,7 @@ def monthly_era5_files (file_head_in, start_year, end_year, file_head_out):
             data_monthly[month,:] = np.mean(data[t:t+nt,:], axis=0)
             t += nt
         write_binary(data_monthly, file_head_out+'_'+str(year))
-
-
-# Process atmospheric forcing from PACE for a single variable and single ensemble member.
-def pace_atm_forcing (var, ens, out_dir):
-
-    import netCDF4 as nc
-
-    if var not in ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']:
-        print(('Error (pace_atm_forcing): Invalid variable ' + var))
-        sys.exit()
-
-    if var in ['FLDS', 'FSDS']:
-        freq = 'monthly'
-    else:
-        freq = 'daily'
-
-    for year in range(start_year, end_year+1):
-        print(('Processing ' + str(year)))
-        file_path, t_start, t_end = find_cesm_file('PPACE', var, 'atm', freq, ens, year)
-        if ens == 13 and freq == 'daily' and year < 2006:
-            # Missing all but the first day of 1988.
-            if year == 1988:
-                # Just repeat 1987
-                t_start -= per_year
-            elif year > 1988:
-                t_start -= per_year - 1
-            t_end = t_start + days_per_year
-        print(('Reading indices ' + str(t_start) + '-' + str(t_end-1)))
-        # Read data
-        data = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
-        # Unit conversions
-        if var in ['FLDS', 'FSDS']:
-            # Swap sign
-            data *= -1
-        elif var == 'TREFHT':
-            # Convert from K to C
-            data -= temp_C2K
-        elif var == 'QBOT':
-            # Convert from mixing ratio to specific humidity
-            data = data/(1.0 + data)
-        # Write data
-        out_file = real_dir(out_dir) + 'PACE_ens' + ens_str + '_' + var + '_' + str(year)
-        write_binary(data, out_file)    
-
-
-# Call pace_atm_forcing for all variables and ensemble members.
-def pace_all (in_dir, out_dir):
-
-    var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
-
-    for ens in range(1,20+1):
-        print(('Processing ensemble member ' + str(ens)))
-        for var in var_names:
-            print(('Processing ' + var))
-            pace_atm_forcing(var, ens, in_dir, out_dir)
-
+        
 
 # Read forcing (var='wind' or 'thermo') from a given atmospheric dataset (source='ERA5', 'UKESM', or 'PACE'). Time-average, ensemble-average (if PACE) and interpolate to the MITgcm grid. Save the otuput to a NetCDF file. This will be used to create spatially-varying, time-constant bias correction files in the functions katabatic_correction and thermo_correction.
 # Can also set monthly_clim=True to get monthly climatology instead of constant in time.
