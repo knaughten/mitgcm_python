@@ -307,6 +307,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, orig_bathy_file=None, orig_draft_file=None):
 
     from .plot_latlon import plot_tmp_domain
+    import mat73
 
     if grounded_iceberg:
         if topo_dir is None and rtopo_file is None:
@@ -325,7 +326,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
     lat = grid.lat_1d
 
     print(('Reading ' + ua_file))
-    f = loadmat(ua_file)
+    f = mat73.loadmat(ua_file)
     bathy = np.transpose(f['B_forMITgcm'])
     draft = np.transpose(f['b_forMITgcm'])
     mask = np.transpose(f['mask_forMITgcm'])
