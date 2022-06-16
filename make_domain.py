@@ -348,10 +348,8 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
     if overwrite_open_ocean:
-        nx = lon.shape[1]
-        ny = lat.shape[0]
-        orig_bathy = read_binary(orig_bathy_file, [nx, ny], dimensions='xy', prec=64)
-        orig_draft = read_binary(orig_draft_file, [nx, ny], dimensions='xy', prec=64)
+        orig_bathy = read_binary(orig_bathy_file, [grid.nx, grid.ny], dimensions='xy', prec=64)
+        orig_draft = read_binary(orig_draft_file, [grid.nx, grid.ny], dimensions='xy', prec=64)
         bathy[mask==2] = orig_bathy[mask==2]
         draft[mask==2] = orig_draft[mask==2]
 
