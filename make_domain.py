@@ -304,7 +304,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
-def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, orig_bathy_file=None, orig_draft_file=None):
+def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, orig_bathy_file=None, orig_draft_file=None):
 
     from .plot_latlon import plot_tmp_domain
 
@@ -318,6 +318,11 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
         if orig_bathy_file is None or orig_draft_file is None:
             print('Error (ua_topo): must set orig_bathy_file and orig_draft_file if overwrite_open_ocean is True')
             sys.exit()
+
+    print('Reading lat/lon from original MITgcm grid')
+    grid = Grid(real_dir(old_grid_dir))
+    lon = grid.lon_1d
+    lat = grid.lat_1d
 
     print(('Reading ' + ua_file))
     f = loadmat(ua_file)
@@ -358,8 +363,8 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
     plot_tmp_domain(lon_2d, lat_2d, omask, title='Ocean mask')
     plot_tmp_domain(lon_2d, lat_2d, imask, title='Ice mask')
 
-    # Write to NetCDF file (at cell centres not edges!)
-    ncfile = NCfile_basiclatlon(nc_out, 0.5*(lon[1:] + lon[:-1]), 0.5*(lat[1:] + lat[:-1]))
+    # Write to NetCDF file
+    ncfile = NCfile_basiclatlon(nc_out, lon, lat)
     ncfile.add_variable('bathy', bathy, units='m')
     ncfile.add_variable('draft', draft, units='m')
     ncfile.add_variable('omask', omask)
