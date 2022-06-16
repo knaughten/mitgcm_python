@@ -331,7 +331,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
     mask = np.transpose(f['mask_forMITgcm'])
     omask = (mask==2) + (mask==1)
     imask = (mask==1) + (mask==0)
-    if (bathy.shape[0] != len(lat)-1) or (bathy.shape[1] != len(lon)-1):
+    if (bathy.shape[0] != len(lat)) or (bathy.shape[1] != len(lon)):
         print(('Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'))
         sys.exit()
 
