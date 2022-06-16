@@ -303,8 +303,8 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     print(("Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"))
 
 
-# Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed.
-def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None):
+# Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
+def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, orig_bathy_file=None, orig_draft_file=None):
 
     from .plot_latlon import plot_tmp_domain
 
@@ -314,13 +314,18 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
             sys.exit()
         if rtopo_file is None:
             rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
+    if overwrite_open_ocean:
+        if orig_bathy_file is None or orig_draft_file is None:
+            print('Error (ua_topo): must set orig_bathy_file and orig_draft_file if overwrite_open_ocean is True')
+            sys.exit()
 
     print(('Reading ' + ua_file))
     f = loadmat(ua_file)
-    bathy = np.transpose(f['bathy'])
-    draft = np.transpose(f['draft'])
-    omask = np.transpose(f['omask'])
-    imask = np.transpose(f['imask'])
+    bathy = np.transpose(f['B_forMITgcm'])
+    draft = np.transpose(f['b_forMITgcm'])
+    mask = np.transpose(f['mask_forMITgcm'])
+    omask = (mask==2) + (mask==1)
+    imask = (mask==1) + (mask==0)
     if (bathy.shape[0] != len(lat)-1) or (bathy.shape[1] != len(lon)-1):
         print(('Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'))
         sys.exit()
@@ -336,6 +341,14 @@ def ua_topo (lon, lat, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rt
 
     if grounded_iceberg:
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
+
+    if overwrite_open_ocean:
+        nx = lon.shape[1]
+        ny = lat.shape[0]
+        orig_bathy = read_binary(orig_bathy_file, [nx, ny], dimensions='xy', prec=64)
+        orig_draft = read_binary(orig_draft_file, [nx, ny], dimensions='xy', prec=64)
+        bathy[mask==2] = orig_bathy[mask==2]
+        draft[mask==2] = orig_draft[mask==2]
 
     print('Plotting')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
