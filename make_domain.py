@@ -325,7 +325,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
     lat = grid.lat_1d
 
     print(('Reading ' + ua_file))
-    f = mat73.loadmat(ua_file)
+    f = loadmat(ua_file)
     bathy = np.transpose(f['B_forMITgcm'])
     draft = np.transpose(f['b_forMITgcm'])
     mask = np.transpose(f['mask_forMITgcm'])
