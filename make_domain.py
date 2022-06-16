@@ -330,7 +330,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
     draft = np.transpose(f['b_forMITgcm'])
     mask = np.transpose(f['mask_forMITgcm'])
     omask = (mask==2) + (mask==1)
-    imask = (mask==1) + (mask==0)
+    imask = (mask==1)
     if (bathy.shape[0] != len(lat)) or (bathy.shape[1] != len(lon)):
         print(('Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'))
         sys.exit()
@@ -352,6 +352,8 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         orig_draft = read_binary(orig_draft_file, [grid.nx, grid.ny], dimensions='xy', prec=64)
         bathy[mask==2] = orig_bathy[mask==2]
         draft[mask==2] = orig_draft[mask==2]
+        omask[bathy==0] = 0
+        imask[draft==0] = 0
 
     '''print('Plotting')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
