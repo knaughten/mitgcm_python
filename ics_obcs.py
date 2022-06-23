@@ -6,8 +6,6 @@ import numpy as np
 import os
 import sys
 import netCDF4 as nc
-from nco import Nco
-from nco.custom import Limit
 from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import interp1d
 
