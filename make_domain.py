@@ -304,6 +304,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
+# This function is NOT GENERAL so USE WITH CAUTION!
 def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False):
 
     #from .plot_latlon import plot_tmp_domain
@@ -344,10 +345,18 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
     if overwrite_open_ocean:
+        # Use original MITgcm bathymetry everywhere Ua thinks is open ocean.
         bathy[mask==2] = grid.bathy[mask==2]
-        draft[mask==2] = grid.draft[mask==2]
-        omask[bathy==0] = 0
-        imask[draft==0] = 0
+        print('Warning, the code is assuming you are using PAS/PDTC config!')
+        # Use original MITgcm ice shelf draft everywhere outside the Ua domain - but be sure not to reimpose static ice within the same ice shelves given differing calving fronts. Set lat/lon bounds for static ice - this is specific to PAS/PTDC config!!
+        xmin = -114.7  # Between Getz and Dotson
+        xmax = -99  # East of PIG
+        ymax = -74.1  # North of Dotson
+        outside_ua = ((grid.lon_2d < xmin) + (grid.lon_2d > xmax) + (grid.lon_2d > ymax)).astype(bool)
+        index = (mask==2)*(outside_ua)
+        draft[index] = grid.draft[index]
+        omask = np.invert(bathy==0)
+        imask = np.invert(draft==0)
 
     '''print('Plotting')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
