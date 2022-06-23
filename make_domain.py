@@ -357,7 +357,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         xmin = -114.7  # Between Getz and Dotson
         xmax = -99  # East of PIG
         ymax = -74.1  # North of Dotson
-        outside_ua = ((grid.lon_2d < xmin) + (grid.lon_2d > xmax) + (grid.lon_2d > ymax)).astype(bool)
+        outside_ua = ((grid.lon_2d < xmin) + (grid.lon_2d > xmax) + (grid.lat_2d > ymax)).astype(bool)
         index = (mask==2)*(outside_ua)
         draft[index] = draft_old[index]
         omask = np.invert(bathy==0)
