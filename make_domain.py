@@ -305,7 +305,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
 # This function is NOT GENERAL so USE WITH CAUTION!
-def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False):
+def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, old_bathy_file=None, old_draft_file=None):
 
     #from .plot_latlon import plot_tmp_domain
 
@@ -345,8 +345,13 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
     if overwrite_open_ocean:
+        if old_bathy_file is None or old_draft_file is None:
+            print('Error (ua_topo): must set old_bathy_file and old_draft_file if overwrite_open_ocean is True')
+            sys.exit()
+        bathy_old = read_binary(old_bathy_file, [grid.nx, grid.ny], 'xy', prec=64)
+        draft_old = read_binary(old_draft_file, [grid.nx, grid.ny], 'xy', prec=64)
         # Use original MITgcm bathymetry everywhere Ua thinks is open ocean.
-        bathy[mask==2] = grid.bathy[mask==2]
+        bathy[mask==2] = bathy_old[mask==2]
         print('Warning, the code is assuming you are using PAS/PDTC config!')
         # Use original MITgcm ice shelf draft everywhere outside the Ua domain - but be sure not to reimpose static ice within the same ice shelves given differing calving fronts. Set lat/lon bounds for static ice - this is specific to PAS/PTDC config!!
         xmin = -114.7  # Between Getz and Dotson
@@ -354,7 +359,7 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         ymax = -74.1  # North of Dotson
         outside_ua = ((grid.lon_2d < xmin) + (grid.lon_2d > xmax) + (grid.lon_2d > ymax)).astype(bool)
         index = (mask==2)*(outside_ua)
-        draft[index] = grid.draft[index]
+        draft[index] = draft_old[index]
         omask = np.invert(bathy==0)
         imask = np.invert(draft==0)
 
