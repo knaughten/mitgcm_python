@@ -406,6 +406,9 @@ def calc_load_anomaly (grid, out_file, option='constant', ini_temp_file=None, in
     while True:
         rms_old = rms_error
         rms_error = rms(press, press_old)
+        if np.isnan(rms_error):
+            print('Error (calc_load_anomaly): RMS error has gone to NaN')
+            sys.exit()
         print(('RMS error = ' + str(rms_error)))
         if rms_error < errorTol or np.abs(rms_error-rms_old) < 0.1*errorTol:
             print('Converged')

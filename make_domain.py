@@ -304,7 +304,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
-def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, orig_bathy_file=None, orig_draft_file=None):
+def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False):
 
     #from .plot_latlon import plot_tmp_domain
 
@@ -314,10 +314,6 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
             sys.exit()
         if rtopo_file is None:
             rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
-    if overwrite_open_ocean:
-        if orig_bathy_file is None or orig_draft_file is None:
-            print('Error (ua_topo): must set orig_bathy_file and orig_draft_file if overwrite_open_ocean is True')
-            sys.exit()
 
     print('Reading lat/lon from original MITgcm grid')
     grid = Grid(real_dir(old_grid_dir))
@@ -348,10 +344,8 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
     if overwrite_open_ocean:
-        orig_bathy = read_binary(orig_bathy_file, [grid.nx, grid.ny], dimensions='xy', prec=64)
-        orig_draft = read_binary(orig_draft_file, [grid.nx, grid.ny], dimensions='xy', prec=64)
-        bathy[mask==2] = orig_bathy[mask==2]
-        draft[mask==2] = orig_draft[mask==2]
+        bathy[mask==2] = grid.bathy[mask==2]
+        draft[mask==2] = grid.draft[mask==2]
         omask[bathy==0] = 0
         imask[draft==0] = 0
 
