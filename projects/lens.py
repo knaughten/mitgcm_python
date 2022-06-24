@@ -23,11 +23,12 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label
 from ..plot_utils.slices import slice_patches, slice_values
-from ..plot_utils.latlon import overlay_vectors
+from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
+from ..make_domain import latlon_points
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -1930,27 +1931,54 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
 def compare_bedmachine_mask (grid_dir, bedmachine_file='/data/oceans_input/raw_input_data/BedMachine/v2.0/BedMachineAntarctica_2020-07-15_v02.nc', fig_name=None):
 
     grid = Grid(grid_dir)
-    x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
+    x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d, lat_c=-70)
     x_bm = read_netcdf(bedmachine_file, 'x')
     y_bm = read_netcdf(bedmachine_file, 'y')
     mask_bm = read_netcdf(bedmachine_file, 'mask')
 
     fig, ax = plt.subplots()
-    ax.scatter(x_mit, y_mit, grid.ice_mask, color='blue')
-    ax.scatter(x_bm, y_bm, mask_bm==1, color='red')
-    ax.set_xlim([np.amin(x_mit), np.amax(x_mit)])
-    ax.set_ylim([np.amin(y_mit), np.amax(y_mit)])
-    shade_land(ax, grid)
-    contour_iceshelf_front(ax, grid)
+    ax.contourf(x_bm, y_bm, mask_bm)
+    ax.set_xlim([-2e6, -1.25e6])
+    ax.set_ylim([-7e5, -8e4])
+    ax.scatter(x_mit, y_mit, grid.ice_mask, color='red')
     finished_plot(fig, fig_name=fig_name)
 
-    
-        
-    
 
-    
+# Generate new XC, YC, XG, YG points for use in Ua base mesh generation.
+def new_grid_points (nc_file, delY_file):
 
-    
+    import netCDF4 as nc
+
+    lon_g, lat_g = latlon_points(-140, -80, -76, -62, 0.1, delY_file)
+    lon_c = 0.5*(lon_g[:-1] + lon_g[1:])
+    lat_c = 0.5*(lat_g[:-1] + lat_g[1:])
+    lon_g = lon_g[:-1]
+    lat_g = lat_g[:-1]
+    nx = lon_c.size
+    ny = lat_c.size
+
+    id = nc.Dataset(nc_file, 'w')
+    id.createDimension('YC', ny)
+    id.createVariable('YC', 'f8', ('YC'))
+    id.variables['YC'].long_name = 'latitude at cell center'
+    id.variables['YC'].units = 'degrees_north'
+    id.variables['YC'][:] = lat_c
+    id.createDimension('YG', ny)
+    id.createVariable('YG', 'f8', ('YG'))
+    id.variables['YG'].long_name = 'latitude at SW corner'
+    id.variables['YG'].units = 'degrees_north'
+    id.variables['YG'][:] = lat_g
+    id.createDimension('XC', nx)
+    id.createVariable('XC', 'f8', ('XC'))
+    id.variables['XC'].long_name = 'longitude at cell center'
+    id.variables['XC'].units = 'degrees_east'
+    id.variables['XC'][:] = lon_c
+    id.createDimension('XG', nx)
+    id.createVariable('XG', 'f8', ('XG'))
+    id.variables['XG'].long_name = 'longitude at SW corner'
+    id.variables['XG'].units = 'degrees_east'
+    id.variables['XG'][:] = lon_g
+    id.close()
     
     
     
