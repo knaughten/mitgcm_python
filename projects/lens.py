@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo
 from ..grid import Grid, read_pop_grid, read_cice_grid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file
@@ -1925,6 +1925,26 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
         ax.grid(linestyle='dotted')
         ax.legend()        
     finished_plot(fig, fig_name=fig_name)
+
+
+def compare_bedmachine_mask (grid_dir, bedmachine_file='/data/oceans_input/raw_input_data/BedMachine/v2.0/BedMachineAntarctica_2020-07-15_v02.nc', fig_name=None):
+
+    grid = Grid(grid_dir)
+    x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
+    x_bm = read_netcdf(bedmachine_file, 'x')
+    y_bm = read_netcdf(bedmachine_file, 'y')
+    mask_bm = read_netcdf(bedmachine_file, 'mask')
+
+    fig, ax = plt.subplots()
+    ax.scatter(x_mit, y_mit, grid.ice_mask, color='blue')
+    ax.scatter(x_bm, y_bm, mask_bm==1, color='red')
+    ax.set_xlim([np.amin(x_mit), np.amax(x_mit)])
+    ax.set_ylim([np.amin(y_mit), np.amax(y_mit)])
+    shade_land(ax, grid)
+    contour_iceshelf_front(ax, grid)
+    finished_plot(fig, fig_name=fig_name)
+
+    
         
     
 
