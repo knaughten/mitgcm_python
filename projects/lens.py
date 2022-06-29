@@ -37,7 +37,7 @@ def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
     timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
     if sim_dir is None:
-        sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '/output/' for n in range(num_ens)]
+        sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_O/output/' for n in range(num_ens)]
     else:
         num_ens = len(sim_dir)
     timeseries_file = 'timeseries.nc'
@@ -1949,7 +1949,7 @@ def new_grid_points (nc_file, delY_file):
 
     import netCDF4 as nc
 
-    lon_g, lat_g = latlon_points(-140, -80, -76, -62, 0.1, delY_file)
+    lon_g, lat_g = latlon_points(-140, -80, -76, -62.3, 0.1, delY_file)
     lon_c = 0.5*(lon_g[:-1] + lon_g[1:])
     lat_c = 0.5*(lat_g[:-1] + lat_g[1:])
     lon_g = lon_g[:-1]
