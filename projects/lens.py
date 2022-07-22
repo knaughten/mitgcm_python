@@ -68,7 +68,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None,
     base_dir = real_dir(base_dir)
     pace_file = base_dir+'timeseries_pace_mean.nc'
     if sim_dir is None:
-        sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'/output/' for n in range(num_ens)]
+        sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_O/output/' for n in range(num_ens)]
     else:
         num_ens = len(sim_dir)
     file_paths = [pace_file] + [sd+'timeseries.nc' for sd in sim_dir]
