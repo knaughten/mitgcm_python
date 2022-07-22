@@ -122,6 +122,11 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             if time_dependent:
                 z = add_time_dim(z, temp.shape[0])
             data_tmp = in_situ_temp(temp, salt, z) - tfreeze(salt, z)
+        elif var == 'iceshelf':
+            # Special case to get floating area
+            ice_mask = grid.get_ice_mask(gtype=gtype)
+            num_time = netcdf_time(file_path).size
+            data_tmp = add_time_dim(ice_mask, num_time)
         else:
             data_tmp = read_netcdf(file_path, var, time_index=time_index, t_start=t_start, t_end=t_end, time_average=time_average)
         if var in ['THETA', 'SALT', 'WSLTMASS']:
@@ -1184,6 +1189,13 @@ def set_parameters (var):
         title = 'Total sea ice production over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-3
+    elif var.endswith('iceshelf_area'):
+        option = 'int_sfc'
+        var_name = 'iceshelf'
+        region = var[:var.index('_iceshelf_area')]
+        title = 'Area of floating ice, '+region_names[region]
+        units = r'10$^3$ km$^2$'
+        factor = 1e-9
     elif var.endswith('seaice_melt'):
         option = 'int_sfc'
         var_name = 'SIfwmelt'
