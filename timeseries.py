@@ -124,7 +124,7 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
             data_tmp = in_situ_temp(temp, salt, z) - tfreeze(salt, z)
         elif var == 'iceshelf':
             # Special case to get floating area
-            ice_mask = grid.get_ice_mask(gtype=gtype)
+            ice_mask = grid.get_ice_mask(gtype=gtype).astype(float)
             num_time = netcdf_time(file_path).size
             data_tmp = add_time_dim(ice_mask, num_time)
         else:
@@ -154,7 +154,10 @@ def timeseries_area_sfc (option, file_path, var_name, grid, gtype='t', time_inde
     for t in range(data.shape[0]):
         # Mask
         if mask is None:
-            data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
+            if var == 'iceshelf':
+                data_tmp = mask_land(data[t,:], grid, gtype=gtype)
+            else:
+                data_tmp = mask_land_ice(data[t,:], grid, gtype=gtype)
         else:
             data_tmp = apply_mask(data[t,:], np.invert(mask))
         # Area-average or integrate
@@ -700,6 +703,8 @@ def calc_timeseries (file_path, option=None, grid=None, gtype='t', var_name=None
             mask = grid.get_region_bdry_mask(region[:region.index('_downstream')], 'downstream')
         elif region == 'wdw_core':
             mask = grid.get_region_mask(region, is_3d=True)
+        elif var_name == 'iceshelf':
+            mask = grid.get_region_mask(region+'_cavity')
         else:
             mask = grid.get_region_mask(region)
     if option == 'adv_dif_bdry':
