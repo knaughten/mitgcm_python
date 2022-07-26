@@ -9,7 +9,7 @@ import shutil
 
 from .constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, region_bounds, region_bathy_bounds
 from .file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
-from .utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz
+from .utils import factors, polar_stereo, mask_box, mask_above_line, mask_iceshelf_box, real_dir, mask_3d, xy_to_xyz, z_to_xyz, fix_lon_range
 from .interpolation import extend_into_mask, interp_topo, neighbours, neighbours_z, remove_isolated_cells 
 from .grid import Grid
 
