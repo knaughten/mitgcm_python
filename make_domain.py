@@ -118,11 +118,13 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
 # Helper function to add grounded icebergs to Bear Ridge.
 def add_bear_ridge_bergs (lon, lat, bathy, omask):
 
+    lon_2d, lat_2d = np.meshgrid(lon, lat)
+
     # Southern part: north-south wall
     [x_wall, x_wall, ymin, ymax] = region_bounds['bear_ridge_S']
     # Find longitude index closest to the target
     i_wall = np.argmin(np.abs(lon-x_wall))    
-    wall_pts = (lat >= ymin)*(lat <= ymax)*(lon == lon[i_wall])
+    wall_pts = (lat_2d >= ymin)*(lat_2d <= ymax)*(lon_2d == lon_2d[i_wall])
     bathy[wall_pts] = 0
     omask[wall_pts] = 0
 
@@ -133,7 +135,11 @@ def add_bear_ridge_bergs (lon, lat, bathy, omask):
     jmin = np.argmin(np.abs(lat-ymin))
     jmax = np.argmin(np.abs(lat-ymax))
     for j in range(jmin, jmax+1):
-        i0 = np.where(bathy[j,:] > z_deep)[0][-1]
+        try:
+            i0 = np.where((lon_2d[j,:] >= xmin)*(lon_2d[j,:] <= xmax)*(bathy[j,:] > z_deep))[0][-1]
+        except(IndexError):
+            # No points shallower than 300m
+            continue
         bathy[j,i0] = 0
         omask[j,i0] = 0
 
