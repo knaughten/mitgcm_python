@@ -329,7 +329,7 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
 
 
 # Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg A23-A if needed (requires path to RTopo2 file), or the line of grounded icebergs on Bear Ridge.
-def ua_topo (grid_dir, ua_file, nc_out, add_a23a=False, topo_dir=None, rtopo_file=None, bear_ridge=False):
+def ua_topo (grid_dir, ua_file, nc_out, grounded_iceberg=False, topo_dir=None, rtopo_file=None, bear_ridge=False):
 
     #from .plot_latlon import plot_tmp_domain
     from MITgcmutils import rdmds
