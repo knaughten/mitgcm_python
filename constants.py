@@ -90,7 +90,9 @@ region_bounds = {
     'filchner_trough_cavity': [-44, -38, -81, -76],
     'amundsen_shelf': [-115, -100, -75.5, -70],
     'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1],
-    'amundsen_sea': [-140, -80, -75.6, -62]
+    'amundsen_sea': [-140, -80, -75.6, -62],
+    'bear_ridge_S': [-110.35, -110.35, -74.2, -73.8791],
+    'bear_ridge_N': [-112.05, -109.05, -73.8791, -72.7314]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot']
@@ -105,7 +107,8 @@ region_bathy_bounds = {
     'offshore_filchner': [None, -2000],
     'filchner_sill': [-1500, -600],
     'filchner_trough_cavity': [None, -1000],
-    'amundsen_shelf': [-1750, None]
+    'amundsen_shelf': [-1750, None],
+    'bear_ridge_N': [-300, None]
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {

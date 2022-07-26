@@ -115,6 +115,31 @@ def add_grounded_iceberg (rtopo_file, lon, lat, bathy, omask):
     return bathy, omask
 
 
+# Helper function to add grounded icebergs to Bear Ridge.
+def add_bear_ridge_bergs (lon, lat, bathy, omask):
+
+    # Southern part: north-south wall
+    [x_wall, x_wall, ymin, ymax] = region_bounds['bear_ridge_S']
+    # Find longitude index closest to the target
+    i_wall = np.argmin(np.abs(lon-x_wall))    
+    wall_pts = (lat >= ymin)*(lat <= ymax)*(lon == lon[i_wall])
+    bathy[wall_pts] = 0
+    omask[wall_pts] = 0
+
+    # Northern part: select easternmost point shallower than 300m at each latitude
+    [xmin, xmax, ymin, ymax] = region_bounds['bear_ridge_N']
+    z_deep = region_bathy_bounds['bear_ridge_N'][0]
+    # Find range of latitude indices to loop over
+    jmin = np.argmin(np.abs(lat-ymin))
+    jmax = np.argmin(np.abs(lat-ymax))
+    for j in range(jmin, jmax+1):
+        i0 = np.where(bathy[j,:] > z_deep)[0][-1]
+        bathy[j,i0] = 0
+        omask[j,i0] = 0
+
+    return bathy, omask
+
+
 # Interpolate BEDMAP2 bathymetry, ice shelf draft, and masks to the new grid. Write the results to a NetCDF file so the user can check for any remaining artifacts that need fixing (eg blocking out the little islands near the peninsula).
 # You can set an alternate bed file (eg Filchner updates by Sebastian Rosier) with the keyword argument bed_file.
 # If you want the A-23A grounded iceberg in your land mask, set grounded_iceberg=True and make sure you have the RTopo-2 aux file (containing the variable "amask") in your topo_dir; set rtopo_file if it has a different path than the default.
@@ -303,11 +328,11 @@ def interp_bedmap2 (lon, lat, topo_dir, nc_out, bed_file=None, grounded_iceberg=
     print(("Then set your vertical layer thicknesses in a plain-text file, one value per line (make sure they clear the deepest bathymetry of " + str(abs(np.amin(bathy_interp))) + " m), and run remove_grid_problems"))
 
 
-# Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg if needed. Can also overwrite bathymetry and draft everywhere outside the Ua domain with data from other files (eg previously used for standalone ocean)
-# This function is NOT GENERAL so USE WITH CAUTION!
-def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None, rtopo_file=None, overwrite_open_ocean=False, old_bathy_file=None, old_draft_file=None):
+# Read topography which has been pre-interpolated to the new grid, from Ua output (to set up the initial domain for coupling). Add the grounded iceberg A23-A if needed (requires path to RTopo2 file), or the line of grounded icebergs on Bear Ridge.
+def ua_topo (grid_dir, ua_file, nc_out, add_a23a=False, topo_dir=None, rtopo_file=None, bear_ridge=False):
 
     #from .plot_latlon import plot_tmp_domain
+    from MITgcmutils import rdmds
 
     if grounded_iceberg:
         if topo_dir is None and rtopo_file is None:
@@ -316,19 +341,25 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
         if rtopo_file is None:
             rtopo_file = topo_dir+'RTopo-2.0.1_30sec_aux.nc'
 
-    print('Reading lat/lon from original MITgcm grid')
-    grid = Grid(real_dir(old_grid_dir))
-    lon = grid.lon_1d
-    lat = grid.lat_1d
+    print('Reading lat/lon from MITgcm')
+    grid_dir = real_dir(grid_dir)
+    lon = rdmds(grid_dir+'XC')[0,:]
+    lat = rdmds(grid_dir+'YC')[:,0]
 
     print(('Reading ' + ua_file))
     f = loadmat(ua_file)
     bathy = np.transpose(f['B_forMITgcm'])
     draft = np.transpose(f['b_forMITgcm'])
     mask = np.transpose(f['mask_forMITgcm'])
-    omask = (mask==2) + (mask==1)
-    imask = (mask==1)
-    if (bathy.shape[0] != len(lat)) or (bathy.shape[1] != len(lon)):
+    bathy[mask==0] = 0
+    draft[mask==0] = 0
+    index = bathy > 0
+    bathy[index] = 0
+    draft[index] = 0
+
+    omask = bathy != 0
+    imask = draft != 0
+    if (bathy.shape[0] != lat.size) or (bathy.shape[1] != lon.size):
         print(('Error (ua_topo): The fields in ' + ua_file + ' do not agree with the dimensions of your latitude and longitude.'))
         sys.exit()
 
@@ -344,24 +375,8 @@ def ua_topo (old_grid_dir, ua_file, nc_out, grounded_iceberg=True, topo_dir=None
     if grounded_iceberg:
         bathy, omask = add_grounded_iceberg(rtopo_file, lon, lat, bathy, omask)
 
-    if overwrite_open_ocean:
-        if old_bathy_file is None or old_draft_file is None:
-            print('Error (ua_topo): must set old_bathy_file and old_draft_file if overwrite_open_ocean is True')
-            sys.exit()
-        bathy_old = read_binary(old_bathy_file, [grid.nx, grid.ny], 'xy', prec=64)
-        draft_old = read_binary(old_draft_file, [grid.nx, grid.ny], 'xy', prec=64)
-        # Use original MITgcm bathymetry everywhere Ua thinks is open ocean.
-        bathy[mask==2] = bathy_old[mask==2]
-        print('Warning, the code is assuming you are using PAS/PDTC config!')
-        # Use original MITgcm ice shelf draft everywhere outside the Ua domain - but be sure not to reimpose static ice within the same ice shelves given differing calving fronts. Set lat/lon bounds for static ice - this is specific to PAS/PTDC config!!
-        xmin = -114.7  # Between Getz and Dotson
-        xmax = -99  # East of PIG
-        ymax = -74.1  # North of Dotson
-        outside_ua = ((grid.lon_2d < xmin) + (grid.lon_2d > xmax) + (grid.lat_2d > ymax)).astype(bool)
-        index = (mask==2)*(outside_ua)
-        draft[index] = draft_old[index]
-        omask = np.invert(bathy==0)
-        imask = np.invert(draft==0)
+    if bear_ridge:
+        bathy, omask = add_bear_ridge_bergs(lon, lat, bathy, omask)        
 
     '''print('Plotting')
     lon_2d, lat_2d = np.meshgrid(lon, lat)
