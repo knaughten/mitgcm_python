@@ -824,6 +824,16 @@ class WOAGrid(Grid):
         # Build land mask
         self.land_mask = np.amin(mask, axis=0)
         self.ice_mask = np.zeros(self.land_mask.shape).astype(bool)
+
+        
+    def get_lon_lat (self, gtype='t', dim=2):
+        if gtype != 't':
+            print("Error (get_lon_lat): must have gtype='t' for WOAGrid")
+            sys.exit()
+        if dim == 1:
+            return self.lon_1d, self.lat_1d
+        elif dim == 2:
+            return self.lon_2d, self.lat_2d
     
 
 # CMIPGrid object containing basic grid variables for a CMIP6 ocean grid.
@@ -1037,7 +1047,7 @@ class PACEGrid:
         else:
             print(('Error (get_lon_lat): invalid dim ' + str(dim)))
             sys.exit()
-
+        
 
 # Read and process the grid from Pierre's observation climatology file. Pass an open Matlab file handle.
 def pierre_obs_grid (f, xy_dim=2, z_dim=1, dA_dim=2):

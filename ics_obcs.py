@@ -131,8 +131,9 @@ def process_ini_field (source_data, source_mask, fill, source_grid, model_grid, 
 # constant_t, constant_s: temperature and salinity to fill ice shelf cavities with (default -1.9 C and 34.4 psu)
 # split: longitude to split the SOSE grid at. Must be 180 (if your domain includes 0E; default) or 0 (if your domain includes 180E). If your domain is circumpolar (i.e. includes both 0E and 180E), try either and hope for the best. You might have points falling in the gap between SOSE's periodic boundary, in which case you'll have to write a few patches to wrap the SOSE data around the boundary (do this in the SOSEGrid class in grid.py).
 # prec: precision to write binary files (64 or 32, must match readBinaryPrec in "data" namelist)
+# skip_ts: boolean indicating to skip temperature and salinity (default False)
 
-def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64):
+def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constant_t=-1.9, constant_s=34.4, split=180, prec=64, skip_ts=False):
 
     from .grid import SOSEGrid
     from .file_io import NCfile
@@ -182,6 +183,8 @@ def sose_ics (grid_path, sose_dir, output_dir, bsose=False, nc_out=None, constan
 
     # Process fields
     for n in range(len(fields)):
+        if skip_ts and fields[n] in ['THETA', 'SALT']:
+            continue
         print(('Processing ' + fields[n]))
         in_file = sose_dir + fields[n] + infile_tail
         out_file = output_dir + fields[n] + outfile_tail
@@ -1684,6 +1687,39 @@ def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=No
                 data_interp = read_correct_cesm_non_ts(expt, var, bdry, ens, year)
                 file_path = out_dir + out_file_head + var + '_' + bdry + '_' + str(year)
                 write_binary(data_interp, file_path)
+
+
+# Create initial conditions for temperature and salinity using the WOA 2018 monthly climatology for January. Ice shelf cavities will be filled with nearest neighbours.
+def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', nc_out=None, prec=64):
+
+    from .file_io import NCfile
+    from .grid import WOAGrid
+
+    woa_file_head = 'woa18_decav_'
+    woa_var = ['t_an', 's_an']
+    woa_file_tail = '01_04.nc'
+    woa_file_paths = [real_dir(woa_dir) + woa_file_head + var[0] + woa_file_tail for var in woa_var]
+    mit_var = ['THETA', 'SALT']
+    out_file_tail = '_WOA18.ini'
+    out_file_paths = [real_dir(output_dir) + var + out_file_tail for var in mit_var]
+    num_var = len(mit_var)
+    dim = 3
+
+    # Build grids
+    model_grid = Grid(grid_path)
+    woa_grid = WOAGrid(woa_file_paths[0])
+    print('Building mask for WOA points to fill')
+    fill = get_fill_mask(woa_grid, model_grid, missing_cavities=False)
+
+    # Set up NetCDF file
+    if nc_out is not None:
+        ncfile = NCfile(nc_out, model_grid, 'xyz')
+
+    # Process fields
+    for n in range(num_var):
+        print('Processing '+mit_var[n])
+        woa_data = read_netcdf(woa_file_paths[n], woa_var[n], time_index=0)
+        process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, mit_var[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
             
         
