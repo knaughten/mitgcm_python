@@ -818,11 +818,11 @@ class WOAGrid(Grid):
             except(KeyError):
                 print('Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.')
                 sys.exit()
-        mask = data.mask
-        z_masked = np.ma.masked_where(data.mask, z_3d)
+        self.mask = data.mask
+        z_masked = np.ma.masked_where(self.mask, z_3d)
         self.bathy = select_bottom(z_masked, return_masked=False)
         # Build land mask
-        self.land_mask = np.amin(mask, axis=0)
+        self.land_mask = np.amin(self.mask, axis=0)
         self.ice_mask = np.zeros(self.land_mask.shape).astype(bool)
 
         
