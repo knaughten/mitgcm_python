@@ -103,7 +103,7 @@ def check_scenario_timeseries (base_dir='./', num_LENS=5, num_MENS=1, num_LW2=1,
             if num_scenario > 1:
                 sim_names += [None for n in range(num_scenario-1)]
     sim_names += ['PACE mean']
-    colours = ['black' for n in range(num_LENS)] + ['red' for n in range(num_MENS)] + ['green' for n in range(num_LW2)] + ['blue' for n in range(num_LW1)] + ['magenta']
+    colours = ['DarkGrey' for n in range(num_LENS)] + ['IndianRed' for n in range(num_MENS)] + ['MediumSeaGreen' for n in range(num_LW2)] + ['DodgerBlue' for n in range(num_LW1)] + ['MediumOrchid']
 
     for var in var_names:
         if fig_dir is not None:
