@@ -788,18 +788,22 @@ class SOSEGrid(Grid):
 # WOAGrid object containing basic grid variables
 class WOAGrid(Grid):
 
-    def __init__ (self, file_path, split=180):
+    def __init__ (self, woa_dir, split=180):
 
         if split != 180:
             print("Error (WOA_grid): Haven't coded for values of split other than 180.")
             sys.exit()
         self.split = split
+        file_path = woa_dir + 'woa18_decav_t00_04.nc'
+        file_path_mon = woa_dir + 'woa18_decav_t01_04.nc'
         self.lon_1d = read_netcdf(file_path, 'lon')
         self.lat_1d = read_netcdf(file_path, 'lat')        
         self.z = -1*read_netcdf(file_path, 'depth')
+        self.z_mon = -1*read_netcdf(file_path_mon, 'depth')
         self.nx = self.lon_1d.size
         self.ny = self.lat_1d.size
         self.nz = self.z.size
+        self.nz_mon = self.z_mon.size
         self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
         # Assume constant resolution - in practice this is 0.25
         dlon = self.lon_1d[1] - self.lon_1d[0]

@@ -58,8 +58,7 @@ def woa18_pico_input (woa_dir, out_file):
     woa_dir = real_dir(woa_dir)
 
     print('Building WOA grid')
-    # Use the January temperature file
-    grid = WOAGrid(woa_dir + file_head + var_names[0] + '01' + file_tail)
+    grid = WOAGrid(woa_dir)
 
     # Build array of days per month, with February as 28.25
     ndays = np.array([days_per_month(t+1, 1) for t in range(12)])
