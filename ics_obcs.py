@@ -1714,6 +1714,8 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
     # Set up NetCDF file
     if nc_out is not None:
         ncfile = NCfile(nc_out, model_grid, 'xyz')
+    else:
+        ncfile = None
 
     # Process fields
     for n in range(num_var):
