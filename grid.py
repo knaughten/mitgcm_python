@@ -525,7 +525,7 @@ class SOSEGrid(Grid):
             self.lon_corners_1d = read_netcdf(path, 'XG')[0,:]
             self.lat_1d = read_netcdf(path, 'YC')[:,0]
             self.lat_corners_1d = read_netcdf(path, 'YG')[:,0]
-            self.z = read_netcdf(path, 'Z')
+            self.z = read_netcdf(path, 'RC')
             self.z_edges = read_netcdf(path, 'RF')
         else:
             self.lon_1d = rdmds(path+'XC')[0,:]
