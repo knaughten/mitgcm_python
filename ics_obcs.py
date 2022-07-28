@@ -1730,13 +1730,13 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
         woa_data = woa_data_clim
         woa_data[:woa_grid.nz_mon,:] = woa_data_mon
         all_woa_data[n,:] = woa_data
-    # Convert to potential temperature.
+    print('Converting to potential temperature')
     press = gravity*1030*z_to_xyz(woa_grid.z, [woa_grid.nx, woa_grid.ny, woa_grid.nz])
     all_woa_data[0,:] = pt0_from_t(all_woa_data[1,:], all_woa_data[0,:], press)
     # Now interpolate etc
     for n in range(num_var):
         print('Processing '+mit_var[n])        
-        process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, mit_var[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
+        process_ini_field(all_woa_data[n,:], woa_grid.mask, fill, woa_grid, model_grid, dim, mit_var[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
             
         
