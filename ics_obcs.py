@@ -9,7 +9,7 @@ import netCDF4 as nc
 from scipy.ndimage.filters import gaussian_filter
 from scipy.interpolate import interp1d
 
-from .grid import Grid, grid_check_split, choose_grid, read_pop_grid, read_cice_grid
+from .grid import Grid, grid_check_split, choose_grid, read_pop_grid, read_cice_grid, WOAGrid
 from .utils import real_dir, xy_to_xyz, z_to_xyz, rms, select_top, fix_lon_range, mask_land, add_time_dim, is_depth_dependent, days_per_month, normalise
 from .file_io import write_binary, read_binary, find_cmip6_files, write_netcdf_basic, read_netcdf, find_cesm_file
 from .interpolation import extend_into_mask, discard_and_fill, neighbours_z, interp_slice_helper, interp_grid, interp_bdry, interp_slice_helper_nonreg, extract_slice_nonreg, interp_nonreg_xy, fill_into_mask, distance_weighted_nearest_neighbours
@@ -481,8 +481,9 @@ def find_obcs_boundary (grid, location):
 # use_seaice: True if you want sea ice OBCS (default), False if you don't
 # nc_out: path to a NetCDF file to save the interpolated boundary conditions to, so you can easily check that they look okay
 # prec: precision to write binary files (32 or 64, must match exf_iprec_obcs in the "data.exf" namelist. If you don't have EXF turned on, it must match readBinaryPrec in "data").
+# skip_ts: boolean indicating to skip temperature and salinity (default False)
 
-def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32, split=180):
+def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_seaice=True, nc_out=None, prec=32, split=180, skip_ts=False):
 
     from .grid import SOSEGrid
     from .file_io import NCfile, read_netcdf
@@ -553,6 +554,8 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
     # Process fields
     for n in range(len(fields)):
         if fields[n].startswith('SI') and not use_seaice:
+            continue
+        if fields[n] in ['THETA', 'SALT'] and skip_ts:
             continue
 
         print(('Processing ' + fields[n]))
@@ -1692,7 +1695,6 @@ def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=No
 # Helper function to read a month of WOA climatology data, splicing in the annual climatology below 1500m, and optionally converting temperature to potential temperature. month is 1-indexed.
 def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18/', convert_temp=True, woa_grid=None):
 
-    from .grid import WOAGrid
     from gsw.conversions import pt0_from_t
 
     if var in ['temp', 'THETA', 'theta', 't_an']:
@@ -1724,10 +1726,6 @@ def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18
 # Create initial conditions for temperature and salinity using the WOA 2018 monthly climatology for January. Ice shelf cavities will be filled with nearest neighbours.
 def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', nc_out=None, prec=64):
 
-    from .file_io import NCfile
-    from .grid import WOAGrid
-    from gsw.conversions import pt0_from_t
-
     var_names = ['THETA', 'SALT']
     out_file_tail = '_WOA18.ini'
     out_file_paths = [real_dir(output_dir) + var + out_file_tail for var in var_names]
@@ -1740,17 +1738,56 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
     print('Building mask for WOA points to fill')
     fill = get_fill_mask(woa_grid, model_grid, missing_cavities=False)
 
-    # Set up NetCDF file
-    if nc_out is not None:
-        ncfile = NCfile(nc_out, model_grid, 'xyz')
-    else:
-        ncfile = None
-
     # Read data
     for n in range(num_var):
         print('Processing '+var_names[n])
         woa_data = read_woa_month(var_names[n], 1, woa_dir=woa_dir, woa_grid=woa_grid)
-        process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, var_names[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
+        process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, var_names[n], out_file_paths[n], missing_cavities=False, prec=prec)
+
+
+# Create boundary conditions (monthly climatology) for temperature and salinity using WOA 2018.
+def woa_ts_obcs (location, grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', prec=32):
+
+    var_names = ['THETA', 'SALT']
+    out_file_paths = [real_dir(output_dir) + var + '_WOA18.OBCS_' + location for var in var_names]
+    num_var = len(var_names)
+
+    print('Building grids')
+    mit_grid = Grid(grid_path)
+    woa_grid = WOAGrid(woa_dir)
+    loc0 = find_obcs_boundary(mit_grid, bdry)[0]
+    if bdry in ['N', 'S']:
+        direction = 'lat'
+        dimensions = 'xzt'
+        woa_h = woa_grid.lon_1d
+        mit_h = mit_grid.lon_1d
+        woa_nh = woa_grid.nx
+        mit_nh = mit_grid.nx
+        j1, j2, c1, c2 = interp_slice_helper(woa_grid.lat_1d, loc0)        
+    elif bdry in ['E', 'W']:
+        direction = 'lon'
+        dimensions = 'yzt'
+        woa_h = woa_grid.lat_1d
+        mit_h = mit_grid.lat_1d
+        woa_nh = woa_grid.ny
+        mit_nh = mit_grid.ny
+        i1, i2, c1, c2 = interp_slice_helper(woa_grid.lon_1d, loc0, lon=True)
+    hfac = get_hfac_bdry(mit_grid, bdry)
+
+    for n in range(num_var):
+        print('Processing '+var_names[n])
+        data_interp = np.zeros([months_per_year, mit_grid.nz, mit_nh])
+        for month in range(months_per_year):
+            print('...month '+str(month+1))
+            woa_data = read_woa_month(var_names[n], month+1, woa_dir=woa_dir, woa_grid=woa_grid)
+            if direction == 'lat':
+                woa_data_sliced = c1*woa_data[...,j1,:] + c2*woa_data[...,j2,:]
+            elif direction == 'lon':
+                woa_data_sliced = c1*woa_data[...,i1] + c2*woa_data[...,i2]
+            data_interp[month,:] = interp_bdry(woa_h, woa_grid.z, woa_data_sliced, woa_data_sliced.mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=True)
+        write_binary(data_interp, out_file_paths[n], prec=prec)
+        
+        
 
             
         
