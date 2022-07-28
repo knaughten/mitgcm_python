@@ -1705,7 +1705,7 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
     num_var = len(mit_var)
     dim = 3
 
-    # Build grids
+    print('Building grids')
     model_grid = Grid(grid_path)
     woa_grid = WOAGrid(woa_file_paths[0])
     print('Building mask for WOA points to fill')

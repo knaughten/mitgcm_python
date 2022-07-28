@@ -796,10 +796,10 @@ class WOAGrid(Grid):
         self.split = split
         self.lon_1d = read_netcdf(file_path, 'lon')
         self.lat_1d = read_netcdf(file_path, 'lat')        
-        self.depth = -1*read_netcdf(file_path, 'depth')
+        self.z = -1*read_netcdf(file_path, 'depth')
         self.nx = self.lon_1d.size
         self.ny = self.lat_1d.size
-        self.nz = self.depth.size
+        self.nz = self.z.size
         self.lon_2d, self.lat_2d = np.meshgrid(self.lon_1d, self.lat_1d)
         # Assume constant resolution - in practice this is 0.25
         dlon = self.lon_1d[1] - self.lon_1d[0]
@@ -808,7 +808,7 @@ class WOAGrid(Grid):
         dy = rEarth*dlat*deg2rad
         self.dA = dx*dy
         # Find the bathymetry
-        depth_3d = z_to_xyz(self.depth, self)
+        z_3d = z_to_xyz(self.z, self)
         # Get mask from either temperature or salinity
         try:
             data = read_netcdf(file_path, 't_an')
@@ -819,8 +819,8 @@ class WOAGrid(Grid):
                 print('Error (WOAGrid): this is neither a temperature nor a salinity file. Need to code the mask reading for another variable.')
                 sys.exit()
         mask = data.mask
-        depth_masked = np.ma.masked_where(data.mask, depth_3d)
-        self.bathy = select_bottom(depth_masked, return_masked=False)
+        z_masked = np.ma.masked_where(data.mask, z_3d)
+        self.bathy = select_bottom(z_masked, return_masked=False)
         # Build land mask
         self.land_mask = np.amin(mask, axis=0)
         self.ice_mask = np.zeros(self.land_mask.shape).astype(bool)
