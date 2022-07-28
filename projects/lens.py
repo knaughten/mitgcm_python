@@ -83,6 +83,36 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None,
         else:
             fig_name=None
         read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name, plot_mean=finished, first_in_mean=False)
+
+
+# As above, but multiple ensembles for different scenarios.
+def check_scenario_timeseries (base_dir='./', num_LENS=5, num_MENS=1, num_LW2=1, num_LW1=1, fig_dir=None):
+
+    var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
+    base_dir = real_dir(base_dir)
+    pace_file = base_dir+'timeseries_pace_mean.nc'
+    smooth = 24
+    start_year = 1920
+
+    sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_O/' for n in range(num_LENS)] + ['PAS_MENS_'+str(n+1).zfill(3)+'_O/' for n in range(num_MENS)] + ['PAS_LW2.0_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW2)] + ['PAS_LW1.5_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW1)]
+    file_paths = [sd+'output/timeseries.nc' for sd in sim_dir] + [pace_file]
+    sim_names = []
+    for scenario, num_scenario in zip(['LENS', 'MENS', 'LW2.0', 'LW1.5'], [num_LENS, num_MENS, num_LW2, num_LW1]):
+        if num_scenario > 0:
+            sim_names += [scenario]
+            if num_scenario > 1:
+                sim_names += [None for n in range(num_scenario-1)]
+    sim_names += ['PACE mean']
+    colours = ['DarkGrey' for n in range(num_LENS)] + ['red' for n in range(num_MENS)] + ['green' for n in range(num_LW2)] + ['blue' for n in range(num_LW1)] + ['magenta']
+
+    for var in var_names:
+        if fig_dir is not None:
+            fig_name = real_dir(fig_dir) + 'timeseries_scenario_' + var + '.png'
+        else:
+            fig_name = None
+        read_plot_timeseries_ensemble(var, file_paths, sim_names=sim_names, precomputed=True, colours=colours, smooth=smooth, vline=start_year, time_use=None, fig_name=fig_name)
+
+    
  
 
 # Compare time-averaged temperature and salinity boundary conditions from PACE over 2006-2013 (equivalent to the first 20 ensemble members of LENS actually!) to the WOA boundary conditions used for the original simulations.
