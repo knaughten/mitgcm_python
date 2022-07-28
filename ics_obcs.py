@@ -1689,6 +1689,38 @@ def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=No
                 write_binary(data_interp, file_path)
 
 
+# Helper function to read a month of WOA climatology data, splicing in the annual climatology below 1500m, and optionally converting temperature to potential temperature. month is 1-indexed.
+def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18/', convert_temp=True, woa_grid=None):
+
+    from .grid import WOAGrid
+    from gsw.conversions import pt0_from_t
+
+    if var in ['temp', 'THETA', 'theta', 't_an']:
+        var = 't_an'
+    elif var in ['salt', 'SALT', 's_an']:
+        var = 's_an'
+    file_head = real_dir(woa_dir) + 'woa18_decav_' + var[0]
+    file_tail = '_04.nc'
+    file_path_clim = file_head + '00' + file_tail
+    file_path_mon = file_head + str(month).zfill(2) + file_tail
+
+    if woa_grid is None:
+        woa_grid = WOAGrid(woa_dir)
+    data_clim = read_netcdf(file_path_clim, var, time_index=0)
+    data_mon = read_netcdf(file_path_mon, var, time_index=0)
+    data = data_clim
+    data[:woa_grid.nz_mon,:] = data_mon
+    
+    if var == 't_an' and convert_temp:
+        # Convert to potential temperature
+        # Need salinity
+        salt = read_woa_month('salt', month, woa_dir=woa_dir, woa_grid=woa_grid)
+        press = z_to_xyz(np.abs(woa_grid.z), [woa_grid.nx, woa_grid.ny, woa_grid.nz])
+        data = pt0_from_t(salt, data, press)
+        
+    return data        
+
+
 # Create initial conditions for temperature and salinity using the WOA 2018 monthly climatology for January. Ice shelf cavities will be filled with nearest neighbours.
 def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', nc_out=None, prec=64):
 
@@ -1696,16 +1728,10 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
     from .grid import WOAGrid
     from gsw.conversions import pt0_from_t
 
-    woa_file_head = 'woa18_decav_'
-    woa_var = ['t_an', 's_an']
-    woa_file_tail_clim = '00_04.nc'
-    woa_file_tail_mon = '01_04.nc'
-    woa_file_paths_clim = [real_dir(woa_dir) + woa_file_head + var[0] + woa_file_tail_clim for var in woa_var]
-    woa_file_paths_mon = [real_dir(woa_dir) + woa_file_head + var[0] + woa_file_tail_mon for var in woa_var]
-    mit_var = ['THETA', 'SALT']
+    var_names = ['THETA', 'SALT']
     out_file_tail = '_WOA18.ini'
-    out_file_paths = [real_dir(output_dir) + var + out_file_tail for var in mit_var]
-    num_var = len(mit_var)
+    out_file_paths = [real_dir(output_dir) + var + out_file_tail for var in var_names]
+    num_var = len(var_names)
     dim = 3
 
     print('Building grids')
@@ -1721,22 +1747,10 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
         ncfile = None
 
     # Read data
-    all_woa_data = np.ma.empty([num_var, woa_grid.nz, woa_grid.ny, woa_grid.nx])
     for n in range(num_var):
-        print('Reading '+mit_var[n])
-        woa_data_clim = read_netcdf(woa_file_paths_clim[n], woa_var[n], time_index=0)
-        woa_data_mon = read_netcdf(woa_file_paths_mon[n], woa_var[n], time_index=0)
-        # The monthly data only goes down to 1500 m. So combine that with the annual climatology below.
-        woa_data = woa_data_clim
-        woa_data[:woa_grid.nz_mon,:] = woa_data_mon
-        all_woa_data[n,:] = woa_data
-    print('Converting to potential temperature')
-    press = z_to_xyz(np.abs(woa_grid.z), [woa_grid.nx, woa_grid.ny, woa_grid.nz])
-    all_woa_data[0,:] = pt0_from_t(all_woa_data[1,:], all_woa_data[0,:], press)
-    # Now interpolate etc
-    for n in range(num_var):
-        print('Processing '+mit_var[n])        
-        process_ini_field(all_woa_data[n,:], woa_grid.mask, fill, woa_grid, model_grid, dim, mit_var[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
+        print('Processing '+var_names[n])
+        woa_data = read_woa_month(var_names[n], 1, woa_dir=woa_dir, woa_grid=woa_grid)
+        process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, var_names[n], out_file_paths[n], missing_cavities=False, nc_out=nc_out, ncfile=ncfile, prec=prec)
 
             
         
