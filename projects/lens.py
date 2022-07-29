@@ -86,7 +86,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None,
 
 
 # As above, but multiple ensembles for different scenarios.
-def check_scenario_timeseries (base_dir='./', num_LENS=5, num_MENS=1, num_LW2=1, num_LW1=1, fig_dir=None):
+def check_scenario_timeseries (base_dir='./', num_LENS=5, num_MENS=2, num_LW2=1, num_LW1=1, fig_dir=None):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)

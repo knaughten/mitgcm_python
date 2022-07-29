@@ -1746,10 +1746,10 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
 
 
 # Create boundary conditions (monthly climatology) for temperature and salinity using WOA 2018.
-def woa_ts_obcs (location, grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', prec=32):
+def woa_ts_obcs (bdry, grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', prec=32):
 
     var_names = ['THETA', 'SALT']
-    out_file_paths = [real_dir(output_dir) + var + '_WOA18.OBCS_' + location for var in var_names]
+    out_file_paths = [real_dir(output_dir) + var + '_WOA18.OBCS_' + bdry for var in var_names]
     num_var = len(var_names)
 
     print('Building grids')
@@ -1784,7 +1784,7 @@ def woa_ts_obcs (location, grid_path, woa_dir='/data/oceans_input/raw_input_data
                 woa_data_sliced = c1*woa_data[...,j1,:] + c2*woa_data[...,j2,:]
             elif direction == 'lon':
                 woa_data_sliced = c1*woa_data[...,i1] + c2*woa_data[...,i2]
-            data_interp[month,:] = interp_bdry(woa_h, woa_grid.z, woa_data_sliced, woa_data_sliced.mask, mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=True)
+            data_interp[month,:] = interp_bdry(woa_h, woa_grid.z, woa_data_sliced, np.invert(woa_data_sliced.mask).astype(float), mit_h, mit_grid.z, hfac, lon=(direction=='lat'), depth_dependent=True)
         write_binary(data_interp, out_file_paths[n], prec=prec)
         
         
