@@ -1699,14 +1699,13 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
     trend_dir = real_dir(trend_dir)
     grid = Grid(grid_dir)
     p0 = 0.05
-    threshold = [0, 0]
+    threshold = [0.1, 0.25]
     z_shelf = -1000
     periods = ['historical', 'future']
     num_periods = len(periods)
     ymax = -70
-    vmax = 1000
+    vmax = 1
 
-    dV = interp_to_depth(grid.dV, z0, grid)
     bathy = grid.bathy
     bathy[grid.lat_2d < -74.2] = 0
     bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
@@ -1714,7 +1713,7 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
     
     def read_component (key, period):
         var_name = key+'VEL' 
-        trends_3d = read_netcdf(trend_dir+var_name+'_'+period+'.nc', var_name)
+        trends_3d = read_netcdf(trend_dir+var_name+'_trend_'+period+'.nc', var_name+'_trend')
         trends = interp_to_depth(trends_3d, z0, grid, time_dependent=True)
         mean_trend = np.mean(trends, axis=0)
         t_val, p_val = ttest_1samp(trends, 0, axis=0)
@@ -1725,9 +1724,8 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
         elif key == 'V':
             gtype = 'v'
             dh = grid.dy_w
-        trend_interp = interp_grid(mean_trend, grid, gtype, 't')
-        #trend_convert = trend_interp*Cp_sw*rhoConst*dh/dV*1e2*1e-3
-        return trend_interp  #trend_convert
+        trend_interp = interp_grid(mean_trend, grid, gtype, 't')*1e3
+        return trend_interp
     magnitude_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
     uvel_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
     vvel_trend = np.ma.empty([num_periods, grid.ny, grid.nx])
@@ -1744,12 +1742,12 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
         ax = plt.subplot(gs[0,t])
         img = latlon_plot(magnitude_trend[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=ymax, title=periods[t], titlesize=14, vmax=vmax)
         ax.contour(grid.lon_2d, grid.lat_2d, bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
-        overlay_vectors(ax, uvel_trend[t,:], vvel_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=1e4, headwidth=4, headlength=5)
+        overlay_vectors(ax, uvel_trend[t,:], vvel_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=8, headwidth=4, headlength=5)
         if t > 0:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
     plt.colorbar(img, cax=cax, extend='max', orientation='horizontal')
-    plt.suptitle('Trends in ocean velocity at '+str(-z0)+r'm (m/s/century)', fontsize=18)
+    plt.suptitle('Trends in ocean velocity at '+str(-z0)+r'm (10$^{-3}$m/s/century)', fontsize=18)
     finished_plot(fig, fig_name=fig_name)
 
 
