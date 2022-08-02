@@ -2005,6 +2005,59 @@ def new_grid_points (nc_file, delY_file):
     id.variables['XG'].units = 'degrees_east'
     id.variables['XG'][:] = lon_g
     id.close()
+
+
+def plot_isopycnal_slices (base_dir='./', fig_name=None):
+
+    base_dir = real_dir(base_dir)
+    num_ens = 5
+    sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_noOBC/output/' for n in range(num_ens)]
+    grid_dir = base_dir + 'PAS_grid/'
+    lon0 = -120
+    start_years = [1920, 2000, 2090]
+    num_years = 10
+    num_periods = len(start_years)
+    ndays = [days_per_month(t+1) for t in range(months_per_year)]
+    vmin = 30
+    vmax = 40
+    contours = [34, 35]
+    
+    grid = Grid(grid_dir)
+
+    # Calculate ensemble mean potential density for each period
+    patches = None
+    rho_mean = np.ma.zeros([num_periods, grid.nz, grid.ny, grid.nx])
+    for n in range(num_ens):
+        for p in range(num_periods):
+            for t in range(num_years):
+                file_path = sim_dir[n] + str(start_years[p]+t)+'01/MITgcm/output.nc'
+                temp_full = read_netcdf(file_path, 'THETA')
+                salt_full = read_netcdf(file_path, 'SALT')
+                if patches is None:
+                    # This is the first calculation - need all the slice variables
+                    patches, temp_values, lon0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above, temp_slice, haxis, z = slice_patches(temp_full, grid, lon0=lon0, return_bdry=True, return_gridded=True)
+                else:
+                    temp_slice = slice_values(temp_full, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, return_gridded=True)[-1]
+                salt_slice = slice_values(salt_full, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, return_gridded=True)[-1]
+                # Calculate potential density based on monthly T and S
+                rho_slice = potential_density('MDJWF', salt_slice, temp_slice)
+                # Annual mean and save to array
+                rho_mean[p,:] += np.average(rho_slice, axis=0, weights=ndays)
+    # Convert from integral to average
+    rho_mean /= num_ens*num_years
+    # Subtract 1000 for readability
+    rho_mean -= 1e3
+
+    # Plot
+    fig, gs, cax = set_panels('1x3C1')
+    for p in range(num_periods):
+        ax = plt.subplot(gs[0,p])
+        img = make_slice_plot(patches, rho_mean[p,:].ravel(), lon0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, ax=ax, make_cbar=False, contours=contours, data_grid=rho_mean[p,:], haxis=haxis, zaxis=grid.z, title=str(start_years[p])+'s')
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle('Potential density at '+lon_label(lon0), fontsize=24)
+    finished_plot(fig, fig_name=fig_name)
+    
+
     
     
     
