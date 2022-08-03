@@ -2008,19 +2008,20 @@ def new_grid_points (nc_file, delY_file):
 
 
 # Plot slices of ensemble mean potential density across the shelf break at 120W, averaged over three periods of LENS (1920s, 2000s, 2090s).
-def plot_isopycnal_slices (base_dir='./', fig_name=None):
+def plot_isopycnal_slices (lon0=-120, base_dir='./', fig_name=None):
 
     base_dir = real_dir(base_dir)
     num_ens = 5
     sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_noOBC/output/' for n in range(num_ens)]
     grid_dir = base_dir + 'PAS_grid/'
-    lon0 = -120
     start_years = [1920, 2000, 2090]
     num_years = 10
     num_periods = len(start_years)
-    vmin = 26.8
-    vmax = 27.87
-    contours = [27]
+    vmin = 27
+    vmax = 27.85
+    zmin = -1200
+    hmax = -71
+    contours = np.arange(vmin, vmax, 0.1)
     
     grid = Grid(grid_dir)
 
@@ -2038,7 +2039,7 @@ def plot_isopycnal_slices (base_dir='./', fig_name=None):
                 for t in range(months_per_year):
                     if patches is None:
                         # This is the first calculation - need all the slice variables
-                        patches, temp_values, lon0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above, temp_slice, haxis, zaxis = slice_patches(mask_3d(temp_full[t,:],grid), grid, lon0=lon0, return_bdry=True, return_gridded=True)
+                        patches, temp_values, lon0, hmin, hmax, zmin, zmax, vmin_tmp, vmax_tmp, left, right, below, above, temp_slice, haxis, zaxis = slice_patches(mask_3d(temp_full[t,:],grid), grid, lon0=lon0, hmax=hmax, zmin=zmin, return_bdry=True, return_gridded=True)
                         # Also set up the master array
                         rho_mean = np.ma.zeros([num_periods, temp_slice.shape[0], temp_slice.shape[1]])
                         ndays_total = np.zeros(num_periods)
@@ -2061,9 +2062,14 @@ def plot_isopycnal_slices (base_dir='./', fig_name=None):
     fig, gs, cax = set_panels('1x3C1')
     for p in range(num_periods):
         ax = plt.subplot(gs[0,p])
-        img = make_slice_plot(patches, rho_mean[p,:].ravel(), lon0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, ax=ax, make_cbar=False, contours=contours, data_grid=rho_mean[p,:], haxis=haxis, zaxis=zaxis, title=str(start_years[p])+'s')
+        img = make_slice_plot(patches, rho_mean[p,:].ravel(), lon0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, ax=ax, make_cbar=False, contours=contours, data_grid=rho_mean[p,:], haxis=haxis, zaxis=zaxis)
+        ax.set_title(str(start_years[p])+'s', fontsize=16)
+        if p > 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_ylabel('')
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
-    plt.suptitle('Potential density at '+lon_label(lon0), fontsize=24)
+    plt.suptitle('Potential density at '+lon_label(lon0), fontsize=20)
     finished_plot(fig, fig_name=fig_name)
     
 
