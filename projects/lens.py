@@ -15,9 +15,9 @@ from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d
-from ..grid import Grid, read_pop_grid, read_cice_grid
+from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
-from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file
+from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
@@ -86,7 +86,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None,
 
 
 # As above, but multiple ensembles for different scenarios.
-def check_scenario_timeseries (base_dir='./', num_LENS=5, num_noOBCS=5, num_MENS=2, num_LW2=1, num_LW1=1, fig_dir=None):
+def check_scenario_timeseries (base_dir='./', num_LENS=5, num_noOBCS=5, num_MENS=2, num_LW2=2, num_LW1=2, fig_dir=None):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
@@ -2071,6 +2071,47 @@ def plot_isopycnal_slices (lon0=-120, base_dir='./', fig_name=None):
     cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle('Potential density at '+lon_label(lon0), fontsize=20)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate monthly timeseries of global average surface air temperature from the given CESM scenario and ensemble member.
+def cesm_warming_timeseries (expt, ens, out_file):
+
+    if expt == 'LENS':
+        start_year = 1920
+    else:
+        start_year = 2006
+    if expt == 'MENS':
+        end_year = 2080
+    else:
+        end_year = 2100
+    var_in = 'TS'
+    var_out = 'TS_global_mean'
+    num_years = end_year - start_year + 1
+    cesm_grid = PACEGrid()
+    dA = add_time_dim(cesm_grid.dA, months_per_year) 
+
+    for year in range(start_year, end_year+1):
+        print('Processing '+str(year))
+        file_path, t_start, t_end = find_cesm_file(expt, var_in, 'atm', 'monthly', ens, year)
+        data_full = read_netcdf(file_path, var_in, t_start=t_start, t_end=t_end)
+        data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
+        time_tmp = netcdf_time(file_path)
+        if year == start_year:
+            data = data_tmp
+            time = time_tmp
+        else:
+            data = np.concatenate((data, data_tmp))
+            time = np.concatenate((time, time_tmp))
+
+    print('Writing to '+out_file)
+    ncfile = NCfile(out_file, None, 't')
+    ncfile.add_time(time)
+    ncfile.add_variable(var_out, data, 't', long_name='global mean surface temperature', units='K')
+    ncfile.close()
+        
+
+    
+
     
 
     
