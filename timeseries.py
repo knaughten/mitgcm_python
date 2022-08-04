@@ -1458,6 +1458,8 @@ def set_parameters (var):
         # This is for CESM raw output - just set title and units for compatibility with plotting functions!
         title = 'Global mean surface temperature'
         units = 'K'
+        option = None
+        var_name = None
     else:
         print(('Error (set_parameters): invalid variable ' + var))
         sys.exit()
