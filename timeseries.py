@@ -1454,6 +1454,10 @@ def set_parameters (var):
         region = var[:var.index('_seaice_area')]
         title = 'Total sea ice area in '+region_names[region]
         units = r'million km$^2$'
+    elif var == 'TS_global_mean':
+        # This is for CESM raw output - just set title and units for compatibility with plotting functions!
+        title = 'Global mean surface temperature'
+        units = 'K'
     else:
         print(('Error (set_parameters): invalid variable ' + var))
         sys.exit()
