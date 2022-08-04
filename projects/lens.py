@@ -2095,7 +2095,7 @@ def cesm_warming_timeseries (expt, ens, out_file):
         file_path, t_start, t_end = find_cesm_file(expt, var_in, 'atm', 'monthly', ens, year)
         data_full = read_netcdf(file_path, var_in, t_start=t_start, t_end=t_end)
         data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
-        time_tmp = netcdf_time(file_path)
+        time_tmp = netcdf_time(file_path, t_start=t_start, t_end=t_end)
         if year == start_year:
             data = data_tmp
             time = time_tmp
@@ -2108,6 +2108,18 @@ def cesm_warming_timeseries (expt, ens, out_file):
     ncfile.add_time(time)
     ncfile.add_variable(var_out, data, 't', long_name='global mean surface temperature', units='K')
     ncfile.close()
+
+
+# Call the above function for 5 members of each experiment
+def all_warming_timeseries (out_dir='./'):
+
+    num_ens = 5
+    out_dir = real_dir(out_dir)
+    for expt in ['LENS', 'MENS', 'LW1.5', 'LW2.0']:
+        for ens in range(1, num_ens+1):
+            print('Processing '+expt+' '+str(ens).zfill(3))
+            cesm_warming_timeseries(expt, ens, out_dir+expt+'_'+str(ens).zfill(3)+'_TS_global_mean.nc')
+            
         
 
     
