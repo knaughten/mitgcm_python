@@ -86,7 +86,7 @@ def check_lens_timeseries (num_ens=5, base_dir='./', fig_dir=None, sim_dir=None,
 
 
 # As above, but multiple ensembles for different scenarios.
-def check_scenario_timeseries (base_dir='./', num_LENS=5, num_noOBCS=5, num_MENS=2, num_LW2=2, num_LW1=2, fig_dir=None):
+def check_scenario_timeseries (base_dir='./', num_LENS=5, num_noOBCS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_dir=None):
 
     var_names = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
     base_dir = real_dir(base_dir)
@@ -95,7 +95,7 @@ def check_scenario_timeseries (base_dir='./', num_LENS=5, num_noOBCS=5, num_MENS
     start_year = 1920
 
     sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_noOBC/' for n in range(num_noOBCS)] + ['PAS_LENS'+str(n+1).zfill(3)+'_O/' for n in range(num_LENS)] + ['PAS_MENS_'+str(n+1).zfill(3)+'_O/' for n in range(num_MENS)] + ['PAS_LW2.0_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW2)] + ['PAS_LW1.5_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW1)]
-    file_paths = [sd+'output/timeseries.nc' for sd in sim_dir] + [pace_file]
+    file_paths = [base_dir+sd+'output/timeseries.nc' for sd in sim_dir] + [pace_file]
     sim_names = []
     for scenario, num_scenario in zip(['LENS no OBCS', 'LENS', 'MENS', 'LW2.0', 'LW1.5'], [num_noOBCS, num_LENS, num_MENS, num_LW2, num_LW1]):
         if num_scenario > 0:
@@ -2119,7 +2119,78 @@ def all_warming_timeseries (out_dir='./'):
         for ens in range(1, num_ens+1):
             print('Processing '+expt+' '+str(ens).zfill(3))
             cesm_warming_timeseries(expt, ens, out_dir+expt+'_'+str(ens).zfill(3)+'_TS_global_mean.nc')
-            
+
+
+# Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
+def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_noOBCS=0, num_MENS=2, num_LW2=1, num_LW1=0, plot_pace=False, timeseries_file_pace=None, fig_dir=None, fig_name=None):
+
+    if var_name == 'TS_global_mean':
+        if num_noOBCS > 0:
+            print('Warning: setting num_noOBCS back to 0')
+            num_noOBCS = 0
+        if plot_pace:
+            print('Warning: setting plot_pace back to False')
+            plot_pace = False
+
+    base_dir = real_dir(base_dir)
+    num_ens = [num_noOBCS, num_LENS, num_MENS, num_LW2, num_LW1]
+    num_expt = len(num_ens)
+    expt_names = ['LENS', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_mid = ['', '', '_', '_', '_']
+    expt_tails = ['_noOBC'] + ['_O' for n in range(num_expt-1)]
+    expt_colours = ['BurlyWood', 'DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
+    smooth = 24
+    start_year = [1920, 1920, 2006, 2006, 2006]
+    if plot_pace:
+        num_PACE = 20
+        num_ens += [num_PACE]
+        num_expt += 1
+        expt_names += ['PACE']
+        expt_colours += ['MediumOrchid']
+        start_year += [1920]
+        if timeseries_file_pace is None:
+            timeseries_file_pace = timeseries_file
+    
+    data_mean = []
+    data_min = []
+    data_max = []
+    time = []
+    for n in range(num_expt):
+        # Read all the data for this experiment
+        for e in range(1, num_ens[n]+1):
+            if var_name == 'TS_global_mean':
+                file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e).zfill(3) + '_TS_global_mean.nc'
+            else:            
+                if expt_names[n] == 'PACE':
+                    file_path = base_dir + '../mitgcm/PAS_PACE' + str(e).zfill(2) + '/output/' + timeseries_file_pace
+                else:
+                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e).zfill(3) + expt_tails[n] + '/output/' + timeseries_file
+            time_tmp = netcdf_time(file_path, monthly=False)
+            t0 = index_year_start(time_tmp, start_year[n])
+            time_tmp = time_tmp[t0:]
+            data_tmp, title, units = read_netcdf(file_path, var_name, return_info=True)[t0:]
+            data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
+            if e == 1:
+                data_sim = np.empty([num_ens[n], time_smooth.size])
+            data_sim[e,:] = data_smooth
+        data_mean.append(np.mean(data_sim, axis=0))
+        data_min.append(np.amin(data_sim, axis=0))
+        data_max.append(np.amax(data_sim, axis=0))
+        time.append(time_smooth)
+
+    fig, ax = plt.subplots()
+    for n in range(num_expt):
+        ax.fill_between(time[n], data_min[n], data_max[n], color=expt_colours[n], alpha=0.3)
+        ax.plot(time[n], data_mean[n], color=expt_colours[n], label=expt_names[n], linewidth=1.5)
+    plt.title(title, fontsize=18)
+    plt.ylabel(units, fontsize=14)
+    ax.grid(linestyle='dotted')
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
+    finished_plot(fig, fig_name=fig_name)
+        
+        
         
 
     
