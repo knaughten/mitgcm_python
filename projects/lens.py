@@ -14,14 +14,14 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period
 from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
-from ..plot_utils.labels import reduce_cbar_labels, lon_label
+from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
@@ -2135,9 +2135,9 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     base_dir = real_dir(base_dir)
     num_ens = [num_noOBCS, num_LENS, num_MENS, num_LW2, num_LW1]
     num_expt = len(num_ens)
-    expt_names = ['LENS_noOBC', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_names = ['LENS', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     expt_mid = ['', '', '_', '_', '_']
-    expt_tails = [''] + ['_O' for n in range(num_expt-1)]
+    expt_tails = ['_noOBC'] + ['_O' for n in range(num_expt-1)]
     expt_colours = ['BurlyWood', 'DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
     smooth = 24
     start_year = [1920, 1920, 2006, 2006, 2006]
@@ -2199,9 +2199,89 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     finished_plot(fig, fig_name=fig_name)
 
 
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_noOBCS=0, num_MENS=2, num_LW2=1, num_LW1=0, fig_dir=None, fig_name=None):
+# Helper function to read and calculate trend per century.
+def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, p0=0.05):
 
-    pass
+    data = read_netcdf(file_path, var)
+    time = netcdf_time(file_path, monthly=False)
+    t0, tf = index_period(time, start_year, end_year)
+    time = time[t0:tf]
+    data = data[t0:tf]
+    time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+    time = time_sec/(365*sec_per_day*100)
+    data, time = moving_average(data, smooth, time=time)
+    slope, intercept, r_value, p_value, std_err = linregress(time, data)
+    sig = p_value < p0
+    return slope, sig
+
+
+# Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_MENS=2, num_LW2=1, num_LW1=0, fig_dir=None, fig_name=None):
+
+    base_dir = real_dir(base_dir)
+    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    num_expt = len(num_ens)
+    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_mid = ['', '_', '_', '_']
+    expt_tail = '_O'
+    expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
+    smooth = 24
+    p0 = 0.05
+
+    trend1 = []
+    trend2 = []
+    labels = []
+    colours = []
+    for n in range(num_expt):
+        for e in range(num_ens[n]):
+            both_trends = []
+            for var in [var1, var2]:
+                if var == 'TS_global_mean':
+                    file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
+                else:
+                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0)
+                if sig:
+                    both_trends.append(trend_tmp)
+                else:
+                    both_trends.append(None)
+            if None in both_trends:
+                # At least one of the trends was not significant
+                continue
+            trend1.append(both_trends[0])
+            trend2.append(both_trends[1])
+            if e==0:
+                labels.append(expt_names[n])
+            else:
+                labels.append(None)
+            colours.append(expt_colours[n])
+
+    fig, ax = plt.subplots(figsize=(10,6))
+    ax.axhline()
+    ax.axvline()
+    for m in range(len(trend1)):
+        ax.plot(trend1[m], trend2[m], 'o', color=colours[m], label=labels[m])
+    ax.grid(linestyle='dotted')
+    slope, intercept, r_value, p_value, std_err = linregress(np.array(trend1), np.array(trend2))
+    if p_value < p0:
+        [x0, x1] = ax.get_xlim()
+        [y0, y1] = slope*np.array([x0, x1]) + intercept
+        ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+        trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
+    else:
+        trend_title = 'no significant relationship'
+    ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
+    ax.set_xlabel(var1)
+    ax.set_ylabel(var2)
+    ax.set_title('Trends per century', fontsize=18)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    finished_plot(fig, fig_name=fig_name)
+
+    
+
+    
         
         
         
