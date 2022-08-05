@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average
 from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
@@ -2122,7 +2122,7 @@ def all_warming_timeseries (out_dir='./'):
 
 
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
-def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_noOBCS=0, num_MENS=2, num_LW2=1, num_LW1=0, plot_pace=False, timeseries_file_pace=None, fig_dir=None, fig_name=None):
+def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_dir=None, fig_name=None):
 
     if var_name == 'TS_global_mean':
         if num_noOBCS > 0:
@@ -2135,9 +2135,9 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     base_dir = real_dir(base_dir)
     num_ens = [num_noOBCS, num_LENS, num_MENS, num_LW2, num_LW1]
     num_expt = len(num_ens)
-    expt_names = ['LENS', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_names = ['LENS_noOBC', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     expt_mid = ['', '', '_', '_', '_']
-    expt_tails = ['_noOBC'] + ['_O' for n in range(num_expt-1)]
+    expt_tails = [''] + ['_O' for n in range(num_expt-1)]
     expt_colours = ['BurlyWood', 'DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
     smooth = 24
     start_year = [1920, 1920, 2006, 2006, 2006]
@@ -2157,31 +2157,39 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     time = []
     for n in range(num_expt):
         # Read all the data for this experiment
-        for e in range(1, num_ens[n]+1):
+        for e in range(num_ens[n]):
             if var_name == 'TS_global_mean':
-                file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e).zfill(3) + '_TS_global_mean.nc'
+                file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
             else:            
                 if expt_names[n] == 'PACE':
-                    file_path = base_dir + '../mitgcm/PAS_PACE' + str(e).zfill(2) + '/output/' + timeseries_file_pace
+                    file_path = base_dir + '../mitgcm/PAS_PACE' + str(e+1).zfill(2) + '/output/' + timeseries_file_pace
                 else:
-                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e).zfill(3) + expt_tails[n] + '/output/' + timeseries_file
+                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tails[n] + '/output/' + timeseries_file
             time_tmp = netcdf_time(file_path, monthly=False)
             t0 = index_year_start(time_tmp, start_year[n])
             time_tmp = time_tmp[t0:]
-            data_tmp, title, units = read_netcdf(file_path, var_name, return_info=True)[t0:]
+            data_tmp, title, units = read_netcdf(file_path, var_name, return_info=True)
+            data_tmp = data_tmp[t0:]
             data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
-            if e == 1:
+            if e == 0:
                 data_sim = np.empty([num_ens[n], time_smooth.size])
             data_sim[e,:] = data_smooth
-        data_mean.append(np.mean(data_sim, axis=0))
-        data_min.append(np.amin(data_sim, axis=0))
-        data_max.append(np.amax(data_sim, axis=0))
-        time.append(time_smooth)
+        if num_ens[n] > 0:
+            data_mean.append(np.mean(data_sim, axis=0))
+            data_min.append(np.amin(data_sim, axis=0))
+            data_max.append(np.amax(data_sim, axis=0))
+            time.append(time_smooth)
+        else:
+            data_mean.append(None)
+            data_min.append(None)
+            data_max.append(None)
+            time.append(None)
 
     fig, ax = plt.subplots()
     for n in range(num_expt):
-        ax.fill_between(time[n], data_min[n], data_max[n], color=expt_colours[n], alpha=0.3)
-        ax.plot(time[n], data_mean[n], color=expt_colours[n], label=expt_names[n], linewidth=1.5)
+        if num_ens[n] > 0:
+            ax.fill_between(time[n], data_min[n], data_max[n], color=expt_colours[n], alpha=0.3)
+            ax.plot(time[n], data_mean[n], color=expt_colours[n], label=expt_names[n], linewidth=1.5)
     plt.title(title, fontsize=18)
     plt.ylabel(units, fontsize=14)
     ax.grid(linestyle='dotted')
@@ -2189,6 +2197,11 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.85, box.height])
     finished_plot(fig, fig_name=fig_name)
+
+
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_noOBCS=0, num_MENS=2, num_LW2=1, num_LW1=0, fig_dir=None, fig_name=None):
+
+    pass
         
         
         
