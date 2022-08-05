@@ -2273,7 +2273,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
     ax.set_xlabel(var1)
     ax.set_ylabel(var2)
-    ax.set_title('Trends per century', fontsize=18)
+    ax.set_title('Trends per century, 2006-2080', fontsize=18)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
