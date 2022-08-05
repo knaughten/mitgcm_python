@@ -18,7 +18,7 @@ from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to
 from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
-from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst
+from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
@@ -2122,7 +2122,7 @@ def all_warming_timeseries (out_dir='./'):
 
 
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
-def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_dir=None, fig_name=None):
+def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
 
     if var_name == 'TS_global_mean':
         if num_noOBCS > 0:
@@ -2216,7 +2216,7 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_MENS=2, num_LW2=1, num_LW1=0, fig_dir=None, fig_name=None):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_MENS=2, num_LW2=1, num_LW1=0, fig_name=None):
 
     base_dir = real_dir(base_dir)
     num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
