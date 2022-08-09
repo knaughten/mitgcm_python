@@ -390,8 +390,8 @@ def ua_topo (grid_dir, ua_file, nc_out, grounded_iceberg=False, topo_dir=None, r
     plot_tmp_domain(lon_2d, lat_2d, bathy, title='Bathymetry (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft, title='Ice shelf draft (m)')
     plot_tmp_domain(lon_2d, lat_2d, draft - bathy, title='Water column thickness (m)')
-    plot_tmp_domain(lon_2d, lat_2d, omask, title='Ocean mask')
-    plot_tmp_domain(lon_2d, lat_2d, imask, title='Ice mask')
+    plot_tmp_domain(lon_2d, lat_2d, omask.astype(float), title='Ocean mask')
+    plot_tmp_domain(lon_2d, lat_2d, imask.astype(float), title='Ice mask')
 
     # Write to NetCDF file
     ncfile = NCfile_basiclatlon(nc_out, lon, lat)
