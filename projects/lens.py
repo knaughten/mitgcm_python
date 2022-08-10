@@ -2190,8 +2190,8 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
         if num_ens[n] > 0:
             ax.fill_between(time[n], data_min[n], data_max[n], color=expt_colours[n], alpha=0.3)
             ax.plot(time[n], data_mean[n], color=expt_colours[n], label=expt_names[n], linewidth=1.5)
-    plt.title(title, fontsize=18)
-    plt.ylabel(units, fontsize=14)
+    plt.title(title, fontsize=14)
+    plt.ylabel(units, fontsize=12)
     ax.grid(linestyle='dotted')
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5), fontsize=12)
     box = ax.get_position()
