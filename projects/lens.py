@@ -16,7 +16,7 @@ from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period
 from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day
 from ..plot_utils.windows import set_panels, finished_plot
@@ -1281,7 +1281,7 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
     elif option == 'scaled':
         lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_scaled(bdry, ens, year, month, return_raw=True)
     elif option == 'ts':
-        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, ens, year, month, return_raw=True)
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, ens, year, month, return_raw=True)
     if var == 'TEMP':
         lens_data_corr = lens_temp_corr
         lens_data_raw = lens_temp_raw
@@ -1346,7 +1346,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     dA_slice = dA[:,:,-1]
 
     # Read the corrected and uncorrected LENS fields
-    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, 1, year, month, return_raw=True) 
+    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, 1, year, month, return_raw=True) 
     
     profiles = np.ma.empty([num_var, num_profiles, grid.nz])
     # Loop over variables
@@ -1495,7 +1495,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     hfac = get_hfac_bdry(grid, bdry)
 
     # Read the corrected and uncorrected LENS fields
-    temp_corr, salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_ts_space(bdry, ens, year, month, return_raw=True)
+    temp_corr, salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, ens, year, month, return_raw=True)
     lens_nh = lens_h.size
     lens_nz = lens_z.size
 
@@ -1926,7 +1926,7 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
             mit_h = grid.lat_1d
         mit_z = grid.z
     else:
-        lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_lens_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
+        lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_cesm_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
     data = [sose_clim, lens_uncorr, lens_corr]
     h = [mit_h, lens_h, mit_h]
     if domain == 'oce':               
