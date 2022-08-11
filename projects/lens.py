@@ -1255,14 +1255,12 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
     base_dir = '/data/oceans_output/shelf/kaight/'
     obcs_dir = base_dir + 'ics_obcs/AMUND/'
     grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
-    # TODO update
-    woa_file_head = obcs_dir + 'OB'
-    woa_file_tail = '_woa_mon.bin'
+    woa_file_mid = '_WOA18.OBCS_'
     if var == 'TEMP':
-        woa_var = 'theta'
+        woa_var = 'THETA'
         var_title = 'Temperature ('+deg_string+'C)'
     elif var == 'SALT':
-        woa_var = 'salt'
+        woa_var = 'SALT'
         var_title = 'Salinity (psu)'
     titles = ['WOA', 'LENS', 'LENS corrected']
     num_panels = len(titles)
@@ -1290,7 +1288,7 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
         lens_data_corr = lens_salt_corr
         lens_data_raw = lens_salt_raw
     # Read the WOA fields
-    woa_file = woa_file_head + bdry + woa_var + woa_file_tail
+    woa_file = obcs_dir + woa_var + woa_file_mid + bdry
     woa_data = read_binary(woa_file, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
     woa_data = np.ma.masked_where(hfac==0, woa_data)
 
@@ -1319,15 +1317,13 @@ def plot_obcs_profiles (year, month, fig_name=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     obcs_dir = base_dir + 'ics_obcs/AMUND/'
-    clim_dir = base_dir + 'CESM_bias_correction/obcs/'
+    clim_dir = base_dir + 'CESM_bias_correction/AMUND/obcs/'
     grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
-    # TODO update
-    woa_file_head = obcs_dir + 'OB'
-    woa_file_tail = '_woa_mon.bin'
+    woa_file_mid = '_WOA18.OBCS_'
     lens_file_head = clim_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
     bdry = 'E'
-    woa_var = ['theta', 'salt']
+    woa_var = ['THETA', 'SALT']
     lens_var = ['TEMP', 'SALT']
     units = [deg_string+'C', 'psu']
     ymax = -70
@@ -1355,7 +1351,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     for v in range(num_var):
         
         # Read WOA climatology
-        woa_data = read_binary(woa_file_head+bdry+woa_var[v]+woa_file_tail, [grid.nx, grid.ny, grid.nz], 'yzt')
+        woa_data = read_binary(obcs_dir+woa_var[v]+woa_file_mid+bdry, [grid.nx, grid.ny, grid.nz], 'yzt')
         # Extract the right month
         woa_data = woa_data[month-1,:]
 
@@ -1473,16 +1469,13 @@ def plot_hovmoller_lens_ensemble (var, region, num_ens=5, base_dir='./', fig_nam
 def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
-    in_dir = '/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/'
+    in_dir = '/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/'
     obcs_dir = base_dir + 'ics_obcs/AMUND/'
     grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
-    # TODO update
-    woa_file_head = obcs_dir + 'OB'
-    woa_file_tail = '_woa_mon.bin'
     lens_file_head = in_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
     lens_var = ['TEMP', 'SALT']
-    woa_var = ['theta', 'salt']
+    woa_var = ['THETA', 'SALT']
     var_titles = ['Temperature anomaly ('+deg_string+'C)', 'Salinity anomaly (psu)']
     source_titles = ['Uncorrected', 'Corrected']
     num_var = len(lens_var)
@@ -1514,7 +1507,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     # Read the WOA climatology
     woa_clim = np.ma.empty([num_var, grid.nz, mit_h.size])
     for v in range(num_var):
-        file_path = woa_file_head + bdry + woa_var[v] + woa_file_tail
+        file_path = obcs_dir + woa_var[v] + woa_file_mid + bdry
         woa_clim[v,:] = read_binary(file_path, [grid.nx, grid.ny, grid.nz], dimensions)[month-1,:]
     # Calculate corrected anomalies
     dtemp_corr = temp_corr - woa_clim[0,:]

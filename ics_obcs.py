@@ -1194,7 +1194,7 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
 
 
 # Helper function to read and correct the CESM temperature and salinity in T/S space for a given experiment, year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
-def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, plot=False):
+def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, plot=False):
 
     if plot:
         import matplotlib
@@ -1527,7 +1527,7 @@ def process_cesm_obcs_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, 
 
                 
 # Helper function to read and correct the given variable in CESM (other than temperature or salinity) for a given year, boundary, and ensemble member.
-def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, return_sose_clim=False):
+def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, return_sose_clim=False):
 
     cesm_file_head = in_dir + 'LENS_climatology_'
     cesm_file_tail = '_1998-2017'
