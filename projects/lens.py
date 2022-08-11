@@ -209,7 +209,7 @@ def calc_lens_climatology (out_dir='./'):
     end_year = 2017
     num_years = end_year - start_year + 1
     num_ens = 40
-    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/'
     bdry_loc = ['N', 'W', 'E']
     num_var = len(var_names)
     out_file_head = 'LENS_climatology_'
@@ -1253,8 +1253,9 @@ def plot_obcs_ts_lens_woa (bdry, month=None, num_bins=100, fig_name=None, corr=F
 def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
-    obcs_dir = base_dir + 'ics_obcs/PAS/'
-    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    obcs_dir = base_dir + 'ics_obcs/AMUND/'
+    grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
+    # TODO update
     woa_file_head = obcs_dir + 'OB'
     woa_file_tail = '_woa_mon.bin'
     if var == 'TEMP':
@@ -1317,9 +1318,10 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
 def plot_obcs_profiles (year, month, fig_name=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
-    obcs_dir = base_dir + 'ics_obcs/PAS/'
+    obcs_dir = base_dir + 'ics_obcs/AMUND/'
     clim_dir = base_dir + 'CESM_bias_correction/obcs/'
-    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
+    # TODO update
     woa_file_head = obcs_dir + 'OB'
     woa_file_tail = '_woa_mon.bin'
     lens_file_head = clim_dir + 'LENS_climatology_'
@@ -1472,8 +1474,9 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     in_dir = '/data/oceans_output/shelf/kaight/CESM_bias_correction/obcs/'
-    obcs_dir = base_dir + 'ics_obcs/PAS/'
-    grid_dir = base_dir + 'mitgcm/PAS_grid/'
+    obcs_dir = base_dir + 'ics_obcs/AMUND/'
+    grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
+    # TODO update
     woa_file_head = obcs_dir + 'OB'
     woa_file_tail = '_woa_mon.bin'
     lens_file_head = in_dir + 'LENS_climatology_'
