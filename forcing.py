@@ -760,7 +760,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                         # Have to weight monthly averages
                         for m in range(12):
                             ndays = days_per_month(m+1, year, allow_leap=False)
-                            data_tmp[month,:] *= ndays
+                            data_tmp[m,:] *= ndays
                             num_time += ndays
                     else:
                         data_sum = np.sum(data_tmp, axis=0)
