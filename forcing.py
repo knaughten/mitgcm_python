@@ -763,8 +763,8 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
                             data_tmp[m,:] *= ndays
                             num_time += ndays
                     else:
-                        data_sum = np.sum(data_tmp, axis=0)
-                        num_time += data_tmp.shape[0]                        
+                        num_time += data_tmp.shape[0]
+                    data_sum = np.sum(data_tmp, axis=0)
                 if data is None:
                     data = data_sum
                 else:
