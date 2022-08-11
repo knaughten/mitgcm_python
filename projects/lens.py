@@ -222,8 +222,8 @@ def calc_lens_climatology (out_dir='./'):
     cice_tlon, cice_tlat, cice_ulon, cice_ulat, cice_nx, cice_ny = read_cice_grid(cice_grid_file, return_ugrid=True)
     mit_grid = Grid(mit_grid_dir)
 
-    for bdry in bdry_loc:
-        for v in range(2, num_var):  # Skip T and S for now because calculated those earlier
+    for v in range(num_var):
+        for bdry in bdry_loc:
             print('Processing '+var_names[v]+' on '+bdry+' boundary')
             loc0_centre, loc0_edge = find_obcs_boundary(mit_grid, bdry)
             if (bdry in ['N', 'S'] and gtype[v] == 'v') or (bdry in ['E', 'W'] and gtype[v] == 'u'):
