@@ -243,7 +243,7 @@ def calc_lens_climatology (out_dir='./'):
                     lat = cice_tlat
                 else:
                     lon = cice_ulon
-                    lat = cice_tlat
+                    lat = cice_ulat
             if bdry in ['N', 'S']:
                 direction = 'lat'
                 h_2d = lon

@@ -1663,7 +1663,7 @@ def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_o
 def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, end_year=None, out_dir='./'):
 
     out_dir = real_dir(out_dir)
-    var_names = ['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    var_names = ['uvel', 'vvel'] #['UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
     out_file_head = out_dir + expt + '_ens' + str(ens).zfill(3) + '_'
     if start_year is None:
         if expt == 'LENS':
