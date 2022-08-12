@@ -2212,7 +2212,7 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=3, num_MENS=2, num_LW2=1, num_LW1=0, fig_name=None):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=3, num_LW1=3, fig_name=None):
 
     base_dir = real_dir(base_dir)
     num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
@@ -2240,13 +2240,10 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
                 if sig:
                     both_trends.append(trend_tmp)
                 else:
-                    both_trends.append(None)
-            if None in both_trends:
-                # At least one of the trends was not significant
-                continue
+                    both_trends.append(0)
             trend1.append(both_trends[0])
             trend2.append(both_trends[1])
-            if e==0:
+            if expt_names[n] not in labels:
                 labels.append(expt_names[n])
             else:
                 labels.append(None)
@@ -2267,8 +2264,8 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     else:
         trend_title = 'no significant relationship'
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
-    ax.set_xlabel(var1)
-    ax.set_ylabel(var2)
+    ax.set_xlabel(var1, fontsize=14)
+    ax.set_ylabel(var2, fontsize=14)
     ax.set_title('Trends per century, 2006-2080', fontsize=18)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])

@@ -395,13 +395,25 @@ def interp_slice_helper (data, val0, lon=False, warn=True):
     # Find the first index greater than val0
     i2 = np.nonzero(data > val0)[0][0]
     if i2 != i1+1:
-        if warn:
-            print('Warning (interp_slice_helper): i1='+str(i1)+' but i2='+str(i2))
-            print('Setting i2='+str(i1+1)+', is this what you want?')
-        i2 = i1+1
+        if data[i1+1] is np.ma.masked or data[i2-1] is np.ma.masked:
+            # This can happen with tripolar grids eg CICE...
+            # Usually it's within the land mask of MITgcm so doesn't matter, but warn the user just in case
+            if warn:
+                print('Warning (interp_slice_helper): hit the boundary of masked part of grid - hopefully this is within your land mask!')
+                i2 = i1
+        else:
+            # This can happen with curved grids near the north pole where the jump in longitude changes over space.
+            if warn:
+                print('Warning (interp_slice_helper): i1='+str(i1)+' but i2='+str(i2))
+                print('Setting i2='+str(i1+1)+', is this what you want?')
+            i2 = i1+1
     # Calculate the weighting coefficients
-    c2 = (val0 - data[i1])/(data[i2] - data[i1])
-    c1 = 1 - c2
+    if i1 == i2:
+        c1 = 1
+        c2 = 0
+    else:
+        c2 = (val0 - data[i1])/(data[i2] - data[i1])
+        c1 = 1 - c2
     return i1, i2, c1, c2
 
 
