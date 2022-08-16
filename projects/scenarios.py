@@ -1,5 +1,5 @@
 ##################################################################
-# JSPS Amundsen Sea simulations forced with LENS
+# JSPS Amundsen Sea simulations forced with CESM future scenarios
 ##################################################################
 
 import numpy as np
@@ -1254,7 +1254,7 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
 
     base_dir = '/data/oceans_output/shelf/kaight/'
     obcs_dir = base_dir + 'ics_obcs/AMUND/'
-    grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
+    grid_dir = base_dir + 'archer2_mitgcm/AMUND_ini_grid/'
     woa_file_mid = '_WOA18.OBCS_'
     if var == 'TEMP':
         woa_var = 'THETA'
@@ -1280,7 +1280,7 @@ def plot_obcs_corrected (var, bdry, ens, year, month, fig_name=None, option='ts'
     elif option == 'scaled':
         lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_lens_scaled(bdry, ens, year, month, return_raw=True)
     elif option == 'ts':
-        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, ens, year, month, return_raw=True)
+        lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space('LENS', bdry, ens, year, month, return_raw=True)
     if var == 'TEMP':
         lens_data_corr = lens_temp_corr
         lens_data_raw = lens_temp_raw
@@ -1344,7 +1344,7 @@ def plot_obcs_profiles (year, month, fig_name=None):
     dA_slice = dA[:,:,-1]
 
     # Read the corrected and uncorrected LENS fields
-    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, 1, year, month, return_raw=True) 
+    lens_temp_corr, lens_salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space('LENS', bdry, 1, year, month, return_raw=True) 
     
     profiles = np.ma.empty([num_var, num_profiles, grid.nz])
     # Loop over variables
@@ -1491,7 +1491,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     hfac = get_hfac_bdry(grid, bdry)
 
     # Read the corrected and uncorrected LENS fields
-    temp_corr, salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space(bdry, ens, year, month, return_raw=True)
+    temp_corr, salt_corr, lens_temp_raw, lens_salt_raw, lens_h, lens_z = read_correct_cesm_ts_space('LENS', bdry, ens, year, month, return_raw=True)
     lens_nh = lens_h.size
     lens_nz = lens_z.size
 
@@ -1922,7 +1922,7 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
             mit_h = grid.lat_1d
         mit_z = grid.z
     else:
-        lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_cesm_non_ts(var, bdry, ens, year, return_raw=True, return_sose_clim=True)
+        lens_corr, lens_uncorr, lens_h, lens_z, sose_clim, mit_h, mit_z = read_correct_cesm_non_ts('LENS', var, bdry, ens, year, return_raw=True, return_sose_clim=True)
     data = [sose_clim, lens_uncorr, lens_corr]
     h = [mit_h, lens_h, mit_h]
     if domain == 'oce':               
