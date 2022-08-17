@@ -2087,7 +2087,9 @@ def precompute_sam_climatologies (out_file):
     # First get zonal mean interpolated to each latitude, for each time index and ensemble member
     psl_points = np.empty([num_lat, months_per_year, num_years, num_ens])
     for e in range(num_ens):
+        print('Processing ensemble member '+str(e+1))
         for y in range(num_years):
+            print('...'+str(start_year+y))
             file_path, t_start, t_end = find_cesm_file(expt, var, 'atm', 'monthly', e+1, start_year+y)
             psl = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
             # Take zonal mean - regular grid so can just do a simple mean
@@ -2111,7 +2113,7 @@ def precompute_sam_climatologies (out_file):
 
 
 # Calculate monthly timeseries of the given variable from the given CESM scenario and ensemble member.
-def cesm_timeseries (var, expt, ens, out_file, sam_clim_file=None):
+def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatology.nc'):
 
     if expt == 'LENS':
         start_year = 1920
@@ -2139,8 +2141,6 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file=None):
         domain = 'atm'
         lat0 = [-40, -65]
         num_lat = len(lat0)
-        if sam_clim_file is None:
-            sam_clim_file = 'LENS_SAM_climatology.nc'
     else:
         print('Error (cesm_warming_timeseries): undefined variable '+var)
         sys.exit()
@@ -2203,7 +2203,7 @@ def all_cesm_timeseries (var, out_dir='./'):
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
 def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
 
-    if var_name in ['TS_global_mean', 'TS_SH_mean']:
+    if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM']:
         if num_noOBCS > 0:
             print('Warning: setting num_noOBCS back to 0')
             num_noOBCS = 0
