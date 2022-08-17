@@ -9,7 +9,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
-from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, PACEGrid, dA_from_latlon
+from .grid import Grid, SOSEGrid, grid_check_split, choose_grid, ERA5Grid, UKESMGrid, CAMGrid, dA_from_latlon
 from .file_io import read_netcdf, write_binary, NCfile, netcdf_time, read_binary, find_cmip6_files, find_cesm_file
 from .utils import real_dir, fix_lon_range, mask_land_ice, ice_shelf_front_points, dist_btw_points, days_per_month, split_longitude, xy_to_xyz, z_to_xyz
 from .interpolation import interp_nonreg_xy, interp_reg, extend_into_mask, discard_and_fill, smooth_xy, interp_slice_helper, interp_reg_xy
@@ -650,7 +650,7 @@ def process_forcing_for_correction (source, var, mit_grid_dir, out_file, in_dir=
     elif source == 'UKESM':
         forcing_grid = UKESMGrid()
     elif source == 'PACE':
-        forcing_grid = PACEGrid()
+        forcing_grid = CAMGrid()
     mit_grid = Grid(mit_grid_dir)
 
     if monthly_clim:

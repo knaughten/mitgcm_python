@@ -1022,8 +1022,8 @@ class UKESMGrid:
             sys.exit()
 
 
-# Similarly for PACE but more lightweight
-class PACEGrid:
+# Similarly for CAM (CESM atmosphere) but more lightweight
+class CAMGrid:
 
     def __init__ (self):
 

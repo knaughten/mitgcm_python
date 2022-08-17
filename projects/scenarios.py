@@ -15,7 +15,7 @@ from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period
-from ..grid import Grid, read_pop_grid, read_cice_grid, PACEGrid
+from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day
@@ -34,7 +34,7 @@ from ..make_domain import latlon_points
 # Update the timeseries calculations from wherever they left off before.
 def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
-    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m']
+    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans']
     base_dir = real_dir(base_dir)
     if sim_dir is None:
         sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_O/output/' for n in range(num_ens)]
@@ -2070,8 +2070,8 @@ def plot_isopycnal_slices (lon0=-120, base_dir='./', fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-# Calculate monthly timeseries of global average surface air temperature from the given CESM scenario and ensemble member.
-def cesm_warming_timeseries (expt, ens, out_file):
+# Calculate monthly timeseries of the given variable from the given CESM scenario and ensemble member.
+def cesm_timeseries (var, expt, ens, out_file):
 
     if expt == 'LENS':
         start_year = 1920
@@ -2081,18 +2081,34 @@ def cesm_warming_timeseries (expt, ens, out_file):
         end_year = 2080
     else:
         end_year = 2100
-    var_in = 'TS'
-    var_out = 'TS_global_mean'
     num_years = end_year - start_year + 1
-    cesm_grid = PACEGrid()
+    if var == 'TS_global_mean':
+        var_in = 'TS'
+        long_name = 'global mean surface temperature'
+        units = 'K'
+        domain = 'atm'
+    elif var == 'TS_SH_mean':
+        var_in = 'TS'
+        long_name = 'Southern Hemisphere mean surface temperature'
+        units = 'K'
+        domain = 'atm'
+    else:
+        print('Error (cesm_warming_timeseries): undefined variable '+var)
+        sys.exit()
+    
+    cesm_grid = CAMGrid()
     dA = add_time_dim(cesm_grid.dA, months_per_year) 
 
     for year in range(start_year, end_year+1):
         print('Processing '+str(year))
-        file_path, t_start, t_end = find_cesm_file(expt, var_in, 'atm', 'monthly', ens, year)
+        file_path, t_start, t_end = find_cesm_file(expt, var_in, domain, 'monthly', ens, year)
         data_full = read_netcdf(file_path, var_in, t_start=t_start, t_end=t_end)
-        data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
         time_tmp = netcdf_time(file_path, t_start=t_start, t_end=t_end)
+        if var == 'TS_global_mean':
+            data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
+        elif var == 'TS_SH_mean':
+            mask = add_time_dim((cesm_grid.lat < 0).astype(float), months_per_year)
+            data_tmp = np.sum(data_full*dA*mask, axis=(1,2))/np.sum(dA*mask, axis=(1,2))        
         if year == start_year:
             data = data_tmp
             time = time_tmp
@@ -2103,7 +2119,7 @@ def cesm_warming_timeseries (expt, ens, out_file):
     print('Writing to '+out_file)
     ncfile = NCfile(out_file, None, 't')
     ncfile.add_time(time)
-    ncfile.add_variable(var_out, data, 't', long_name='global mean surface temperature', units='K')
+    ncfile.add_variable(var, data, 't', long_name=long_name, units=units)
     ncfile.close()
 
 

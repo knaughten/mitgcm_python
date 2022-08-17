@@ -14,7 +14,7 @@ from scipy.io import loadmat
 import os
 import netCDF4 as nc
 
-from ..grid import ERA5Grid, PACEGrid, Grid, dA_from_latlon, pierre_obs_grid, ZGrid
+from ..grid import ERA5Grid, CAMGrid, Grid, dA_from_latlon, pierre_obs_grid, ZGrid
 from ..file_io import read_binary, write_binary, read_netcdf, netcdf_time, read_title_units, read_annual_average, NCfile
 from ..utils import real_dir, daily_to_monthly, fix_lon_range, split_longitude, mask_land_ice, moving_average, index_year_start, index_year_end, index_period, mask_2d_to_3d, days_per_month, add_time_dim, z_to_xyz, select_bottom, convert_ismr, mask_except_ice, xy_to_xyz, apply_mask, var_min_max, mask_3d, average_12_months, depth_of_isoline, mask_land, axis_edges, polar_stereo
 from ..plot_utils.colours import set_colours, choose_n_colours, truncate_colourmap
@@ -71,7 +71,7 @@ def calc_climatologies (era5_dir, pace_dir, out_dir, wind_speed=False):
     num_vars_daily = len(var_era5_daily)  
     
     era5_grid = ERA5Grid()
-    pace_grid = PACEGrid()
+    pace_grid = CAMGrid()
 
     # Get right edges of PACE grid (for binning)
     pace_lon, pace_lat = pace_grid.get_lon_lat(dim=1)
@@ -198,7 +198,7 @@ def plot_biases (var_name, clim_dir, monthly=False, fig_dir='./', ratio=False):
     # 19 visually distinct colours (from http://phrogz.net/css/distinct-colors.html)
     ens_colours = [(0.224,0.902,0.584), (0.475,0.537,0.949), (0.451,0.114,0.384), (1.0,0.267,0.0), (1.0,0.933,0.0), (0.275,0.549,0.459), (0.667,0.639,0.851), (0.949,0.239,0.522), (0.549,0.145,0.0), (0.467,0.502,0.0), (0.0,1.0,0.933), (0.349,0.275,0.549), (0.302,0.224,0.255), (0.949,0.6,0.475), (0.6,0.8,0.2), (0.412,0.541,0.549), (0.38,0.0,0.949), (1.0,0.0,0.267), (0.2,0.078,0.0)]
 
-    grid = PACEGrid()
+    grid = CAMGrid()
     data = np.empty([num_ens, per_year, grid.ny, grid.nx])
     # Read data
     for ens in range(1, num_ens+1):
@@ -1063,7 +1063,7 @@ def monthly_from_daily_climatologies (clim_dir):
 
     models = ['ERA5'] + ['PACE_ens'+str(n+1).zfill(2) for n in range(num_ens)]
     # Get PACE grid just for the sizes
-    grid = PACEGrid()
+    grid = CAMGrid()
     clim_dir = real_dir(clim_dir)
     
     # Start and end days for each month
@@ -1100,7 +1100,7 @@ def plot_monthly_biases (var_name, clim_dir, grid_dir, fig_dir='./'):
     ymin = model_grid.lat_corners_1d[0]
     ymax = 2*model_grid.lat_1d[-1] - model_grid.lat_corners_1d[-1]
     # Also build PACE grid to get sizes
-    pace_grid = PACEGrid()
+    pace_grid = CAMGrid()
     clim_dir = real_dir(clim_dir)
     fig_dir = real_dir(fig_dir)
 
