@@ -2124,14 +2124,14 @@ def cesm_timeseries (var, expt, ens, out_file):
 
 
 # Call the above function for 5 members of each experiment
-def all_warming_timeseries (out_dir='./'):
+def all_cesm_timeseries (var, out_dir='./'):
 
     num_ens = 5
     out_dir = real_dir(out_dir)
     for expt in ['LENS', 'MENS', 'LW1.5', 'LW2.0']:
         for ens in range(1, num_ens+1):
             print('Processing '+expt+' '+str(ens).zfill(3))
-            cesm_warming_timeseries(expt, ens, out_dir+expt+'_'+str(ens).zfill(3)+'_TS_global_mean.nc')
+            cesm_warming_timeseries(var, expt, ens, out_dir+expt+'_'+str(ens).zfill(3)+'_'+var+'.nc')
 
 
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
