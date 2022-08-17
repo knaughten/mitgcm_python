@@ -1471,11 +1471,12 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     base_dir = '/data/oceans_output/shelf/kaight/'
     in_dir = '/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/'
     obcs_dir = base_dir + 'ics_obcs/AMUND/'
-    grid_dir = base_dir + 'mitgcm/AMUND_ini_grid/'
+    grid_dir = base_dir + 'archer2_mitgcm/AMUND_ini_grid/'
     lens_file_head = in_dir + 'LENS_climatology_'
     lens_file_tail = '_1998-2017'
     lens_var = ['TEMP', 'SALT']
     woa_var = ['THETA', 'SALT']
+    woa_file_mid = '_WOA18.OBCS_'
     var_titles = ['Temperature anomaly ('+deg_string+'C)', 'Salinity anomaly (psu)']
     source_titles = ['Uncorrected', 'Corrected']
     num_var = len(lens_var)
@@ -1903,7 +1904,7 @@ def plot_obcs_corrected_non_ts (var, bdry, ens, year, month, polar_coordinates=T
     num_sources = len(titles)
     main_title = var_title+' at '+bdry+' boundary, '+str(year)+'/'+str(month)
     
-    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    mit_grid_dir = '/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_grid/'
     grid = Grid(mit_grid_dir)
 
     if polar_coordinates and var in ['UVEL', 'VVEL', 'uvel', 'vvel']:
@@ -2212,7 +2213,7 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=3, num_LW1=3, fig_name=None):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
 
     base_dir = real_dir(base_dir)
     num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]

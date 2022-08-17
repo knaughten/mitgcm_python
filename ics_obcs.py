@@ -590,6 +590,9 @@ def make_obcs (location, grid_path, input_path, output_dir, source='SOSE', use_s
         source_hfac = source_grid.get_hfac(gtype=gtype[n])
         model_lon, model_lat = model_grid.get_lon_lat(gtype=gtype[n], dim=1)
         model_hfac = model_grid.get_hfac(gtype=gtype[n])
+        if (gtype[n] == 'u' and location == 'W') or (gtype[n] == 'v' and location == 'S'):
+            # Use tracer grid hfac because of weird western and southern boundary issues. I don't know why this happens!
+            model_hfac = model_grid.get_hfac(gtype='t')
         # Interpolate to the correct grid and choose the correct horizontal axis
         if location in ['N', 'S']:
             if gtype[n] == 'v':
