@@ -2069,9 +2069,49 @@ def plot_isopycnal_slices (lon0=-120, base_dir='./', fig_name=None):
     plt.suptitle('Potential density at '+lon_label(lon0), fontsize=20)
     finished_plot(fig, fig_name=fig_name)
 
+    
+# Precompute the mean and standard deviation of monthly climatology sea level pressure at 40S and 65S in the LENS ensemble. This will be used to calculate the SAM index later.
+def precompute_sam_climatologies (out_file):
+
+    expt = 'LENS'
+    num_ens = 40
+    start_year = 1976
+    end_year = 2005
+    num_years = end_year-start_year+1
+    var = 'PSL'
+    lat0 = [-40, -65]
+    num_lat = len(lat0)
+    cesm_grid = CAMGrid()
+    cesm_lat = cesm_grid.get_lon_lat(dim=1)[1]
+
+    # First get zonal mean interpolated to each latitude, for each time index and ensemble member
+    psl_points = np.empty([num_lat, months_per_year, num_years, num_ens])
+    for e in range(num_ens):
+        for y in range(num_years):
+            file_path, t_start, t_end = find_cesm_file(expt, var, 'atm', 'monthly', e+1, start_year+y)
+            psl = read_netcdf(file_path, var, t_start=t_start, t_end=t_end)
+            # Take zonal mean - regular grid so can just do a simple mean
+            psl_zonal_mean = np.mean(psl, axis=-1)
+            # Interpolate to each latitude
+            for n in range(num_lat):
+                i1, i2, c1, c2 = interp_slice_helper(cesm_lat, lat0[n])
+                psl_points[n,:,y,e] = c1*psl_zonal_mean[:,i1] + c2*psl_zonal_mean[:,i2]
+
+    # Now get monthly climatology mean and standard deviation across all years and ensemble members, for each latitude.
+    psl_mean = np.mean(psl_points, axis=(2,3))
+    psl_std = np.std(psl_points, axis=(2,3))
+
+    # Save to file
+    ncfile = NCfile(out_file, None, 't')
+    ncfile.add_time(np.arange(months_per_year)+1, units='months')
+    for n in range(num_lat):
+        ncfile.add_variable('psl_mean_'+str(abs(lat0[n]))+'S', psl_mean[n,:], 't')
+        ncfile.add_variable('psl_std_'+str(abs(lat0[n]))+'S', psl_std[n,:], 't')
+    ncfile.close()    
+
 
 # Calculate monthly timeseries of the given variable from the given CESM scenario and ensemble member.
-def cesm_timeseries (var, expt, ens, out_file):
+def cesm_timeseries (var, expt, ens, out_file, sam_clim_file=None):
 
     if expt == 'LENS':
         start_year = 1920
@@ -2092,12 +2132,24 @@ def cesm_timeseries (var, expt, ens, out_file):
         long_name = 'Southern Hemisphere mean surface temperature'
         units = 'K'
         domain = 'atm'
+    elif var == 'SAM':
+        var_in = 'PSL'
+        long_name = 'Southern Annular Mode index'
+        units = '1'
+        domain = 'atm'
+        lat0 = [-40, -65]
+        num_lat = len(lat0)
+        if sam_clim_file is None:
+            sam_clim_file = 'LENS_SAM_climatology.nc'
     else:
         print('Error (cesm_warming_timeseries): undefined variable '+var)
         sys.exit()
     
     cesm_grid = CAMGrid()
-    dA = add_time_dim(cesm_grid.dA, months_per_year) 
+    if var in ['TS_global_mean', 'TS_SH_mean']:
+        dA = add_time_dim(cesm_grid.dA, months_per_year)
+    elif var == 'SAM':
+        cesm_lat = cesm_grid.get_lon_lat(dim=1)[1]        
 
     for year in range(start_year, end_year+1):
         print('Processing '+str(year))
@@ -2108,7 +2160,21 @@ def cesm_timeseries (var, expt, ens, out_file):
             data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
         elif var == 'TS_SH_mean':
             mask = add_time_dim((cesm_grid.lat < 0).astype(float), months_per_year)
-            data_tmp = np.sum(data_full*dA*mask, axis=(1,2))/np.sum(dA*mask, axis=(1,2))        
+            data_tmp = np.sum(data_full*dA*mask, axis=(1,2))/np.sum(dA*mask, axis=(1,2))
+        elif var == 'SAM':
+            # Take zonal mean
+            psl_zonal_mean = np.mean(data_full, axis=-1)
+            psl_points_norm = []
+            for n in range(num_lat):
+                # Interpolate to given latitude
+                i1, i2, c1, c2 = interp_slice_helper(cesm_lat, lat0[n])
+                psl_point = c1*psl_zonal_mean[:,i1] + c2*psl_zonal_mean[:,i2]
+                # Read monthly climatology mean and std for this latitude
+                psl_mean = read_netcdf(sam_clim_file, 'psl_mean_'+str(abs(lat0[n]))+'S')
+                psl_std = read_netcdf(sam_clim_file, 'psl_std_'+str(abs(lat0[n]))+'S')
+                psl_points_norm.append((psl_point - psl_mean)/psl_std)
+            # Take difference between latitudes to get SAM index
+            data_tmp = psl_points_norm[0] - psl_points_norm[1]                
         if year == start_year:
             data = data_tmp
             time = time_tmp
@@ -2137,7 +2203,7 @@ def all_cesm_timeseries (var, out_dir='./'):
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
 def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
 
-    if var_name == 'TS_global_mean':
+    if var_name in ['TS_global_mean', 'TS_SH_mean']:
         if num_noOBCS > 0:
             print('Warning: setting num_noOBCS back to 0')
             num_noOBCS = 0
@@ -2171,8 +2237,8 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     for n in range(num_expt):
         # Read all the data for this experiment
         for e in range(num_ens[n]):
-            if var_name == 'TS_global_mean':
-                file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
+            if var_name in ['TS_global_mean', 'TS_SH_mean']:
+                file_path = base_dir + 'cesm_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_' + var_name + '.nc'
             else:            
                 if expt_names[n] == 'PACE':
                     file_path = base_dir + '../mitgcm/PAS_PACE' + str(e+1).zfill(2) + '/output/' + timeseries_file_pace
