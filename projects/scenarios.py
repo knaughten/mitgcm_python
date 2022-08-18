@@ -34,7 +34,7 @@ from ..make_domain import latlon_points
 # Update the timeseries calculations from wherever they left off before.
 def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
-    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans']
+    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans', 'getz_massloss', 'dotson_massloss', 'crosson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss']
     base_dir = real_dir(base_dir)
     if sim_dir is None:
         sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_O/output/' for n in range(num_ens)]
@@ -2237,7 +2237,7 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     for n in range(num_expt):
         # Read all the data for this experiment
         for e in range(num_ens[n]):
-            if var_name in ['TS_global_mean', 'TS_SH_mean']:
+            if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM']:
                 file_path = base_dir + 'cesm_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_' + var_name + '.nc'
             else:            
                 if expt_names[n] == 'PACE':

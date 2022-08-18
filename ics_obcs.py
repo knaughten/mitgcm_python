@@ -1688,7 +1688,7 @@ def process_cesm_obcs_non_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=No
                 write_binary(data_interp, file_path)
 
 
-# Helper function to read a month of WOA climatology data, splicing in the annual climatology below 1500m, and optionally converting temperature to potential temperature. month is 1-indexed.
+# Helper function to read a month of WOA climatology data, splicing in the annual climatology below 1500m, and optionally converting temperature to potential temperature. month is 1-indexed. Setting month=0 will return the annual average.
 def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18/', convert_temp=True, woa_grid=None):
 
     from gsw.conversions import pt0_from_t
@@ -1700,14 +1700,15 @@ def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18
     file_head = real_dir(woa_dir) + 'woa18_decav_' + var[0]
     file_tail = '_04.nc'
     file_path_clim = file_head + '00' + file_tail
-    file_path_mon = file_head + str(month).zfill(2) + file_tail
+    if month != 0:
+        file_path_mon = file_head + str(month).zfill(2) + file_tail
 
     if woa_grid is None:
         woa_grid = WOAGrid(woa_dir)
-    data_clim = read_netcdf(file_path_clim, var, time_index=0)
-    data_mon = read_netcdf(file_path_mon, var, time_index=0)
-    data = data_clim
-    data[:woa_grid.nz_mon,:] = data_mon
+    data = read_netcdf(file_path_clim, var, time_index=0)
+    if month != 0:
+        data_mon = read_netcdf(file_path_mon, var, time_index=0)
+        data[:woa_grid.nz_mon,:] = data_mon
     
     if var == 't_an' and convert_temp:
         # Convert to potential temperature
@@ -1720,7 +1721,7 @@ def read_woa_month (var, month, woa_dir='/data/oceans_input/raw_input_data/WOA18
 
 
 # Create initial conditions for temperature and salinity using the WOA 2018 monthly climatology for January. Ice shelf cavities will be filled with nearest neighbours.
-def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', prec=64):
+def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', output_dir='./', prec=64, annual_avg=False):
 
     var_names = ['THETA', 'SALT']
     out_file_tail = '_WOA18.ini'
@@ -1737,7 +1738,11 @@ def woa_ts_ics (grid_path, woa_dir='/data/oceans_input/raw_input_data/WOA18/', o
     # Read data
     for n in range(num_var):
         print('Processing '+var_names[n])
-        woa_data = read_woa_month(var_names[n], 1, woa_dir=woa_dir, woa_grid=woa_grid)
+        if annual_avg:
+            month = 0
+        else:
+            month = 1
+        woa_data = read_woa_month(var_names[n], month, woa_dir=woa_dir, woa_grid=woa_grid)
         process_ini_field(woa_data, woa_grid.mask, fill, woa_grid, model_grid, dim, var_names[n], out_file_paths[n], missing_cavities=False, prec=prec)
 
 
