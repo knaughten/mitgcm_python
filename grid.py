@@ -1112,7 +1112,7 @@ def read_pop_grid (file_path, return_ugrid=False):
 
 
 # Similarly for CICE
-def read_cice_grid (file_path, return_ugrid=False):
+def read_cice_grid (file_path, return_ugrid=False, return_dA=False):
 
     lon = fix_lon_range(read_netcdf(file_path, 'TLON'))
     lat = read_netcdf(file_path, 'TLAT')
@@ -1121,10 +1121,18 @@ def read_cice_grid (file_path, return_ugrid=False):
         ulat = read_netcdf(file_path, 'ULAT')
     ny = lat.shape[0]
     nx = lon.shape[1]
+    if return_dA:
+        dA = dA_from_latlon(lon, lat, periodic=True)
     if return_ugrid:
-        return lon, lat, ulon, ulat, nx, ny
+        if return_dA:
+            return lon, lat, ulon, ulat, nx, ny, dA
+        else:
+            return lon, lat, ulon, ulat, nx, ny
     else:
-        return lon, lat, nx, ny
+        if return_dA:
+            return lon, lat, nx, ny, dA
+        else:
+            return lon, lat, nx, ny
         
         
 

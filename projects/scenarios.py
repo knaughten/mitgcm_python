@@ -2150,16 +2150,22 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatolo
         lat0 = [-40, -65]
         num_lat = len(lat0)
     else:
-        print('Error (cesm_warming_timeseries): undefined variable '+var)
+        print('Error (cesm_timeseries): undefined variable '+var)
         sys.exit()
     
-    cesm_grid = CAMGrid()
+    if domain == 'atm':
+        cesm_grid = CAMGrid()
+        lat = cesm_grid.lat
+        dA = cesm_grid.dA
+    elif domain == 'ice':
+        file_path = find_cesm_file(expt, var_in, domain, 'monthly', ens, start_year)[0]
+        lon, lat, nx, ny, dA = read_cice_grid(file_path, return_dA=True)        
     if var in ['TS_global_mean', 'TS_SH_mean', 'seaice_extent_SH']:
-        dA = add_time_dim(cesm_grid.dA, months_per_year)
+        dA = add_time_dim(dA, months_per_year)
     if var in ['TS_SH_mean', 'seaice_extent_SH']:
-        SH_mask = add_time_dim((cesm_grid.lat < 0).astype(float), months_per_year)
+        SH_mask = add_time_dim((lat < 0).astype(float), months_per_year)
     if var == 'SAM':
-        cesm_lat = cesm_grid.get_lon_lat(dim=1)[1]        
+        lat_1d = cesm_grid.get_lon_lat(dim=1)[1]        
 
     for year in range(start_year, end_year+1):
         print('Processing '+str(year))
@@ -2180,7 +2186,7 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatolo
             psl_points_norm = []
             for n in range(num_lat):
                 # Interpolate to given latitude
-                i1, i2, c1, c2 = interp_slice_helper(cesm_lat, lat0[n])
+                i1, i2, c1, c2 = interp_slice_helper(lat_1d, lat0[n])
                 psl_point = c1*psl_zonal_mean[:,i1] + c2*psl_zonal_mean[:,i2]
                 # Read monthly climatology mean and std for this latitude
                 psl_mean = read_netcdf(sam_clim_file, 'psl_mean_'+str(abs(lat0[n]))+'S')
