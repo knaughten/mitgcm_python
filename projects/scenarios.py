@@ -2134,6 +2134,14 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatolo
         long_name = 'Southern Hemisphere mean surface temperature'
         units = 'K'
         domain = 'atm'
+    elif var == 'seaice_extent_SH':
+        var_in = 'aice'
+        long_name = 'Southern Hemisphere sea ice extent'
+        units = 'million km^2'
+        factor_in = 1e-2
+        factor_out = 1e-12
+        threshold = 0.15
+        domain = 'ice'
     elif var == 'SAM':
         var_in = 'PSL'
         long_name = 'Southern Annular Mode index'
@@ -2146,9 +2154,11 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatolo
         sys.exit()
     
     cesm_grid = CAMGrid()
-    if var in ['TS_global_mean', 'TS_SH_mean']:
+    if var in ['TS_global_mean', 'TS_SH_mean', 'seaice_extent_SH']:
         dA = add_time_dim(cesm_grid.dA, months_per_year)
-    elif var == 'SAM':
+    if var in ['TS_SH_mean', 'seaice_extent_SH']:
+        SH_mask = add_time_dim((cesm_grid.lat < 0).astype(float), months_per_year)
+    if var == 'SAM':
         cesm_lat = cesm_grid.get_lon_lat(dim=1)[1]        
 
     for year in range(start_year, end_year+1):
@@ -2159,8 +2169,11 @@ def cesm_timeseries (var, expt, ens, out_file, sam_clim_file='LENS_SAM_climatolo
         if var == 'TS_global_mean':
             data_tmp = np.sum(data_full*dA, axis=(1,2))/np.sum(dA, axis=(1,2))
         elif var == 'TS_SH_mean':
-            mask = add_time_dim((cesm_grid.lat < 0).astype(float), months_per_year)
-            data_tmp = np.sum(data_full*dA*mask, axis=(1,2))/np.sum(dA*mask, axis=(1,2))
+            data_tmp = np.sum(data_full*dA*SH_mask, axis=(1,2))/np.sum(dA*SH_mask, axis=(1,2))
+        elif var == 'seaice_extent_SH':
+            data_full *= factor_in
+            data_full[data_full < threshold] = 0
+            data_tmp = np.sum(data_full*dA*SH_mask, axis=(1,2))*factor_out
         elif var == 'SAM':
             # Take zonal mean
             psl_zonal_mean = np.mean(data_full, axis=-1)
@@ -2203,7 +2216,7 @@ def all_cesm_timeseries (var, out_dir='./'):
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
 def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
 
-    if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM']:
+    if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM', 'seaice_extent_SH']:
         if num_noOBCS > 0:
             print('Warning: setting num_noOBCS back to 0')
             num_noOBCS = 0
