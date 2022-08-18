@@ -2075,7 +2075,7 @@ def precompute_sam_climatologies (out_file):
 
     expt = 'LENS'
     num_ens = 40
-    start_year = 1976
+    start_year = 1920
     end_year = 2005
     num_years = end_year-start_year+1
     var = 'PSL'
@@ -2256,7 +2256,7 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
     for n in range(num_expt):
         # Read all the data for this experiment
         for e in range(num_ens[n]):
-            if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM']:
+            if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM', 'seaice_extent_SH']:
                 file_path = base_dir + 'cesm_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_' + var_name + '.nc'
             else:            
                 if expt_names[n] == 'PACE':
