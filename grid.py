@@ -1122,7 +1122,7 @@ def read_cice_grid (file_path, return_ugrid=False, return_dA=False):
     ny = lat.shape[0]
     nx = lon.shape[1]
     if return_dA:
-        dA = dA_from_latlon(lon, lat, periodic=True)
+        dA = read_netcdf(file_path, 'tarea')
     if return_ugrid:
         if return_dA:
             return lon, lat, ulon, ulat, nx, ny, dA
