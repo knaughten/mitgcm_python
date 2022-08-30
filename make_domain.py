@@ -740,7 +740,11 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     limit_w, limit_e, limit_s, limit_n = neighbours(limit)[:4]
     if dig_full_cells:
         # Locally increase the minimum wct to be the full cell dz of the given cell plus the next one (to match PAS domain generation)
-        limit[bathy!=0] = field + direction_flag*(dz_layer + dz_next)
+        limit = field + direction_flag*(dz_layer + dz_next)
+        if dig_option == 'bathy':
+            limit[bathy==0] = 0
+        elif dig_option == 'draft':
+            limit[bathy==0] = z_edges[-1]
 
     # Inner function to apply limits to the field (based on each point itself, or each point's neighbour in a single direction eg. west).
     def dig_one_direction (limit):
