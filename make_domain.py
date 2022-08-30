@@ -688,7 +688,7 @@ def do_filling (bathy, dz, z_edges, hFacMin=0.1, hFacMinDr=20.):
 
 # Fix problem (2) above.
 # Default is to dig the bathymetry; another option (for coupled simulations at restart points) is to dig the ice shelf draft. 
-def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_option='bathy'):
+def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_option='bathy', dig_full_cells=False):
 
     # Figure out which field will be modified, which the other field is, which edge should be included in call to level_vars, and whether we are making the field deeper (-1) or shallower (1).
     if dig_option == 'bathy':
@@ -706,7 +706,7 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     else:
         print(('Error (do_digging): invalid dig_option ' + dig_option))
         sys.exit()
-
+        
     # Find the other field as the model will see it (based on hFac constraints)
     model_other_field = single_model_bdry(other_field, dz, z_edges, option=other_option, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
     # Get some variables about the vertical grid
@@ -738,6 +738,9 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         limit[bathy==0] = z_edges[-1]
     # Get limit at each point's 4 neighbours
     limit_w, limit_e, limit_s, limit_n = neighbours(limit)[:4]
+    if dig_full_cells:
+        # Locally increase the minimum wct to be the full cell dz of the given cell plus the next one (to match PAS domain generation)
+        limit[bathy!=0] = field + direction_flag*(dz_layer + dz_next)
 
     # Inner function to apply limits to the field (based on each point itself, or each point's neighbour in a single direction eg. west).
     def dig_one_direction (limit):
@@ -801,7 +804,7 @@ def do_zapping (draft, imask, dz, z_edges, hFacMinDr=20., only_grow=False):
 # hFacMin, hFacMinDr: make sure these match the values in your "data" namelist for MITgcm
 # coupled: set to True if this is the initial topography for a coupled run. This will only grow ice shelf draft rather than zapping it.
 
-def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False):
+def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., coupled=False, dig_full_cells=False):
 
     from .plot_latlon import plot_tmp_domain
 
@@ -822,7 +825,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., co
 
     print('Digging subglacial lakes')
     bathy_orig = np.copy(bathy)
-    bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr)
+    bathy = do_digging(bathy, draft, dz, z_edges, hFacMin=hFacMin, hFacMinDr=hFacMinDr, dig_full_cells=dig_full_cells)
     # Plot how the results have changed
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy), title='Bathymetry (m) after digging')
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, bathy-bathy_orig), title='Change in bathymetry (m)\ndue to digging')
