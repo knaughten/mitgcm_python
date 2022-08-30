@@ -729,6 +729,9 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
     # The second open cell digs into the layer below OR above that by the minimum amount (based on hFac constraints).
     hfac_limit = np.maximum(hFacMin, np.minimum(hFacMinDr/dz_next, 1))
     limit += direction_flag*dz_next*hfac_limit
+    if dig_full_cells:
+        # Minimum wct is full cell dz of the given cell plus the next one
+        limit = model_other_field + direction_flag*(dz_layer + dz_next)
     # In the land mask, there is no limit.
     if dig_option == 'bathy':
         # Shallowest acceptable bathymetry is zero
@@ -738,13 +741,6 @@ def do_digging (bathy, draft, dz, z_edges, hFacMin=0.1, hFacMinDr=20., dig_optio
         limit[bathy==0] = z_edges[-1]
     # Get limit at each point's 4 neighbours
     limit_w, limit_e, limit_s, limit_n = neighbours(limit)[:4]
-    if dig_full_cells:
-        # Locally increase the minimum wct to be the full cell dz of the given cell plus the next one (to match PAS domain generation)
-        limit = field + direction_flag*(dz_layer + dz_next)
-        if dig_option == 'bathy':
-            limit[bathy==0] = 0
-        elif dig_option == 'draft':
-            limit[bathy==0] = z_edges[-1]
 
     # Inner function to apply limits to the field (based on each point itself, or each point's neighbour in a single direction eg. west).
     def dig_one_direction (limit):
