@@ -29,6 +29,7 @@ from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, ext
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
+from ..timeseries import monthly_to_annual
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -2379,6 +2380,66 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     finished_plot(fig, fig_name=fig_name)
+
+
+# For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct.
+def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, window=5, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
+
+    from scipy.stats import ttest_ind
+
+    scenarios = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    num_scenarios = len(scenarios)
+    start_year = 2006
+    end_year_MENS = 2080
+    end_year_other = 2100
+    p0 = 0.05
+    base_dir = real_dir(base_dir)
+    if window % 2 != 1:
+        print('Error (plot_scenario_divergence): window must be an odd number of years.')
+        sys.exit()
+
+    combo_names = []
+    combo_distinct = []
+    combo_time = []
+    # Loop over every combination of scenarios
+    for s1 in range(num_scenarios):
+        for s2 in range(s1+1, num_scenarios):
+            combo_names += [scenarios[s1]+' vs '+scenarios[s2]]
+            # Read all the data, annually averaged
+            if 'MENS' in [scenarios[s1], scenarios[s2]]:
+                end_year = end_year_MENS
+            else:
+                end_year = end_year_other
+            num_years = end_year - start_year + 1
+            all_data1 = np.empty([num_ens[s1], num_years])
+            all_data2 = np.empty([num_ens[s2], num_years])
+            for s, all_data in zip([s1, s2], [all_data1, all_data2]):
+                for n in range(num_ens[s]):
+                    file_path = base_dir + 'PAS_' + scenarios[s]
+                    if scenarios[s] != 'LENS':
+                        file_path += '_'
+                    file_path += str(n+1).zfill(3) + '_O/output/' + timeseries_file
+                    time = netcdf_time(file_path, monthly=False)
+                    data = read_netcdf(file_path, var)
+                    t_start, t_end = index_period(time, start_year, end_year)
+                    time = time[t_start:t_end]
+                    data = data[t_start:t_end]
+                    data, time = monthly_to_annual(data, time)
+                    all_data[s,:] = data
+            # Now do a 2-sample t-test over each 5-year window
+            radius = (window-1)/2
+            time = time[radius:-radius]
+            combo_time.append(time)
+            distinct = []
+            for t in range(radius, num_years-radius):
+                sample1 = all_data1[:,t-radius:t+radius+1]
+                sample2 = all_data2[:,t-radius:t+radius+1]
+                t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
+                distinct.append(p_val < p0)
+            combo_distinct.append(distinct)
+            
+            
 
     
 
