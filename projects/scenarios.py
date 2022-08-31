@@ -2405,7 +2405,7 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     # Loop over every combination of scenarios
     for s1 in range(num_scenarios):
         for s2 in range(s1+1, num_scenarios):
-            combo_names += [scenarios[s1]+' vs '+scenarios[s2]]
+            combo_names += [scenarios[s1]+' vs\n'+scenarios[s2]]
             # Read all the data, annually averaged
             if 'MENS' in [scenarios[s1], scenarios[s2]]:
                 end_year = end_year_MENS
@@ -2426,27 +2426,37 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
                     time = time[t_start:t_end]
                     data = data[t_start:t_end]
                     data, time = monthly_to_annual(data, time)
-                    all_data[s,:] = data
+                    all_data[n,:] = data
             # Now do a 2-sample t-test over each 5-year window
-            radius = (window-1)/2
+            radius = (window-1)//2
             time = time[radius:-radius]
-            combo_time.append(time)
+            combo_time.append(np.array([t.year for t in time]))
             distinct = []
             for t in range(radius, num_years-radius):
-                sample1 = all_data1[:,t-radius:t+radius+1]
-                sample2 = all_data2[:,t-radius:t+radius+1]
+                sample1 = all_data1[:,t-radius:t+radius+1].ravel()
+                sample2 = all_data2[:,t-radius:t+radius+1].ravel()
                 t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
                 distinct.append(p_val < p0)
             combo_distinct.append(distinct)
-            
-            
+    num_combos = len(combo_names)
 
-    
-
-    
-        
-        
-        
+    # Plot
+    fig, ax = plt.subplots()
+    for n in range(num_combos):
+        for t in range(len(combo_time[n])):
+            if combo_distinct[n][t]:
+                colour = 'IndianRed'
+            else:
+                colour = 'DodgerBlue'
+            ax.barh(combo_names[n], 1, left=t, color=colour)
+    ax.invert_yaxis()
+    box = ax.get_position()
+    ax.set_position([box.x0*1.25, box.y0, box.width, box.height])
+    tick_years = np.arange(2020, 2100+20, 20)
+    ax.set_xticks(tick_years-combo_time[0][0])
+    ax.set_xticklabels([str(t) for t in tick_years])
+    ax.set_title(var+', window='+str(window)+' years')
+    finished_plot(fig, fig_name=fig_name)        
 
     
 
