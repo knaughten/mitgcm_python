@@ -25,7 +25,7 @@ from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
-from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
@@ -1543,7 +1543,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx']
+    var_names = ['THETA', 'SALT'] #['barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -2465,7 +2465,105 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     ax.set_xticks(tick_years-combo_time[0][0])
     ax.set_xticklabels([str(t) for t in tick_years])
     ax.set_title(var+', window='+str(window)+' years')
-    finished_plot(fig, fig_name=fig_name)        
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Directly interpolate all PAS files (ICs, OBCs, etc - everything except topography) to the AMUND domain for testing purposes.
+def interp_PAS_files_to_AMUND ():
+
+    grid_dir_old = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
+    grid_dir_new = '/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid_dig/'
+    in_dir = '/data/oceans_output/shelf/kaight/ics_obcs/PAS/'
+    fnames_3d = ['ICtheta_woa_clim.bin', 'ICsalt_woa_clim.bin', 'addmass_bedmach_merino.bin']
+    fnames_2d = ['ICarea_sose.bin', 'ICheff_sose.bin', 'IChsnow_sose.bin', 'katabatic_rotate_PAS_90W', 'katabatic_scale_PAS_90W', 'aqh_offset_PAS', 'atemp_offset_PAS', 'lwdown_offset_PAS', 'precip_offset_PAS', 'swdown_offset_PAS', 'panom.bin']
+    in_dir_obcs = '/data/oceans_input/processed_input_data/CESM/PAS_obcs/LENS_obcs/'
+    obcs_head = 'LENS_ens001_'
+    obcs_var = ['TEMP', 'SALT', 'UVEL', 'VVEL', 'aice', 'hi', 'hs', 'uvel', 'vvel']
+    obcs_dim = [3, 3, 3, 3, 2, 2, 2, 2, 2]
+    obcs_loc = ['N', 'W', 'E']
+    obcs_start_year = 1920
+    obcs_end_year = 2005
+    out_dir = '/data/oceans_output/shelf/kaight/ics_obcs/AMUND/'
+    out_dir_obcs = '/data/oceans_input/processed_input_data/CESM/AMUND_obcs/LENS_obcs/PAS_interp/'
+
+    grid_old = Grid(grid_dir_old)
+    grid_new = Grid(grid_dir_new)
+    fill = get_fill_mask(grid_old, grid_new, missing_cavities=False)
+    mask_PAS = grid_old.hfac==0
+    mask_AMUND = grid_new.hfac==0
+
+    # 3D files
+    for fname in fnames_3d:
+        data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xyz', prec=64)
+        data_PAS = discard_and_fill(data_PAS, mask_PAS, fill)
+        data_AMUND = interp_reg(grid_old, grid_new, data_PAS, fill_value=0)
+        data_AMUND[mask_AMUND] = 0
+        write_binary(data_AMUND, out_dir+fname+'_PAS_interp', prec=64)
+
+    # 2D files
+    for fname in fnames_2d:
+        data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xy', prec=64)
+        data_PAS = discard_and_fill(data_PAS, mask_PAS[0,:], fill[0,:])
+        data_AMUND = interp_reg(grid_old, grid_new, data_PAS, fill_value=0, dim=2)
+        data_AMUND[mask_AMUND[0,:]] = 0
+        write_binary(data_AMUND, out_dir+fname+'_PAS_interp', prec=64)
+
+    # OBCS files
+    for bdry in obcs_loc:
+        for var, dim in zip(obcs_var, obcs_dim):
+            if var in ['UVEL', 'uvel']:
+                gtype = 'u'
+            elif var in ['VVEL', 'vvel']:
+                gtype = 'v'
+            else:
+                gtype = 't'
+            lon_PAS, lat_PAS = grid_old.get_lon_lat(dim=1, gtype=gtype)
+            lon_AMUND, lat_AMUND = grid_new.get_lon_lat(dim=1, gtype=gtype)
+            hfac_PAS = get_hfac_bdry(grid_old, bdry, gtype=gtype)
+            hfac_AMUND = get_hfac_bdry(grid_new, bdry, gtype=gtype)
+            if bdry in ['N', 'S']:
+                h_PAS = lon_PAS
+                h_AMUND = lon_AMUND
+                dimensions = 'x'
+                shape = [grid_new.nx]                    
+            elif bdry in ['E', 'W']:
+                h_PAS = lat_PAS
+                h_AMUND = lat_AMUND
+                dimensions = 'y'
+                shape = [grid_new.ny]
+            if dim == 3:
+                dimensions += 'z'
+                shape = [grid_new.nz] + shape
+            else:
+                hfac_PAS = hfac_PAS[0,:]
+                hfac_AMUND = hfac_AMUND[0,:]
+            dimensions += 't'
+            shape = [months_per_year] + shape
+            for year in range(obcs_start_year, obcs_end_year+1):
+                fname = obcs_head + var + '_' + bdry + '_' + str(year)
+                file_path = in_dir_obcs + fname
+                data_PAS = read_binary(file_path, [grid_old.nx, grid_old.ny, grid_old.nz], dimensions, prec=32)
+                if h_AMUND[0] < h_PAS[0]:
+                    h_PAS = np.concatenate(([h_AMUND[0]], h_PAS))
+                    data_PAS = np.concatenate((data_PAS[...,0], data_PAS), axis=-1)
+                if h_AMUND[-1] > h_PAS[-1]:
+                    h_PAS = np.concatenate((h_PAS, [h_AMUND[-1]]))
+                    data_PAS = np.concatenate((data_PAS, data_PAS[...,-1]), axis=-1)
+                data_AMUND = np.empty(shape)
+                for t in range(months_per_year):
+                    data_AMUND[t,:] = interp_bdry(h_PAS, grid_old.z, data_PAS[t,:], hfac_PAS, h_AMUND, grid_new.z, hfac_AMUND, depth_dependent=(dim==3))
+                write_binary(data_AMUND, out_dir_obcs+fname, prec=32)
+                
+            
+            
+            
+            
+        
+        
+    
+    
+
+    
 
     
 
