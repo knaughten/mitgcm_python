@@ -1543,7 +1543,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx']
+    var_names = ['barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
