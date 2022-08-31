@@ -1410,6 +1410,7 @@ def analyse_pace_ensemble (era5_dir, pace_dir, fig_dir='./', year_start=1979, ye
 def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype='t', start_year=1920, end_year=None, end_base_year=1949, time_integral_anomaly=False):
 
     from scipy.stats import linregress
+    from .utils import mask_3d
 
     num_ens = len(sim_dir)
     grid = Grid(grid_dir)
