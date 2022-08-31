@@ -1560,6 +1560,12 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
             dim = 3
         else:
             dim = 2
+        if var in ['barotropic_u', 'baroclinic_u_bottom100m', 'UVEL', 'ADVx_TH']:
+            gtype = 'u'
+        elif var in ['barotropic_v', 'baroclinic_v_bottom100m', 'VVEL', 'ADVy_TH']:
+            gtype = 'v'
+        else:
+            gtype = 't'
         for t in range(num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
             out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
@@ -1573,7 +1579,7 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
                 elif periods[t] == 'LW1.5':
                     num_ens = num_LW1
                 sim_dir = [base_dir+'PAS_'+periods[t]+'_'+str(n+1).zfill(3)+'_O' for n in range(num_ens)]            
-            make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t])
+            make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t], gtype=gtype)
 
 
 # Plot the historical and future trends in each lat-lon variable.
