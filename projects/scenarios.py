@@ -2416,10 +2416,13 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             all_data2 = np.empty([num_ens[s2], num_years])
             for s, all_data in zip([s1, s2], [all_data1, all_data2]):
                 for n in range(num_ens[s]):
-                    file_path = base_dir + 'PAS_' + scenarios[s]
-                    if scenarios[s] != 'LENS':
-                        file_path += '_'
-                    file_path += str(n+1).zfill(3) + '_O/output/' + timeseries_file
+                    if var in ['TS_global_mean', 'TS_SH_mean', 'SAM', 'seaice_extent_SH']:
+                        file_path = base_dir + 'cesm_timeseries/' + scenarios[s] + '_' + str(n+1).zfill(3) + '_' + var + '.nc'
+                    else:
+                        file_path = base_dir + 'PAS_' + scenarios[s]
+                        if scenarios[s] != 'LENS':
+                            file_path += '_'
+                        file_path += str(n+1).zfill(3) + '_O/output/' + timeseries_file
                     time = netcdf_time(file_path, monthly=False)
                     data = read_netcdf(file_path, var)
                     t_start, t_end = index_period(time, start_year, end_year)
