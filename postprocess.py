@@ -1526,6 +1526,24 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.mean(np.sqrt(u**2 + v**2), axis=0)
                 long_name = 'speed of ocean velocity'
                 units = 'm/s'
+            elif var_name in ['barotropic_u', 'barotropic_v']:
+                var_cmp = var_name[-1]
+                data_3d = mask_3d(read_netcdf(file_paths[t], upper(var_cmp)+'VEL'), gtype=var_cmp, time_dependent=True)
+                data = vertical_average(data_3d, grid, gtype=var_cmp, time_dependent=True)
+                long_name = 'barotropic '+var_cmp+' velocity'
+                units = 'm/s'
+            elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m']:
+                var_cmp = var_name[-1]
+                data_3d = mask_3d(read_netcdf(file_paths[t], upper(var_cmp)+'VEL'), gtype=var_cmp, time_dependent=True)
+                data_barotropic = xy_to_xyz(vertical_average(data_3d, grid, gtype=var_cmp, time_dependent=True), grid)
+                data_baroclinic = data_3d - data_barotropic
+                z_3d = z_to_xyz(grid.z, grid)
+                bathy_3d = xy_to_xyz(grid.bathy, grid)
+                mask_above_100m = add_time_dim(z_3d > bathy_3d + 100, data_3d.shape[0])
+                data_baroclinic = np.ma.masked_where(mask_above_100m, data_baroclinic)
+                data = vertical_average(data_baroclinic, grid, gtype=var_cmp, time_dependent=True)
+                long_name = 'baroclinic '+var_cmp+' velocity over bottom 100m'
+                units = 'm/s'                
             elif var_name == 'thermocline':
                 temp = read_netcdf(file_paths[t], 'THETA')
                 num_time = temp.shape[0]
