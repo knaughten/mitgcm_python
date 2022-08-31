@@ -1528,13 +1528,15 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 units = 'm/s'
             elif var_name in ['barotropic_u', 'barotropic_v']:
                 var_cmp = var_name[-1]
-                data_3d = mask_3d(read_netcdf(file_paths[t], upper(var_cmp)+'VEL'), grid, gtype=var_cmp, time_dependent=True)
+                data_3d = read_netcdf(file_paths[t], upper(var_cmp)+'VEL')
+                data_3d = mask_3d(data_3d, grid, gtype=var_cmp, time_dependent=True)
                 data = vertical_average(data_3d, grid, gtype=var_cmp, time_dependent=True)
                 long_name = 'barotropic '+var_cmp+' velocity'
                 units = 'm/s'
             elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m']:
                 var_cmp = var_name[-1]
-                data_3d = mask_3d(read_netcdf(file_paths[t], upper(var_cmp)+'VEL'), grid, gtype=var_cmp, time_dependent=True)
+                data_3d = read_netcdf(file_paths[t], upper(var_cmp)+'VEL')
+                data_3d = mask_3d(data_3d, grid, gtype=var_cmp, time_dependent=True)
                 data_barotropic = xy_to_xyz(vertical_average(data_3d, grid, gtype=var_cmp, time_dependent=True), grid)
                 data_baroclinic = data_3d - data_barotropic
                 z_3d = z_to_xyz(grid.z, grid)
