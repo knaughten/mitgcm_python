@@ -1539,19 +1539,15 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     finished_plot(fig, fig_name=fig_name)
     
 
-# Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and future (2006-2100).
-def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
+# Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
+def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['UVEL', 'VVEL'] #['ismr', 'THETA', 'SALT', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'speed', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline', 'ADVx_TH', 'ADVy_TH']
+    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
-    if sim_dir is None:
-        sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) for n in range(num_ens)]
-    else:
-        num_ens = len(sim_dir)
-    start_years = [1920, 2006]
-    end_years = [2005, 2100]
-    periods = ['historical', 'future']
+    periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    start_years = [1920, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2100, 2080, 2100, 2100]
     num_periods = len(periods)
 
     for var in var_names:
@@ -1566,6 +1562,16 @@ def precompute_ensemble_trends (num_ens=5, base_dir='./', sim_dir=None, out_dir=
         for t in range(num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
             out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
+            if periods[t] in ['historical', 'LENS']:
+                sim_dir = [base_dir+'PAS_LENS'+str(n+1).zfill(3)+'_O' for n in range(num_LENS)]
+            else:
+                if periods[t] == 'MENS':
+                    num_ens = num_MENS
+                elif periods[t] == 'LW2.0':
+                    num_ens = num_LW2
+                elif periods[t] == 'LW1.5':
+                    num_ens = num_LW1
+                sim_dir = [base_dir+'PAS_'+periods[t]+'_'+str(n+1).zfill(3)+'_O' for n in range(num_ens)]            
             make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t])
 
 
