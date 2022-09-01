@@ -2572,17 +2572,35 @@ def interp_PAS_files_to_AMUND ():
 
 
 # Plot Hovmollers of temp or salt in Pine Island Bay for the historical LENS simulation and all four future scenarios. Express as anomalies from the 1920s mean.
-def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None):
+def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None, anomaly=False):
 
     base_dir = real_dir(base_dir)
     grid_dir = base_dir + 'PAS_grid/'
     region = 'pine_island_bay'
     hovmoller_file = 'hovmoller.nc'
     if var == 'temp':
-        var_title = 'Temperature anomalies ('+deg_string+'C)'
+        var_title = 'Temperature ('+deg_string+'C)'
+        if anomaly:
+            vmin = -1
+            vmax = 2.5
+        else:
+            vmin = -1.6
+            vmax = 1.4
     elif var == 'salt':
-        var_title = 'Salinity anomalies (psu)'
-    suptitle = var_title + ' from 1920s in ' + region_names[region]
+        var_title = 'Salinity (psu)'
+        if anomaly:
+            vmin = -0.5
+            vmax = 0.25
+        else:
+            vmin = 34
+            vmax = 34.8
+    if anomaly:
+        var_title += ' anomalies\nfrom 1920s '
+        ctype = 'plusminus'
+    else:
+        var_title += '\n'
+        ctype = 'basic'
+    suptitle = var_title + 'in ' + region_names[region]
     smooth = 12
     scenarios = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
@@ -2595,8 +2613,6 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
 
     time_plot = []
     data_plot = []
-    vmin = 0
-    vmax = 0
     for n in range(num_scenarios):
         for e in range(num_ens[n]):
             file_path = base_dir + 'PAS_'
@@ -2616,21 +2632,20 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             else:
                 data_ens += data
         data_ens /= num_ens[n]
-        if n==0:
-            tb_start, tb_end = index_period(time, baseline_decade, baseline_decade+9)
-            data_baseline = np.mean(data_ens[tb_start:tb_end,:], axis=0)
-        data_ens -= data_baseline[None,:]
+        if anomaly:
+            if n==0:
+                tb_start, tb_end = index_period(time, baseline_decade, baseline_decade+9)
+                data_baseline = np.mean(data_ens[tb_start:tb_end,:], axis=0)
+            data_ens -= data_baseline[None,:]
         data_plot.append(data_ens)
-        vmin = min(vmin, np.amin(data_ens))
-        vmax = max(vmax, np.amax(data_ens))
 
-    fig = plt.figure(figsize=(6,10))
+    fig = plt.figure(figsize=(6,8))
     gs = plt.GridSpec(num_scenarios,1)
-    gs.update(left=0.07, right=0.85, bottom=0.04, top=0.95, hspace=0.08)
-    cax = fig.add_axes([0.75, 0.96, 0.24, 0.012])
+    gs.update(left=0.07, right=0.85, bottom=0.04, top=0.9, hspace=0.08)
+    cax = fig.add_axes([0.75, 0.94, 0.24, 0.012])
     for n in range(num_scenarios):
         ax = plt.subplot(gs[n,0])
-        img = hovmoller_plot(data_plot[n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, ctype='plusminus')
+        img = hovmoller_plot(data_plot[n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, ctype=ctype)
         ax.set_xlim([datetime.date(start_year[0], 1, 1), datetime.date(end_year[-1], 12, 31)])
         ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_year[0], end_year[-1], 20)])
         if n == 0:
@@ -2642,7 +2657,7 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             ax.set_ylabel('')
         if n == 1:
             ax.set_ylabel('Depth (km)', fontsize=10)
-        if n != num_ens-1:
+        if n != num_scenarios-1:
             ax.set_xticklabels([])
         ax.set_xlabel('')
         plt.text(1.01, 0.5, scenarios[n], ha='left', va='center', transform=ax.transAxes, fontsize=11)
