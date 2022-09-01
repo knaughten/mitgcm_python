@@ -2572,7 +2572,7 @@ def interp_PAS_files_to_AMUND ():
 
 
 # Plot Hovmollers of temp or salt in Pine Island Bay for the historical LENS simulation and all four future scenarios. Express as anomalies from the 1920s mean.
-def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None, anomaly=False):
+def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None, option='mean'):
 
     base_dir = real_dir(base_dir)
     grid_dir = base_dir + 'PAS_grid/'
@@ -2580,25 +2580,34 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     hovmoller_file = 'hovmoller.nc'
     if var == 'temp':
         var_title = 'Temperature ('+deg_string+'C)'
-        if anomaly:
+        if option == 'anomaly':
             vmin = -1
             vmax = 2.5
-        else:
+        elif option == 'mean':
             vmin = -1.6
             vmax = 1.4
+        elif option == 'std':
+            vmin = 0
+            vmax = 0.75
     elif var == 'salt':
         var_title = 'Salinity (psu)'
-        if anomaly:
+        if option == 'anomaly':
             vmin = -0.5
             vmax = 0.25
-        else:
+        elif option == 'mean':
             vmin = 34
             vmax = 34.8
-    if anomaly:
+        elif option == 'std':
+            vmin = 0
+            vmax = 0.1
+    if option == 'anomaly':
         var_title += ' anomalies\nfrom 1920s '
         ctype = 'plusminus'
-    else:
+    elif option == 'mean':
         var_title += '\n'
+        ctype = 'basic'
+    elif option == 'std':
+        var_title += ' standard\ndeviation '
         ctype = 'basic'
     suptitle = var_title + 'in ' + region_names[region]
     smooth = 12
@@ -2628,16 +2637,18 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             time = time[t_start:t_end]
             if e==0:
                 time_plot.append(time)
-                data_ens = data
-            else:
-                data_ens += data
-        data_ens /= num_ens[n]
-        if anomaly:
+                data_ens = np.ma.empty([num_ens[n], data.shape[0], data.shape[1]])
+            data_ens[e,:] = data
+        if option in ['mean', 'anomaly']:
+            data_save = np.ma.mean(data_ens, axis=0)
+        elif option == 'std':
+            data_save = np.ma.std(data_ens, axis=0)            
+        if option == 'anomaly':
             if n==0:
                 tb_start, tb_end = index_period(time, baseline_decade, baseline_decade+9)
-                data_baseline = np.mean(data_ens[tb_start:tb_end,:], axis=0)
-            data_ens -= data_baseline[None,:]
-        data_plot.append(data_ens)
+                data_baseline = np.ma.mean(data_save[tb_start:tb_end,:], axis=0)
+            data_save -= data_baseline[None,:]
+        data_plot.append(data_save)
 
     fig = plt.figure(figsize=(6,8))
     gs = plt.GridSpec(num_scenarios,1)
