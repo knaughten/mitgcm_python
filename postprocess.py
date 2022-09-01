@@ -1533,7 +1533,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 long_name = 'barotropic '+var_name[-1]+' velocity'
                 units = 'm/s'
             elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m']:
-                data_3d = mask_3d(read_netcdf(file_paths[t], var_name[-1].upper()+'VEL', time_average=True), grid, gtype=gtype)
+                data_3d = mask_3d(read_netcdf(file_paths[t], var_name[var_name.index('_')+1].upper()+'VEL', time_average=True), grid, gtype=gtype)
                 data_barotropic = xy_to_xyz(vertical_average(data_3d, grid, gtype=gtype), grid)
                 data_baroclinic = data_3d - data_barotropic
                 z_3d = z_to_xyz(grid.z, grid)
