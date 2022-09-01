@@ -16,7 +16,7 @@ from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
-from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts
+from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day
 from ..plot_utils.windows import set_panels, finished_plot
@@ -25,7 +25,7 @@ from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
-from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
@@ -2327,7 +2327,7 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
 
     base_dir = real_dir(base_dir)
     num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
@@ -2338,6 +2338,9 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
     smooth = 24
     p0 = 0.05
+    if timeseries_file_2 is None:
+        timeseries_file_2 = timeseries_file
+    timeseries_files = [timeseries_file, timeseries_file_2]
 
     trend1 = []
     trend2 = []
@@ -2346,11 +2349,11 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     for n in range(num_expt):
         for e in range(num_ens[n]):
             both_trends = []
-            for var in [var1, var2]:
+            for var, k in zip([var1, var2], range(2)):
                 if var == 'TS_global_mean':
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
                 else:
-                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_files[k]
                 trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0)
                 if sig:
                     both_trends.append(trend_tmp)
@@ -2492,19 +2495,25 @@ def interp_PAS_files_to_AMUND ():
     mask_PAS = grid_old.hfac==0
     mask_AMUND = grid_new.hfac==0
 
+    # Extend to the north
+    lat_old = np.concatenate((grid_old.lat_1d, [grid.new.lat_1d[-1]]))
+    fill = np.concatenate((fill, np.expand_dims(fill[...,-1],-1)), axis=-1)
+    mask_PAS = np.concatenate((mask_PAS, np.expand_dims(mask_PAS[...,-1],-1)), axis=-1)
+
     # 3D files
     for fname in fnames_3d:
         data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xyz', prec=64)
+        data_PAS = np.concatenate((data_PAS, np.expand_dims(data_PAS[...,-1],-1)), axis=-1)
         data_PAS = discard_and_fill(data_PAS, mask_PAS, fill)
-        data_AMUND = interp_reg(grid_old, grid_new, data_PAS, fill_value=0)
+        data_AMUND = interp_reg_xyz(grid_old.lon_1d, lat_old, grid_old.z, data_PAS, grid_new.lon_1d, grid_new.lat_1d, grid_new.z)
         data_AMUND[mask_AMUND] = 0
         write_binary(data_AMUND, out_dir+fname+'_PAS_interp', prec=64)
 
     # 2D files
     for fname in fnames_2d:
         data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xy', prec=64)
-        data_PAS = discard_and_fill(data_PAS, mask_PAS[0,:], fill[0,:])
-        data_AMUND = interp_reg(grid_old, grid_new, data_PAS, fill_value=0, dim=2)
+        data_PAS = discard_and_fill(data_PAS, mask_PAS[0,:], fill[0,:], use_3d=False)
+        data_AMUND = interp_reg_xy(grid_old.lon_1d, lat_old, data_PAS, grid_new.lon_1d, grid_new.lat_1d)
         data_AMUND[mask_AMUND[0,:]] = 0
         write_binary(data_AMUND, out_dir+fname+'_PAS_interp', prec=64)
 
@@ -2539,16 +2548,22 @@ def interp_PAS_files_to_AMUND ():
                 hfac_AMUND = hfac_AMUND[0,:]
             dimensions += 't'
             shape = [months_per_year] + shape
+            extend_left = h_AMUND[0] < h_PAS[0]
+            extend_right = h_AMUND[-1] > h_PAS[-1]
+            if extend_left:
+                h_PAS = np.concatenate(([h_AMUND[0]], h_PAS))
+                hfac_PAS = np.concatenate((np.expand_dims(hfac_PAS[...,0],-1), hfac_PAS), axis=-1)
+            if extend_right:
+                h_PAS = np.concatenate((h_PAS, [h_AMUND[-1]]))
+                hfac_PAS = np.concatenate((hfac_PAS, np.expand_dims(hfac_PAS[...,-1],-1)), axis=-1)
             for year in range(obcs_start_year, obcs_end_year+1):
                 fname = obcs_head + var + '_' + bdry + '_' + str(year)
                 file_path = in_dir_obcs + fname
                 data_PAS = read_binary(file_path, [grid_old.nx, grid_old.ny, grid_old.nz], dimensions, prec=32)
-                if h_AMUND[0] < h_PAS[0]:
-                    h_PAS = np.concatenate(([h_AMUND[0]], h_PAS))
-                    data_PAS = np.concatenate((data_PAS[...,0], data_PAS), axis=-1)
-                if h_AMUND[-1] > h_PAS[-1]:
-                    h_PAS = np.concatenate((h_PAS, [h_AMUND[-1]]))
-                    data_PAS = np.concatenate((data_PAS, data_PAS[...,-1]), axis=-1)
+                if extend_left:                    
+                    data_PAS = np.concatenate((np.expand_dims(data_PAS[...,0],-1), data_PAS), axis=-1)
+                if extend_right:                    
+                    data_PAS = np.concatenate((data_PAS, np.expand_dims(data_PAS[...,-1],-1)), axis=-1)
                 data_AMUND = np.empty(shape)
                 for t in range(months_per_year):
                     data_AMUND[t,:] = interp_bdry(h_PAS, grid_old.z, data_PAS[t,:], hfac_PAS, h_AMUND, grid_new.z, hfac_AMUND, depth_dependent=(dim==3))
