@@ -2392,9 +2392,9 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
 
 
 # For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct.
-def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, window=5, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
+def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, window=11, timeseries_file='timeseries.nc', base_dir='./', fig_name=None, option='overlap'):
 
-    from scipy.stats import ttest_ind
+    from scipy.stats import ttest_ind, norm
 
     scenarios = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
     num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
@@ -2447,8 +2447,15 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             for t in range(radius, num_years-radius):
                 sample1 = all_data1[:,t-radius:t+radius+1].ravel()
                 sample2 = all_data2[:,t-radius:t+radius+1].ravel()
-                t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
-                distinct.append(p_val < p0)
+                if option == 'ttest':
+                    t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
+                    distinct.append(p_val < p0)
+                elif option == 'overlap':
+                    min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
+                    min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
+                    mean1 = np.mean(sample1)
+                    mean2 = np.mean(sample2)
+                    distinct.append((mean2 > max1) or (mean2 < min1) or (mean1 > max2) or (mean1 < min2))
             combo_distinct.append(distinct)
     num_combos = len(combo_names)
 
