@@ -2471,7 +2471,7 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     finished_plot(fig, fig_name=fig_name)
 
 
-# Directly interpolate all PAS files (ICs, OBCs, etc - everything except topography) to the AMUND domain for testing purposes.
+# Directly interpolate all PAS files (ICs, OBCs, etc) to the AMUND domain for testing purposes.
 def interp_PAS_files_to_AMUND ():
 
     grid_dir_old = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/'
@@ -2496,14 +2496,14 @@ def interp_PAS_files_to_AMUND ():
     mask_AMUND = grid_new.hfac==0
 
     # Extend to the north
-    lat_old = np.concatenate((grid_old.lat_1d, [grid.new.lat_1d[-1]]))
-    fill = np.concatenate((fill, np.expand_dims(fill[...,-1],-1)), axis=-1)
-    mask_PAS = np.concatenate((mask_PAS, np.expand_dims(mask_PAS[...,-1],-1)), axis=-1)
+    lat_old = np.concatenate((grid_old.lat_1d, [grid_new.lat_1d[-1]]))
+    fill = np.concatenate((fill, np.expand_dims(fill[...,-1,:],-2)), axis=-2)
+    mask_PAS = np.concatenate((mask_PAS, np.expand_dims(mask_PAS[...,-1,:],-2)), axis=-2)
 
     # 3D files
     for fname in fnames_3d:
         data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xyz', prec=64)
-        data_PAS = np.concatenate((data_PAS, np.expand_dims(data_PAS[...,-1],-1)), axis=-1)
+        data_PAS = np.concatenate((data_PAS, np.expand_dims(data_PAS[...,-1,:],-2)), axis=-2)
         data_PAS = discard_and_fill(data_PAS, mask_PAS, fill)
         data_AMUND = interp_reg_xyz(grid_old.lon_1d, lat_old, grid_old.z, data_PAS, grid_new.lon_1d, grid_new.lat_1d, grid_new.z)
         data_AMUND[mask_AMUND] = 0
@@ -2512,6 +2512,7 @@ def interp_PAS_files_to_AMUND ():
     # 2D files
     for fname in fnames_2d:
         data_PAS = read_binary(in_dir + fname, [grid_old.nx, grid_old.ny, grid_old.nz], 'xy', prec=64)
+        data_PAS = np.concatenate((data_PAS, np.expand_dims(data_PAS[...,-1,:],-2)), axis=-2)
         data_PAS = discard_and_fill(data_PAS, mask_PAS[0,:], fill[0,:], use_3d=False)
         data_AMUND = interp_reg_xy(grid_old.lon_1d, lat_old, data_PAS, grid_new.lon_1d, grid_new.lat_1d)
         data_AMUND[mask_AMUND[0,:]] = 0
@@ -2568,6 +2569,91 @@ def interp_PAS_files_to_AMUND ():
                 for t in range(months_per_year):
                     data_AMUND[t,:] = interp_bdry(h_PAS, grid_old.z, data_PAS[t,:], hfac_PAS, h_AMUND, grid_new.z, hfac_AMUND, depth_dependent=(dim==3))
                 write_binary(data_AMUND, out_dir_obcs+fname, prec=32)
+
+
+# Plot Hovmollers of temp or salt in Pine Island Bay for the historical LENS simulation and all four future scenarios. Express as anomalies from the 1920s mean.
+def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None):
+
+    base_dir = real_dir(base_dir)
+    grid_dir = base_dir + 'PAS_grid/'
+    region = 'pine_island_bay'
+    hovmoller_file = 'hovmoller.nc'
+    if var == 'temp':
+        var_title = 'Temperature anomalies ('+deg_string+'C)'
+    elif var == 'salt':
+        var_title = 'Salinity anomalies (psu)'
+    suptitle = var_title + ' from 1920s in ' + region_names[region]
+    smooth = 12
+    scenarios = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
+    start_year = [1920, 2006, 2006, 2006, 2006]
+    end_year = [2005, 2100, 2100, 2080, 2100]
+    baseline_decade = 1920
+    num_scenarios = len(scenarios)
+
+    grid = Grid(grid_dir)
+
+    time_plot = []
+    data_plot = []
+    vmin = 0
+    vmax = 0
+    for n in range(num_scenarios):
+        for e in range(num_ens[n]):
+            file_path = base_dir + 'PAS_'
+            if scenarios[n] in ['historical', 'LENS']:
+                file_path += 'LENS'
+            else:
+                file_path += scenarios[n] + '_'
+            file_path += str(e+1).zfill(3) + '_O/output/' + hovmoller_file
+            time = netcdf_time(file_path, monthly=False)
+            data = read_netcdf(file_path, region+'_'+var)
+            t_start, t_end = index_period(time, start_year[n], end_year[n])
+            data = data[t_start:t_end,:]
+            time = time[t_start:t_end]
+            if e==0:
+                time_plot.append(time)
+                data_ens = data
+            else:
+                data_ens += data
+        data_ens /= num_ens[n]
+        if n==0:
+            tb_start, tb_end = index_period(time, baseline_decade, baseline_decade+9)
+            data_baseline = np.mean(data_ens[tb_start:tb_end,:], axis=0)
+        data_ens -= data_baseline[None,:]
+        data_plot.append(data_ens)
+        vmin = min(vmin, np.amin(data_ens))
+        vmax = max(vmax, np.amax(data_ens))
+
+    fig = plt.figure(figsize=(6,10))
+    gs = plt.GridSpec(num_scenarios,1)
+    gs.update(left=0.07, right=0.85, bottom=0.04, top=0.95, hspace=0.08)
+    cax = fig.add_axes([0.75, 0.96, 0.24, 0.012])
+    for n in range(num_scenarios):
+        ax = plt.subplot(gs[n,0])
+        img = hovmoller_plot(data_plot[n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, ctype='plusminus')
+        ax.set_xlim([datetime.date(start_year[0], 1, 1), datetime.date(end_year[-1], 12, 31)])
+        ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_year[0], end_year[-1], 20)])
+        if n == 0:
+            ax.set_yticks([0, -500, -1000])
+            ax.set_yticklabels(['0', '0.5', '1'])
+            ax.set_ylabel('')
+        else:
+            ax.set_yticks([])
+            ax.set_ylabel('')
+        if n == 1:
+            ax.set_ylabel('Depth (km)', fontsize=10)
+        if n != num_ens-1:
+            ax.set_xticklabels([])
+        ax.set_xlabel('')
+        plt.text(1.01, 0.5, scenarios[n], ha='left', va='center', transform=ax.transAxes, fontsize=11)
+    plt.suptitle(suptitle, fontsize=16, x=0.05, ha='left')
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal', extend='both')
+    cax.xaxis.set_ticks_position('top')
+    reduce_cbar_labels(cbar)
+    finished_plot(fig, fig_name=fig_name)
+        
+    
+    
                 
             
             
