@@ -1583,7 +1583,7 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
 
 
 # Plot the historical and future trends (in each scenario) for the given variable (precomputed in precompute_ensemble_trends).
-def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_LENS=5,  num_MENS=5, num_LW2=5, num_LW1=5, lon0=-106, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
+def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_LENS=5,  num_MENS=5, num_LW2=5, num_LW1=5, lon0=-106, xmin=None, xmax=None, ymin=None, ymax=None, zmin=None, zmax=None, hmin=None, hmax=None, vmin=None, vmax=None, fig_name=None):
 
     if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx']:
         option = 'scalar'
@@ -1626,10 +1626,9 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
         data_plot_u = np.ma.empty(shape)
         data_plot_v = np.ma.empty(shape)
     for t in range(num_periods):
-        if option in ['scalar', 'slice']:
+        if option == 'scalar':
             data_plot[t,:], long_name, units = read_trend(var)
-            units = units[:-2] + '/century'
-        else:
+        elif option == 'vector':
             if var == 'wind':
                 var_u = 'EXFuwind'
                 var_v = 'EXFvwind'
@@ -1645,39 +1644,47 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
                 # Interpolate to tracer grid
                 trends_u = interp_grid(trends_u, grid, 'u', 't')
                 trends_v = interp_grid(trends_v, grid, 'v', 't')
-            # Calculate magnitude
+            # Also read trends in magnitude
             trends, units, long_name = read_trend(var+'_speed')
-            index = trends < threshold
+            index = np.abs(trends) < threshold
             trends_u = np.ma.masked_where(index, trends_u)
             trends_v = np.ma.masked_where(index, trends_v)
             data_plot[t,:] = trends
             data_plot_u[t,:] = trends_u
             data_plot_v[t,:] = trends_v
+        elif option == 'slice':
+            # TODO
+            pass
 
-
-
-    
-            data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])
-            for t in range(num_periods):
-                file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'
-                trends, long_name, units = read_netcdf(file_path, var +'_trend', return_info=True)
-                mean_trend = np.mean(trends, axis=0)
-                t_val, p_val = ttest_1samp(trends, 0, axis=0)
-                mean_trend[p_val > p0] = 0
-                data_plot[t,:] = mean_trend*1e2
-            vmin = np.amin([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[0] for t in range(num_periods)])
-            vmax = np.amax([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[1] for t in range(num_periods)])
-            fig, gs, cax = set_panels('1x2C1')
-            for t in range(num_periods):
-                ax = plt.subplot(gs[0,t])
+        if vmin is None:
+            if option in ['scalar', 'vector']:
+                vmin = np.amin([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[0] for t in range(num_periods)])
+            elif option == 'slice':
+                # TODO
+                pass
+        if vmax is None:
+            if option in ['scalar', 'vector']:
+                vmax = np.amax([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymax=ymax)[1] for t in range(num_periods)])
+            elif option == 'slice':
+                # TODO
+                pass
+        fig, gs, cax = set_panels('3x2-1C1')
+        for t in range(num_periods):
+            ax = plt.subplot(gs[(t+1)//2, (t+1)%2])
+            if option in ['scalar', 'vector']:
                 img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, ymax=ymax, xmin=xmin, xmax=xmax, title=periods[t], titlesize=14)
                 if t != 0:
                     ax.set_xticklabels([])
                     ax.set_yticklabels([])
-            plt.colorbar(img, cax=cax, orientation='horizontal')
-            plt.suptitle(long_name+' ('+units[:-2]+'/century)', fontsize=20)
-            fig_name = fig_dir + var + '_trends' + file_tail
-            finished_plot(fig, fig_name=fig_name)
+                if option == 'vector':
+                    # TODO: add vectors overlay
+                    pass
+            elif option == 'slice':
+                # TODO: plot slice at given lon0
+                pass
+        plt.colorbar(img, cax=cax, orientation='horizontal')
+        plt.suptitle(long_name+' ('+units[:-2]+'/century)', fontsize=20)
+        finished_plot(fig, fig_name=fig_name)
 
 
 # Plot historical and future temperature and salinity trends as a slice through any longitude.

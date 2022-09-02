@@ -80,6 +80,8 @@ def set_panels (key, figsize=None):
             figsize = (10, 8)
         elif key == '2x4-1C7':
             figsize = (10, 6)
+        elif key == '3x2-1C1':
+            figsize = (8, 10)
 
     fig = plt.figure(figsize=figsize)
     
@@ -272,6 +274,11 @@ def set_panels (key, figsize=None):
                     continue
                 cax = fig.add_axes([x0[i], y0[j], 0.2, 0.02])
                 cax_all.append(cax)
+    elif key == '3x2-1C1':
+        # 5 plots arranged in 3 rows and 2 columns, with an empty space at the top left for the title and colourbar
+        gs = plt.GridSpec(3,2)
+        gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.02, hspace=0.2)
+        cax = fig.add_axes([0.1, 0.8, 0.3, 0.02])
     else:
         print(('Error (set_panels): no entry for key ' + key))
         sys.exit()
