@@ -1543,7 +1543,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT']
+    var_names = ['barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -1582,39 +1582,81 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
             make_trend_file(var, region, sim_dir, grid_dir, out_file, dim=dim, start_year=start_years[t], end_year=end_years[t], gtype=gtype)
 
 
-# Plot the historical and future trends in each lat-lon variable.
-def plot_trend_maps (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_dir='./'):
+# Plot the historical and future trends (in each scenario) for the given variable (precomputed in precompute_ensemble_trends).
+def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_LENS=5,  num_MENS=5, num_LW2=5, num_LW1=5, lon0=-106, xmin=None, xmax=None, ymin=None, ymax=None, fig_name=None):
 
-    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'thermocline']
+    if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx']:
+        option = 'scalar'
+    elif var in ['wind', 'barotropic_vel', 'baroclinic_vel_bottom100m']:
+        option = 'vector'
+        if var == 'wind':
+            threshold = 0
+        elif var == 'barotropic_vel':
+            threshold = 0
+        elif var == 'baroclinic_vel_bottom100m':
+            threshold = 0
+    elif var in ['THETA', 'SALT']:
+        option = 'slice'
     trend_dir = real_dir(trend_dir)
     fig_dir = real_dir(fig_dir)
     grid = Grid(grid_dir)
-    start_years = [1920, 2006]
-    end_years = [2005, 2100]
-    periods = ['historical', 'future']
+    periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    start_years = [1920, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2100, 2080, 2100, 2100]
     num_periods = len(periods)
     p0 = 0.05
 
-    for var in var_names:
-        for zoom in [True, False]:
-            if zoom:
-                ymax = -70
-                file_tail = '_zoom.png'
-                if var in ['sst', 'sss', 'SIfwfrz', 'SIfwmelt', 'SIarea', 'SIheff', 'EXFatemp', 'EXFaqh', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed']:
-                    # No need to zoom in
-                    continue
-            else:
-                ymax = None
-                file_tail = '.png'
-                if var in ['ismr', 'temp_btw_200_700m', 'salt_btw_200_700m', 'temp_below_700m', 'salt_below_700m', 'thermocline']:
-                    # No need to zoom out
-                    continue
-            if var in ['SIfwmelt', 'oceFWflx']:
-                xmin = -138
-                xmax = -82
-            else:
-                xmin = None
-                xmax = None
+    # Inner function to read the precomputed trend in each ensemble member, calculate the mean trend, set it to 0 where not significant, and convert to trend per century
+    def read_trend (var_in_file):
+        file_path = trend_dir + var_in_file + '_trend_' + periods[t] + '.nc'
+        trends, long_name, units = read_netcdf(file_path, var_in_file +'_trend', return_info=True)
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend[p_val > p0] = 0
+        return mean_trend*1e2, long_name, units        
+
+    # Calculate the trends for each period/scenario
+    shape = [num_periods]
+    if option == 'slice':
+        shape += [grid.nz, grid.ny]
+    else:
+        shape += [grid.ny, grid.nx]
+    data_plot = np.ma.empty(shape)
+    if option == 'vector':
+        data_plot_u = np.ma.empty(shape)
+        data_plot_v = np.ma.empty(shape)
+    for t in range(num_periods):
+        if option in ['scalar', 'slice']:
+            data_plot[t,:], long_name, units = read_trend(var)
+            units = units[:-2] + '/century'
+        else:
+            if var == 'wind':
+                var_u = 'EXFuwind'
+                var_v = 'EXFvwind'
+            elif var == 'barotropic_vel':
+                var_u = 'barotropic_u'
+                var_v = 'barotropic_v'
+            elif var == 'baroclinic_vel_bottom100m':
+                var_u = 'baroclinic_u_bottom100m'
+                var_v = 'baroclinic_v_bottom100m'
+            trends_u = read_trend(var_u)[0]
+            trends_v = read_trend(var_v)[0]
+            if var in ['barotropic_vel', 'baroclinic_vel_bottom100m']:
+                # Interpolate to tracer grid
+                trends_u = interp_grid(trends_u, grid, 'u', 't')
+                trends_v = interp_grid(trends_v, grid, 'v', 't')
+            # Calculate magnitude
+            trends, units, long_name = read_trend(var+'_speed')
+            index = trends < threshold
+            trends_u = np.ma.masked_where(index, trends_u)
+            trends_v = np.ma.masked_where(index, trends_v)
+            data_plot[t,:] = trends
+            data_plot_u[t,:] = trends_u
+            data_plot_v[t,:] = trends_v
+
+
+
+    
             data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])
             for t in range(num_periods):
                 file_path = trend_dir + var + '_trend_' + periods[t] + '.nc'

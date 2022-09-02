@@ -1527,22 +1527,49 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data = np.mean(np.sqrt(u**2 + v**2), axis=0)
                 long_name = 'speed of ocean velocity'
                 units = 'm/s'
-            elif var_name in ['barotropic_u', 'barotropic_v']:
-                data_3d = mask_3d(read_netcdf(file_paths[t], var_name[-1].upper()+'VEL', time_average=True), grid, gtype=gtype)
-                data = vertical_average(data_3d, grid, gtype=gtype)
-                long_name = 'barotropic '+var_name[-1]+' velocity'
+            elif var_name in ['barotropic_u', 'barotropic_v', 'barotropic_vel_speed']:
+                if var_name != 'barotropic_v':
+                    data_u = vertical_average(mask_3d(read_netcdf(file_paths[t], 'UVEL', time_average=True), grid, gtype=gtype), grid, gtype='u')
+                if var_name != 'barotropic_u':
+                    data_v = vertical_average(mask_3d(read_netcdf(file_paths[t], 'VVEL', time_average=True), grid, gtype=gtype), grid, gtype='v')
+                long_name = 'barotropic '
                 units = 'm/s'
-            elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m']:
-                data_3d = mask_3d(read_netcdf(file_paths[t], var_name[var_name.index('_')+1].upper()+'VEL', time_average=True), grid, gtype=gtype)
-                data_barotropic = xy_to_xyz(vertical_average(data_3d, grid, gtype=gtype), grid)
-                data_baroclinic = data_3d - data_barotropic
+                if var == 'barotropic_u':
+                    data = data_u
+                    long_name += 'u-'
+                elif var == 'barotropic_v':
+                    data = data_v
+                    long_name += 'v-'
+                elif var == 'barotropic_vel_speed':
+                    data_u = interp_grid(data_u, grid, 'u', 't')
+                    data_v = interp_grid(data_v, grid, 'v', 't')
+                    data = np.sqrt(data_u**2 + data_v**2)
+                long_name += 'velocity'
+            elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'baroclinic_vel_bottom100m_speed']:
                 z_3d = z_to_xyz(grid.z, grid)
                 bathy_3d = xy_to_xyz(grid.bathy, grid)
                 mask_above_100m = z_3d > bathy_3d + 100
-                data_baroclinic = np.ma.masked_where(mask_above_100m, data_baroclinic)
-                data = vertical_average(data_baroclinic, grid, gtype=gtype)
-                long_name = 'baroclinic '+var_name[-1]+' velocity over bottom 100m'
-                units = 'm/s'                
+                if var_name != 'baroclinic_v_bottom100m':
+                    data_u_3d = mask_3d(read_netcdf(file_paths[t], 'UVEL', time_average=True), grid, gtype='u')
+                    data_u_baroclinic = data_u_3d - xy_to_xyz(vertical_average(data_u_3d, grid, gtype='u'), grid)
+                    data_u = vertical_average(np.ma.masked_where(mask_above_100m, data_u_baroclinic), grid, gtype='u')
+                if var_name != 'baroclinic_u_bottom100m':
+                    data_v_3d = mask_3d(read_netcdf(file_paths[t], 'VVEL', time_average=True), grid, gtype='v')
+                    data_v_baroclinic = data_v_3d - xy_to_xyz(vertical_average(data_v_3d, grid, gtype='v'), grid)
+                    data_v = vertical_average(np.ma.masked_where(mask_above_100m, data_v_baroclinic), grid, gtype='v')
+                long_name = 'baroclinic '
+                units = 'm/s'
+                if var == 'baroclinic_u_bottom100m':
+                    data = data_u
+                    long_name += 'u-'
+                elif var == 'baroclinic_v_bottom100m':
+                    data = data_v
+                    long_name += 'v-'
+                elif var == 'baroclinic_vel_bottom100m_speed':
+                    data_u = interp_grid(data_u, grid, 'u', 't')
+                    data_v = interp_grid(data_v, grid, 'v', 't')
+                    data = np.sqrt(data_u**2 + data_v**2)
+                long_name += 'velocity over bottom 100m'
             elif var_name == 'thermocline':
                 temp = read_netcdf(file_paths[t], 'THETA')
                 num_time = temp.shape[0]
