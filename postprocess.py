@@ -1534,13 +1534,13 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                     data_v = vertical_average(mask_3d(read_netcdf(file_paths[t], 'VVEL', time_average=True), grid, gtype=gtype), grid, gtype='v')
                 long_name = 'barotropic '
                 units = 'm/s'
-                if var == 'barotropic_u':
+                if var_name == 'barotropic_u':
                     data = data_u
                     long_name += 'u-'
-                elif var == 'barotropic_v':
+                elif var_name == 'barotropic_v':
                     data = data_v
                     long_name += 'v-'
-                elif var == 'barotropic_vel_speed':
+                elif var_name == 'barotropic_vel_speed':
                     data_u = interp_grid(data_u, grid, 'u', 't')
                     data_v = interp_grid(data_v, grid, 'v', 't')
                     data = np.sqrt(data_u**2 + data_v**2)
@@ -1559,13 +1559,13 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                     data_v = vertical_average(np.ma.masked_where(mask_above_100m, data_v_baroclinic), grid, gtype='v')
                 long_name = 'baroclinic '
                 units = 'm/s'
-                if var == 'baroclinic_u_bottom100m':
+                if var_name == 'baroclinic_u_bottom100m':
                     data = data_u
                     long_name += 'u-'
-                elif var == 'baroclinic_v_bottom100m':
+                elif var_name == 'baroclinic_v_bottom100m':
                     data = data_v
                     long_name += 'v-'
-                elif var == 'baroclinic_vel_bottom100m_speed':
+                elif var_name == 'baroclinic_vel_bottom100m_speed':
                     data_u = interp_grid(data_u, grid, 'u', 't')
                     data_v = interp_grid(data_v, grid, 'v', 't')
                     data = np.sqrt(data_u**2 + data_v**2)
