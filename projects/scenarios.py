@@ -1593,9 +1593,11 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
             threshold = 0.25
             scale = 10
         elif var == 'barotropic_vel':
-            threshold = 0
+            threshold = 0.02
+            scale = 1
         elif var == 'baroclinic_vel_bottom100m':
-            threshold = 0
+            threshold = 0.02
+            scale = 0.8
     elif var in ['THETA', 'SALT']:
         option = 'slice'
     else:
@@ -1619,13 +1621,13 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
         return mean_trend*1e2, long_name, units        
 
     # Calculate the trends for each period/scenario
-    if option in ['scalar, vector']:
+    if option in ['scalar', 'vector']:
         data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])
     elif option == 'slice':
         data_plot = []
     if option == 'vector':
-        data_plot_u = np.ma.empty(shape)
-        data_plot_v = np.ma.empty(shape)
+        data_plot_u = np.ma.empty([num_periods, grid.ny, grid.nx])
+        data_plot_v = np.ma.empty([num_periods, grid.ny, grid.nx])
     for t in range(num_periods):
         if option == 'scalar':
             data_plot[t,:], long_name, units = read_trend(var)
