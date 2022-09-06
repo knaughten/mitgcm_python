@@ -2742,7 +2742,7 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
 
 
 # Compare the bathymetry, 
-def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_dig/', xmin=-115, xmax=-98, ymin=-75.5, ymax=-73.5, vmin=0, vmax=None, fig_name=None):
+def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_dig/', xmin=-115, xmax=-98, ymin=-75.5, ymax=-73.5, vmin=0, vmax=None, vmin_diff=None, vmax_diff=None, fig_name=None):
 
     grid_old = Grid(grid_dir_old)
     grid_new = Grid(grid_dir_new)
@@ -2757,13 +2757,13 @@ def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_di
 
     data_old = prep_data(grid_old)
     data_new = prep_data(grid_new)
-    data_new_fill = fill_into_mask(np.copy(data), use_3d=False, log=False)
+    data_new_fill = fill_into_mask(np.ma.copy(data_new), use_3d=False, log=False)
     data_new_interp = interp_reg(grid_new, grid_old, data_new_fill, dim=2)
     data_diff = data_new_interp - data_old
     mask_new = data_new.mask.astype(float)
     mask_new_interp = np.ceil(interp_reg(grid_new, grid_old, mask_new, dim=2)).astype(bool)
     mask_both = (data_old.mask + mask_new_interp).astype(bool)
-    data_diff = np.ma.masked_where(mask_both, data_new_interp)
+    data_diff = np.ma.masked_where(mask_both, data_diff)
 
     fig, gs, cax1, cax2 = set_panels('1x3C2')
     cax = [cax1, None, cax2]
@@ -2772,9 +2772,15 @@ def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_di
     titles = ['PAS', 'AMUND', 'Difference']
     vmin_old, vmax_old = var_min_max(data_old, grid_old, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
     vmin_new, vmax_new = var_min_max(data_new, grid_new, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    vmin_diff, vmax_diff = var_min_max(data_diff, grid_old, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-    vmin_abs = min(vmin_old, vmin_new)
-    vmax_abs = max(vmax_old, vmax_new)
+    vmin_diff_tmp, vmax_diff_tmp = var_min_max(data_diff, grid_old, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    if vmin is None:
+        vmin_abs = min(vmin_old, vmin_new)
+    else:
+        vmin_abs = vmin
+    if vmax is None:
+        vmax_abs = max(vmax_old, vmax_new)
+    else:
+        vmax_abs = vmax
     vmin = [vmin_abs, vmin_abs, vmin_diff]
     vmax = [vmax_abs, vmax_abs, vmax_diff]
     ctype = ['basic', 'basic', 'plusminus']
