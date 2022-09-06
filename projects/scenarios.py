@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
@@ -25,7 +25,7 @@ from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
-from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
@@ -2739,6 +2739,57 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     cax.xaxis.set_ticks_position('top')
     reduce_cbar_labels(cbar)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Compare the bathymetry, 
+def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_dig/', xmin=-115, xmax=-98, ymin=-75.5, ymax=-73.5, vmin=0, vmax=None, fig_name=None):
+
+    grid_old = Grid(grid_dir_old)
+    grid_new = Grid(grid_dir_new)
+
+    def prep_data (grid):
+        if var == 'bathy':
+            return abs(mask_land(grid.bathy, grid))
+        elif var == 'draft':
+            return abs(mask_except_ice(grid.draft, grid))
+        elif var == 'wct':
+            return abs(mask_land(grid.draft-grid.bathy, grid))
+
+    data_old = prep_data(grid_old)
+    data_new = prep_data(grid_new)
+    data_new_fill = fill_into_mask(np.copy(data), use_3d=False, log=False)
+    data_new_interp = interp_reg(grid_new, grid_old, data_new_fill, dim=2)
+    data_diff = data_new_interp - data_old
+    mask_new = data_new.mask.astype(float)
+    mask_new_interp = np.ceil(interp_reg(grid_new, grid_old, mask_new, dim=2)).astype(bool)
+    mask_both = (data_old.mask + mask_new_interp).astype(bool)
+    data_diff = np.ma.masked_where(mask_both, data_new_interp)
+
+    fig, gs, cax1, cax2 = set_panels('1x3C2')
+    cax = [cax1, None, cax2]
+    data = [data_old, data_new, data_diff]
+    grid = [grid_old, grid_new, grid_old]
+    titles = ['PAS', 'AMUND', 'Difference']
+    vmin_old, vmax_old = var_min_max(data_old, grid_old, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    vmin_new, vmax_new = var_min_max(data_new, grid_new, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    vmin_diff, vmax_diff = var_min_max(data_diff, grid_old, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+    vmin_abs = min(vmin_old, vmin_new)
+    vmax_abs = max(vmax_old, vmax_new)
+    vmin = [vmin_abs, vmin_abs, vmin_diff]
+    vmax = [vmax_abs, vmax_abs, vmax_diff]
+    ctype = ['basic', 'basic', 'plusminus']
+    for n in range(len(data)):
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(data[n], grid[n], ax=ax, vmin=vmin[n], vmax=vmax[n], xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, ctype=ctype[n], make_cbar=False)
+        ax.set_title(titles[n], fontsize=14)
+        if n != 0:
+            ax.set_xticks([])
+            ax.set_yticks([])
+        if cax[n] is not None:
+            plt.colorbar(img, cax=cax[n])
+    plt.suptitle(var, fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
+        
         
     
     
