@@ -1597,7 +1597,7 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                 data_raw = apply_mask(data_raw, np.invert(mask_3d))
                 data = vertical_average(data_raw, grid)
             elif var_name.startswith('isotherm'):
-                var_tail = var[len('isotherm_'):]
+                var_tail = var_name[len('isotherm_'):]
                 if 'below' in var_tail:
                     isotherm = var_tail[:var_tail.index('C_below')]
                     z0 = -1*int(var_tail[len(isotherm+'C_below_'):-1])
