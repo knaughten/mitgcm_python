@@ -28,7 +28,7 @@ from ..plot_slices import slice_plot, make_slice_plot
 from ..constants import sec_per_year, kg_per_Gt, dotson_melt_years, getz_melt_years, pig_melt_years, region_names, deg_string, sec_per_day, region_bounds, Cp_sw, rad2deg, rhoConst, adusumilli_melt, rho_fw, bedmap_bdry, bedmap_res, bedmap_dim
 from ..plot_misc import hovmoller_plot, ts_animation, ts_binning
 from ..timeseries import calc_annual_averages, set_parameters
-from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var, precompute_timeseries_coupled, make_trend_file, #trend_region_plots
+from ..postprocess import get_output_files, check_segment_dir, segment_file_paths, set_update_file, set_update_time, set_update_var, precompute_timeseries_coupled, make_trend_file #, trend_region_plots
 from ..diagnostics import adv_heat_wrt_freezing, potential_density, thermocline
 from ..calculus import time_derivative, time_integral, vertical_average, area_average
 from ..interpolation import interp_reg_xy, interp_reg_xyz, interp_to_depth, interp_grid, interp_slice_helper, interp_nonreg_xy, discard_and_fill
