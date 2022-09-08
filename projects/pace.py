@@ -3889,6 +3889,24 @@ def plot_sfc_trends_alt (trend_dir='./', grid_dir='PAS_grid/', fig_dir='./'):
     finished_plot(fig, fig_name=fig_dir+'sfc_trends_alt.png', dpi=300)
 
 
+def plot_salt_trend_slice (trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_ens=20, lon0=None, zmin=None, zmax=None, hmin=None, hmax=None, fig_name=None):
+
+    trend_dir = real_dir(trend_dir)
+    grid = Grid(grid_dir)
+    start_year = 1920
+    end_year = 2013
+    p0 = 0.05
+
+    file_path = trend_dir + 'SALT_trend.nc'
+    trends = read_netcdf(file_path, 'SALT_trend')
+    mean_trend = np.mean(trends, axis=0)
+    t_val, p_val = ttest_1samp(trends, 0, axis=0)
+    mean_trend[p_val > p0] = 0
+    mean_trend *= 1e2
+
+    slice_plot(mean_trend, grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, ctype='plusminus', fig_name=fig_name)
+
+
 
 
 
