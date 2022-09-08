@@ -92,10 +92,12 @@ region_bounds = {
     'dotson_to_cosgrove': [-114.6, -98.5, -75.5, -73.1],
     'amundsen_sea': [-140, -80, -75.6, -62],
     'bear_ridge_S': [-110.35, -110.35, -74.35, -73.8791],
-    'bear_ridge_N': [-112.05, -109.05, -73.8791, -72.7314]
+    'bear_ridge_N': [-112.05, -109.05, -73.8791, -72.7314],
+    'PAS_shelf1': [-140, -100, -75.6, -70],
+    'PAS_shelf2': [-100, -80, -75.6, -69]
 }
 # Regions that are in two parts
-region_split = ['fris', 'abbot']
+region_split = ['fris', 'abbot', 'PAS_shelf']
 # Isobaths restricting some regions
 region_bathy_bounds = {
     'sws_shelf': [-1250, None],
@@ -108,7 +110,8 @@ region_bathy_bounds = {
     'filchner_sill': [-1500, -600],
     'filchner_trough_cavity': [None, -1000],
     'amundsen_shelf': [-1750, None],
-    'bear_ridge_N': [-300, None]
+    'bear_ridge_N': [-300, None],
+    'PAS_shelf': [-1750, None]
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {

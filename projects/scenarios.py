@@ -18,7 +18,7 @@ from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
-from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day
+from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
@@ -2821,6 +2821,28 @@ def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_di
             plt.colorbar(img, cax=cax[n])
     plt.suptitle(var, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate some extra timeseries of surface freshwater flux terms
+def calc_sfc_fw_timeseries (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, timeseries_file='timeseries_fwflx.nc'):
+
+    var_names = ['PAS_shelf_seaice_melt', 'PAS_shelf_seaice_freeze', 'PAS_shelf_pmepr']
+    base_dir = real_dir(base_dir)
+    sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_O/' for n in range(num_LENS)] + ['PAS_MENS_'+str(n+1).zfill(3)+'_O/' for n in range(num_MENS)] + ['PAS_LW2.0_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW2)] + ['PAS_LW1.5_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW1)]
+    for sd in sim_dir:
+        precompute_timeseries_coupled(output_dir=base_dir+sd+'output/', timeseries_types=var_names, hovmoller_loc=[], timeseries_file=timeseries_file)
+    
+
+
+def plot_fw_budget_timeseries ():
+
+    # Read all_massloss
+    ismr_flux = massloss*1e6/(rho_ice*sec_per_year)
+
+    # Separately: Define continental shelf region for entire domain
+    # Calculate _seaice_melt, _seaice_freeze, _pmepr timeseries over region, multiply by 1e-3 to get Sv
+
+    # Advection of salt from eastern boundary
         
         
     
