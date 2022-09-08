@@ -10,7 +10,7 @@ import numpy as np
 
 from .grid import Grid, choose_grid
 from .file_io import read_netcdf, find_variable, netcdf_time, check_single_time, read_iceprod
-from .utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max, real_dir, select_top
+from .utils import convert_ismr, mask_except_ice, mask_3d, mask_land_ice, mask_land, select_bottom, select_year, var_min_max, real_dir, select_top, depth_of_isoline
 from .plot_utils.windows import set_panels, finished_plot
 from .plot_utils.labels import latlon_axes, check_date_string, parse_date
 from .plot_utils.colours import set_colours, get_extend
@@ -325,6 +325,15 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
     latlon_plot(psi, grid, ctype='plusminus', vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title='Horizontal velocity streamfunction (Sv)\nvertically integrated', fig_name=fig_name, figsize=figsize, dpi=dpi)
 
 
+def plot_isotherm (temp, grid, isotherm, z0=None, vmin=None,  vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
+
+    isotherm_depth = depth_of_isoline(temp, grid.z, isotherm, z0=z0)
+    title = 'Depth of '+str(isotherm)+'C isotherm'
+    if z0 is not None:
+        title += ' below '+str(abs(z0))+'m'
+    latlon_plot(isotherm_depth, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title=title, fig_name=fig_name, figsize=figsize, dpi=dpi)
+
+
 # NetCDF interface. Call this function with a specific variable key and information about the necessary NetCDF file, to get a nice lat-lon plot.
 
 # Arguments:
@@ -346,6 +355,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 #      'velice': sea ice velocity: magnitude overlaid with vectors
 #      'psi': horizontal velocity streamfunction
 #      'iceprod': sea ice production
+#      'isotherm': depth of given isotherm, possibly below the minimum depth z0
 # file_path: path to NetCDF file containing the necessary variable:
 #            'ismr': SHIfwFlx
 #            'bwtemp': THETA
@@ -387,7 +397,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 # chunk: only matters for 'vel' or 'velice'. As in function overlay_vectors.
 # figsize: as in function latlon_plot
 
-def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', z0=None, chunk=None, scale=None, pster=False, figsize=(8,6), dpi=None):
+def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, t_end=None, time_average=False, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, second_file_path=None, change_points=None, tf_option='min', vel_option='avg', isotherm=None, z0=None, chunk=None, scale=None, pster=False, figsize=(8,6), dpi=None):
 
     # Build the grid if needed
     grid = choose_grid(grid, file_path)
@@ -395,6 +405,10 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     check_single_time(time_index, time_average)
     # Determine what to write about the date
     date_string = check_date_string(date_string, file_path, time_index)
+
+    if var == 'isotherm' and isotherm is None:
+        print('Error (read_plot_latlon): must set isotherm')
+        sys.exit()
 
     # Inner function to read a variable from the correct NetCDF file and mask appropriately
     def read_and_mask (var_name, mask_option, check_second=False, gtype='t'):
@@ -420,7 +434,7 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
     # Now read and mask the necessary variables
     if var == 'ismr':
         shifwflx = read_and_mask('SHIfwFlx', 'except_ice')
-    if var in ['bwtemp', 'sst', 'tminustf']:
+    if var in ['bwtemp', 'sst', 'tminustf', 'isotherm']:
         temp = read_and_mask('THETA', '3d', check_second=True)
     if var in ['bwsalt', 'sss', 'tminustf']:
         salt = read_and_mask('SALT', '3d', check_second=True)
@@ -486,6 +500,8 @@ def read_plot_latlon (var, file_path, grid=None, time_index=None, t_start=None, 
         plot_psi(psi, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     elif var == 'iceprod':
         plot_2d_noshelf('iceprod', iceprod, grid, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
+    elif var == 'isotherm':
+        plot_isotherm(temp, grid, isotherm, z0=z0, vmin=vmin, vmax=vmax, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, fig_name=fig_name, figsize=figsize, dpi=dpi)
     else:
         print(('Error (read_plot_latlon): variable key ' + str(var) + ' does not exist'))
         sys.exit()
@@ -992,7 +1008,6 @@ def read_plot_latlon_comparison (var, expt_name_1, expt_name_2, directory1, dire
 
     # Make the plot
     latlon_comparison_plot(data_1, data_2, grid, include_shelf=include_shelf, ctype=ctype, vmin=vmin, vmax=vmax, vmin_diff=vmin_diff, vmax_diff=vmax_diff, zoom_fris=zoom_fris, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, date_string=date_string, title1=expt_name_1, title2=expt_name_2, suptitle=title, fig_name=fig_name, change_points=change_points, extend=extend, extend_diff=extend_diff, u_1=u_1, v_1=v_1, u_2=u_2, v_2=v_2, percent_anomaly=percent_anomaly, angle_anomaly=angle_anomaly, pster=pster, fill_gap=fill_gap, lon_lines=lon_lines, lat_lines=lat_lines)
-    
     
         
     

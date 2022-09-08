@@ -839,7 +839,7 @@ def depth_of_max (data, grid, gtype='t'):
 
 
 # Calculate the shallowest depth of the given isoline, below the given depth z0.
-# Regions where the entire water column is below the given isoline will be set to the seafloor depth; regions where it is entirely above the isoline will trigger an error.
+# Regions where the entire water column is below the given isoline will be set to the seafloor depth; regions where it is entirely above the isoline will be masked.
 def depth_of_isoline (data, z, val0, z0=None):
 
     [nz, ny, nx] = data.shape
