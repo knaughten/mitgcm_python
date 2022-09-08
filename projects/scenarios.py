@@ -1543,7 +1543,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['thermocline', 'UVEL', 'VVEL'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL']
+    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -1585,7 +1585,7 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
 # Plot the historical and future trends (in each scenario) for the given variable (precomputed in precompute_ensemble_trends).
 def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_LENS=5,  num_MENS=5, num_LW2=5, num_LW1=5, lon0=-106, xmin=None, xmax=None, ymin=None, ymax=None, zmin=None, zmax=None, hmin=None, hmax=None, vmin=None, vmax=None, chunk_x=20, chunk_y=10, fig_name=None):
 
-    if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx']:
+    if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx', 'thermocline']:
         option = 'scalar'
     elif var in ['wind', 'barotropic_vel', 'baroclinic_vel_bottom100m']:
         option = 'vector'
