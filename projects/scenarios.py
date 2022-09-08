@@ -1666,7 +1666,7 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
         elif option == 'slice':
             trend_3d, long_name, units = read_trend(var)
             if t==0:
-                patches, values, lon0, hmin, hmax, zmin, zmax, vmin0, vmax0, left, right, below, above = slice_patches(trend_3d, grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, gtype=gtype return_bdry=True)
+                patches, values, lon0, hmin, hmax, zmin, zmax, vmin0, vmax0, left, right, below, above = slice_patches(trend_3d, grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, gtype=gtype, return_bdry=True)
             else:
                 values, vmin_tmp, vmax_tmp = slice_values(trend_3d, grid, left, right, below, above, hmin, hmax, zmin, zmax, lon0=lon0, gtype=gtype)
                 vmin0 = min(vmin0, vmin_tmp)
