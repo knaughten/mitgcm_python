@@ -2456,7 +2456,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     finished_plot(fig, fig_name=fig_name)
 
 
-# For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct.
+# For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct. Also print out the year at which they diverge for good, as well as the year at which the ensemble means last intersect.
 def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, window=11, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
 
     from scipy.stats import norm
@@ -2480,6 +2480,7 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     for s1 in range(num_scenarios):
         for s2 in range(s1+1, num_scenarios):
             combo_names += [scenarios[s1]+' vs\n'+scenarios[s2]]
+            print(combo_names[-1])
             # Read all the data, annually averaged
             if 'MENS' in [scenarios[s1], scenarios[s2]]:
                 end_year = end_year_MENS
@@ -2504,7 +2505,18 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
                     data = data[t_start:t_end]
                     data, time = monthly_to_annual(data, time)
                     all_data[n,:] = data
-            # Now do a 2-sample t-test over each 5-year window
+            # Calculate running mean over window to find the last intersection of ensemble means
+            data1_smooth, time_smooth = moving_average(np.mean(all_data1,axis=0), window, time=np.copy(time))
+            data2_smooth = moving_average(np.mean(all_data2,axis=0), window)
+            if (data1_smooth < data2_smooth).all() or (data1_smooth > data2_smooth).all():
+                print('Ensemble means never cross')
+            else:
+                if data1_smooth[-1] < data2_smooth[-1]:
+                    t0 = np.where(data1_smooth >= data2_smooth)[0][-1] + 1
+                elif data1_smooth[-1] > data2_smooth[-1]:
+                    t0 = np.where(data1_smooth <= data2_smooth)[0][-1] + 1
+                print('Ensemble means stop crossing at '+str(time_smooth[t0]))
+            # Now do a 2-sample t-test over each window
             radius = (window-1)//2
             time = time[radius:-radius]
             combo_time.append(np.array([t.year for t in time]))
@@ -2520,6 +2532,12 @@ def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
                 mean2 = np.mean(sample2)
                 distinct.append((mean2 > max1) or (mean2 < min1) or (mean1 > max2) or (mean1 < min2))
             combo_distinct.append(distinct)
+            if not distinct[-1]:
+                print('Ensembles never diverge for good')
+            else:
+                t0 = np.where(np.invert(distinct))[0][-1] + 1
+                print('Ensembles diverge for good at '+str(time[t0]))
+            
     num_combos = len(combo_names)
 
     # Plot
