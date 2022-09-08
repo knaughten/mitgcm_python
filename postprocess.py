@@ -11,7 +11,7 @@ import netCDF4 as nc
 from .grid import Grid
 from .file_io import NCfile, netcdf_time, find_time_index, read_netcdf, read_iceprod
 from .timeseries import calc_timeseries, calc_special_timeseries, set_parameters
-from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask, convert_ismr, mask_2d_to_3d, xy_to_xyz, z_to_xyz
+from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask, convert_ismr, mask_2d_to_3d, xy_to_xyz, z_to_xyz, depth_of_isoline
 from .constants import deg_string, region_names
 from .calculus import area_average, vertical_average
 from .diagnostics import density, thermocline, adv_heat_wrt_freezing
@@ -1595,7 +1595,22 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                     z_deep = None
                 mask_3d = mask_2d_to_3d(mask, grid, zmin=z_deep, zmax=z_shallow)
                 data_raw = apply_mask(data_raw, np.invert(mask_3d))
-                data = vertical_average(data_raw, grid)                
+                data = vertical_average(data_raw, grid)
+            elif var_name.startswith('isotherm'):
+                var_tail = var[len('isotherm_'):]
+                if 'below' in var_tail:
+                    isotherm = var_tail[:var_tail.index('C_below')]
+                    z0 = -1*int(var_tail[len(isotherm+'C_below_'):-1])
+                    isotherm = float(isotherm)
+                else:
+                    isotherm = float(var_tail[:-1])
+                    z0 = None
+                temp = mask_3d(read_netcdf(file_paths[t], 'THETA', time_average=True), grid)
+                data = np.abs(depth_of_isoline(temp, grid.z, isotherm, z0=z0, mask_if_below=True))
+                long_name = 'depth of '+str(isotherm)+'C isotherm'
+                if z0 is not None:
+                    long_name += ' below '+str(abs(z0))+'m'
+                units = 'm'
             else:
                 data, long_name, units = read_netcdf(file_paths[t], var_name, time_average=True, return_info=True)
             if len(data.shape) != dim:
