@@ -839,8 +839,8 @@ def depth_of_max (data, grid, gtype='t'):
 
 
 # Calculate the shallowest depth of the given isoline, below the given depth z0.
-# Regions where the entire water column is below the given isoline will be set to the seafloor depth; regions where it is entirely above the isoline will be masked.
-def depth_of_isoline (data, z, val0, z0=None):
+# Regions where the entire water column is below the given isoline will be either set to the seafloor depth or masked; regions where it is entirely above the isoline will be masked.
+def depth_of_isoline (data, z, val0, z0=None, mask_if_below=False):
 
     [nz, ny, nx] = data.shape
     if len(z.shape) == 1:
@@ -886,8 +886,11 @@ def depth_of_isoline (data, z, val0, z0=None):
     depth_iso = np.ma.masked_where(land_mask, depth_iso)
     # Mask out regions shallower than z0
     depth_iso = np.ma.masked_where(bathy > z0, depth_iso)
-    # Set to seafloor depth where the entire water column is below val0
-    depth_iso[mask_below] = bathy[mask_below]
+    if mask_if_below:
+        depth_iso - np.ma.masked_where(mask_below, depth_iso)
+    else:
+        # Set to seafloor depth where the entire water column is below val0
+        depth_iso[mask_below] = bathy[mask_below]
     # Mask where the entire water column is above val0
     depth_iso = np.ma.masked_where(mask_above, depth_iso)
     return depth_iso

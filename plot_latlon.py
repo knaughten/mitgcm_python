@@ -327,9 +327,7 @@ def plot_psi (psi, grid, vmin=None, vmax=None, zoom_fris=False, xmin=None, xmax=
 
 def plot_isotherm (temp, grid, isotherm, z0=None, vmin=None,  vmax=None, zoom_fris=False, xmin=None, xmax=None, ymin=None, ymax=None, date_string=None, fig_name=None, figsize=(8,6), dpi=None):
 
-    isotherm_depth = np.abs(depth_of_isoline(temp, grid.z, isotherm, z0=z0))
-    index = isotherm_depth == np.abs(grid.bathy)
-    isotherm_depth = np.ma.masked_where(index, isotherm_depth)
+    isotherm_depth = np.abs(depth_of_isoline(temp, grid.z, isotherm, z0=z0, mask_if_below=True))
     title = 'Depth of '+str(isotherm)+'C isotherm'
     if z0 is not None:
         title += ' below '+str(abs(z0))+'m'
