@@ -1585,7 +1585,7 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
 # Plot the historical and future trends (in each scenario) for the given variable (precomputed in precompute_ensemble_trends).
 def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', num_LENS=5,  num_MENS=5, num_LW2=5, num_LW1=5, lon0=-106, xmin=None, xmax=None, ymin=None, ymax=None, zmin=None, zmax=None, hmin=None, hmax=None, vmin=None, vmax=None, chunk_x=20, chunk_y=10, fig_name=None):
 
-    if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx', 'thermocline']:
+    if var in ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'oceFWflx', 'thermocline'] or var.startswith('isotherm'):
         option = 'scalar'
     elif var in ['wind', 'barotropic_vel', 'baroclinic_vel_bottom100m']:
         option = 'vector'
@@ -1607,7 +1607,7 @@ def plot_trend_maps (var, trend_dir='precomputed_trends/', grid_dir='PAS_grid/',
         elif var == 'VVEL':
             gtype = 'v'
     else:
-        print('Error (plot_trend_maps): unkonwn variable '+var)
+        print('Error (plot_trend_maps): unknown variable '+var)
         sys.exit()
     trend_dir = real_dir(trend_dir)
     grid = Grid(grid_dir)
@@ -2836,11 +2836,9 @@ def calc_sfc_fw_timeseries (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, nu
 
 def plot_fw_budget_timeseries ():
 
-    # Read all_massloss
+    # Read all_massloss, PAS_shelf_seaice_melt, PAS_shelf_seaice_freeze, PAS_shelf_pmepr
     ismr_flux = massloss*1e6/(rho_ice*sec_per_year)
-
-    # Separately: Define continental shelf region for entire domain
-    # Calculate _seaice_melt, _seaice_freeze, _pmepr timeseries over region, multiply by 1e-3 to get Sv
+    # Multiply PAS_shelf_* by 1e-3 
 
     # Advection of salt from eastern boundary
         
