@@ -2839,22 +2839,22 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
     var_names = ['all_massloss', 'PAS_shelf_seaice_freeze', 'PAS_shelf_seaice_melt', 'PAS_shelf_pmepr']
     var_titles = ['Ice shelf melting', 'Sea ice freezing', 'Sea ice melting', 'Precip minus evap']
     var_factor = [1e6/(rho_ice*sec_per_year), 1e-3, 1e-3, 1e-3]
-    var_colours = ['green', 'blue', 'red', 'black']
+    var_colours = ['MediumSeaGreen', 'DodgerBlue', 'IndianRed', 'DarkGrey']
     num_var = len(var_names)
     base_dir = real_dir(base_dir)
-    num_ens = [num_LENS, num_LENS, num_MENS, num_LW2, num_LW1]
+    num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
     num_expt = len(num_ens)
-    expt_names = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_names = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     start_year_historical = 1920
     start_year_future = 2006
     start_year_baseline = 1996
     end_year_future = 2100
     smooth = 24
     units = 'Sv'
+    vmin = -0.02
+    vmax = 0.025
 
-    data_mean = []
-    data_min = []
-    data_max = []
+    all_data = []
     time = []
     for n in range(num_expt):
         if expt_names[n] == 'historical':
@@ -2863,7 +2863,7 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
         else:
             start_year = start_year_future            
         for e in range(num_ens[n]):
-            file_path = base_dir
+            file_path = base_dir + 'PAS_'
             if expt_names[n] in ['historical', 'LENS']:
                 file_path += 'LENS'
             else:
@@ -2880,22 +2880,25 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
                     baseline[v] += np.mean(data_tmp[t0_baseline:tf_baseline])/num_ens[n]
                 data_tmp = data_tmp[t0:]
                 data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
-                if e == 0:
-                    data_sim = np.empty([num_ens[n], num_var, time_smooth.size])
-                data_sim[e,v,:] = data_smooth
-        data_sim -= baseline[None,:,None]
-        data_mean.append(np.mean(data_sim, axis=0))
-        data_min.append(np.amin(data_sim, axis=0))
-        data_max.append(np.amax(data_sim, axis=0))
+                if e==0 and v==0:
+                    data_sim = np.empty([num_var, num_ens[n], time_smooth.size])
+                data_sim[v,e,:] = data_smooth
+        all_data.append(data_sim)
         time.append(time_smooth)
 
     fig, gs = set_panels('3x2-1C0')
     for n in range(num_expt):
         ax = plt.subplot(gs[(n+1)//2, (n+1)%2])
         for v in range(num_var):
-            ax.fill_between(time[n], data_min[n][v,:], data_max[n][v,:], color=var_colours[v], alpha=0.3)
-            ax.plot(time[n], data_mean[n][v,:], color=var_colours[v], label=var_titles[v], linewidth=1.5)
-        plt.title(expt_names[n], fontsize=14)
+            data = all_data[n][v,:]
+            if expt_names[n] != 'historical':
+                data -= baseline[v]
+            ax.fill_between(time[n], np.amin(data, axis=0), np.amax(data, axis=0), color=var_colours[v], alpha=0.3)
+            ax.plot(time[n], np.mean(data, axis=0), color=var_colours[v], label=var_titles[v], linewidth=1.5)
+        title = expt_names[n]
+        if expt_names[n] != 'historical':
+            title += ' anomalies'
+        plt.title(title, fontsize=14)
         if expt_names[n] == 'historical':
             start_year = start_year_historical
             end_year = start_year_future - 1
@@ -2903,11 +2906,15 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
             start_year = start_year_future
             end_year = end_year_future
         ax.set_xlim([datetime.date(start_year, 1, 1), datetime.date(end_year, 12, 31)])
+        if expt_names[n] != 'historical':
+            ax.set_ylim([vmin, vmax])
+            if (n+1)%2 == 1:
+                ax.set_yticklabels([])
         ax.grid(linestyle='dotted')
         if n == 0:
             ax.legend(loc='center left', bbox_to_anchor=(-1,0.5), fontsize=12)
             plt.text(0.05, 0.95, 'Freshwater sources into domain (Sv)', fontsize=14, ha='left', va='top', transform=fig.transFigure)
-    finsihed_plot(fig, fig_name=fig_name)            
+    finished_plot(fig, fig_name=fig_name)            
             
             
             

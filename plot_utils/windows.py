@@ -284,7 +284,7 @@ def set_panels (key, figsize=None):
     elif key == '3x2-1C0':
         # 5 plots arranged in 3 rows and 2 columns, with an empty space at the top left for the title and legend but no colourbar
         gs = plt.GridSpec(3,2)
-        gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95, wspace=0.02, hspace=0.2)
+        gs.update(left=0.08, right=0.95, bottom=0.05, top=0.95, wspace=0.03, hspace=0.25)
     else:
         print(('Error (set_panels): no entry for key ' + key))
         sys.exit()
