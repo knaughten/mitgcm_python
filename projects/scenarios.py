@@ -2834,19 +2834,80 @@ def calc_sfc_fw_timeseries (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, nu
     
 
 
-def plot_fw_budget_timeseries ():
+def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
 
-    # Read all_massloss, PAS_shelf_seaice_melt, PAS_shelf_seaice_freeze, PAS_shelf_pmepr
-    ismr_flux = massloss*1e6/(rho_ice*sec_per_year)
-    # Multiply PAS_shelf_* by 1e-3 
+    var_names = ['all_massloss', 'PAS_shelf_seaice_freeze', 'PAS_shelf_seaice_melt', 'PAS_shelf_pmepr']
+    var_titles = ['Ice shelf melting', 'Sea ice freezing', 'Sea ice melting', 'Precip minus evap']
+    var_factor = [1e6/(rho_ice*sec_per_year), 1e-3, 1e-3, 1e-3]
+    var_colours = ['green', 'blue', 'red', 'black']
+    num_var = len(var_names)
+    base_dir = real_dir(base_dir)
+    num_ens = [num_LENS, num_LENS, num_MENS, num_LW2, num_LW1]
+    num_expt = len(num_ens)
+    expt_names = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    start_year_historical = 1920
+    start_year_future = 2006
+    start_year_baseline = 1996
+    end_year_future = 2100
+    smooth = 24
+    units = 'Sv'
 
-    # Advection of salt from eastern boundary
-        
-        
-    
-    
-                
-            
+    data_mean = []
+    data_min = []
+    data_max = []
+    time = []
+    for n in range(num_expt):
+        if expt_names[n] == 'historical':
+            start_year = start_year_historical
+            baseline = np.zeros(num_var)
+        else:
+            start_year = start_year_future            
+        for e in range(num_ens[n]):
+            file_path = base_dir
+            if expt_names[n] in ['historical', 'LENS']:
+                file_path += 'LENS'
+            else:
+                file_path += expt_names[n] + '_'
+            file_path += str(e+1).zfill(3) + '_O/output/' + timeseries_file
+            time_tmp = netcdf_time(file_path, monthly=False)
+            t0 = index_year_start(time_tmp, start_year)
+            if expt_names[n] == 'historical':
+                t0_baseline, tf_baseline = index_period(time_tmp, start_year_baseline, start_year_future)
+            time_tmp = time_tmp[t0:]
+            for v in range(num_var):
+                data_tmp = read_netcdf(file_path, var_names[v])*var_factor[v]
+                if expt_names[n] == 'historical':
+                    baseline[v] += np.mean(data_tmp[t0_baseline:tf_baseline])/num_ens[n]
+                data_tmp = data_tmp[t0:]
+                data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
+                if e == 0:
+                    data_sim = np.empty([num_ens[n], num_var, time_smooth.size])
+                data_sim[e,v,:] = data_smooth
+        data_sim -= baseline[None,:,None]
+        data_mean.append(np.mean(data_sim, axis=0))
+        data_min.append(np.amin(data_sim, axis=0))
+        data_max.append(np.amax(data_sim, axis=0))
+        time.append(time_smooth)
+
+    fig, gs = set_panels('3x2-1C0')
+    for n in range(num_expt):
+        ax = plt.subplot(gs[(n+1)//2, (n+1)%2])
+        for v in range(num_var):
+            ax.fill_between(time[n], data_min[n][v,:], data_max[n][v,:], color=var_colours[v], alpha=0.3)
+            ax.plot(time[n], data_mean[n][v,:], color=var_colours[v], label=var_titles[v], linewidth=1.5)
+        plt.title(expt_names[n], fontsize=14)
+        if expt_names[n] == 'historical':
+            start_year = start_year_historical
+            end_year = start_year_future - 1
+        else:
+            start_year = start_year_future
+            end_year = end_year_future
+        ax.set_xlim([datetime.date(start_year, 1, 1), datetime.date(end_year, 12, 31)])
+        ax.grid(linestyle='dotted')
+        if n == 0:
+            ax.legend(loc='center left', bbox_to_anchor=(-1,0.5), fontsize=12)
+            plt.text(0.05, 0.95, 'Freshwater sources into domain (Sv)', fontsize=14, ha='left', va='top', transform=fig.transFigure)
+    finsihed_plot(fig, fig_name=fig_name)            
             
             
             
