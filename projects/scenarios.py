@@ -2953,7 +2953,7 @@ def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', times
         trends = np.empty(num_ens[n])
         for e in range(num_ens[n]):
             file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
-            trends[e] = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year, percent=percent, baseline=baseline)
+            trends[e] = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year[n], percent=percent, baseline=baseline)[0]
         p_val = ttest_1samp(trends, 0)[1]
         if p_val > p0:
             print(expt_names[n]+': no significant trend')
