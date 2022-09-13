@@ -2921,26 +2921,26 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
 
 
 # Calculate and print the ensemble mean trends over the full length of each scenario.
-def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, massloss_percent=True):
+def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, num_noOBC=0, massloss_percent=True):
 
     base_dir = real_dir(base_dir)
-    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1, num_noOBC]
     num_expt = len(num_ens)
-    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
-    expt_mid = ['', '_', '_', '_']
-    expt_tail = '_O'
+    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5', 'LENS']
+    expt_mid = ['', '_', '_', '_', '']
+    expt_tail = ['_O', '_O', '_O', '_O', '_noOBC']
     smooth = 24
     p0 = 0.05
     start_year = 2006
     end_year = [2100, 2080, 2100, 2100]
-    start_year_baseline = 1920
-    end_year_baseline = 1950
+    start_year_baseline = 2000
+    end_year_baseline = 2010
     percent = 'massloss' in var and massloss_percent
 
     if percent:
         baseline_ens = np.empty(num_ens[0])
         for e in range(num_ens[0]):
-            file_path = base_dir + 'PAS_' + expt_names[0] + expt_mid[0] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+            file_path = base_dir + 'PAS_' + expt_names[0] + expt_mid[0] + str(e+1).zfill(3) + expt_tail[n] + '/output/' + timeseries_file
             time = netcdf_time(file_path, monthly=False)
             data = read_netcdf(file_path, var)
             t_start, t_end = index_period(time, start_year_baseline, end_year_baseline)
@@ -2950,16 +2950,17 @@ def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', times
         baseline = None
         
     for n in range(num_expt):
+        if num_ens[n] == 0:
+            continue
         trends = np.empty(num_ens[n])
         for e in range(num_ens[n]):
-            file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+            file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail[n] + '/output/' + timeseries_file
             trends[e] = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year[n], percent=percent, baseline=baseline)[0]
         p_val = ttest_1samp(trends, 0)[1]
         if p_val > p0:
             print(expt_names[n]+': no significant trend')
         else:
             print(expt_names[n]+' '+str(np.mean(trends))+' units/century')
-    
             
             
             
