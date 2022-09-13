@@ -2376,9 +2376,11 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
 
 
 # Helper function to read and calculate trend per century.
-def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, p0=0.05):
+def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, p0=0.05, percent=False, baseline=None):
 
     data = read_netcdf(file_path, var)
+    if percent:
+        data = (data-baseline)/baseline*100
     time = netcdf_time(file_path, monthly=False)
     t0, tf = index_period(time, start_year, end_year)
     time = time[t0:tf]
@@ -2889,6 +2891,7 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
     fig, gs = set_panels('3x2-1C0')
     for n in range(num_expt):
         ax = plt.subplot(gs[(n+1)//2, (n+1)%2])
+        ax.axhline(color='black')
         for v in range(num_var):
             data = all_data[n][v,:]
             if expt_names[n] != 'historical':
@@ -2913,8 +2916,50 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
         ax.grid(linestyle='dotted')
         if n == 0:
             ax.legend(loc='center left', bbox_to_anchor=(-1,0.5), fontsize=12)
-            plt.text(0.05, 0.95, 'Freshwater sources into domain (Sv)', fontsize=14, ha='left', va='top', transform=fig.transFigure)
-    finished_plot(fig, fig_name=fig_name)            
+            plt.text(0.05, 0.95, 'Freshwater sources onto\ncontinental shelf (Sv)', fontsize=14, ha='left', va='top', transform=fig.transFigure)
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate and print the ensemble mean trends over the full length of each scenario.
+def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, massloss_percent=True):
+
+    base_dir = real_dir(base_dir)
+    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    num_expt = len(num_ens)
+    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_mid = ['', '_', '_', '_']
+    expt_tail = '_O'
+    smooth = 24
+    p0 = 0.05
+    start_year = 2006
+    end_year = [2100, 2080, 2100, 2100]
+    start_year_baseline = 1920
+    end_year_baseline = 1950
+    percent = 'massloss' in var and massloss_percent
+
+    if percent:
+        baseline_ens = np.empty(num_ens[0])
+        for e in range(num_ens[0]):
+            file_path = base_dir + 'PAS_' + expt_names[0] + expt_mid[0] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+            time = netcdf_time(file_path, monthly=False)
+            data = read_netcdf(file_path, var)
+            t_start, t_end = index_period(time, start_year_baseline, end_year_baseline)
+            baseline_ens[e] = np.mean(data[t_start:t_end])
+        baseline = np.mean(baseline_ens)
+    else:
+        baseline = None
+        
+    for n in range(num_expt):
+        trends = np.empty(num_ens[n])
+        for e in range(num_ens[n]):
+            file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_file
+            trends[e] = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year, percent=percent, baseline=baseline)
+        p_val = ttest_1samp(trends, 0)[1]
+        if p_val > p0:
+            print(expt_names[n]+': no significant trend')
+        else:
+            print(expt_names[n]+' '+str(np.mean(trends))+' units/century')
+    
             
             
             
