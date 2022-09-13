@@ -2965,9 +2965,6 @@ def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', times
 
 def make_obcs_trend_file (var_name, bdry, expt_name, num_ens, obcs_dir, grid_dir, out_file, start_year, end_year):
 
-    from scipy.stats import linregress
-    from .utils import mask_3d
-
     obcs_dir = real_dir(obcs_dir)
     grid_dir = real_dir(grid_dir)
     num_years = end_year - start_year + 1
@@ -2994,10 +2991,10 @@ def make_obcs_trend_file (var_name, bdry, expt_name, num_ens, obcs_dir, grid_dir
             else:
                 file_path = obcs_dir + expt_name + '_ens' + str(e+1).zfill(3) + '_' + var_name + '_' + bdry + '_' + str(start_year+t)
             print('...Reading '+file_path)
-            data = read_binary(file_path, [grid.nz, grid.ny, grid.nx], dimensions)
+            data = np.mean(read_binary(file_path, [grid.nz, grid.ny, grid.nx], dimensions), axis=0)
             if var_name == 'speed':
                 print('...Reading '+file_path_2)
-                data_2 = read_binary(file_path_2, [grid.nz, grid.ny, grid.nx], dimensions)
+                data_2 = np.mean(read_binary(file_path_2, [grid.nz, grid.ny, grid.nx], dimensions), axis=0)
                 data = np.sqrt(data**2 + data_2**2)
             data_save[e,t,:] = data[mask]
     print('Calculating trends')
