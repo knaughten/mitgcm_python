@@ -2932,7 +2932,7 @@ def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', times
     smooth = 24
     p0 = 0.05
     start_year = 2006
-    end_year = [2100, 2080, 2100, 2100]
+    end_year = [2100, 2080, 2100, 2100, 2100]
     start_year_baseline = 2000
     end_year_baseline = 2010
     percent = 'massloss' in var and massloss_percent
@@ -2961,6 +2961,87 @@ def calc_mean_trends (var, base_dir='./', timeseries_file='timeseries.nc', times
             print(expt_names[n]+': no significant trend')
         else:
             print(expt_names[n]+' '+str(np.mean(trends))+' units/century')
+
+
+def make_obcs_trend_file (var_name, bdry, expt_name, num_ens, obcs_dir, grid_dir, out_file, start_year, end_year):
+
+    from scipy.stats import linregress
+    from .utils import mask_3d
+
+    obcs_dir = real_dir(obcs_dir)
+    grid_dir = real_dir(grid_dir)
+    num_years = end_year - start_year + 1
+    
+    grid = Grid(grid_dir)
+    hfac = get_hfac_bdry(grid, bdry)
+    mask = hfac != 0
+    num_pts = np.count_nonzero(mask)
+    if bdry in ['N', 'S']:
+        nh = grid.nx
+        dimensions = 'xzt'
+    elif bdry in ['E', 'W']:
+        nh = grid.ny
+        dimensions = 'yzt'
+    trends = np.zeros([num_ens, grid.nz, nh])
+
+    data_save = np.empty([num_ens, num_years, num_pts])
+    for e in range(num_ens):
+        print('Processing ensemble member '+str(e+1))
+        for t in range(num_years):
+            if var_name == 'speed':
+                file_path = obcs_dir + expt_name + '_ens' + str(e+1).zfill(3) + '_UVEL_' + bdry + '_' + str(start_year+t)
+                file_path_2 = obcs_dir + expt_name + '_ens' + str(e+1).zfill(3) + '_VVEL_' + bdry + '_' + str(start_year+t)
+            else:
+                file_path = obcs_dir + expt_name + '_ens' + str(e+1).zfill(3) + '_' + var_name + '_' + bdry + '_' + str(start_year+t)
+            print('...Reading '+file_path)
+            data = read_binary(file_path, [grid.nz, grid.ny, grid.nx], dimensions)
+            if var_name == 'speed':
+                print('...Reading '+file_path_2)
+                data_2 = read_binary(file_path_2, [grid.nz, grid.ny, grid.nx], dimensions)
+                data = np.sqrt(data**2 + data_2**2)
+            data_save[e,t,:] = data[mask]
+    print('Calculating trends')
+    for e in range(num_ens):
+        print('...member '+str(e+1))
+        trends_tmp = np.empty(num_pts)
+        for p in range(num_pts):
+            slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_years), data_save[e,:,p])
+            trends_tmp[p] = slope
+        trends[e,mask] = trends_tmp
+    trends = np.ma.masked_where(trends==0, trends)
+
+    ncfile = NCfile(out_file, grid, dimensions)
+    ncfile.add_time(np.arange(num_ens)+1, units='ensemble member')
+    ncfile.add_variable(var_name+'_'+bdry+'_trend', dimensions, long_name='trend in '+var_name, units='units/y')
+    ncfile.close()
+
+
+def precompute_obcs_trends (num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/obcs/', obcs_dir='/data/oceans_input/processed_input_data/CESM/PAS_obcs/', grid_dir='PAS_grid/'):
+
+    var_names = ['TEMP', 'SALT', 'UVEL', 'VVEL', 'speed']
+    periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
+    start_years = [1920, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2100, 2080, 2100, 2100]
+    num_ens = [num_LENS, num_LENS, num_MENS, num_LW2, num_LW1]
+    num_periods = len(periods)
+    bdry = ['E', 'W', 'N']
+
+    for var in var_names:
+        for t in range(num_periods):
+            for loc in bdry:
+                print('Calculating '+periods[t]+' trends in '+var+' at '+loc+' bdry')
+                out_file = out_dir + var + '_' + loc + '_trend_' + periods[t] + '.nc'
+                if periods[t] == 'historical':
+                    expt_name = 'LENS'
+                else:
+                    expt_name = periods[t]
+                make_obcs_trend_file (var, loc, expt_name, num_ens[t], obcs_dir+expt_name+'_obcs/', grid_dir, out_file, start_years[t], end_years[t])
+                
+            
+            
+        
+    
+    
             
             
             
