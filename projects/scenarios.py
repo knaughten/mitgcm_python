@@ -3009,7 +3009,7 @@ def make_obcs_trend_file (var_name, bdry, expt_name, num_ens, obcs_dir, grid_dir
 
     ncfile = NCfile(out_file, grid, dimensions)
     ncfile.add_time(np.arange(num_ens)+1, units='ensemble member')
-    ncfile.add_variable(var_name+'_'+bdry+'_trend', dimensions, long_name='trend in '+var_name, units='units/y')
+    ncfile.add_variable(var_name+'_'+bdry+'_trend', trends, dimensions, long_name='trend in '+var_name, units='units/y')
     ncfile.close()
 
 
