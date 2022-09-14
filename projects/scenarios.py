@@ -3033,7 +3033,61 @@ def precompute_obcs_trends (num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_di
                 else:
                     expt_name = periods[t]
                 make_obcs_trend_file (var, loc, expt_name, num_ens[t], obcs_dir+expt_name+'_obcs/', grid_dir, out_file, start_years[t], end_years[t])
-                
+
+
+def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_dir='PAS_grid/', hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, fig_name=None):
+
+    trend_dir = real_dir(trend_dir)
+    grid_dir = real_dir(grid_dir)
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    num_periods = len(periods)
+    p0 = 0.05
+
+    grid = Grid(grid_dir)
+    hfac = get_hfac_bdry(grid, bdry)
+    if bdry in ['N', 'S']:
+        nh = grid.nx
+        h = grid.lon_1d
+        dimensions = 'xzt'
+    elif bdry in ['E', 'W']:
+        nh = grid.ny
+        h = grid.lat_1d
+        dimensions = 'yzt'
+    if var == 'TEMP':
+        units = deg_string+'C/century'
+    elif var == 'SALT':
+        units = 'psu/century'
+    elif var in ['UVEL', 'VVEL', 'speed']:
+        units = 'm/s/century'
+
+    data_plot = np.ma.empty([num_periods, grid.nz, nh])
+    for t in range(num_periods):
+        file_path = trend_dir + var + '_' + bdry + '_trend_' + periods[t] + '.nc'
+        trends = read_netcdf(file_path, var+'_'+bdry+'_trend')
+        mean_trend = np.mean(trends, axis=0)
+        t_val, p_val = ttest_1samp(trends, 0, axis=0)
+        mean_trend[p_val > p0] = 0
+        data_plot[t,:] = np.ma.masked_where(hfac==0, mean_trend)*1e2
+
+    if vmin is None:
+        vmin = np.amin(data_plot)
+    if vmax is None:
+        vmax = np.amax(data_plot)
+    cmap = set_colours(data_plot, ctype='plusminus', vmin=vmin, vmax=vmax)[0]
+    fig, gs, cax = set_panels('3x2-1C1')
+    for t in range(num_periods):
+        ax = plt.subplot(gs[(t+1)//2, (t+1)%2])
+        img = ax.pcolormesh(h, grid.z, data_plot[t,:], vmin=vmin, vmax=vmax, cmap=cmap)
+        ax.set_title(periods[t], fontsize=14)
+        if t != 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_ylabel('')
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.text(0.05, 0.95, var_name+' ('+units+')', fontsize=14,  ha='left', va='top', transform=fig.transFigure)
+    finished_plot(fig, fig_name=fig_name)
+    
+    
             
             
         
