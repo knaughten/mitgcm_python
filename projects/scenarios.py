@@ -21,7 +21,7 @@ from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
-from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
+from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
@@ -2705,7 +2705,6 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
     start_year = [1920, 2006, 2006, 2006, 2006]
     end_year = [2005, 2100, 2100, 2080, 2100]
-    baseline_decade = 1920
     num_scenarios = len(scenarios)
 
     grid = Grid(grid_dir)
@@ -2735,8 +2734,7 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             data_save = np.ma.std(data_ens, axis=0)            
         if option == 'anomaly':
             if n==0:
-                tb_start, tb_end = index_period(time, baseline_decade, baseline_decade+9)
-                data_baseline = np.ma.mean(data_save[tb_start:tb_end,:], axis=0)
+                data_baseline = np.ma.mean(data_save, axis=0)
             data_save -= data_baseline[None,:]
         data_plot.append(data_save)
 
@@ -3048,10 +3046,12 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
     if bdry in ['N', 'S']:
         nh = grid.nx
         h = grid.lon_1d
+        h_axis = 'lon'
         dimensions = 'xzt'
     elif bdry in ['E', 'W']:
         nh = grid.ny
         h = grid.lat_1d
+        h_axis = 'lat'
         dimensions = 'yzt'
     if var == 'TEMP':
         units = deg_string+'C/century'
@@ -3079,12 +3079,15 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
         ax = plt.subplot(gs[(t+1)//2, (t+1)%2])
         img = ax.pcolormesh(h, grid.z, data_plot[t,:], vmin=vmin, vmax=vmax, cmap=cmap)
         ax.set_title(periods[t], fontsize=14)
+        ax.set_xlim([hmin, hmax])
+        ax.set_ylim([zmin, zmax])
+        slice_axes(ax, h_axis=h_axis)
         if t != 0:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             ax.set_ylabel('')
     plt.colorbar(img, cax=cax, orientation='horizontal')
-    plt.text(0.05, 0.95, var_name+' ('+units+')', fontsize=14,  ha='left', va='top', transform=fig.transFigure)
+    plt.text(0.05, 0.95, var+' ('+units+')', fontsize=14,  ha='left', va='top', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
     
     
