@@ -2671,8 +2671,8 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     if var == 'temp':
         var_title = 'Temperature ('+deg_string+'C)'
         if option == 'anomaly':
-            vmin = -1
-            vmax = 2.5
+            vmin = -1.25
+            vmax = 2
         elif option == 'mean':
             vmin = -1.6
             vmax = 1.4
@@ -2691,7 +2691,7 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
             vmin = 0
             vmax = 0.1
     if option == 'anomaly':
-        var_title += ' anomalies\nfrom 1920s '
+        var_title += ' anomalies\nfrom historical mean '
         ctype = 'plusminus'
     elif option == 'mean':
         var_title += '\n'
