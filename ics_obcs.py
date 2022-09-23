@@ -1197,7 +1197,7 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
 
 
 # Helper function to read and correct the CESM temperature and salinity in T/S space for a given experiment, year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
-def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, plot=False):
+def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/PAS/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
 
     if plot:
         import matplotlib
@@ -1210,8 +1210,10 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
     cesm_file_tail = '_1998-2017'
     cesm_var_names = ['TEMP', 'SALT']
     obcs_dir = real_dir(obcs_dir)
-    woa_var_names = ['THETA', 'SALT']
-    woa_file_mid = '_WOA18.OBCS_'
+    #woa_var_names = ['THETA', 'SALT']
+    #woa_file_mid = '_WOA18.OBCS_'
+    woa_var_names = ['theta', 'salt']
+    woa_file_tail = '_woa_mon.bin'
     num_var = len(woa_var_names)
     num_bins = 100
     drho0 = 0.1  # Threshold density for mixed layer in WOA
@@ -1307,7 +1309,8 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
     # Read WOA climatology for this month
     woa_clim = np.ma.empty([num_var, mit_grid.nz, mit_h.size])
     for v in range(num_var):
-        file_path = obcs_dir + woa_var_names[v] + woa_file_mid + bdry
+        #file_path = obcs_dir + woa_var_names[v] + woa_file_mid + bdry
+        file_path = obcs_dir + 'OB' + bdry + woa_var_names[v] + woa_file_tail
         woa_data_tmp = read_binary(file_path, [mit_grid.nx, mit_grid.ny, mit_grid.nz], dimensions)[month-1,:]
         woa_clim[v,:] = np.ma.masked_where(hfac==0, woa_data_tmp)
     if plot:
@@ -1530,11 +1533,11 @@ def process_cesm_obcs_ts (expt, ens, bdry_loc=['N', 'E', 'W'], start_year=None, 
 
                 
 # Helper function to read and correct the given variable in CESM (other than temperature or salinity) for a given year, boundary, and ensemble member.
-def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/AMUND/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/AMUND/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/AMUND_ini_grid/', return_raw=False, return_sose_clim=False):
+def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/PAS/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, return_sose_clim=False):
 
     cesm_file_head = in_dir + 'LENS_climatology_'
     cesm_file_tail = '_1998-2017'
-    if var in ['UVEL', 'VVEL']:
+    '''if var in ['UVEL', 'VVEL']:
         sose_var = var
     elif var == 'aice':
         sose_var = 'SIarea'
@@ -1546,7 +1549,26 @@ def read_correct_cesm_non_ts (expt, var, bdry, ens, year, in_dir='/data/oceans_o
         sose_var = 'SIuice'
     elif var == 'vvel':
         sose_var = 'SIvice'
-    sose_file = real_dir(obcs_dir) + sose_var + '_BSOSE.OBCS_' + bdry
+    sose_file = real_dir(obcs_dir) + sose_var + '_BSOSE.OBCS_' + bdry'''
+    if var == 'UVEL':
+        sose_var = 'uvel'
+    elif var == 'VVEL':
+        sose_var = 'vvel'
+    elif var == 'aice':
+        sose_var = 'area'
+    elif var == 'hi':
+        sose_var = 'heff'
+    elif var == 'hs':
+        sose_var = 'hsnow'
+    elif var == 'uvel':
+        sose_var = 'uice'
+    elif var == 'vvel':
+        sose_var = 'vice'
+    if (var == 'UVEL' and bdry in ['E', 'W']) or (var == 'VVEL' and bdry == 'N'):
+        sose_file_tail = '_sose_corr.bin'
+    else:
+        sose_file_tail = '_sose.bin'
+    sose_file = real_dir(obcs_dir) + 'OB' + bdry + sose_var + sose_file_tail
     if var in ['UVEL', 'VVEL']:
         domain = 'oce'
     else:
