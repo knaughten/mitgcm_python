@@ -1023,6 +1023,8 @@ def cesm_atm_forcing (expt, var, ens, out_dir, end_year=None):
     if expt == 'LENS':
         if ens == 1:
             start_year = 1850
+        elif ens > 5:
+            start_year = 2006
         else:
             start_year = 1920
         end_year_default = 2100
