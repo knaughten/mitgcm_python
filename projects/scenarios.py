@@ -1541,9 +1541,9 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     
 
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
-def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
+def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['ETAN'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m']
+    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'ETAN']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -1566,11 +1566,15 @@ def precompute_ensemble_trends (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5
             gtype = 'v'
         else:
             gtype = 't'
-        for t in range(num_periods):
+        for t in [0]: #range(num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
             out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
             if periods[t] in ['historical', 'LENS']:
-                sim_dir = [base_dir+'PAS_LENS'+str(n+1).zfill(3)+'_O' for n in range(num_LENS)]
+                if periods[t] == 'historical':
+                    num_ens = num_hist
+                else:
+                    num_ens = num_LENS
+                sim_dir = [base_dir+'PAS_LENS'+str(n+1).zfill(3)+'_O' for n in range(num_ens)]
             else:
                 if periods[t] == 'MENS':
                     num_ens = num_MENS
