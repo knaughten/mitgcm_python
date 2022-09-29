@@ -35,7 +35,7 @@ from ..timeseries import monthly_to_annual
 # Update the timeseries calculations from wherever they left off before.
 def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
-    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans', 'getz_massloss', 'dotson_massloss', 'crosson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss', 'getz_iceshelf_area', 'dotson_iceshelf_area', 'crosson_iceshelf_area', 'thwaites_iceshelf_area', 'pig_iceshelf_area', 'cosgrove_iceshelf_area', 'abbot_iceshelf_area', 'venable_iceshelf_area']
+    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans', 'getz_massloss', 'dotson_massloss', 'crosson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss'] #, 'getz_iceshelf_area', 'dotson_iceshelf_area', 'crosson_iceshelf_area', 'thwaites_iceshelf_area', 'pig_iceshelf_area', 'cosgrove_iceshelf_area', 'abbot_iceshelf_area', 'venable_iceshelf_area']
     base_dir = real_dir(base_dir)
     if sim_dir is None:
         sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_O/output/' for n in range(num_ens)]
@@ -1543,7 +1543,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'ETAN']
+    var_names = ['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -2302,7 +2302,7 @@ def all_cesm_timeseries (var, out_dir='./'):
 
 
 # Plot timeseries of the given variable across all scenarios, showing the ensemble mean and range of each.            
-def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
+def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseries.nc', num_LENS=10, num_noOBCS=0, num_MENS=5, num_LW2=5, num_LW1=5, plot_pace=False, timeseries_file_pace='timeseries_final.nc', fig_name=None):
 
     if var_name in ['TS_global_mean', 'TS_SH_mean', 'SAM', 'seaice_extent_SH']:
         if num_noOBCS > 0:
@@ -2330,6 +2330,7 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
         start_year += [1920]
         if timeseries_file_pace is None:
             timeseries_file_pace = timeseries_file
+    fill_value = 9999
     
     data_mean = []
     data_min = []
@@ -2353,12 +2354,18 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
             data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
             if e == 0:
                 data_sim = np.empty([num_ens[n], time_smooth.size])
-            data_sim[e,:] = data_smooth
+                time.append(time_smooth)
+            if time_smooth.size < data_sim.shape[1]:
+                num_time = time_smooth.size
+                data_sim[e,:num_time] = data_smooth
+                data_sim[e,num_time:] = fill_value
+            else:
+                data_sim[e,:] = data_smooth
         if num_ens[n] > 0:
+            data_sim = np.ma.masked_where(data_sim==fill_value, data_sim)
             data_mean.append(np.mean(data_sim, axis=0))
             data_min.append(np.amin(data_sim, axis=0))
             data_max.append(np.amax(data_sim, axis=0))
-            time.append(time_smooth)
         else:
             data_mean.append(None)
             data_min.append(None)
@@ -2666,7 +2673,7 @@ def interp_PAS_files_to_AMUND ():
 
 
 # Plot Hovmollers of temp or salt in Pine Island Bay for the historical LENS simulation and all four future scenarios. Express as anomalies from the 1920s mean.
-def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None, option='mean'):
+def plot_hovmoller_scenarios (var, num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, base_dir='./', fig_name=None, option='mean'):
 
     base_dir = real_dir(base_dir)
     grid_dir = base_dir + 'PAS_grid/'
@@ -2706,7 +2713,7 @@ def plot_hovmoller_scenarios (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5,
     suptitle = var_title + 'in ' + region_names[region]
     smooth = 12
     scenarios = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
-    num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
+    num_ens = [num_hist, num_LW1, num_LW2, num_MENS, num_LENS]
     start_year = [1920, 2006, 2006, 2006, 2006]
     end_year = [2005, 2100, 2100, 2080, 2100]
     num_scenarios = len(scenarios)
