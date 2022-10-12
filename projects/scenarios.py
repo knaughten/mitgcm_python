@@ -2750,22 +2750,22 @@ def plot_hovmoller_scenarios (var, num_hist=10, num_LENS=5, num_MENS=5, num_LW2=
         data_plot.append(data_save)
 
     fig = plt.figure(figsize=(6,8))
-    gs = plt.GridSpec(num_scenarios,1)
+    gs = plt.GridSpec(num_scenarios-1, 1) #(num_scenarios,1)
     gs.update(left=0.07, right=0.85, bottom=0.04, top=0.9, hspace=0.08)
     cax = fig.add_axes([0.75, 0.94, 0.24, 0.012])
-    for n in range(num_scenarios):
-        ax = plt.subplot(gs[n,0])
+    for n in range(1, num_scenarios): #num_scenarios):
+        ax = plt.subplot(gs[n-1,0]) #n,0])
         img = hovmoller_plot(data_plot[n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, ctype=ctype)
-        ax.set_xlim([datetime.date(start_year[0], 1, 1), datetime.date(end_year[-1], 12, 31)])
-        ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_year[0], end_year[-1], 20)])
-        if n == 0:
+        ax.set_xlim([datetime.date(start_year[1], 1, 1), datetime.date(end_year[-1], 12, 31)]) #[0], 1, 1), datetime.date(end_year[-1], 12, 31)])
+        ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(2020, end_year[-1], 20)]) #start_year[0], end_year[-1], 20)])
+        if n == 1: #0:
             ax.set_yticks([0, -500, -1000])
             ax.set_yticklabels(['0', '0.5', '1'])
             ax.set_ylabel('')
         else:
             ax.set_yticks([])
             ax.set_ylabel('')
-        if n == 1:
+        if n == 2: #1:
             ax.set_ylabel('Depth (km)', fontsize=10)
         if n != num_scenarios-1:
             ax.set_xticklabels([])

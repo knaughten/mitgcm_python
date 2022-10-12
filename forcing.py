@@ -1104,6 +1104,9 @@ def cesm_expt_all_atm_forcing (expt, num_ens=None, out_dir=None):
     var_names = ['TREFHT', 'QBOT', 'PSL', 'UBOT', 'VBOT', 'PRECT', 'FLDS', 'FSDS']
 
     for ens in range(1,num_ens+1):
+        if ens < 6:
+            print('Assuming ensemble member '+str(ens)+' is already done')
+            continue
         print(('Processing ensemble member ' + str(ens)))
         for var in var_names:
             print(('Processing ' + var))
