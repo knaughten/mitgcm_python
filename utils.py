@@ -978,16 +978,24 @@ def connected_mask (point0, mask):
 def distance_to_grounding_line (grid, pinning_points=False):
 
     # Grounding line is defined as ice shelf points with at least one grounded neighbour
-    gl_mask = grid.get_grounding_line_mask(pinning_points=pinning_points)
+    gl_mask, grounded_mask = grid.get_grounding_line_mask(pinning_points=pinning_points, return_grounded_mask=True)
+    iceshelf_mask = grid.ice_mask
+    if not pinning_points:
+        # Need to select pinning points and add to ice shelf mask, otherwise they could disconnect some regions of the ice shelf from the valid grounding lines later
+        pinning_point_mask = grid.land_mask*np.invert(grounded_mask)
+        iceshelf_mask[pinning_point_mask] = True
+        
     i_vals, j_vals = np.meshgrid(np.arange(grid.nx), np.arange(grid.ny))
-    
     min_dist = -np.ones([grid.ny, grid.nx])  # Initialise with -1 flags
     # Loop over all grounding line points
     for j, i in zip(j_vals[gl_mask], i_vals[gl_mask]):
         # Calculate distance of every point in the model grid to this specific grounding line point, in km
         dist_to_pt = dist_btw_points([grid.lon_2d[j,i], grid.lat_2d[j,i]], [grid.lon_2d, grid.lat_2d])*1e3
         # Find all ice shelf points connected to this grounding line
-        connected_ice_mask = connected_mask([j,i], grid.ice_mask)       
+        connected_ice_mask = connected_mask([j,i], iceshelf_mask)
+        if not pinning_points:
+            # Remove the pinning points now that we've done connectivity
+            connected_ice_mask[pinning_point_mask] = False
         # Initialise min_dist for this ice shelf if needed
         index = connected_ice_mask*(min_dist == -1)
         min_dist[index] = dist_to_pt[index]
