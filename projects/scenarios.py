@@ -2845,7 +2845,7 @@ def calc_sfc_fw_timeseries (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, nu
     
 
 
-def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
+def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_historical=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
 
     var_names = ['all_massloss', 'PAS_shelf_seaice_freeze', 'PAS_shelf_seaice_melt', 'PAS_shelf_pmepr']
     var_titles = ['Ice shelf melting', 'Sea ice freezing', 'Sea ice melting', 'Precip minus evap']
@@ -2853,13 +2853,14 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
     var_colours = ['MediumSeaGreen', 'DodgerBlue', 'IndianRed', 'DarkGrey']
     num_var = len(var_names)
     base_dir = real_dir(base_dir)
-    num_ens = [num_LENS, num_LW1, num_LW2, num_MENS, num_LENS]
+    num_ens = [num_historical, num_LW1, num_LW2, num_MENS, num_LENS]
     num_expt = len(num_ens)
     expt_names = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     start_year_historical = 1920
     start_year_future = 2006
     start_year_baseline = 1996
     end_year_future = 2100
+    end_year_MENS = 2080
     smooth = 24
     units = 'Sv'
     vmin = -0.02
@@ -2870,9 +2871,14 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
     for n in range(num_expt):
         if expt_names[n] == 'historical':
             start_year = start_year_historical
+            end_year = start_year_future - 1
             baseline = np.zeros(num_var)
         else:
-            start_year = start_year_future            
+            start_year = start_year_future
+            if expt_names[n] == 'MENS':
+                end_year = end_year_MENS
+            else:
+                end_year = end_year_future
         for e in range(num_ens[n]):
             file_path = base_dir + 'PAS_'
             if expt_names[n] in ['historical', 'LENS']:
@@ -2881,15 +2887,15 @@ def plot_fw_timeseries (base_dir='./', timeseries_file='timeseries.nc', num_LENS
                 file_path += expt_names[n] + '_'
             file_path += str(e+1).zfill(3) + '_O/output/' + timeseries_file
             time_tmp = netcdf_time(file_path, monthly=False)
-            t0 = index_year_start(time_tmp, start_year)
+            t0, tf = index_period(time_tmp, start_year, end_year)
             if expt_names[n] == 'historical':
-                t0_baseline, tf_baseline = index_period(time_tmp, start_year_baseline, start_year_future)
-            time_tmp = time_tmp[t0:]
+                t0_baseline, tf_baseline = index_period(time_tmp, start_year_baseline, start_year_future-1)
+            time_tmp = time_tmp[t0:tf]
             for v in range(num_var):
                 data_tmp = read_netcdf(file_path, var_names[v])*var_factor[v]
                 if expt_names[n] == 'historical':
                     baseline[v] += np.mean(data_tmp[t0_baseline:tf_baseline])/num_ens[n]
-                data_tmp = data_tmp[t0:]
+                data_tmp = data_tmp[t0:tf]
                 data_smooth, time_smooth = moving_average(data_tmp, smooth, time=time_tmp)
                 if e==0 and v==0:
                     data_sim = np.empty([num_var, num_ens[n], time_smooth.size])
@@ -3022,18 +3028,18 @@ def make_obcs_trend_file (var_name, bdry, expt_name, num_ens, obcs_dir, grid_dir
     ncfile.close()
 
 
-def precompute_obcs_trends (num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/obcs/', obcs_dir='/data/oceans_input/processed_input_data/CESM/PAS_obcs/', grid_dir='PAS_grid/'):
+def precompute_obcs_trends (num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/obcs/', obcs_dir='/data/oceans_input/processed_input_data/CESM/PAS_obcs/', grid_dir='PAS_grid/'):
 
     var_names = ['TEMP', 'SALT', 'UVEL', 'VVEL', 'speed']
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     start_years = [1920, 2006, 2006, 2006, 2006]
     end_years = [2005, 2100, 2080, 2100, 2100]
-    num_ens = [num_LENS, num_LENS, num_MENS, num_LW2, num_LW1]
+    num_ens = [num_hist, num_LENS, num_MENS, num_LW2, num_LW1]
     num_periods = len(periods)
     bdry = ['E', 'W', 'N']
 
     for var in var_names:
-        for t in range(num_periods):
+        for t in [0]: #range(num_periods):
             for loc in bdry:
                 print('Calculating '+periods[t]+' trends in '+var+' at '+loc+' bdry')
                 out_file = out_dir + var + '_' + loc + '_trend_' + periods[t] + '.nc'
@@ -3100,6 +3106,57 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.text(0.05, 0.95, var+' ('+units+')', fontsize=14,  ha='left', va='top', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
+
+
+def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_trends/', fig_name=None):
+
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    colours = ['BurlyWood', 'DodgerBlue', 'MediumSeaGreen', 'IndianRed', 'DarkGrey']
+    num_periods = len(periods)
+    num_bins = 100
+    p0 = 0.05
+    title = 'Ice shelf basal melting trend'
+    ytitle = 'm/y/century'
+    grid = Grid(grid_dir)
+
+    if option == 'depth':
+        bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), np.abs(grid.draft))
+        xtitle = 'Depth of ice draft (m)'
+
+    bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
+    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
+    bin_trends_all = []
+    for n in range(num_periods):
+        bin_trends = np.zeros(num_bins)
+        bin_area = np.zeros(num_bins+1)
+        trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
+        trends = read_netcdf(trend_file, 'ismr_trend')
+        mean_trend = np.mean(trends, axis=0)*1e2
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        for trend_val, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
+            bin_index = np.nonzero(bin_edges > bin_val)[0][0]-1
+            bin_trends[bin_index] += trend_val*dA_val
+            bin_area[bin_index] += dA_val
+        bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
+        bin_trends_all.append(bin_trends)
+
+    fig, ax = plt.subplot()
+    for n in range(num_periods):
+        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], linewidth=1, markersize=5, label=periods[n])
+    ax.set_xlabel(xtitle, fontsize=12)
+    ax.set_ylabel(ytitle, fontsize=12)
+    ax.set_title(title, fontsize=16)
+    ax.legend()
+    finished_plot(fig, fig_name=fig_name)
+
+    
+
+    
+
+    
+
+    
     
     
             
