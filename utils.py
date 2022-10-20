@@ -902,6 +902,76 @@ def normalise (data):
     vmin = np.amin(data)
     vmax = np.amax(data)
     return (data - vmin)/(vmax - vmin)
+
+
+# Given a boolean mask of up to 3 dimensions (eg land mask, ice mask...) and the coordinates of a point in which that mask is True (eg [j,i]), return another mask which is True at all the points which are connected to the original point. For example, to isolate an individual ice shelf, or a subglacial lake.
+def connected_mask (point0, mask):
+
+    dim = len(point0)
+    if dim == 1:
+        [nx] = mask.shape
+    elif dim == 2:
+        [ny,nx] = mask.shape
+    elif dim == 3:
+        [nz,ny,nx] = mask.shape
+    elif dim > 3:
+        print('Error (connected_mask): not implemented for more than 3 dimensions. This array has '+str(dim)+' dimensions.')
+        sys.exit()
+    if not mask[tuple(point0)]:
+        print('Error (connected_mask): the given mask is False at the given point.')
+        sys.exit()
+
+    # Initialise connected mask to all False
+    connected = np.zeros(mask.shape).astype(bool)
+
+    # Inner function to check if a given neighbour to the given point is valid
+    def check_neighbour (point, dimension, increment, neighbours):
+        new_point = np.copy(point)
+        new_point[dimension] = point[dimension] + increment
+        if mask[tuple(new_point)]:
+            neighbours.append(new_point)
+        return neighbours
+
+    # Inner function to get valid immediate neighbours at any point (up to 2*dim)
+    def get_immediate_neighbours (point):
+        neighbours = []
+        if dim == 1:
+            [i] = point
+        elif dim == 2:
+            [j,i] = point
+        elif dim == 3:
+            [k,j,i] = point
+        if i > 0:
+            neighbours = check_neighbour(point, -1, -1, neighbours)
+        if i+1 < nx:
+            neighbours = check_neighbour(point, -1, 1, neighbours)
+        if dim > 1:
+            if j > 0:
+                neighbours = check_neighbour(point, -2, -1, neighbours)
+            if j+1 < ny:
+                neighbours = check_neighbour(point, -2, 1, neighbours)
+        if dim > 2:
+            if k > 0:
+                neighbours = check_neighbour(point, -3, -1, neighbours)
+            if k+1 < nz:
+                neighbours = check_neighbour(point, -3, 1, neighbours)
+        return neighbours
+
+    # Get started with the immediate neighbours of point0 to initialise a LIFO stack
+    stack = get_immediate_neighbours(point0)
+
+    while len(stack) > 0:
+        new_point = stack.pop()
+        # Update connected mask
+        connected[tuple(new_point)] = True
+        # Get its immediate neighbours
+        neighbours = get_immediate_neighbours(new_point)
+        # Loop over these neighbours and add to the stack if they haven't already been dealt with
+        for possible_point in neighbours:
+            if not connected[tuple(possible_point)]:
+                stack.append(possible_point)
+
+    return connected
     
     
 
