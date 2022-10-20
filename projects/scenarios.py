@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
@@ -3154,6 +3154,55 @@ def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_t
     ax.set_title(title, fontsize=16)
     ax.legend()
     finished_plot(fig, fig_name=fig_name)
+
+
+def plot_warming_trend_profiles (region, fig_name=None):
+
+    # TODO: if use this in publication, recalculate mean baseline temp using proper weighting of different lengths of months - can use average_12_months in utils.py
+    baseline_file = 'temp_avg_LENS_last10y.nc'
+    # TODO: if use this in publication, consider whether it's more correct to read Hovmollers and then recalculate trends of area-averaged quantities, rather than area-averaging the trends.
+    trend_dir = 'precomputed_trends/'
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    baseline_colour = 'black'
+    colours = ['BurlyWood', 'DodgerBlue', 'MediumSeaGreen', 'IndianRed', 'DarkGrey']
+    num_periods = len(periods)
+    p0 = 0.05
+    grid_dir = 'PAS_grid/'
+
+    grid = Grid(grid_dir)
+    region_mask = grid.get_region_mask(region)
+    # Read baseline temperature and horizontally average over region
+    baseline_temp_3d = apply_mask(mask_3d(read_netcdf(baseline_file, 'THETA'), grid), np.invert(region_mask), depth_dependent=True)
+    baseline_temp_profile = area_average(baseline_temp_3d, grid)
+    # Now get the profiles of mean trends for each period
+    temp_trend_profiles = np.ma.empty([num_periods, grid.nz])
+    for n in range(num_periods):
+        file_path = real_dir(trend_dir) + 'THETA_trend_' + periods[n] + '.nc'
+        trends = apply_mask(mask_3d(read_netcdf(file_path, 'THETA_trend'), grid, time_dependent=True), np.invert(region_mask), depth_dependent=True, time_dependent=True)
+        trend_profiles = area_average(trends, grid, time_dependent=True)
+        mean_trend_profiles = np.mean(trend_profiles, axis=0)*1e2
+        p_val = ttest_1samp(trend_profiles, 0, axis=0)[1]
+        mean_trend_profiles[p_val > p0] = 0
+        temp_trend_profiles[n,:] = mean_trend_profiles
+
+    fig, ax1 = plt.subplots()
+    # Plot baseline temperature on one side
+    ax1.plot(baseline_temp_profile, grid.z, color=baseline_colour, linestyle='dashed')
+    ax1.grid(linestyle='dotted')
+    ax1.set_ylabel('Baseline temperature ('+deg_string+'C)', fontsize=12)
+    ax2 = ax1.twinx()
+    for n in range(num_periods):
+        ax2.plot(temp_trend_profiles[n,:], grid.z, color=colours[n], label=periods[n])
+    ax2.get_yaxis().get_major_formatter().set_useOffset(False)
+    ax2.set_ylabel('Temperature trend ('+deg_string+'C/century)', fontsize=12)
+    ax2.legend()
+    plt.title(region_names[region], fontsize=16)
+    finished_plot(fig, fig_name=fig_name)
+        
+    
+    
+    
+    
 
     
 

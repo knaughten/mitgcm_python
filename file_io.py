@@ -628,7 +628,7 @@ def read_iceprod (file_path, time_index=None, t_start=None, t_end=None, time_ave
 def read_annual_average (var_name, file_paths, return_years=False):
 
     # Inner function to calculate the average and save to data_annual
-    def update_data_annual (data_read, t0, year, data_annual):
+    def update_data_annual (data_read, t0, year, data_annual, calendar):
         data_avg = average_12_months(data_read, t0, calendar=calendar, year=year)
         # Add a dummy time dimension
         data_avg = np.expand_dims(data_avg, axis=0)
@@ -656,7 +656,7 @@ def read_annual_average (var_name, file_paths, return_years=False):
                 sys.exit()
             data_tmp2 = data[:num_months,...]
             data_year = np.concatenate((data_tmp, data_tmp2), axis=0)
-            data_annual = update_data_annual(data_year, 0, time[0].year, data_annual)
+            data_annual = update_data_annual(data_year, 0, time[0].year, data_annual, calendar)
             t_start = num_months
         else:
             # This file starts at the beginning of a year
@@ -665,7 +665,7 @@ def read_annual_average (var_name, file_paths, return_years=False):
         for t in range(t_start, (time.size-t_start)//12*12, 12):
             print((time[t].year))
             years.append(time[t].year)
-            data_annual = update_data_annual(data, t, time[t].year, data_annual)
+            data_annual = update_data_annual(data, t, time[t].year, data_annual, calendar)
         if t+12 < time.size:
             # Read partial year from end
             data_tmp = data[t+12:,...]
