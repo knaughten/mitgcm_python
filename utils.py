@@ -997,7 +997,7 @@ def distance_to_grounding_line (grid, pinning_points=False, verbose=False):
             if count % 10 == 0:
                 print('Processing '+str(count)+' of '+str(num_pts)+' grounding line points')
         # Calculate distance of every point in the model grid to this specific grounding line point, in km
-        dist_to_pt = dist_btw_points([grid.lon_2d[j,i], grid.lat_2d[j,i]], [grid.lon_2d, grid.lat_2d])*1e3
+        dist_to_pt = dist_btw_points([grid.lon_2d[j,i], grid.lat_2d[j,i]], [grid.lon_2d, grid.lat_2d])*1e-3
         # Find all ice shelf points connected to this grounding line
         connected_ice_mask = connected_mask([j,i], iceshelf_mask)
         if not pinning_points:
