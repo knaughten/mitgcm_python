@@ -973,6 +973,13 @@ def connected_mask (point0, mask):
 
     return connected
 
+
+# Calculate the distance of each ice shelf point to the nearest connected grounding line (i.e. don't jump over the open ocean to show distance to the grounding line of another ice shelf, even if that's closer). The argument pinning_points is as in Grid.get_grounding_line_mask.
+def distance_to_grounding_line (grid, pinning_points=False):
+
+    gl_mask = grid.get_grounding_line_mask(pinning_points=pinning_points)
+    
+
     
 
     
