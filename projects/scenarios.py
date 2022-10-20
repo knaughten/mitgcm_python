@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, connected_mask
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
@@ -3119,9 +3119,13 @@ def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_t
     grid = Grid(grid_dir)
 
     if option == 'depth':
-        bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), np.abs(grid.draft))
+        bin_quantity = np.abs(grid.draft)
         xtitle = 'Depth of ice draft (m)'
-
+    elif option == 'dist_to_gl':
+        bin_quantity = distance_to_grounding_line(grid)
+        xtitle = 'Distance to grounding line (km)'
+    bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
+    
     bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
     bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
     bin_trends_all = []
