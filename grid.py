@@ -437,7 +437,7 @@ class Grid:
 
 
     # Build and return a mask for grounding line points: ice shelf points with at least one neighbour which is grounded ice. The default is to only consider grounding lines connected to the "proper" grounded ice sheet (defined as the central southern point of the domain), and to exclude the grounding lines of pinning points etc, but you can override this by setting pinning_points=True.
-    def get_grounding_line_mask (self, pinning_points=False, return_grounded=mask=False):
+    def get_grounding_line_mask (self, pinning_points=False, return_grounded_mask=False):
 
         from .interpolation import neighbours
         if pinning_points:
