@@ -12,7 +12,7 @@ import sys
 import os
 
 from .file_io import read_netcdf, find_cmip6_files
-from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d
+from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d, connected_mask
 from .constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -434,6 +434,23 @@ class Grid:
             index = (lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)
             coast_mask[index] = False
         return coast_mask
+
+
+    # Build and return a mask for grounding line points: grounded ice points with at least one neighbour which is an ice shelf. The default is to only consider grounding lines connected to the "proper" grounded ice sheet (defined as the central southern point of the domain), and to exclude the grounding lines of pinning points etc, but you can override this by setting pinning_points=True.
+    def get_grounding_line_mask (self, pinning_points=False):
+
+        from .interpolation import neighbours
+        if pinning_points:
+            # Consider the grounding lines of pinning points too
+            grounded_mask = self.land_mask
+        else:
+            # Only consider "proper" grounding lines of the grounded ice sheet
+            ice_sheet_point0 = [0, round(self.nx/2)]
+            grounded_mask = connected_mask(ice_sheet_point0, self.land_mask)
+        num_iceshelf_neighbours = neighbours(self.ice_mask, missing_val=0)[-1]
+        gl_mask = (grounded_mask*(num_iceshelf_neighbours > 0)).astype(bool)
+        return gl_mask
+        
 
 
 # Interface to Grid for situations such as read_plot_latlon where there are three possibilities:

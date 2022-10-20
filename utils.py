@@ -972,6 +972,10 @@ def connected_mask (point0, mask):
                 stack.append(possible_point)
 
     return connected
+
+    
+
+    
     
     
 
