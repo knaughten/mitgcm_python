@@ -903,8 +903,6 @@ def normalise (data):
     vmax = np.amax(data)
     return (data - vmin)/(vmax - vmin)
     
-
-    
     
 
     

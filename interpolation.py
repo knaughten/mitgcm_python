@@ -697,5 +697,72 @@ def distance_weighted_nearest_neighbours (data, weights=None, num_neighbours=10,
         data_filled[j0,i0] = np.sum(data[neighbours]*inv_distance[neighbours]*weights[neighbours])/np.sum(inv_distance[neighbours]*weights[neighbours])
     data_filled[~mask] = data[~mask]
     return data_filled
+
+
+# Given a boolean mask of up to 3 dimensions (eg land mask, ice mask...) and the coordinates of a point in which that mask is True (eg [j,i]), return another mask which is True at all the points which are connected to the original point. For example, to isolate an individual ice shelf, or a subglacial lake.
+# This function is recursive so the usual dangers apply
+def connected_mask (point, mask, is_connected=None):
+
+    dim = len(point)
+    if dim == 1:
+        [i] = point
+        [nx] = mask.shape
+    elif dim == 2:
+        [j,i] = point
+        [ny,nx] = mask.shape
+    elif dim == 3:
+        [k,j,i] = point
+        [nz,ny,nx] = mask.shape
+    elif dim > 3:
+        print('Error (connected_mask): not implemented for more than 3 dimensions. This array has '+str(dim)+' dimensions.')
+        sys.exit()
+    if not mask[point]:
+        print('Error (connected_mask): the given mask is False at the given point.')
+        sys.exit()
+
+    if is_connected is None:
+        # Initialise connected mask to all False
+        is_connected = np.zeros(mask.shape).astype(bool)
+
+    # Get immediate neighbours which are True in the given mask
+    neighbours = []
+    # Inner function to streamline this
+    def check_neighbour (dimension, increment):
+        new_point = np.copy(point)
+        new_point[dimension] = point[dimension] + increment
+        if mask[new_point]:
+            neighbours.append(new_point)
+    # x dimension
+    if i > 0:
+        check_neighbour(-1, -1)
+    if i+1 < nx:
+        check_neighbour(-1, 1)
+    # y dimension
+    if dim > 1:
+        if j > 0:
+            check_neighbour(-2, -1)
+        if j+1 < ny:
+            check_neighbour(-2, 1)
+    # z dimension
+    if dim > 2:
+        if k > 0:
+            check_neighbour(-3, -1)
+        if k+1 < nz:
+            check_neighbour(-3, 1)
+
+    # Now loop over the valid neighbours
+    for new_point in neighbours:
+        if is_connected[new_point]:
+            # This point was dealt with previously
+            continue
+        else:
+            # Update connected mask
+            is_connected[new_point] = True
+            # Recursive call to function to deal with all of this point's neighbours
+            is_connected = connected_mask(new_point, mask, is_connected=is_connected)
+
+    return is_connected
+    
+    
     
 

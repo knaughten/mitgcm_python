@@ -3108,12 +3108,11 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
     finished_plot(fig, fig_name=fig_name)
 
 
-def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_trends/', fig_name=None):
+def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, fig_name=None):
 
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     colours = ['BurlyWood', 'DodgerBlue', 'MediumSeaGreen', 'IndianRed', 'DarkGrey']
     num_periods = len(periods)
-    num_bins = 100
     p0 = 0.05
     title = 'Ice shelf basal melting trend'
     ytitle = 'm/y/century'
@@ -3128,22 +3127,24 @@ def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_t
     bin_trends_all = []
     for n in range(num_periods):
         bin_trends = np.zeros(num_bins)
-        bin_area = np.zeros(num_bins+1)
+        bin_area = np.zeros(num_bins)
         trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
         trends = read_netcdf(trend_file, 'ismr_trend')
         mean_trend = np.mean(trends, axis=0)*1e2
         p_val = ttest_1samp(trends, 0, axis=0)[1]
         mean_trend[p_val > p0] = 0
         for trend_val, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
-            bin_index = np.nonzero(bin_edges > bin_val)[0][0]-1
+            bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
             bin_trends[bin_index] += trend_val*dA_val
             bin_area[bin_index] += dA_val
+        bin_trends /= bin_area
         bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
         bin_trends_all.append(bin_trends)
 
-    fig, ax = plt.subplot()
+    fig, ax = plt.subplots()
     for n in range(num_periods):
-        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], linewidth=1, markersize=5, label=periods[n])
+        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=periods[n])
+    ax.grid(linestyle='dotted')
     ax.set_xlabel(xtitle, fontsize=12)
     ax.set_ylabel(ytitle, fontsize=12)
     ax.set_title(title, fontsize=16)
