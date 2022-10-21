@@ -3257,7 +3257,6 @@ def calc_trends_for_table ():
             trends = np.zeros(num_ens[n])
             for e in range(num_ens[n]):
                 file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file
-                percent = 
                 if var_names == 'dotson_to_cosgrove_massloss':
                     percent = True
                 slope, sig = read_calc_trend(var, file_path, start_year=start_years[n], end_year=end_years[n], smooth=smooth, p0=p0, percent=percent, baseline=baseline)
