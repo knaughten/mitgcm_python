@@ -3363,6 +3363,101 @@ def timeseries_shelf_temp (fig_name=None):
     ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
+
+# Figure 2
+def temp_profiles (fig_name=None):
+
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
+    num_expt = len(expt_names)
+    expt_dir_heads = ['PAS_']*(num_expt-1) + ['../mitgcm/PAS_']
+    expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'PACE']
+    expt_ens_prec = [3]*(num_expt-1) + [2]
+    expt_dir_tails = ['_O']*(num_expt-1) + ['']
+    hovmoller_file = ['/output/hovmoller.nc', '/output/hovmoller1.nc'] # TODO: ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
+    num_ens = [10, 5, 5, 5, 5, 20]  # TODO: update most to 10
+    start_years = [1920, 2006, 2006, 2006, 2006, 1920]
+    end_years = [2005, 2100, 2100, 2080, 2100, 2013]
+    final_period = 20
+    region = 'pine_island_bay' # TODO: 'amundsen_shelf'    
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65), (0.34,0.71,0.91)]
+    grid_dir = 'PAS_grid/'
+    grid = Grid(grid_dir)
+    smooth = 24
+    p0 = 0.05
+    ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
+
+    mean_profiles = np.ma.empty([num_expt, grid.nz])
+    std_profiles = np.ma.empty([num_expt, grid.nz])
+    trend_profiles = np.ma.empty([num_expt, grid.nz])
+    # Loop over experiments
+    for n in range(num_expt):
+        num_years = end_years[n] - start_years[n] + 1
+        ndays_full = np.tile(ndays, num_years)
+        expt_annual_means = np.ma.empty([num_ens[n], num_years, grid.nz])
+        expt_trends = np.ma.empty([num_ens[n], grid.nz])
+        # Loop over ensemble members
+        for e in range(num_ens[n]):
+            # Read the data
+            file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + hovmoller_file[n]
+            time = netcdf_time(file_path, monthly=False)
+            temp = read_netcdf(file_path, region+'_temp')
+            # Trim to correct years
+            t0, tf = index_period(time, start_years[n], end_years[n])
+            time = time[t0:tf]
+            temp = temp[t0:tf,:]
+            # Calculate annual means
+            expt_annual_means[e,:] = np.ma.average(temp, axis=0, weights=ndays_full)
+            # Calculate trend per century of smoothed data at each depth
+            time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
+            temp_smoothed, time_smoothed = moving_average(data, smooth, time=time_cent)
+            for k in range(grid.nz):
+                slope, intercept, r_value, p_value, std_err = linregress(time_smoothed, temp_smoothed[:,k])
+                if p_value < p0:
+                    expt_trends[e,k] = slope
+                else:
+                    expt_trends[e,k] = 0
+        # Now get mean and std over last 20 years and all ensemble members
+        mean_profiles[n,:] = np.mean(expt_annual_means[:,-final_period:,:], axis=(0,1))
+        std_profiles[n,:] = np.std(expt_annual_means[:,-final_period:,:], axis=(0,1))
+        # Calculate ensemble mean trend and test significance
+        mean_trend = np.mean(expt_trends, axis=0)
+        p_val = ttest_1samp(expt_trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        trend_profiles[n,:] = mean_trend
+    # Mask out depths where trend is not significantly different from 0
+    trend_profiles = np.ma.masked_where(trend_profiles==0, trend_profiles)
+
+    # Plot
+    fig = plt.figure(figsize=(8,5))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.1, right=0.95, bottom=0.2, top=0.8, wspace=0.05)
+    data_plot = [mean_profiles, std_profiles, trend_profiles]
+    titles = [r'$\bf{a}$. Mean (last 20y)', r'$\bf{b}$. Std (last 20y)', r'$\bf{c}$. Trend']
+    units = [deg_string+'C']*2 + [deg_string+'C/century']
+    depth = -grid.z
+    for v in range(3):
+        ax = plt.subplot(gs[0,v])
+        for n in range(num_expt):
+            ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])     
+        ax.tick_params(direction='in')
+        ax.grid(linestyle='dotted')
+        ax.invert_yaxis()
+        ax.set_title(titles[v], fontsize=14)
+        ax.set_xlabel(units[v], fontsize=12)
+        if v==0:
+            ax.set_ylabel('depth (km)', fontsize=12)
+    ax.legend(loc='lower center', bbox_to_anchor=(-1,-0.2), fontsize=12, num_col=num_expt/2)
+    plt.suptitle('Temperature profiles on '+region_names[region], fontsize=18)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+            
+            
+            
+        
+
+    
+    
+    
+
     
     
     
