@@ -14,7 +14,7 @@ import datetime
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask, index_year_end
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
@@ -3212,6 +3212,66 @@ def plot_warming_trend_profiles (region, fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
+# Data for Table 1
+def calc_trends_for_table ():
+
+    var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
+    units = ['C/century', '%/century']
+    expt_names = ['Historical', 'Historical fixed BCs', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5 fixed BCs', 'PACE']
+    num_expt = len(expt_names)
+    expt_dir_heads = ['PAS_']*(num_expt-1) + ['../mitgcm/PAS_']
+    expt_dir_mids = ['LENS', 'LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS', 'PACE']
+    expt_ens_prec = [3]*(num_expt-1) + [2]
+    expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC', '']
+    timeseries_file = ['/output/timeseries.nc']*(num_expt-1) + ['/output/timeseries_final.nc']
+    num_ens = [5, 5, 5, 5, 5, 5, 5, 20]  # Update most of these to 10 later
+    start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006, 1920]
+    end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100, 2013]
+    baseline_period = 30
+    smooth = 24
+    p0 = 0.05
+
+    for var in var_names:
+        print('\nTrends in '+var+':')
+        for n in range(num_expt):
+            if var_names == 'dotson_to_cosgrove_massloss' and expt_names == 'Historical':
+                # Calculate baseline for massloss: historical ensemble mean over 1920-1950
+                massloss_baseline = 0
+                for e in range(num_ens[n]):
+                    file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file
+                    data = read_netcdf(file_path, var)
+                    time = netcdf_time(file_path, monthly=False)
+                    t0, tf = index_period(time, start_years[n], start_years[n]+baseline_period)
+                    time = time[t0:tf]
+                    data = data[t0:tf]
+                    data_annual = monthly_to_annual(data, time)[0]
+                    massloss_baseline += np.mean(data_annual)
+                massloss_baseline /= num_ens[n]
+                print('(using baseline of '+str(baseline)+' Gt/y)')
+            percent = (var_names == 'dotson_to_cosgrove_massloss')
+            if percent:
+                baseline = massloss_baseline
+            else:
+                baseline = None
+            # Calculate trends in each ensemble member
+            trends = np.zeros(num_ens[n])
+            for e in range(num_ens[n]):
+                file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file
+                percent = 
+                if var_names == 'dotson_to_cosgrove_massloss':
+                    percent = True
+                slope, sig = read_calc_trend(var, file_path, start_year=start_years[n], end_year=end_years[n], smooth=smooth, p0=p0, percent=percent, baseline=baseline)
+                if sig:
+                    trends[e] = slope
+            mean_trend = np.mean(trends)
+            p_val = ttest_1samp(trends, 0)[1]
+            if p_val < p0:
+                print(expt_names[n]+': '+str(mean_trend))
+            else:
+                print(expt_names[n]+': no significant trend')
+
+
+# Figure 1
 def timeseries_shelf_temp (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
@@ -3226,7 +3286,7 @@ def timeseries_shelf_temp (fig_name=None):
     expt_file_mid = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
     expt_file_tail = '_O/output/timeseries.nc'
     var_name = 'amundsen_shelf_temp_btw_200_700m'
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.8,0.47,0.65), (0.9,0.62,0)]
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     smooth = 24
 
     data_mean = []
@@ -3267,7 +3327,11 @@ def timeseries_shelf_temp (fig_name=None):
             # Smooth
             data_smooth, time_smooth = moving_average(data_raw, smooth, time=time_raw)
             # Trim
-            t_start, t_end = index_period(time_smooth, start_year, end_year)
+            t_start = index_year_start(time_smooth, start_year)
+            if expt_names[n] == 'Historical':
+                t_end = index_year_end(time_smooth, end_year)
+            else:
+                t_end = time_smooth.size
             time_smooth = time_smooth[t_start:t_end]
             data_smooth = data_smooth[t_start:t_end]
             if e == 0:
@@ -3281,8 +3345,9 @@ def timeseries_shelf_temp (fig_name=None):
         data_max.append(np.amax(data_sim, axis=0))
 
     # Plot
-    fig, gs = plt.GridSpec(1,1)
-    gs.update(left=0.1, right=0.95, bottom=0.15, top=0.9)
+    fig = plt.figure(figsize=(8,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.1, right=0.95, bottom=0.18, top=0.9)
     ax = plt.subplot(gs[0,0])
     for n in range(num_expt):
         # Shade ensemble range
@@ -3290,14 +3355,15 @@ def timeseries_shelf_temp (fig_name=None):
         # Plot ensemble mean as solid line
         ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
         # TODO: add labels as appropriate to show 3 periods and/or time of divergence of scenarios
-    ax.set_grid(linestyle='dotted')
-    ax.set_xlim([start_year_hist, np.amax(time[-1])])
+    ax.grid(linestyle='dotted')
+    ax.set_xlim([datetime.date(start_year_hist,1,1), np.amax(time[-1])])
     ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year_hist, end_year_future, 20)])
-    ax.set_xlabel('Year', fontsize=14)
-    ax.set_ylabel(deg_string+'C', fontsize=14)
-    ax.set_title('Temperature on Amundsen Sea continental shelf (200-700m)', fontsize=18)
-    ax.legend(loc='lower center', bbox_to_anchor=(0,-0.1), fontsize=12, ncol=num_expt)
+    ax.set_xlabel('Year', fontsize=12)
+    ax.set_ylabel(deg_string+'C', fontsize=12)
+    ax.set_title('Temperature on Amundsen Sea continental shelf (200-700m)', fontsize=17)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
     finished_plot(fig, fig_name=fig_name, dpi=300)
+
     
     
     
