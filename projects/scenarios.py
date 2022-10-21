@@ -30,6 +30,7 @@ from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
 from ..timeseries import monthly_to_annual
+from ..calculus import area_average
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -3183,22 +3184,122 @@ def plot_warming_trend_profiles (region, fig_name=None):
         mean_trend_profiles = np.mean(trend_profiles, axis=0)*1e2
         p_val = ttest_1samp(trend_profiles, 0, axis=0)[1]
         mean_trend_profiles[p_val > p0] = 0
+        mean_trend_profiles = np.ma.masked_where(mean_trend_profiles==0, mean_trend_profiles)
         temp_trend_profiles[n,:] = mean_trend_profiles
 
-    fig, ax1 = plt.subplots()
+    fig = plt.figure(figsize=(8,6))
+    gs = plt.GridSpec(1,2)
+    gs.update(left=0.1, right=0.97, bottom=0.17, top=0.88, wspace=0.05)
     # Plot baseline temperature on one side
-    ax1.plot(baseline_temp_profile, grid.z, color=baseline_colour, linestyle='dashed')
-    ax1.grid(linestyle='dotted')
-    ax1.set_ylabel('Baseline temperature ('+deg_string+'C)', fontsize=12)
-    ax2 = ax1.twinx()
+    ax = plt.subplot(gs[0,0])
+    ax.plot(baseline_temp_profile, -grid.z, color=baseline_colour)
+    ax.invert_yaxis()
+    ax.grid(linestyle='dotted')
+    ax.set_title('Baseline temperature', fontsize=14)
+    ax.set_xlabel(deg_string+'C', fontsize=12)
+    ax.set_ylabel('Depth (m)', fontsize=12)
+    # Plot trends on other side
+    ax = plt.subplot(gs[0,1])
     for n in range(num_periods):
-        ax2.plot(temp_trend_profiles[n,:], grid.z, color=colours[n], label=periods[n])
-    ax2.get_yaxis().get_major_formatter().set_useOffset(False)
-    ax2.set_ylabel('Temperature trend ('+deg_string+'C/century)', fontsize=12)
-    ax2.legend()
-    plt.title(region_names[region], fontsize=16)
+        ax.plot(temp_trend_profiles[n,:], -grid.z, color=colours[n], label=periods[n])
+    ax.invert_yaxis()
+    ax.grid(linestyle='dotted')
+    ax.set_title('Temperature trends', fontsize=14)
+    ax.set_xlabel(deg_string+'C/century', fontsize=12)
+    ax.set_yticklabels([])
+    ax.legend(loc='center left', bbox_to_anchor=(-1,-0.18), fontsize=12, ncol=num_periods)
+    plt.suptitle(region_names[region], fontsize=16)
     finished_plot(fig, fig_name=fig_name)
-        
+
+
+def timeseries_shelf_temp (fig_name=None):
+
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    num_expt = len(expt_names)
+    num_ens_default = 5  # Update to 10 later
+    num_ens_LW1 = 5
+    start_year_hist = 1920
+    start_year_future = 2006
+    end_year_MENS = 2080
+    end_year_future = 2100
+    expt_file_head = 'PAS_'
+    expt_file_mid = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+    expt_file_tail = '_O/output/timeseries.nc'
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.8,0.47,0.65), (0.9,0.62,0)]
+    smooth = 24
+
+    data_mean = []
+    data_min = []
+    data_max = []
+    time = []
+    # Loop over scenarios
+    for n in range(num_expt):
+        # Set parameters
+        if '1.5' in expt_names[n]:
+            num_ens = num_ens_LW1
+        else:
+            num_ens = num_ens_default
+        if expt_names[n] == 'Historical':
+            start_year = start_year_hist
+            end_year = start_year_future-1
+        else:
+            start_year = start_year_future
+            if expt_names[n] == 'RCP 4.5':
+                end_year = end_year_MENS
+            else:
+                end_year = end_year_future
+        # Loop over ensemble members
+        for e in range(num_ens):
+            # Read data
+            file_path = expt_file_head + expt_file_mid[n] + str(e+1).zfill(3) + expt_file_tail
+            time_raw = netcdf_time(file_path, monthly=False)
+            data_raw = read_netcdf(file_path, var_name)
+            if expt_names[n] == 'Historical':
+                # Save historical data for concatenating to others later
+                t_end = index_year_end(time_raw, end_year)
+                time_hist = np.copy(time_raw[:t_end])
+                data_hist = np.copy(data_raw[:t_end])
+            else:
+                # Concatenate with historical data for smoothing
+                time_raw = np.concatenate((time_hist, time_raw))
+                data_raw = np.concatenate((data_hist, data_raw))
+            # Smooth
+            data_smooth, time_smooth = moving_average(data_raw, smooth, time=time_raw)
+            # Trim
+            t_start, t_end = index_period(time_smooth, start_year, end_year)
+            time_smooth = time_smooth[t_start:t_end]
+            data_smooth = data_smooth[t_start:t_end]
+            if e == 0:
+                data_sim = np.empty([num_ens, time_smooth.size])
+                time.append(time_smooth)
+            # Store the timeseries for this ensemble member
+            data_sim[e,:] = data_smooth
+        # Now calculate mean, min, max over the ensemble at each time index
+        data_mean.append(np.mean(data_sim, axis=0))
+        data_min.append(np.amin(data_sim, axis=0))
+        data_max.append(np.amax(data_sim, axis=0))
+
+    # Plot
+    fig, gs = plt.GridSpec(1,1)
+    gs.update(left=0.1, right=0.95, bottom=0.15, top=0.9)
+    ax = plt.subplot(gs[0,0])
+    for n in range(num_expt):
+        # Shade ensemble range
+        ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
+        # Plot ensemble mean as solid line
+        ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
+        # TODO: add labels as appropriate to show 3 periods and/or time of divergence of scenarios
+    ax.set_grid(linestyle='dotted')
+    ax.set_xlim([start_year_hist, np.amax(time[-1])])
+    ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year_hist, end_year_future, 20)])
+    ax.set_xlabel('Year', fontsize=14)
+    ax.set_ylabel(deg_string+'C', fontsize=14)
+    ax.set_title('Temperature on Amundsen Sea continental shelf (200-700m)', fontsize=18)
+    ax.legend(loc='lower center', bbox_to_anchor=(0,-0.1), fontsize=12, ncol=num_expt)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+    
+    
     
     
     
