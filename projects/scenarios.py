@@ -1544,7 +1544,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['barotropic_vel_speed', 'baroclinic_vel_speed'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m']
+    var_names = ['baroclinic_vel_bottom100m_speed'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -3224,7 +3224,7 @@ def calc_trends_for_table ():
     expt_ens_prec = [3]*(num_expt-1) + [2]
     expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC', '']
     timeseries_file = ['/output/timeseries.nc']*(num_expt-1) + ['/output/timeseries_final.nc']
-    num_ens = [5, 5, 5, 5, 5, 5, 5, 20]  # Update most of these to 10 later
+    num_ens = [10, 5, 5, 5, 5, 5, 5, 20]  # Update most of these to 10 later
     start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006, 1920]
     end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100, 2013]
     baseline_period = 30
@@ -3234,11 +3234,11 @@ def calc_trends_for_table ():
     for var in var_names:
         print('\nTrends in '+var+':')
         for n in range(num_expt):
-            if var_names == 'dotson_to_cosgrove_massloss' and expt_names == 'Historical':
+            if var == 'dotson_to_cosgrove_massloss' and expt_names[n] == 'Historical':
                 # Calculate baseline for massloss: historical ensemble mean over 1920-1950
                 massloss_baseline = 0
                 for e in range(num_ens[n]):
-                    file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file
+                    file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file[n]
                     data = read_netcdf(file_path, var)
                     time = netcdf_time(file_path, monthly=False)
                     t0, tf = index_period(time, start_years[n], start_years[n]+baseline_period)
@@ -3247,8 +3247,8 @@ def calc_trends_for_table ():
                     data_annual = monthly_to_annual(data, time)[0]
                     massloss_baseline += np.mean(data_annual)
                 massloss_baseline /= num_ens[n]
-                print('(using baseline of '+str(baseline)+' Gt/y)')
-            percent = (var_names == 'dotson_to_cosgrove_massloss')
+                print('(using baseline of '+str(massloss_baseline)+' Gt/y)')
+            percent = (var == 'dotson_to_cosgrove_massloss')
             if percent:
                 baseline = massloss_baseline
             else:
@@ -3256,7 +3256,7 @@ def calc_trends_for_table ():
             # Calculate trends in each ensemble member
             trends = np.zeros(num_ens[n])
             for e in range(num_ens[n]):
-                file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file
+                file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + timeseries_file[n]
                 if var_names == 'dotson_to_cosgrove_massloss':
                     percent = True
                 slope, sig = read_calc_trend(var, file_path, start_year=start_years[n], end_year=end_years[n], smooth=smooth, p0=p0, percent=percent, baseline=baseline)
