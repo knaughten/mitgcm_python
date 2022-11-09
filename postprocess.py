@@ -1545,27 +1545,32 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
                     data_v = interp_grid(data_v, grid, 'v', 't')
                     data = np.sqrt(data_u**2 + data_v**2)
                 long_name += 'velocity'
-            elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'baroclinic_vel_bottom100m_speed']:
+            elif var_name in ['baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'baroclinic_vel_bottom100m_speed', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed']:
                 z_3d = z_to_xyz(grid.z, grid)
                 bathy_3d = xy_to_xyz(grid.bathy, grid)
                 mask_above_100m = z_3d > bathy_3d + 100
-                if var_name != 'baroclinic_v_bottom100m':
+                if var_name not in ['baroclinic_v_bottom100m', 'v_bottom100m']:
                     data_u_3d = mask_3d(read_netcdf(file_paths[t], 'UVEL', time_average=True), grid, gtype='u')
-                    data_u_baroclinic = data_u_3d - xy_to_xyz(vertical_average(data_u_3d, grid, gtype='u'), grid)
-                    data_u = vertical_average(np.ma.masked_where(mask_above_100m, data_u_baroclinic), grid, gtype='u')
-                if var_name != 'baroclinic_u_bottom100m':
+                    if 'baroclinic' in var_name:
+                        data_u_3d -= xy_to_xyz(vertical_average(data_u_3d, grid, gtype='u'), grid)
+                    data_u = vertical_average(np.ma.masked_where(mask_above_100m, data_u_3d), grid, gtype='u')
+                if var_name not in ['baroclinic_u_bottom100m', 'u_bottom100m']:
                     data_v_3d = mask_3d(read_netcdf(file_paths[t], 'VVEL', time_average=True), grid, gtype='v')
-                    data_v_baroclinic = data_v_3d - xy_to_xyz(vertical_average(data_v_3d, grid, gtype='v'), grid)
-                    data_v = vertical_average(np.ma.masked_where(mask_above_100m, data_v_baroclinic), grid, gtype='v')
-                long_name = 'baroclinic '
+                    if 'baroclinic' in var_name:
+                        data_v_3d -= xy_to_xyz(vertical_average(data_v_3d, grid, gtype='v'), grid)
+                    data_v = vertical_average(np.ma.masked_where(mask_above_100m, data_v_3d), grid, gtype='v')
+                if 'baroclinic' in var_name:
+                    long_name = 'baroclinic '
+                else:
+                    long_name = ''
                 units = 'm/s'
-                if var_name == 'baroclinic_u_bottom100m':
+                if var_name in ['baroclinic_u_bottom100m', 'u_bottom100m']:
                     data = data_u
                     long_name += 'u-'
-                elif var_name == 'baroclinic_v_bottom100m':
+                elif var_name in ['baroclinic_v_bottom100m', 'v_bottom100m']:
                     data = data_v
                     long_name += 'v-'
-                elif var_name == 'baroclinic_vel_bottom100m_speed':
+                elif var_name in ['baroclinic_vel_bottom100m_speed', 'vel_bottom100m_speed']:
                     data_u = interp_grid(data_u, grid, 'u', 't')
                     data_v = interp_grid(data_v, grid, 'v', 't')
                     data = np.sqrt(data_u**2 + data_v**2)

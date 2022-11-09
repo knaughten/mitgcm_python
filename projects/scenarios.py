@@ -1545,7 +1545,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['THETA', 'temp_btw_200_700m', 'ismr', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'baroclinic_vel_bottom100m_speed', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
+    var_names = ['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -3136,7 +3136,7 @@ def melt_trend_histogram (option='buttressing', grid_dir='PAS_grid/', trend_dir=
         # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
         fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
         fill = extend_into_mask(fill, missing_val=0, num_iters=3)
-        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0)
+        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
         # Now interpolate to MITgcm grid
         bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
         xtitle = 'Buttressing flux response number'
@@ -3169,7 +3169,7 @@ def melt_trend_histogram (option='buttressing', grid_dir='PAS_grid/', trend_dir=
     ax.set_ylabel(ytitle, fontsize=12)
     ax.set_title(title, fontsize=16)
     ax.legend()
-    finished_plot(fig, fig_name=fig_name)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
 def plot_warming_trend_profiles (region, fig_name=None):
