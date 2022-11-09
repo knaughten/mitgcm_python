@@ -3159,6 +3159,7 @@ def melt_trend_histogram (option='buttressing', grid_dir='PAS_grid/', trend_dir=
             bin_area[bin_index] += dA_val
         bin_trends /= bin_area
         bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
+        bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
         bin_trends_all.append(bin_trends)
 
     fig, ax = plt.subplots()
