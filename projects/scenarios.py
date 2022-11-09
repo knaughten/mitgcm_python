@@ -10,6 +10,7 @@ import os
 from scipy.stats import linregress, ttest_1samp
 from scipy.ndimage.filters import gaussian_filter
 import datetime
+import itertools
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
@@ -1542,9 +1543,9 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
     
 
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
-def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
+def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['baroclinic_vel_bottom100m_speed'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
+    var_names = ['THETA', 'temp_btw_200_700m', 'ismr', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'baroclinic_vel_bottom100m_speed', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -1567,7 +1568,7 @@ def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=5, num_MENS
             gtype = 'v'
         else:
             gtype = 't'
-        for t in [0]: #range(num_periods):
+        for t in range(1, num_periods-1): #num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
             out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
             if periods[t] in ['historical', 'LENS']:
@@ -3373,7 +3374,7 @@ def temp_profiles (fig_name=None):
     expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'PACE']
     expt_ens_prec = [3]*(num_expt-1) + [2]
     expt_dir_tails = ['_O']*(num_expt-1) + ['']
-    hovmoller_file = ['/output/hovmoller.nc', '/output/hovmoller1.nc'] # TODO: ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
+    hovmoller_file = ['/output/hovmoller.nc']*(num_expt-1) + ['/output/hovmoller1.nc'] # TODO: ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
     num_ens = [10, 5, 5, 5, 5, 20]  # TODO: update most to 10
     start_years = [1920, 2006, 2006, 2006, 2006, 1920]
     end_years = [2005, 2100, 2100, 2080, 2100, 2013]
@@ -3392,7 +3393,6 @@ def temp_profiles (fig_name=None):
     # Loop over experiments
     for n in range(num_expt):
         num_years = end_years[n] - start_years[n] + 1
-        ndays_full = np.tile(ndays, num_years)
         expt_annual_means = np.ma.empty([num_ens[n], num_years, grid.nz])
         expt_trends = np.ma.empty([num_ens[n], grid.nz])
         # Loop over ensemble members
@@ -3406,10 +3406,11 @@ def temp_profiles (fig_name=None):
             time = time[t0:tf]
             temp = temp[t0:tf,:]
             # Calculate annual means
-            expt_annual_means[e,:] = np.ma.average(temp, axis=0, weights=ndays_full)
+            for t in range(num_years):
+                expt_annual_means[e,t,:] = np.ma.average(temp[t*months_per_year:(t+1)*months_per_year,:], axis=0, weights=ndays)
             # Calculate trend per century of smoothed data at each depth
             time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
-            temp_smoothed, time_smoothed = moving_average(data, smooth, time=time_cent)
+            temp_smoothed, time_smoothed = moving_average(temp, smooth, time=time_cent)
             for k in range(grid.nz):
                 slope, intercept, r_value, p_value, std_err = linregress(time_smoothed, temp_smoothed[:,k])
                 if p_value < p0:
@@ -3428,25 +3429,29 @@ def temp_profiles (fig_name=None):
     trend_profiles = np.ma.masked_where(trend_profiles==0, trend_profiles)
 
     # Plot
-    fig = plt.figure(figsize=(8,5))
+    fig = plt.figure(figsize=(8,5.5))
     gs = plt.GridSpec(1,3)
-    gs.update(left=0.1, right=0.95, bottom=0.2, top=0.8, wspace=0.05)
+    gs.update(left=0.1, right=0.95, bottom=0.2, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
-    titles = [r'$\bf{a}$. Mean (last 20y)', r'$\bf{b}$. Std (last 20y)', r'$\bf{c}$. Trend']
+    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Ensemble std\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
         ax = plt.subplot(gs[0,v])
-        for n in range(num_expt):
+        # Hack the order of plotting so the legend is intuitive
+        for n in [0, 2, 5, 3, 1, 4]:
             ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])     
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
+        ax.set_ylim([0, None])
         ax.invert_yaxis()
         ax.set_title(titles[v], fontsize=14)
         ax.set_xlabel(units[v], fontsize=12)
         if v==0:
-            ax.set_ylabel('depth (km)', fontsize=12)
-    ax.legend(loc='lower center', bbox_to_anchor=(-1,-0.2), fontsize=12, num_col=num_expt/2)
+            ax.set_ylabel('depth (m)', fontsize=12)
+        else:
+            ax.set_yticklabels([])
+    ax.legend(loc='lower center', bbox_to_anchor=(-0.75,-0.33), fontsize=12, ncol=3)
     plt.suptitle('Temperature profiles on '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
             
