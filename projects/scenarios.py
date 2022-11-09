@@ -26,7 +26,7 @@ from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
 from ..plot_misc import ts_binning, hovmoller_plot
-from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg
+from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg, extend_into_mask, interp_nonreg_xy
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
@@ -3110,7 +3110,9 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
     finished_plot(fig, fig_name=fig_name)
 
 
-def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, fig_name=None):
+def melt_trend_histogram (option='buttressing', grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat', fig_name=None):
+
+    from scipy.io import loadmat
 
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     colours = ['BurlyWood', 'DodgerBlue', 'MediumSeaGreen', 'IndianRed', 'DarkGrey']
@@ -3126,6 +3128,18 @@ def melt_trend_histogram (option, grid_dir='PAS_grid/', trend_dir='precomputed_t
     elif option == 'dist_to_gl':
         bin_quantity = distance_to_grounding_line(grid)
         xtitle = 'Distance to grounding line (km)'
+    elif option == 'buttressing':
+        f = loadmat(ronja_file)
+        buttressing = f['BFRN']
+        rlat = f['lat']
+        rlon = f['lon']
+        # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
+        fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
+        fill = extend_into_mask(fill, missing_val=0, num_iters=3)
+        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0)
+        # Now interpolate to MITgcm grid
+        bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
+        xtitle = 'Buttressing flux response number'
     bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
     
     bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
