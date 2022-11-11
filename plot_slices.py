@@ -103,7 +103,7 @@ def make_slice_plot (patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, 
 # date_string: as in function latlon_plot
 # fig_name: as in function finished_plot
 
-def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, ctype='basic', title='', titlesize=18, date_string=None, fig_name=None):
+def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1=None, hmin=None, hmax=None, zmin=None, zmax=None, vmin=None, vmax=None, contours=None, ctype='basic', title='', titlesize=18, date_string=None, fig_name=None, ax=None, make_cbar=False):
 
     # Choose what the endpoints of the colourbar should do
     extend = get_extend(vmin=vmin, vmax=vmax)
@@ -127,7 +127,7 @@ def slice_plot (data, grid, gtype='t', lon0=None, lat0=None, point0=None, point1
         vmax = vmax_tmp
         
     # Plot
-    make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, point0=point0, point1=point1, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, titlesize=titlesize, date_string=date_string, fig_name=fig_name)
+    return make_slice_plot(patches, values, loc0, hmin, hmax, zmin, zmax, vmin, vmax, lon0=lon0, lat0=lat0, point0=point0, point1=point1, contours=contours, data_grid=data_grid, haxis=haxis, zaxis=zaxis, ctype=ctype, extend=extend, title=title, titlesize=titlesize, date_string=date_string, fig_name=fig_name, ax=ax, make_cbar=make_cbar)
 
 
 # Slice plot showing difference between two simulations (2 minus 1). It is assumed the corresponding data arrays cover the same period of time.

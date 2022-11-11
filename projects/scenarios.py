@@ -22,7 +22,7 @@ from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
-from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes
+from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries
 from ..plot_misc import ts_binning, hovmoller_plot
@@ -3495,71 +3495,71 @@ def velocity_trend_maps (fig_name=None):
     expt_name = 'LW2.0'
     expt_title = 'Paris 2'+deg_string+'C'
     trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
-    trend_var = ['barotropic_u', 'u_bottom100m']
-    var_titles = ['Depth-averaged', 'Bottom 100m']
+    trend_var = ['u_bottom100m', 'UVEL', 'VVEL']
+    lon0 = [None, -112, None]
+    lat0 = [None, None, -73]
+    h_bounds = [None, [-71.8, -71.1], [-107, -105]]
+    var_titles = ['Bottom 100m', 'Undercurrent ('+lon_label(lon0[1])+')', 'PITE Trough ('+lat_label(lat0[2])+')']
+    direction = ['magnitude', 'east', 'north']
+    gtypes = [None, 'u', 'v']
     num_var = len(trend_var)
-    title = 'Velocity trends in Paris 2'+deg_string+'C scenario (m/s/century)'
+    title = 'Velocity trends in Paris 2'+deg_string+'C scenario'
     grid_dir = 'PAS_grid/'
     xmin = -120
     xmax = -98
     ymax = -70
     p0 = 0.05
     threshold = 0.02
+    
 
     grid = Grid(grid_dir)
 
-    def read_single_trend (var_name):
+    def read_single_trend (var_name, dim=2, gtype='t'):
         file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
         trends = read_netcdf(file_path, var_name + '_trend')
         mean_trend = np.mean(trends, axis=0)
         p_val = ttest_1samp(trends, 0, axis=0)[1]
         mean_trend[p_val > p0] = 0
-        return mask_land_ice(mean_trend*1e2, grid)
+        if dim == 2:
+            mean_trend = mask_land_ice(mean_trend, grid, gtype=gtype)
+        elif dim == 3:
+            mean_trend = mask_3d(mean_trend, grid, gtype=gtype)
+        return mean_trend*1e2
     
-    def read_trend_vector(u_var):
-        u_trend = read_single_trend(u_var)
-        v_trend = read_single_trend(u_var.replace('u', 'v'))
-        vel_trend = read_single_trend(u_var.replace('u', 'vel')+'_speed')
+    def read_trend_vector(u_var, dim=2):
+        u_trend = read_single_trend(u_var, dim=dim, gtype='u')
+        v_trend = read_single_trend(u_var.replace('u', 'v'), dim=dim, gtype='v')
+        vel_trend = read_single_trend(u_var.replace('u', 'vel')+'_speed', dim=dim)
         return u_trend, v_trend, vel_trend
 
-    u_data = []
-    v_data = []
-    vel_data = []
-    all_vmin = []
-    all_vmax = []
-    for n in range(num_var):
-        u_tmp, v_tmp, vel_tmp = read_trend_vector(trend_var[n])
-        u_tmp = interp_grid(u_tmp, grid, 'u', 't')
-        v_tmp = interp_grid(v_tmp, grid, 'v', 't')
-        index = vel_tmp < threshold
-        u_tmp = np.ma.masked_where(index, u_tmp)
-        v_tmp = np.ma.masked_where(index, v_tmp)
-        u_data.append(u_tmp)
-        v_data.append(v_tmp)
-        vel_data.append(vel_tmp)
-        vmin_tmp, vmax_tmp = var_min_max(vel_tmp, grid, xmin=xmin, xmax=xmax, ymax=ymax)
-        all_vmin.append(vmin_tmp)
-        all_vmax.append(vmax_tmp)
-    vmin = np.amin(all_vmin)
-    vmax = np.amax(all_vmax)
-
-    fig = plt.figure(figsize=(9,5))
-    gs = plt.GridSpec(1,2)
-    gs.update(left=0.05, right=0.95, bottom=0.15, top=0.85, wspace=0.05)
+    fig = plt.figure(figsize=(6,12))
+    gs = plt.GridSpec(3,1)
+    gs.update(left=0.1, right=0.85, bottom=0.05, top=0.9, hspace=0.2)
     for n in range(num_var):
         ax = plt.subplot(gs[0,n])
-        img = latlon_plot(vel_data[n], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymax=ymax, title=var_titles[n], titlesize=14)
-        overlay_vectors(ax, u_data[n], v_data[n], grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
-        labels = ax.xaxis.get_ticklabels()
-        for label in labels[1::2]:
-            label.set_visible(False)
-        if n > 0:
-            ax.set_xticklabels([])
-            ax.set_yticklabels([])
-    cax = fig.add_axes([0.05, 0.05, 0.4, 0.03])
-    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+        if n == 0:
+            # First panel: bottom 100m velocity map
+            u_trend, v_trend, vel_trend = read_trend_vector(trend_var[n], dim=2)
+            u_trend = interp_grid(u_trend, grid, 'u', 't')
+            v_trend = interp_grid(v_trend, grid, 'v', 't')
+            index = vel_trend < threshold
+            u_trend = np.ma.masked_where(index, u_trend)
+            v_trend = np.ma.masked_where(index, v_trend)
+            img = latlon_plot(vel_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax, title=var_titles[n], titlesize=14)
+            overlay_vectors(ax, u_trend, v_trend, grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
+            labels = ax.xaxis.get_ticklabels()
+            for label in labels[1::2]:
+                label.set_visible(False)
+            ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linestyle='dashed', linewidth=2)
+            ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linestyle='dashed', linewidth=2)
+        else:
+            # Second and third panels: velocity slices
+            trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
+            img = slice_plot(trend, grid, gtype=gtypes[n], lon0=lon0[n], lat0=lat0[n], hmin=bounds[n][0], hmax=bounds[n][1], ctype='plusminus', title=var_titles[n], titlesize=14, date_string='', ax=ax, make_cbar=False)            
+        cax = fig.add_axes([0.87, 0.3*n, 0.02, 0.25])
+        cbar = plt.colorbar(img, cax=cax)
+        plt.text(0.95, 0.3*n, 'm/s/century ('+direction[n]+')', rotation=-90, ha='center', va='center', transform=fig.transFigure)
     plt.suptitle(title, fontsize=18)
-    # TODO: arrow legend
     finished_plot(fig, fig_name=fig_name, dpi=300)    
 
 
