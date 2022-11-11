@@ -1545,7 +1545,7 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
+    var_names = ['UVEL', 'VVEL'] #['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
@@ -3490,37 +3490,110 @@ def temp_profiles (fig_name=None):
 
 
 # Figure 4
-def melt_trend_buttressing (option='buttressing', grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat', fig_name=None):
+def velocity_trend_maps (fig_name=None):
+
+    expt_name = 'LW2.0'
+    expt_title = 'Paris 2'+deg_string+'C'
+    trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
+    trend_var = ['barotropic_u', 'u_bottom100m']
+    var_titles = ['Depth-averaged', 'Bottom 100m']
+    num_var = len(trend_var)
+    title = 'Velocity trends in Paris 2'+deg_string+'C scenario (m/s/century)'
+    grid_dir = 'PAS_grid/'
+    xmin = -120
+    xmax = -98
+    ymax = -70
+    p0 = 0.05
+    threshold = 0.02
+
+    grid = Grid(grid_dir)
+
+    def read_single_trend (var_name):
+        file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
+        trends = read_netcdf(file_path, var_name + '_trend')
+        mean_trend = np.mean(trends, axis=0)
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        return mask_land_ice(mean_trend*1e2, grid)
+    
+    def read_trend_vector(u_var):
+        u_trend = read_single_trend(u_var)
+        v_trend = read_single_trend(u_var.replace('u', 'v'))
+        vel_trend = read_single_trend(u_var.replace('u', 'vel')+'_speed')
+        return u_trend, v_trend, vel_trend
+
+    u_data = []
+    v_data = []
+    vel_data = []
+    all_vmin = []
+    all_vmax = []
+    for n in range(num_var):
+        u_tmp, v_tmp, vel_tmp = read_trend_vector(trend_var[n])
+        u_tmp = interp_grid(u_tmp, grid, 'u', 't')
+        v_tmp = interp_grid(v_tmp, grid, 'v', 't')
+        index = vel_tmp < threshold
+        u_tmp = np.ma.masked_where(index, u_tmp)
+        v_tmp = np.ma.masked_where(index, v_tmp)
+        u_data.append(u_tmp)
+        v_data.append(v_tmp)
+        vel_data.append(vel_tmp)
+        vmin_tmp, vmax_tmp = var_min_max(vel_tmp, grid, xmin=xmin, xmax=xmax, ymax=ymax)
+        all_vmin.append(vmin_tmp)
+        all_vmax.append(vmax_tmp)
+    vmin = np.amin(all_vmin)
+    vmax = np.amax(all_vmax)
+
+    fig = plt.figure(figsize=(9,5))
+    gs = plt.GridSpec(1,2)
+    gs.update(left=0.05, right=0.95, bottom=0.15, top=0.85, wspace=0.05)
+    for n in range(num_var):
+        ax = plt.subplot(gs[0,n])
+        img = latlon_plot(vel_data[n], grid, ax=ax, make_cbar=False, ctype='plusminus', vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymax=ymax, title=var_titles[n], titlesize=14)
+        overlay_vectors(ax, u_data[n], v_data[n], grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
+        labels = ax.xaxis.get_ticklabels()
+        for label in labels[1::2]:
+            label.set_visible(False)
+        if n > 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    cax = fig.add_axes([0.05, 0.05, 0.4, 0.03])
+    cbar = plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle(title, fontsize=18)
+    # TODO: arrow legend
+    finished_plot(fig, fig_name=fig_name, dpi=300)    
+
+
+# Figure 5
+def melt_trend_buttressing (fig_name=None):
 
     from scipy.io import loadmat
 
+    grid_dir = 'PAS_grid/'
+    trend_dir='precomputed_trends/'
+    num_bins = 50
+    ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat'
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
     colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     num_periods = len(periods)
     p0 = 0.05
-    title = 'Ice shelf basal melting trend'
-    ytitle = 'Mean trend (m/y/century)'
+    title = 'Ice shelf melting as function of buttressing potential'
+    xtitle = 'Buttressing flux response number'
+    ytitle = 'Mean basal melting trend (m/y/century)'
     grid = Grid(grid_dir)
 
-    if option == 'depth':
-        bin_quantity = np.abs(grid.draft)
-        xtitle = 'Depth of ice draft (m)'
-    elif option == 'dist_to_gl':
-        bin_quantity = distance_to_grounding_line(grid)
-        xtitle = 'Distance to grounding line (km)'
-    elif option == 'buttressing':
-        f = loadmat(ronja_file)
-        buttressing = f['BFRN']
-        rlat = f['lat']
-        rlon = f['lon']
-        # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
-        fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
-        fill = extend_into_mask(fill, missing_val=0, num_iters=3)
-        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
-        # Now interpolate to MITgcm grid
-        bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
-        xtitle = 'Buttressing flux response number'
+    #bin_quantity = np.abs(grid.draft)
+    #bin_quantity = distance_to_grounding_line(grid)
+    f = loadmat(ronja_file)
+    buttressing = f['BFRN']
+    rlat = f['lat']
+    rlon = f['lon']
+    # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
+    fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
+    fill = extend_into_mask(fill, missing_val=0, num_iters=3)
+    buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
+    # Now interpolate to MITgcm grid
+    bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
     bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
     
     bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
