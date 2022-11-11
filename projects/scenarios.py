@@ -3226,17 +3226,24 @@ def calc_trends_for_table ():
 # Figure 1
 def pretty_map (fig_name=None):
 
+    import matplotlib.patheffects as pthe
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+    import matplotlib.colors as cl
+    from mpl_toolkits.basemap import Basemap
+
     expt_name = 'LW2.0'
     expt_title = 'Paris 2'+deg_string+'C'
-    trend_dir = 'precomputed_trends/'
+    trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
     trend_var = ['temp_btw_200_700m', 'ismr']
     grid_dir = 'PAS_grid/'
-    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB', 'BR']
-    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2, -110]
-    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75, -73.95]
-    labelsize = [14]*8 + [10]*5
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB']
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.6, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75]
+    labelsize = [11]*8 + [10]*4
     num_labels = len(region_labels)
-    z_shelf = -1000
+    z_shelf = -1750
+    p0 = 0.05
+    lat_max = -68
 
     grid = Grid(grid_dir)
 
@@ -3251,33 +3258,48 @@ def pretty_map (fig_name=None):
     temp_trend = mask_land_ice(read_trend(trend_var[0]), grid)
     ismr_trend = mask_except_ice(read_trend(trend_var[1]), grid)
 
-    fig = plt.figure(figsize=(10,6))
+    fig = plt.figure(figsize=(9,5))
     gs = plt.GridSpec(1,1)
-    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.9)
+    gs.update(left=0.05, right=0.97, bottom=0.05, top=0.9)
     ax = plt.subplot(gs[0,0])
     # Plot warming trends in red
-    img1 = latlon_plot(temp_trend, grid, ax=ax, make_cbar=False, ctype='plusminus')
+    img1 = latlon_plot(temp_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=lat_max)
     # Overlay ice shelf melting trends
     x, y, ismr_plot = cell_boundaries(ismr_trend, grid)
-    img2 = ax.pcolormesh(x, y, ismr_plot, cmap='inferno')
+    cmap, vmin, vmax = set_colours(ismr_plot, ctype='ismr', change_points=[5,10,30])
+    img2 = ax.pcolormesh(x, y, ismr_plot, cmap=cmap)
     # Add colorbars
-    cax1 = inset_axes(ax, "18%", "4%", loc='upper right')
-    cbar1 = plt.colorbar(img1, cax=cax1, orientation='horizontal')
-    plt.text(0.8, 0.9, 'Temperature trend ('+deg_string+'C/century)', fontsize=12, transform=ax.transAxes)
-    cax2 = inset_axes(ax, "18%", "4%", loc='center right')
+    cax1 = inset_axes(ax, "22%", "4%", loc='upper right')
+    cbar1 = plt.colorbar(img1, cax=cax1, orientation='horizontal', ticks=np.arange(0,2,0.5))
+    plt.text(0.885, 0.84, 'Temperature trend\n(200-700m,'+deg_string+'C/century)', fontsize=12, transform=ax.transAxes, ha='center', va='center')
+    cax2 = inset_axes(ax, "22%", "4%", loc='lower right')
     cbar2 = plt.colorbar(img2, cax=cax2, orientation='horizontal')
-    plt.text(0.8, 0.7, 'Basal melting trend (m/y/century)', fontsize=12, transform=ax.transAxes)
+    cbar2.ax.xaxis.set_ticks_position('top')
+    plt.text(0.885, 0.16, 'Basal melting trend\n(m/y/century)', fontsize=12, transform=ax.transAxes, ha='center', va='center')
     # Contour shelf break
     bathy = grid.bathy
-    bathy[grid.lat_2d < -74.2] = 0
-    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
-    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
+    bathy[grid.lat_2d > -69] = 2*z_shelf
+    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
     ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('black'), linewidths=1)
+    # Contour Amundsen Shelf region
+    mask = grid.get_region_mask('amundsen_shelf')
+    all_bounds = [[-106, -104, -73.5, -72.5], [-104, -103, -74.5, -74], [-111, -110, -74.2, -73]]
+    for bounds in all_bounds:
+        index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
+        mask[index] = 1
+    ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('blue'), linewidths=1, linestyles='dashed')
     # Add region labels
     for n in range(num_labels):
-        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
+        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='black', transform=ax.transData)
         txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
-    # TODO: map inset
+    # Map inset
+    ax3 = inset_axes(ax, "18%", "25%", loc='upper left')
+    map = Basemap(projection='spstere', boundinglat=-64, lon_0=180)
+    map.drawmapboundary(fill_color='white')
+    map.fillcontinents(color=(0.6, 0.6, 0.6), lake_color=(0.6, 0.6, 0.6))
+    lon_bdry = np.concatenate((np.ones(50)*grid.lon_1d[0], grid.lon_1d, np.ones(50)*grid.lon_1d[-1], np.flip(grid.lon_1d, axis=0)))
+    lat_bdry = np.concatenate((np.linspace(grid.lat_1d[0], lat_max, num=50), np.ones(grid.nx)*lat_max, np.linspace(lat_max, grid.lat_1d[0], num=50), np.ones(grid.nx)*grid.lat_1d[0]))
+    map.plot(lon_bdry, lat_bdry, color='red', latlon=True, linewidth=1)    
     ax.set_title('Ocean warming and ice shelf melting in '+expt_title+' scenario', fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)    
 
