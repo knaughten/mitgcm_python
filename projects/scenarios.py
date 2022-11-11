@@ -24,7 +24,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes
 from ..plot_utils.slices import slice_patches, slice_values
-from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front
+from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg, extend_into_mask, interp_nonreg_xy
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
@@ -3110,69 +3110,6 @@ def plot_obcs_trend_maps (var, bdry, trend_dir='precomputed_trends/obcs/', grid_
     finished_plot(fig, fig_name=fig_name)
 
 
-def melt_trend_histogram (option='buttressing', grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat', fig_name=None):
-
-    from scipy.io import loadmat
-
-    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
-    colours = ['BurlyWood', 'DodgerBlue', 'MediumSeaGreen', 'IndianRed', 'DarkGrey']
-    num_periods = len(periods)
-    p0 = 0.05
-    title = 'Ice shelf basal melting trend'
-    ytitle = 'm/y/century'
-    grid = Grid(grid_dir)
-
-    if option == 'depth':
-        bin_quantity = np.abs(grid.draft)
-        xtitle = 'Depth of ice draft (m)'
-    elif option == 'dist_to_gl':
-        bin_quantity = distance_to_grounding_line(grid)
-        xtitle = 'Distance to grounding line (km)'
-    elif option == 'buttressing':
-        f = loadmat(ronja_file)
-        buttressing = f['BFRN']
-        rlat = f['lat']
-        rlon = f['lon']
-        # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
-        fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
-        fill = extend_into_mask(fill, missing_val=0, num_iters=3)
-        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
-        # Now interpolate to MITgcm grid
-        bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
-        xtitle = 'Buttressing flux response number'
-    bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
-    
-    bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
-    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    bin_trends_all = []
-    for n in range(num_periods):
-        bin_trends = np.zeros(num_bins)
-        bin_area = np.zeros(num_bins)
-        trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
-        trends = read_netcdf(trend_file, 'ismr_trend')
-        mean_trend = np.mean(trends, axis=0)*1e2
-        p_val = ttest_1samp(trends, 0, axis=0)[1]
-        mean_trend[p_val > p0] = 0
-        for trend_val, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
-            bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
-            bin_trends[bin_index] += trend_val*dA_val
-            bin_area[bin_index] += dA_val
-        bin_trends /= bin_area
-        bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
-        bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
-        bin_trends_all.append(bin_trends)
-
-    fig, ax = plt.subplots()
-    for n in range(num_periods):
-        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=periods[n])
-    ax.grid(linestyle='dotted')
-    ax.set_xlabel(xtitle, fontsize=12)
-    ax.set_ylabel(ytitle, fontsize=12)
-    ax.set_title(title, fontsize=16)
-    ax.legend()
-    finished_plot(fig, fig_name=fig_name, dpi=300)
-
-
 def plot_warming_trend_profiles (region, fig_name=None):
 
     # TODO: if use this in publication, recalculate mean baseline temp using proper weighting of different lengths of months - can use average_12_months in utils.py
@@ -3287,6 +3224,65 @@ def calc_trends_for_table ():
 
 
 # Figure 1
+def pretty_map (fig_name=None):
+
+    expt_name = 'LW2.0'
+    expt_title = 'Paris 2'+deg_string+'C'
+    trend_dir = 'precomputed_trends/'
+    trend_var = ['temp_btw_200_700m', 'ismr']
+    grid_dir = 'PAS_grid/'
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB', 'BR']
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2, -110]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.65, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75, -73.95]
+    labelsize = [14]*8 + [10]*5
+    num_labels = len(region_labels)
+    z_shelf = -1000
+
+    grid = Grid(grid_dir)
+
+    def read_trend (var_name):
+        file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
+        trends = read_netcdf(file_path, var_name + '_trend')
+        mean_trend = np.mean(trends, axis=0)
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        return mean_trend*1e2
+
+    temp_trend = mask_land_ice(read_trend(trend_var[0]), grid)
+    ismr_trend = mask_except_ice(read_trend(trend_var[1]), grid)
+
+    fig = plt.figure(figsize=(10,6))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.9)
+    ax = plt.subplot(gs[0,0])
+    # Plot warming trends in red
+    img1 = latlon_plot(temp_trend, grid, ax=ax, make_cbar=False, ctype='plusminus')
+    # Overlay ice shelf melting trends
+    x, y, ismr_plot = cell_boundaries(ismr_trend, grid)
+    img2 = ax.pcolormesh(x, y, ismr_plot, cmap='inferno')
+    # Add colorbars
+    cax1 = inset_axes(ax, "18%", "4%", loc='upper right')
+    cbar1 = plt.colorbar(img1, cax=cax1, orientation='horizontal')
+    plt.text(0.8, 0.9, 'Temperature trend ('+deg_string+'C/century)', fontsize=12, transform=ax.transAxes)
+    cax2 = inset_axes(ax, "18%", "4%", loc='center right')
+    cbar2 = plt.colorbar(img2, cax=cax2, orientation='horizontal')
+    plt.text(0.8, 0.7, 'Basal melting trend (m/y/century)', fontsize=12, transform=ax.transAxes)
+    # Contour shelf break
+    bathy = grid.bathy
+    bathy[grid.lat_2d < -74.2] = 0
+    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
+    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
+    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('black'), linewidths=1)
+    # Add region labels
+    for n in range(num_labels):
+        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='blue')
+        txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
+    # TODO: map inset
+    ax.set_title('Ocean warming and ice shelf melting in '+expt_title+' scenario', fontsize=18)
+    finished_plot(fig, fig_name=fig_name, dpi=300)    
+
+
+# Figure 2
 def timeseries_shelf_temp (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
@@ -3380,7 +3376,7 @@ def timeseries_shelf_temp (fig_name=None):
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
-# Figure 2
+# Figure 3
 def temp_profiles (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
@@ -3469,7 +3465,71 @@ def temp_profiles (fig_name=None):
     ax.legend(loc='lower center', bbox_to_anchor=(-0.75,-0.33), fontsize=12, ncol=3)
     plt.suptitle('Temperature profiles on '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
-            
+
+
+# Figure 4
+def melt_trend_buttressing (option='buttressing', grid_dir='PAS_grid/', trend_dir='precomputed_trends/', num_bins=50, ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat', fig_name=None):
+
+    from scipy.io import loadmat
+
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    num_periods = len(periods)
+    p0 = 0.05
+    title = 'Ice shelf basal melting trend'
+    ytitle = 'Mean trend (m/y/century)'
+    grid = Grid(grid_dir)
+
+    if option == 'depth':
+        bin_quantity = np.abs(grid.draft)
+        xtitle = 'Depth of ice draft (m)'
+    elif option == 'dist_to_gl':
+        bin_quantity = distance_to_grounding_line(grid)
+        xtitle = 'Distance to grounding line (km)'
+    elif option == 'buttressing':
+        f = loadmat(ronja_file)
+        buttressing = f['BFRN']
+        rlat = f['lat']
+        rlon = f['lon']
+        # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
+        fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
+        fill = extend_into_mask(fill, missing_val=0, num_iters=3)
+        buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
+        # Now interpolate to MITgcm grid
+        bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
+        xtitle = 'Buttressing flux response number'
+    bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
+    
+    bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
+    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
+    bin_trends_all = []
+    for n in range(num_periods):
+        bin_trends = np.zeros(num_bins)
+        bin_area = np.zeros(num_bins)
+        trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
+        trends = read_netcdf(trend_file, 'ismr_trend')
+        mean_trend = np.mean(trends, axis=0)*1e2
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        for trend_val, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
+            bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
+            bin_trends[bin_index] += trend_val*dA_val
+            bin_area[bin_index] += dA_val
+        bin_trends /= bin_area
+        bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
+        bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
+        bin_trends_all.append(bin_trends)
+
+    fig, ax = plt.subplots()
+    for n in range(num_periods):
+        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+    ax.grid(linestyle='dotted')
+    ax.set_xlabel(xtitle, fontsize=12)
+    ax.set_ylabel(ytitle, fontsize=12)
+    ax.set_title(title, fontsize=16)
+    ax.legend()
+    finished_plot(fig, fig_name=fig_name, dpi=300)
             
             
         
