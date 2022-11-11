@@ -14,7 +14,7 @@ import itertools
 
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
-from ..plot_slices import make_slice_plot
+from ..plot_slices import make_slice_plot, slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask, index_year_end
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
@@ -3496,21 +3496,20 @@ def velocity_trend_maps (fig_name=None):
     expt_title = 'Paris 2'+deg_string+'C'
     trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
     trend_var = ['u_bottom100m', 'UVEL', 'VVEL']
-    lon0 = [None, -112, None]
+    lon0 = [None, -118, None]
     lat0 = [None, None, -73]
-    h_bounds = [None, [-71.8, -71.1], [-107, -105]]
-    var_titles = ['Bottom 100m', 'Undercurrent ('+lon_label(lon0[1])+')', 'PITE Trough ('+lat_label(lat0[2])+')']
+    h_bounds = [None, [-72.3, -71.5], [-107, -105]]
+    var_titles = [r'$\bf{a}$. '+'Bottom 100m', r'$\bf{b}$. '+'Undercurrent ('+lon_label(lon0[1])+')', r'$\bf{c}$. '+'PITE Trough ('+lat_label(lat0[2])+')']
     direction = ['magnitude', 'east', 'north']
     gtypes = [None, 'u', 'v']
     num_var = len(trend_var)
     title = 'Velocity trends in Paris 2'+deg_string+'C scenario'
     grid_dir = 'PAS_grid/'
-    xmin = -120
+    xmin = -122
     xmax = -98
     ymax = -70
     p0 = 0.05
     threshold = 0.02
-    
 
     grid = Grid(grid_dir)
 
@@ -3534,9 +3533,9 @@ def velocity_trend_maps (fig_name=None):
 
     fig = plt.figure(figsize=(6,12))
     gs = plt.GridSpec(3,1)
-    gs.update(left=0.1, right=0.85, bottom=0.05, top=0.9, hspace=0.2)
+    gs.update(left=0.12, right=0.8, bottom=0.05, top=0.92, hspace=0.25)
     for n in range(num_var):
-        ax = plt.subplot(gs[0,n])
+        ax = plt.subplot(gs[n,0])
         if n == 0:
             # First panel: bottom 100m velocity map
             u_trend, v_trend, vel_trend = read_trend_vector(trend_var[n], dim=2)
@@ -3545,20 +3544,26 @@ def velocity_trend_maps (fig_name=None):
             index = vel_trend < threshold
             u_trend = np.ma.masked_where(index, u_trend)
             v_trend = np.ma.masked_where(index, v_trend)
-            img = latlon_plot(vel_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax, title=var_titles[n], titlesize=14)
+            img = latlon_plot(vel_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax)
             overlay_vectors(ax, u_trend, v_trend, grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
-            labels = ax.xaxis.get_ticklabels()
-            for label in labels[1::2]:
-                label.set_visible(False)
-            ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linestyle='dashed', linewidth=2)
-            ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linestyle='dashed', linewidth=2)
+            ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linewidth=1.5)
+            plt.text(lon0[1], h_bounds[1][1]+0.1, 'a', color='blue', weight='bold', ha='center', va='bottom')
+            ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linewidth=1.5)
+            plt.text(h_bounds[2][0]-0.2, lat0[2], 'b', color='blue', weight='bold', ha='right', va='center')
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
-            img = slice_plot(trend, grid, gtype=gtypes[n], lon0=lon0[n], lat0=lat0[n], hmin=bounds[n][0], hmax=bounds[n][1], ctype='plusminus', title=var_titles[n], titlesize=14, date_string='', ax=ax, make_cbar=False)            
-        cax = fig.add_axes([0.87, 0.3*n, 0.02, 0.25])
+            img = slice_plot(trend, grid, gtype=gtypes[n], lon0=lon0[n], lat0=lat0[n], hmin=h_bounds[n][0], hmax=h_bounds[n][1], ctype='plusminus', ax=ax, make_cbar=False)
+        ax.set_title(var_titles[n], fontsize=14)
+        if n > 0:
+            ax.set_ylabel('Depth (m)', fontsize=12)
+            labels = ax.xaxis.get_ticklabels()
+            for label in labels[1::2]:
+                label.set_visible(False)
+        cax = fig.add_axes([0.83, 0.7-0.315*n, 0.03, 0.2])
         cbar = plt.colorbar(img, cax=cax)
-        plt.text(0.95, 0.3*n, 'm/s/century ('+direction[n]+')', rotation=-90, ha='center', va='center', transform=fig.transFigure)
+        plt.text(0.99, 0.8-0.315*n, 'm/s/century ('+direction[n]+')', rotation=-90, ha='right', va='center', transform=fig.transFigure, fontsize=12)
+        labels = ax.xaxis.get_ticklabels()
     plt.suptitle(title, fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)    
 
