@@ -3739,7 +3739,7 @@ def sfc_forcing_trends (var, fig_name=None):
 
 
 # Test if the trends in the given variable are distinct between the given two scenarios over their common time period.
-def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc'):
+def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc', timeseries_file_pace='timeseries_final.nc'):
 
     p0 = 0.05
     smooth = 24
@@ -3754,6 +3754,7 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
         num_ens = 10
         start_year = 2006
         end_year = 2100
+        ts_file = timeseries_file
         if expt_name == 'Historical':
             start_year = 1920
             end_year = 2005
@@ -3769,6 +3770,7 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
             num_ens = 20
             start_year = 1920
             end_year = 2013
+            ts_file = timeseries_file_pace
         elif expt_name == 'Paris 1.5C':
             expt_head = 'PAS_LW1.5_'
             num_ens = 5
@@ -3782,7 +3784,7 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
         elif expt_name == 'RCP 8.5 fixed BCs':
             expt_tail = '_noOBC'
             num_ens = 5
-        file_paths = [expt_head+str(n+1).zfill(prec)+'/output/'+timeseries_file for n in range(num_ens)]
+        file_paths = [expt_head+str(n+1).zfill(prec)+expt_tail+'/output/'+ts_file for n in range(num_ens)]
         return file_paths, start_year, end_year
 
     file_paths_1, start_year_1, end_year_1 = expt_name_setup(expt_name_1)
@@ -3804,12 +3806,40 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
     trends2 = calc_expt_trends(file_paths_2)
     p_val = ttest_ind(trends1, trends2, equal_var=False)[1]
     distinct = p_val < p0
+    print('Trends in '+var_name+' over '+str(start_year)+'-'+str(end_year)+':')
     for expt_name, trends in zip([expt_name_1, expt_name_2], [trends1, trends2]):
         print(expt_name+': mean trend '+str(np.mean(trends)))
     if distinct:
         print('They are distinct')
     else:
         print('They are not distinct')
+
+
+# Call the above function for all the sensible combinations of trends in Table 1
+def all_trends_distinct ():
+
+    var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
+    expt_names = ['Historical', 'Historical fixed BCs', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5 fixed BCs', 'PACE']
+    for var in var_names:
+        # All combinations of historical scenarios
+        # Historical with and without transient BCs
+        trend_scenarios_distinct(expt_names[0], expt_names[1])
+        # Historical vs PACE
+        trend_scenarios_distinct(expt_names[0], expt_names[-1])
+        # Historical with fixed BCs vs PACE
+        trend_scenarios_distinct(expt_names[1], expt_names[-1])
+        
+        # All combinations of future scenarios with transient BCs
+        for n1 in range(2, 5+1):
+            for n2 in range(2, 5+1):
+                if n1 == n2:
+                    continue
+                trend_scenarios_distinct(expt_names[n1], expt_names[n2])
+        # RCP 8.5 with and without transient BCs
+        trend_scenarios_distinct(expt_names[5], expt_names[6])
+
+    
+    
 
     
         
