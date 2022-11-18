@@ -3400,7 +3400,7 @@ def calc_rcp85_divergence (window=11, return_year=False):
         t0 = np.where(np.invert(distinct))[0][-1] + 1
         print('RCP 8.5 diverges for good at '+str(time[t0]))
         if return_year:
-            return t0.year
+            return time[t0].year
     fig, ax = plt.subplots()
     ax.fill_between(time, min1_vals, max1_vals, color='red', alpha=0.3)
     ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='RCP 8.5')
@@ -3497,20 +3497,19 @@ def timeseries_shelf_temp (fig_name=None):
         ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
         if n == 1:
             # Label beginning of future scenarios
-            ax.axvline(time[0], color=colours[0], linestyle='dashed')
-            plt.text(datetime.date(2008,1,1), 1.45, 'Future scenarios', fontsize=14, color=colours[0], ha='left', va='top', weight='bold')
+            ax.axvline(time[n][0], color=colours[0], linestyle='dashed')
+            plt.text(datetime.date(2008,1,1), -0.8, 'Future scenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
         if n == num_expt-1:
             # Label year of RCP 8.5 divergence
             ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
-            plt.text(datetime.date(rcp85_div_year+2,1,1), 1.45, 'RCP 8.5 diverges', fontsize=14, color=colours[n], ha='left', va='top', weight='bold')
-        # TODO: add labels as appropriate to show 3 periods and/or time of divergence of scenarios
+            plt.text(datetime.date(rcp85_div_year+2,1,1), -0.8, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
     ax.grid(linestyle='dotted')
     ax.set_xlim([datetime.date(start_year_hist,1,1), np.amax(time[-1])])
     ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year_hist, end_year_future, 20)])
     ax.set_xlabel('Year', fontsize=12)
-    ax.set_ylabel('Continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
+    ax.set_ylabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
     ax.set_title('Evolution of ocean temperature', fontsize=17)
-    ax.legend(loc='upper left', fontsize=11) #(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
+    ax.legend(loc='upper left', fontsize=11)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
