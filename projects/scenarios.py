@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import os
-from scipy.stats import linregress, ttest_1samp
+from scipy.stats import linregress, ttest_1samp, ttest_ind
 from scipy.ndimage.filters import gaussian_filter
 import datetime
 import itertools
@@ -19,7 +19,7 @@ from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
-from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year
+from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year, region_bounds, rho_fw
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
@@ -3177,7 +3177,7 @@ def calc_trends_for_table ():
     expt_ens_prec = [3]*(num_expt-1) + [2]
     expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC', '']
     timeseries_file = ['/output/timeseries.nc']*(num_expt-1) + ['/output/timeseries_final.nc']
-    num_ens = [10, 5, 5, 5, 5, 5, 5, 20]  # Update most of these to 10 later
+    num_ens = [10, 5, 5, 10, 10, 10, 5, 20]  # Update most of these to 10 later
     start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006, 1920]
     end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100, 2013]
     baseline_period = 30
@@ -3224,7 +3224,7 @@ def calc_trends_for_table ():
 
 
 # Figure 1
-def pretty_map (fig_name=None):
+def warming_melting_trend_map (fig_name=None):
 
     import matplotlib.patheffects as pthe
     from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -3233,7 +3233,7 @@ def pretty_map (fig_name=None):
 
     expt_name = 'LW2.0'
     expt_title = 'Paris 2'+deg_string+'C'
-    trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
+    trend_dir = 'precomputed_trends/'
     trend_var = ['temp_btw_200_700m', 'ismr']
     grid_dir = 'PAS_grid/'
     region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB']
@@ -3244,6 +3244,8 @@ def pretty_map (fig_name=None):
     z_shelf = -1750
     p0 = 0.05
     lat_max = -68
+    regions = ['amundsen_shelf'] #, 'pine_island_bay']
+    region_colours = ['blue'] #, 'cyan']
 
     grid = Grid(grid_dir)
 
@@ -3278,16 +3280,19 @@ def pretty_map (fig_name=None):
     plt.text(0.885, 0.16, 'Basal melting trend\n(m/y/century)', fontsize=12, transform=ax.transAxes, ha='center', va='center')
     # Contour shelf break
     bathy = grid.bathy
+    bathy[grid.ice_mask] = 0
     bathy[grid.lat_2d > -69] = 2*z_shelf
     bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
     ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('black'), linewidths=1)
     # Contour Amundsen Shelf region
-    mask = grid.get_region_mask('amundsen_shelf')
-    all_bounds = [[-106, -104, -73.5, -72.5], [-104, -103, -74.5, -74], [-111, -110, -74.2, -73]]
-    for bounds in all_bounds:
-        index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
-        mask[index] = 1
-    ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=('blue'), linewidths=1, linestyles='dashed')
+    for n in range(len(regions)):
+        mask = grid.get_region_mask(regions[n])
+        if regions[n] == 'amundsen_shelf':
+            all_bounds = [[-106, -104, -73.5, -72.5], [-104, -103, -74.5, -74], [-111, -110, -74.2, -73]]
+            for bounds in all_bounds:
+                index = (grid.lon_2d >= bounds[0])*(grid.lon_2d <= bounds[1])*(grid.lat_2d >= bounds[2])*(grid.lat_2d <= bounds[3])
+                mask[index] = 1
+        ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1, linestyles='dashed')
     # Add region labels
     for n in range(num_labels):
         txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='black', transform=ax.transData)
@@ -3309,7 +3314,7 @@ def timeseries_shelf_temp (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
     num_expt = len(expt_names)
-    num_ens_default = 5  # Update to 10 later
+    num_ens_default = 10
     num_ens_LW1 = 5
     start_year_hist = 1920
     start_year_future = 2006
@@ -3380,7 +3385,7 @@ def timeseries_shelf_temp (fig_name=None):
     # Plot
     fig = plt.figure(figsize=(8,5))
     gs = plt.GridSpec(1,1)
-    gs.update(left=0.1, right=0.95, bottom=0.18, top=0.9)
+    gs.update(left=0.1, right=0.95, bottom=0.1, top=0.9)
     ax = plt.subplot(gs[0,0])
     for n in range(num_expt):
         # Shade ensemble range
@@ -3394,7 +3399,7 @@ def timeseries_shelf_temp (fig_name=None):
     ax.set_xlabel('Year', fontsize=12)
     ax.set_ylabel(deg_string+'C', fontsize=12)
     ax.set_title('Temperature on Amundsen Sea continental shelf (200-700m)', fontsize=17)
-    ax.legend(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
+    ax.legend(loc='upper left', fontsize=11) #(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
@@ -3407,18 +3412,30 @@ def temp_profiles (fig_name=None):
     expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'PACE']
     expt_ens_prec = [3]*(num_expt-1) + [2]
     expt_dir_tails = ['_O']*(num_expt-1) + ['']
-    hovmoller_file = ['/output/hovmoller.nc']*(num_expt-1) + ['/output/hovmoller1.nc'] # TODO: ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
-    num_ens = [10, 5, 5, 5, 5, 20]  # TODO: update most to 10
+    hovmoller_file = ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
+    num_ens = [10, 5, 10, 10, 10, 20]
     start_years = [1920, 2006, 2006, 2006, 2006, 1920]
     end_years = [2005, 2100, 2100, 2080, 2100, 2013]
     final_period = 20
-    region = 'pine_island_bay' # TODO: 'amundsen_shelf'    
+    region = 'amundsen_shelf' #'pine_island_bay'    
     colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65), (0.34,0.71,0.91)]
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
     smooth = 24
     p0 = 0.05
     ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
+
+    # Get mask of all ice front points
+    icefront_mask = grid.get_icefront_mask()
+    # Mask out everywhere outside given region
+    [xmin, xmax, ymin, ymax] = region_bounds[region]
+    outside_region = np.invert((grid.lon_2d>=xmin)*(grid.lon_2d<=xmax)*(grid.lat_2d>=ymin)*(grid.lat_2d<=ymax))
+    icefront_mask[outside_region] = 0
+    icefront_mask = icefront_mask.astype(bool)
+    draft_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.draft)
+    bathy_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.bathy)
+    mean_draft = area_average(draft_icefront, grid)
+    mean_bathy = area_average(bathy_icefront, grid)   
 
     mean_profiles = np.ma.empty([num_expt, grid.nz])
     std_profiles = np.ma.empty([num_expt, grid.nz])
@@ -3466,7 +3483,7 @@ def temp_profiles (fig_name=None):
     gs = plt.GridSpec(1,3)
     gs.update(left=0.1, right=0.95, bottom=0.2, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
-    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Ensemble std\n(last 20y)', r'$\bf{c}$. '+'Trend']
+    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
@@ -3484,22 +3501,24 @@ def temp_profiles (fig_name=None):
             ax.set_ylabel('depth (m)', fontsize=12)
         else:
             ax.set_yticklabels([])
+        ax.axhline(np.abs(mean_draft), color='black', linestyle='dashed', linewidth=1)
+        ax.axhline(np.abs(mean_bathy), color='black', linestyle='dashed', linewidth=1)
     ax.legend(loc='lower center', bbox_to_anchor=(-0.75,-0.33), fontsize=12, ncol=3)
-    plt.suptitle('Temperature profiles on '+region_names[region], fontsize=18)
+    plt.suptitle('Temperature profiles over '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
 # Figure 4
-def velocity_trend_maps (fig_name=None):
+def velocity_trends (fig_name=None):
 
     expt_name = 'LW2.0'
     expt_title = 'Paris 2'+deg_string+'C'
-    trend_dir = 'precomputed_trends/5_members/'  # TODO: redo with full ensemble when done
+    trend_dir = 'precomputed_trends/'
     trend_var = ['u_bottom100m', 'UVEL', 'VVEL']
     lon0 = [None, -118, None]
     lat0 = [None, None, -73]
     h_bounds = [None, [-72.3, -71.5], [-107, -105]]
-    var_titles = [r'$\bf{a}$. '+'Bottom 100m', r'$\bf{b}$. '+'Undercurrent ('+lon_label(lon0[1])+')', r'$\bf{c}$. '+'PITE Trough ('+lat_label(lat0[2])+')']
+    var_titles = [r'$\bf{a}$. '+'Bottom 100m', r'$\bf{b}$. '+'Undercurrent ('+lon_label(lon0[1])+'), zonal', r'$\bf{c}$. '+'PITE Trough ('+lat_label(lat0[2])+'), meridional']
     direction = ['magnitude', 'east', 'north']
     gtypes = [None, 'u', 'v']
     num_var = len(trend_var)
@@ -3582,7 +3601,7 @@ def melt_trend_buttressing (fig_name=None):
     colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     num_periods = len(periods)
     p0 = 0.05
-    title = 'Ice shelf melting as function of buttressing potential'
+    title = 'Ice shelf melting as function of buttressing'
     xtitle = 'Buttressing flux response number'
     ytitle = 'Mean basal melting trend (m/y/century)'
     grid = Grid(grid_dir)
@@ -3630,6 +3649,181 @@ def melt_trend_buttressing (fig_name=None):
     ax.set_title(title, fontsize=16)
     ax.legend()
     finished_plot(fig, fig_name=fig_name, dpi=300)
+
+
+# Supplementary Figures 1 and 2
+def sfc_forcing_trends (var, fig_name=None):
+
+    grid_dir = 'PAS_grid/'
+    trend_dir = 'precomputed_trends/'
+    title = 'Trends in '
+    if var == 'wind':
+        var_name_u = 'EXFuwind'
+        var_name_v = 'EXFvwind'
+        var_name = 'wind_speed'
+        threshold = 0.25
+        scale = 10
+        chunk_x = 24
+        chunk_y = 12
+        title += 'surface winds (m/s/century)'
+        extend = 'neither'
+        ymax = None
+    elif var == 'fwflux':
+        var_name = 'oceFWflx'
+        title += r'surface freshwater flux (m/y/century)'
+        vmin = -4
+        vmax = 4
+        extend = 'both'
+        ymax = -70
+    periods = ['historical', 'PACE', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    expt_names = ['Historical', 'PACE', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    num_periods = len(periods)
+    p0 = 0.05
+    xmin = -138
+    xmax = -82
+    ymin = None
+    z_shelf = -1750
+    
+    grid = Grid(grid_dir)
+    bathy = grid.bathy
+    bathy[grid.ice_mask] = 0
+    bathy[grid.lat_2d > -69] = 2*z_shelf
+    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
+
+    def read_single_trend (var_in_file):
+        file_path = trend_dir + var_in_file + '_trend_' + periods[t] + '.nc'
+        trends = read_netcdf(file_path, var_in_file+'_trend')
+        mean_trend = np.mean(trends, axis=0)
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        mean_trend[p_val > p0] = 0
+        if var_in_file == 'oceFWflx':
+            mean_trend *= sec_per_year/rho_fw
+        return mask_land_ice(mean_trend, grid)*1e2
+
+    data_plot = np.ma.empty([num_periods, grid.ny, grid.nx])
+    if var == 'wind':
+        data_plot_u = np.ma.empty([num_periods, grid.ny, grid.nx])
+        data_plot_v = np.ma.empty([num_periods, grid.ny, grid.nx])
+    for t in range(num_periods):
+        data_plot[t,:] = read_single_trend(var_name)
+        if var == 'wind':
+            trends_u = read_single_trend(var_name_u)
+            trends_v = read_single_trend(var_name_v)
+            index = np.abs(data_plot[t,:]) < threshold
+            trends_u = np.ma.masked_where(index, trends_u)
+            trends_v = np.ma.masked_where(index, trends_v)
+            data_plot_u[t,:] = trends_u
+            data_plot_v[t,:] = trends_v
+
+    if var == 'wind':
+        vmin = np.amin([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[0] for t in range(num_periods)])
+        vmax = np.amax([var_min_max(data_plot[t,:], grid, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)[1] for t in range(num_periods)])
+
+    fig = plt.figure(figsize=(8,9))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.07, right=0.93, bottom=0.07, top=0.92, wspace=0.05, hspace=0.2)
+    cax = fig.add_axes([0.22, 0.03, 0.56, 0.02])
+    for t in range(num_periods):
+        ax = plt.subplot(gs[t//2, t%2])
+        img = latlon_plot(data_plot[t,:], grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, title=expt_names[t], titlesize=14, ctype='plusminus')
+        if var == 'wind':
+            overlay_vectors(ax, data_plot_u[t,:], data_plot_v[t,:], grid, chunk_x=chunk_x, chunk_y=chunk_y, scale=scale, headwidth=4, headlength=5)
+        ax.tick_params(direction='in')
+        ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('magenta'), linewidths=1)
+        if t != 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    plt.colorbar(img, cax=cax, orientation='horizontal', extend=extend)
+    plt.suptitle(title, fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Test if the trends in the given variable are distinct between the given two scenarios over their common time period.
+def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc'):
+
+    p0 = 0.05
+    smooth = 24
+    # Note no need to calculate mass loss as percent of baseline, as linear transformation will not change significance of trends
+
+    # For the given experiment name, return a list of paths to timeseries files, and years to consider.
+    def expt_name_setup (expt_name):
+        # Defaults
+        expt_head = 'PAS_LENS'
+        expt_tail = '_O'
+        prec = 3
+        num_ens = 10
+        start_year = 2006
+        end_year = 2100
+        if expt_name == 'Historical':
+            start_year = 1920
+            end_year = 2005
+        elif expt_name == 'Historical fixed BCs':
+            expt_tail = '_noOBC'
+            num_ens = 5
+            start_year = 1920
+            end_year = 2005
+        elif expt_name == 'PACE':
+            expt_head = '../mitgcm/PAS_PACE'
+            expt_tail = ''
+            prec = 2
+            num_ens = 20
+            start_year = 1920
+            end_year = 2013
+        elif expt_name == 'Paris 1.5C':
+            expt_head = 'PAS_LW1.5_'
+            num_ens = 5
+        elif expt_name == 'Paris 2C':
+            expt_head = 'PAS_LW2.0_'
+        elif expt_name == 'RCP 4.5':
+            expt_head = 'PAS_MENS_'
+            end_year = 2080
+        elif expt_name == 'RCP 8.5':
+            pass
+        elif expt_name == 'RCP 8.5 fixed BCs':
+            expt_tail = '_noOBC'
+            num_ens = 5
+        file_paths = [expt_head+str(n+1).zfill(prec)+'/output/'+timeseries_file for n in range(num_ens)]
+        return file_paths, start_year, end_year
+
+    file_paths_1, start_year_1, end_year_1 = expt_name_setup(expt_name_1)
+    file_paths_2, start_year_2, end_year_2 = expt_name_setup(expt_name_2)
+    start_year = max(start_year_1, start_year_2)
+    end_year = min(end_year_1, end_year_2)
+
+    # Calculate the trend in all the given files
+    def calc_expt_trends (file_paths):
+        num_ens = len(file_paths)
+        trends = np.zeros(num_ens)
+        for n in range(num_ens):
+            slope, sig = read_calc_trend(var_name, file_paths[n], start_year=start_year, end_year=end_year, smooth=smooth, p0=p0)
+            if sig:
+                trends[n] = slope
+        return trends
+
+    trends1 = calc_expt_trends(file_paths_1)
+    trends2 = calc_expt_trends(file_paths_2)
+    p_val = ttest_ind(trends1, trends2, equal_var=False)[1]
+    distinct = p_val < p0
+    for expt_name, trends in zip([expt_name_1, expt_name_2], [trends1, trends2]):
+        print(expt_name+': mean trend '+str(np.mean(trends)))
+    if distinct:
+        print('They are distinct')
+    else:
+        print('They are not distinct')
+
+    
+        
+            
+            
+
+    
+        
+            
+                    
+
+    
+        
+        
             
             
         
