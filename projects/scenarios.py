@@ -3334,7 +3334,81 @@ def warming_melting_trend_map (fig_name=None):
     lat_bdry = np.concatenate((np.linspace(grid.lat_1d[0], lat_max, num=50), np.ones(grid.nx)*lat_max, np.linspace(lat_max, grid.lat_1d[0], num=50), np.ones(grid.nx)*grid.lat_1d[0]))
     map.plot(lon_bdry, lat_bdry, color='red', latlon=True, linewidth=1)    
     ax.set_title('Ocean warming and ice shelf melting in '+expt_title+' scenario', fontsize=18)
-    finished_plot(fig, fig_name=fig_name, dpi=300)    
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+
+
+# Calculate year at which RCP 8.5 diverges from rest of scenarios, to print onto timeseries figure 
+def calc_rcp85_divergence (window=11, return_year=False):
+
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
+    file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
+    file_tail = '_O/output/timeseries.nc'
+    num_ens = [10, 10, 10, 5]
+    num_expt = len(file_head)
+    start_year = 2006
+    end_year = 2080
+    num_years = end_year - start_year + 1
+    p0 = 0.05
+
+    # Read annually averaged data from one scenario
+    def read_process_expt (n):
+        all_data = np.empty([num_ens[n], num_years])
+        for e in range(num_ens[n]):
+            file_path = file_head[n] + str(e+1).zfill(3) + file_tail
+            time = netcdf_time(file_path, monthly=False)
+            data = read_netcdf(file_path, var_name)
+            t_start, t_end = index_period(time, start_year, end_year)
+            time = time[t_start:t_end]
+            data = data[t_start:t_end]
+            data, time = monthly_to_annual(data, time)
+            all_data[e,:] = data
+        return all_data, time
+
+    data_rcp85, time = read_process_expt(0)
+    data_other = np.empty([np.sum(num_ens[1:]), num_years])
+    e0 = 0
+    for n in range(1, num_expt):
+        data_other[e0:e0+num_ens[n],:] = read_process_expt(n)[0]
+        e0 += num_ens[n]
+    # Now compare the two samples over each window
+    radius = (window-1)//2
+    time = time[radius:-radius]
+    distinct = []
+    min1_vals = []
+    max1_vals = []
+    mean1_vals = []
+    min2_vals = []
+    max2_vals = []
+    mean2_vals = []
+    for t in range(radius, num_years-radius):
+        sample1 = data_rcp85[:,t-radius:t+radius+1].ravel()
+        sample2 = data_other[:,t-radius:t+radius+1].ravel()
+        min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
+        min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
+        mean1 = np.mean(sample1)
+        mean2 = np.mean(sample2)
+        distinct.append((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1))
+        min1_vals.append(min1)
+        max1_vals.append(max1)
+        mean1_vals.append(mean1)
+        min2_vals.append(min2)
+        max2_vals.append(max2)
+        mean2_vals.append(mean2)
+    if not distinct[-1]:
+        print('RCP 8.5 never diverges for good')
+    else:
+        t0 = np.where(np.invert(distinct))[0][-1] + 1
+        print('RCP 8.5 diverges for good at '+str(time[t0]))
+        if return_year:
+            return t0.year
+    fig, ax = plt.subplots()
+    ax.fill_between(time, min1_vals, max1_vals, color='red', alpha=0.3)
+    ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='RCP 8.5')
+    ax.fill_between(time, min2_vals, max2_vals, color='blue', alpha=0.3)
+    ax.plot(time, mean2_vals, color='blue', linewidth=1.5, label='Other scenarios')
+    ax.legend(loc='upper left')
+    ax.grid(linestyle='dotted')
+    fig.show()
 
 
 # Main text figure
@@ -3354,6 +3428,7 @@ def timeseries_shelf_temp (fig_name=None):
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     smooth = 24
+    rcp85_div_year = calc_rcp85_divergence(return_year=True)
 
     data_mean = []
     data_min = []
@@ -3420,6 +3495,14 @@ def timeseries_shelf_temp (fig_name=None):
         ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
         # Plot ensemble mean as solid line
         ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
+        if n == 1:
+            # Label beginning of future scenarios
+            ax.axvline(time[0], color=colours[0], linestyle='dashed')
+            plt.text(datetime.date(2008,1,1), 1.45, 'Future scenarios', fontsize=14, color=colours[0], ha='left', va='top', weight='bold')
+        if n == num_expt-1:
+            # Label year of RCP 8.5 divergence
+            ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
+            plt.text(datetime.date(rcp85_div_year+2,1,1), 1.45, 'RCP 8.5 diverges', fontsize=14, color=colours[n], ha='left', va='top', weight='bold')
         # TODO: add labels as appropriate to show 3 periods and/or time of divergence of scenarios
     ax.grid(linestyle='dotted')
     ax.set_xlim([datetime.date(start_year_hist,1,1), np.amax(time[-1])])
@@ -3865,56 +3948,6 @@ def all_trends_distinct ():
                 trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
         # RCP 8.5 with and without transient BCs
         trend_scenarios_distinct(var, expt_names[5], expt_names[6])
-
-
-def calc_rcp85_divergence ():
-
-    var_name = 'amundsen_shelf_temp_btw_200_700m'
-    window = 11
-    file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
-    file_tail = '_O/output/timeseries.nc'
-    num_ens = [10, 10, 10, 5]
-    num_expt = len(file_head)
-    start_year = 2006
-    end_year = 2080
-    num_years = end_year - start_year + 1
-    p0 = 0.05
-
-    # Read annually averaged data from one scenario
-    def read_process_expt (n):
-        all_data = np.empty([num_ens[n], num_years])
-        for e in range(num_ens[n]):
-            file_path = file_head[n] + str(e+1).zfill(3) + file_tail
-            time = netcdf_time(file_path, monthly=False)
-            data = read_netcdf(file_path, var_name)
-            t_start, t_end = index_period(time, start_year, end_year)
-            time = time[t_start:t_end]
-            data = data[t_start:t_end]
-            data, time = monthly_to_annual(data, time)
-            all_data[e,:] = data
-        return all_data, time
-
-    data_rcp85, time = read_process_expt[0]
-    data_other = np.empty([np.sum(num_ens[1:]), num_years])
-    e0 = 0
-    for n in range(1, num_expt):
-        data_other[e0:e0+num_ens[n],:] = read_process_expt[n]
-        e0 += num_ens[n]
-    # Now compare the two samples over each window
-    radius = (window-1)//2
-    time = time[radius:-radius]
-    distinct = []
-    for t in range(radius, num_years-radius):
-        sample_rcp85 = data_rcp85[:,t-radius:t+radius+1].ravel()
-        sample_other = data_other[:,t-radius:t+radius+1].ravel()
-        min_other, max_other = norm.interval(1-p0, loc=np.mean(sample_other), scale=np.std(sample_other))
-        mean_rcp85 = np.mean(sample_rcp85)
-        distinct.append((mean_rcp85 > max_other) or (mean_rcp < min_other))
-    if not distinct[-1]:
-        print('RCP 8.5 never diverges for good')
-    else:
-        t0 = np.where(np.invert(distinct))[0][-1] + 1
-        print('RCP 8.5 diverges for good at '+str(time[t0]))
         
     
     
