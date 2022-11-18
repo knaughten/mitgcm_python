@@ -3704,34 +3704,40 @@ def melt_trend_buttressing (fig_name=None):
 
     grid_dir = 'PAS_grid/'
     trend_dir='precomputed_trends/'
-    num_bins = 50
-    ronja_file='/data/oceans_output/shelf/kaight/ronja_2018/ButtressingFluxResponseNumbers_withLatLon.mat'
+    num_bins = 40
+    buttressing_file='/data/oceans_output/shelf/kaight/BFRN/AMUND_BFRN_Bedmachinev2_withLatLon.mat'
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
     colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     num_periods = len(periods)
     p0 = 0.05
+    vmin = 1e-2
+    vmax = 40
     title = 'Ice shelf melting as function of buttressing'
     xtitle = 'Buttressing flux response number'
     ytitle = 'Mean basal melting trend (m/y/century)'
     grid = Grid(grid_dir)
 
-    #bin_quantity = np.abs(grid.draft)
-    #bin_quantity = distance_to_grounding_line(grid)
-    f = loadmat(ronja_file)
-    buttressing = f['BFRN']
+    f = loadmat(buttressing_file)
+    buttressing = f['BFRN']*1e2
     rlat = f['lat']
     rlon = f['lon']
+    buttressing_mask = np.isnan(buttressing)
+    buttressing[buttressing_mask]=0
     # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
     fill = np.ceil(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat))
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
-    buttressing = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
+    buttressing_fill = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
     # Now interpolate to MITgcm grid
-    bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing, grid.lon_1d, grid.lat_1d, fill_value=0)
+    bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing_fill, grid.lon_1d, grid.lat_1d, fill_value=0)
+    #bin_quantity = np.abs(grid.draft)
+    #bin_quantity = distance_to_grounding_line(grid)
     bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
-    
-    bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
-    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
+
+    bin_centres = np.logspace(np.log10(vmin), np.log10(vmax), num=num_bins)
+    bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
+    #bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
+    #bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
     bin_trends_all = []
     for n in range(num_periods):
         bin_trends = np.zeros(num_bins)
@@ -3750,15 +3756,67 @@ def melt_trend_buttressing (fig_name=None):
         bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
         bin_trends_all.append(bin_trends)
 
-    fig, ax = plt.subplots()
+    fig = plt.figure(figsize=(7,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.1, right=0.95, bottom=0.2, top=0.9)
+    ax = plt.subplot(gs[0,0])
     for n in range(num_periods):
         ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+    ax.set_xscale('log')
+    ticks = ax.get_xticks()
+    tick_labels = []
+    for x in ticks:
+        if x > 1:
+            tick_labels.append(str(int(x))+'%')
+        else:
+            tick_labels.append(str(x)+'%')
+    ax.set_xticklabels(tick_labels)
     ax.grid(linestyle='dotted')
     ax.set_xlabel(xtitle, fontsize=12)
     ax.set_ylabel(ytitle, fontsize=12)
     ax.set_title(title, fontsize=16)
-    ax.legend()
+    ax.legend(ncol=num_periods, loc='lower center', bbox_to_anchor=(0.5, -0.27))
     finished_plot(fig, fig_name=fig_name, dpi=300)
+
+
+def compare_buttressing_maps ():
+
+    from scipy.io import loadmat
+    import matplotlib.colors as cl
+
+    buttressing_dir = '/data/oceans_output/shelf/kaight/BFRN/'
+    ronja_file = 'ButtressingFluxResponseNumbers_withLatLon.mat'
+    jan_file = 'AMUND_BFRN_Bedmachinev2_withLatLon.mat'
+    trend_file = 'precomputed_trends/ismr_trend_LW2.0.nc'
+    trend_var = 'ismr_trend'
+    p0 = 0.05
+    ymax = -71
+    grid_dir = 'PAS_grid/'
+    grid = Grid(grid_dir)    
+
+    def plot_buttressing_file (file_path, title):
+        f = loadmat(file_path)
+        buttressing = f['BFRN']
+        lat = f['lat']
+        lon = f['lon']
+        buttressing = np.ma.masked_where(buttressing==0, buttressing)
+        fig, ax = plt.subplots()
+        img = ax.pcolormesh(lon, lat, buttressing, norm=cl.LogNorm(), vmin=1e-4, vmax=0.5, cmap='YlOrRd')
+        ax.set_xlim([np.amin(grid.lon_1d), np.amax(grid.lon_1d)])
+        ax.set_ylim([np.amin(grid.lat_1d), ymax])
+        plt.colorbar(img, extend='both')
+        plt.title(title, fontsize=16)
+        fig.show()
+
+    plot_buttressing_file(buttressing_dir+ronja_file, 'Original BFRN')
+    plot_buttressing_file(buttressing_dir+jan_file, 'New BFRN')
+    
+    trends = read_netcdf(trend_file, trend_var)
+    mean_trend = np.mean(trends, axis=0)*1e2
+    p_val = ttest_1samp(trends, 0, axis=0)[1]
+    mean_trend[p_val > p0] = 0
+    mean_trend = mask_except_ice(mean_trend, grid)
+    latlon_plot(mean_trend, grid, title='Paris 2.0C melting trends (m/y/century)', titlesize=16, ctype='plusminus', ymax=ymax)     
 
 
 # Supplementary figures (2)
