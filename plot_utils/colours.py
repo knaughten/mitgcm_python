@@ -251,8 +251,7 @@ def set_colours (data, ctype='basic', vmin=None, vmax=None, change_points=None, 
         return ratio_cmap(vmin, vmax), vmin, vmax
 
     else:
-        print(('Error (set_colours): invalid ctype ' + ctype))
-        sys.exit()            
+        return plt.get_cmap(ctype), vmin, vmax
 
     
 # Choose what the endpoints of the colourbar should do. If they're manually set, they should extend. The output can be passed to plt.colorbar with the keyword argument 'extend'.

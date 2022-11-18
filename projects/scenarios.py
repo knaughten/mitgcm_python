@@ -3701,6 +3701,7 @@ def velocity_trends (fig_name=None):
 def melt_trend_buttressing (fig_name=None):
 
     from scipy.io import loadmat
+    import matplotlib.colors as cl
 
     grid_dir = 'PAS_grid/'
     trend_dir='precomputed_trends/'
@@ -3713,6 +3714,7 @@ def melt_trend_buttressing (fig_name=None):
     p0 = 0.05
     vmin = 1e-2
     vmax = 40
+    ymax = -71
     title = 'Ice shelf melting as function of buttressing'
     xtitle = 'Buttressing flux response number'
     ytitle = 'Mean basal melting trend (m/y/century)'
@@ -3733,6 +3735,8 @@ def melt_trend_buttressing (fig_name=None):
     #bin_quantity = np.abs(grid.draft)
     #bin_quantity = distance_to_grounding_line(grid)
     bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
+
+    latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, cmap='YlOrRd')
 
     bin_centres = np.logspace(np.log10(vmin), np.log10(vmax), num=num_bins)
     bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
