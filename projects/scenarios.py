@@ -3719,7 +3719,7 @@ def melt_trend_buttressing (fig_name=None):
     grid = Grid(grid_dir)
 
     f = loadmat(buttressing_file)
-    buttressing = f['BFRN']*1e2
+    buttressing = f['BFRN']
     rlat = f['lat']
     rlon = f['lon']
     buttressing_mask = np.isnan(buttressing)
@@ -3790,7 +3790,10 @@ def compare_buttressing_maps ():
     trend_file = 'precomputed_trends/ismr_trend_LW2.0.nc'
     trend_var = 'ismr_trend'
     p0 = 0.05
-    ymax = -71
+    xmin = -115
+    xmax = -97
+    ymin = -75.6
+    ymax = -74
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)    
 
@@ -3802,8 +3805,8 @@ def compare_buttressing_maps ():
         buttressing = np.ma.masked_where(buttressing==0, buttressing)
         fig, ax = plt.subplots()
         img = ax.pcolormesh(lon, lat, buttressing, norm=cl.LogNorm(), vmin=1e-4, vmax=0.5, cmap='YlOrRd')
-        ax.set_xlim([np.amin(grid.lon_1d), np.amax(grid.lon_1d)])
-        ax.set_ylim([np.amin(grid.lat_1d), ymax])
+        ax.set_xlim([xmin, xmax])
+        ax.set_ylim([ymin, ymax])
         plt.colorbar(img, extend='both')
         plt.title(title, fontsize=16)
         fig.show()
@@ -3816,7 +3819,7 @@ def compare_buttressing_maps ():
     p_val = ttest_1samp(trends, 0, axis=0)[1]
     mean_trend[p_val > p0] = 0
     mean_trend = mask_except_ice(mean_trend, grid)
-    latlon_plot(mean_trend, grid, title='Paris 2.0C melting trends (m/y/century)', titlesize=16, ctype='plusminus', ymax=ymax)     
+    latlon_plot(mean_trend, grid, title='Paris 2.0C melting trends (m/y/century)', titlesize=16, ctype='plusminus', xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)     
 
 
 # Supplementary figures (2)
