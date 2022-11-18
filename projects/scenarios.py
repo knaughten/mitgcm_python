@@ -3755,16 +3755,16 @@ def melt_trend_buttressing (fig_name=None):
         bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
         bin_trends_all.append(bin_trends)
 
-    fig = plt.figure(figsize=(7,8))
+    fig = plt.figure(figsize=(7,7))
     gs = plt.GridSpec(2,1)
-    gs.update(left=0.1, right=0.88, bottom=0.1, top=0.95, hspace=0.2)
+    gs.update(left=0.1, right=0.88, bottom=0.12, top=0.93, hspace=0.25)
     # Plot BFRN
     ax = plt.subplot(gs[0,0])
-    img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='hot_r', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=16)
+    img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='hot_r', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=14)
     ytick_labels = ax.get_yticklabels()
     for label in ytick_labels[1::2]:
         label.set_visible(False)
-    cax = fig.add_axes([0.9, 0.57, 0.02, 0.36])
+    cax = fig.add_axes([0.9, 0.58, 0.02, 0.34])
     cbar = plt.colorbar(img, cax=cax, extend='both')
     ctick_labels = cax.get_yticklabels()
     for label in ctick_labels:
@@ -3793,10 +3793,10 @@ def melt_trend_buttressing (fig_name=None):
             xtick_labels.append(str(x)+'%')
     ax.set_xticklabels(xtick_labels)
     ax.grid(linestyle='dotted')
-    ax.set_xlabel('Buttressing flux response number', fontsize=12)
-    ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=12)
-    ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=16)
-    ax.legend(ncol=num_periods, loc='lower center', bbox_to_anchor=(0.5, -0.27))
+    ax.set_xlabel('Buttressing flux response number', fontsize=10)
+    ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
+    ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=14)
+    ax.legend(ncol=num_periods, loc='lower center', bbox_to_anchor=(0.5, -0.33))
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
