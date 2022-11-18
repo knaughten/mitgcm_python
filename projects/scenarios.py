@@ -2472,7 +2472,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
 
 
 # For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct. Also print out the year at which they diverge for good, as well as the year at which the ensemble means last intersect.
-def plot_scenario_divergence (var, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, window=11, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
+def plot_scenario_divergence (var, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, window=11, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
 
     from scipy.stats import norm
 
@@ -3165,26 +3165,32 @@ def plot_warming_trend_profiles (region, fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-# Data for Table 1
-def calc_trends_for_table ():
+# Main text figure, plus print data for table
+def trend_box_plot (fig_name=None):
 
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
-    units = ['C/century', '%/century']
-    expt_names = ['Historical', 'Historical fixed BCs', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5 fixed BCs', 'PACE']
+    var_titles = ['Trend over continental shelf,\n200-700m ', 'Basal mass loss trend\nfrom Dotson to Cosgrove']
+    units = [deg_string+'C/century', '%/century']
+    expt_names = ['Historical', 'Historical\nfixed BCs', 'PACE', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nfixed BCs']
     num_expt = len(expt_names)
-    expt_dir_heads = ['PAS_']*(num_expt-1) + ['../mitgcm/PAS_']
-    expt_dir_mids = ['LENS', 'LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS', 'PACE']
-    expt_ens_prec = [3]*(num_expt-1) + [2]
-    expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC', '']
-    timeseries_file = ['/output/timeseries.nc']*(num_expt-1) + ['/output/timeseries_final.nc']
-    num_ens = [10, 5, 5, 10, 10, 10, 5, 20]  # Update most of these to 10 later
-    start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006, 1920]
-    end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100, 2013]
+    expt_dir_heads = ['PAS_']*num_expt
+    expt_dir_heads[2] = '../mitgcm/PAS_'
+    expt_dir_mids = ['LENS', 'LENS', 'PACE', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS']
+    expt_ens_prec = [3]*num_expt
+    expt_ens_prec[2] = 2
+    expt_dir_tails = ['_O', '_noOBC', '', '_O', '_O', '_O', '_O', '_noOBC']
+    timeseries_file = ['/output/timeseries.nc']*num_expt
+    timeseries_file[2] = '/output/timeseries_final.nc'
+    num_ens = [10, 5, 20, 5, 10, 10, 10, 5]
+    start_years = [1920, 1920, 1920, 2006, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2005, 2013, 2100, 2100, 2080, 2100, 2100]
     baseline_period = 30
     smooth = 24
     p0 = 0.05
 
+    all_trends = []
     for var in var_names:
+        var_trends = []
         print('\nTrends in '+var+':')
         for n in range(num_expt):
             if var == 'dotson_to_cosgrove_massloss' and expt_names[n] == 'Historical':
@@ -3216,14 +3222,36 @@ def calc_trends_for_table ():
                 if sig:
                     trends[e] = slope
             mean_trend = np.mean(trends)
+            std_trend = np.std(trends)
             p_val = ttest_1samp(trends, 0)[1]
             if p_val < p0:
-                print(expt_names[n]+': '+str(mean_trend))
+                print(expt_names[n]+': '+str(mean_trend)+' +/- '+str(std_trend))
             else:
                 print(expt_names[n]+': no significant trend')
+            var_trends.append(trends)
+        all_trends.append(var_trends)
+
+    # Make the box plot - just show warming trends
+    fig = plt.figure(figsize=(8,5))
+    gs = plt.GridSpec(1,1)
+    gs.update(left=0.13, right=0.97, bottom=0.1, top=0.9)
+    ax = plt.subplot(gs[0,0])
+    bplot = ax.boxplot(all_trends[0], positions=range(num_expt), showmeans=True, whis='range', medianprops=dict(color='blue'), meanprops=dict(markeredgecolor='black', markerfacecolor='black', marker='*'), patch_artist=True)
+    for patch in bplot['boxes']:
+        patch.set_facecolor('LightCoral')
+    ax.grid(linestyle='dotted')
+    ax.set_ylabel(var_titles[0]+'('+units[0]+')', fontsize=11)
+    ax.set_xticklabels(expt_names, fontsize=11)
+    ax.axhline(color='black', linewidth=1, linestyle='dashed')
+    ax.axvline(2.5, color='black', linewidth=1)
+    plt.text(-0.4, 1.75, 'Historical\nscenarios', fontsize=14, ha='left', va='top')
+    plt.text(2.6, 1.75, 'Future\nscenarios', fontsize=14, ha='left', va='top')
+    ax.set_title('Ocean temperature trends in each scenario', fontsize=16)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+    
 
 
-# Figure 1
+# Main text figure
 def warming_melting_trend_map (fig_name=None):
 
     import matplotlib.patheffects as pthe
@@ -3309,7 +3337,7 @@ def warming_melting_trend_map (fig_name=None):
     finished_plot(fig, fig_name=fig_name, dpi=300)    
 
 
-# Figure 2
+# Main text figure
 def timeseries_shelf_temp (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
@@ -3397,13 +3425,13 @@ def timeseries_shelf_temp (fig_name=None):
     ax.set_xlim([datetime.date(start_year_hist,1,1), np.amax(time[-1])])
     ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year_hist, end_year_future, 20)])
     ax.set_xlabel('Year', fontsize=12)
-    ax.set_ylabel(deg_string+'C', fontsize=12)
-    ax.set_title('Temperature on Amundsen Sea continental shelf (200-700m)', fontsize=17)
+    ax.set_ylabel('Continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
+    ax.set_title('Evolution of ocean temperature', fontsize=17)
     ax.legend(loc='upper left', fontsize=11) #(loc='lower center', bbox_to_anchor=(0.5,-0.25), fontsize=11, ncol=num_expt)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
-# Figure 3
+# Main text figure
 def temp_profiles (fig_name=None):
 
     expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
@@ -3508,7 +3536,7 @@ def temp_profiles (fig_name=None):
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
-# Figure 4
+# Main text figure
 def velocity_trends (fig_name=None):
 
     expt_name = 'LW2.0'
@@ -3587,7 +3615,7 @@ def velocity_trends (fig_name=None):
     finished_plot(fig, fig_name=fig_name, dpi=300)    
 
 
-# Figure 5
+# Main text figure
 def melt_trend_buttressing (fig_name=None):
 
     from scipy.io import loadmat
@@ -3651,7 +3679,7 @@ def melt_trend_buttressing (fig_name=None):
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
-# Supplementary Figures 1 and 2
+# Supplementary figures (2)
 def sfc_forcing_trends (var, fig_name=None):
 
     grid_dir = 'PAS_grid/'
@@ -3810,12 +3838,12 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
     for expt_name, trends in zip([expt_name_1, expt_name_2], [trends1, trends2]):
         print(expt_name+': mean trend '+str(np.mean(trends)))
     if distinct:
-        print('They are distinct')
+        print('They are distinct\n')
     else:
-        print('They are not distinct')
+        print('They are not distinct\n')
 
 
-# Call the above function for all the sensible combinations of trends in Table 1
+# Call the above function for all the sensible combinations of trends in table
 def all_trends_distinct ():
 
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
@@ -3823,20 +3851,20 @@ def all_trends_distinct ():
     for var in var_names:
         # All combinations of historical scenarios
         # Historical with and without transient BCs
-        trend_scenarios_distinct(expt_names[0], expt_names[1])
+        trend_scenarios_distinct(var, expt_names[0], expt_names[1])
         # Historical vs PACE
-        trend_scenarios_distinct(expt_names[0], expt_names[-1])
+        trend_scenarios_distinct(var, expt_names[0], expt_names[-1])
         # Historical with fixed BCs vs PACE
-        trend_scenarios_distinct(expt_names[1], expt_names[-1])
+        trend_scenarios_distinct(var, expt_names[1], expt_names[-1])
         
         # All combinations of future scenarios with transient BCs
         for n1 in range(2, 5+1):
-            for n2 in range(2, 5+1):
+            for n2 in range(n1+1, 5+1):
                 if n1 == n2:
                     continue
-                trend_scenarios_distinct(expt_names[n1], expt_names[n2])
+                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
         # RCP 8.5 with and without transient BCs
-        trend_scenarios_distinct(expt_names[5], expt_names[6])
+        trend_scenarios_distinct(var, expt_names[5], expt_names[6])
 
     
     
