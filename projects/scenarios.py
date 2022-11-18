@@ -7,7 +7,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import os
-from scipy.stats import linregress, ttest_1samp, ttest_ind
+from scipy.stats import linregress, ttest_1samp, ttest_ind, norm
 from scipy.ndimage.filters import gaussian_filter
 import datetime
 import itertools
@@ -3865,6 +3865,62 @@ def all_trends_distinct ():
                 trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
         # RCP 8.5 with and without transient BCs
         trend_scenarios_distinct(var, expt_names[5], expt_names[6])
+
+
+def calc_rcp85_divergence ():
+
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
+    window = 11
+    file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
+    file_tail = '_O/output/timeseries.nc'
+    num_ens = [10, 10, 10, 5]
+    num_expt = len(file_head)
+    start_year = 2006
+    end_year = 2080
+    num_years = end_year - start_year + 1
+    p0 = 0.05
+
+    # Read annually averaged data from one scenario
+    def read_process_expt (n):
+        all_data = np.empty([num_ens[n], num_years])
+        for e in range(num_ens[n]):
+            file_path = file_head[n] + str(e+1).zfill(3) + file_tail
+            time = netcdf_time(file_path, monthly=False)
+            data = read_netcdf(file_path, var_name)
+            t_start, t_end = index_period(time, start_year, end_year)
+            time = time[t_start:t_end]
+            data = data[t_start:t_end]
+            data, time = monthly_to_annual(data, time)
+            all_data[e,:] = data
+        return all_data, time
+
+    data_rcp85, time = read_process_expt[0]
+    data_other = np.empty([np.sum(num_ens[1:]), num_years])
+    e0 = 0
+    for n in range(1, num_expt):
+        data_other[e0:e0+num_ens[n],:] = read_process_expt[n]
+        e0 += num_ens[n]
+    # Now compare the two samples over each window
+    radius = (window-1)//2
+    time = time[radius:-radius]
+    distinct = []
+    for t in range(radius, num_years-radius):
+        sample_rcp85 = data_rcp85[:,t-radius:t+radius+1].ravel()
+        sample_other = data_other[:,t-radius:t+radius+1].ravel()
+        min_other, max_other = norm.interval(1-p0, loc=np.mean(sample_other), scale=np.std(sample_other))
+        mean_rcp85 = np.mean(sample_rcp85)
+        distinct.append((mean_rcp85 > max_other) or (mean_rcp < min_other))
+    if not distinct[-1]:
+        print('RCP 8.5 never diverges for good')
+    else:
+        t0 = np.where(np.invert(distinct))[0][-1] + 1
+        print('RCP 8.5 diverges for good at '+str(time[t0]))
+        
+    
+    
+    
+
+    
 
     
     
