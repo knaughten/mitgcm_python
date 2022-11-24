@@ -3707,9 +3707,9 @@ def melt_trend_buttressing (fig_name=None):
     trend_dir='precomputed_trends/'
     num_bins = 40
     buttressing_file='/data/oceans_output/shelf/kaight/BFRN/AMUND_BFRN_Bedmachinev2_withLatLon.mat'
-    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS', 'PACE']
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65), (0.34,0.71,0.91)]
     num_periods = len(periods)
     p0 = 0.05
     vmin = 1e-2
@@ -3796,7 +3796,7 @@ def melt_trend_buttressing (fig_name=None):
     ax.set_xlabel('Buttressing flux response number', fontsize=10)
     ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
     ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=14)
-    ax.legend(ncol=num_periods, loc='lower center', bbox_to_anchor=(0.5, -0.33))
+    ax.legend(ncol=num_periods//2, loc='lower center', bbox_to_anchor=(0.5, -0.33))
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
