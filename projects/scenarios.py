@@ -3414,19 +3414,21 @@ def calc_rcp85_divergence (window=11, return_year=False):
 # Main text figure
 def timeseries_shelf_temp (fig_name=None):
 
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    expt_names = ['Historical', 'PACE', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
     num_expt = len(expt_names)
-    num_ens_default = 10
-    num_ens_LW1 = 5
-    start_year_hist = 1920
-    start_year_future = 2006
-    end_year_MENS = 2080
-    end_year_future = 2100
-    expt_file_head = 'PAS_'
-    expt_file_mid = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
-    expt_file_tail = '_O/output/timeseries.nc'
+    num_ens = [10, 20, 5, 10, 10, 10]
+    start_year = [1920, 1920, 2006, 2006, 2006, 2006]
+    end_year = [2005, 2013, 2100, 2080, 2100, 2100]
+    expt_file_head = ['PAS_']*num_expt
+    expt_file_head[1] = '../mitgcm/PAS_'
+    expt_file_mid = ['LENS', 'PACE', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+    expt_ens_prec = [3]*num_expt
+    expt_ens_prec[1] = 2
+    expt_dir_tail = ['_O']*num_expt
+    expt_dir_tail[1] = ''
+    expt_file_tail = '/output/timeseries.nc'
     var_name = 'amundsen_shelf_temp_btw_200_700m'
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    colours = [(0.6,0.6,0.6), (0.34,0.71,0.91), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     smooth = 24
     rcp85_div_year = calc_rcp85_divergence(return_year=True)
 
@@ -3436,41 +3438,27 @@ def timeseries_shelf_temp (fig_name=None):
     time = []
     # Loop over scenarios
     for n in range(num_expt):
-        # Set parameters
-        if '1.5' in expt_names[n]:
-            num_ens = num_ens_LW1
-        else:
-            num_ens = num_ens_default
-        if expt_names[n] == 'Historical':
-            start_year = start_year_hist
-            end_year = start_year_future-1
-        else:
-            start_year = start_year_future
-            if expt_names[n] == 'RCP 4.5':
-                end_year = end_year_MENS
-            else:
-                end_year = end_year_future
         # Loop over ensemble members
-        for e in range(num_ens):
+        for e in range(num_ens[n]):
             # Read data
-            file_path = expt_file_head + expt_file_mid[n] + str(e+1).zfill(3) + expt_file_tail
+            file_path = expt_file_head[n] + expt_file_mid[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tail[n] + expt_file_tail
             time_raw = netcdf_time(file_path, monthly=False)
             data_raw = read_netcdf(file_path, var_name)
             if expt_names[n] == 'Historical':
                 # Save historical data for concatenating to others later
-                t_end = index_year_end(time_raw, end_year)
+                t_end = index_year_end(time_raw, end_year[n])
                 time_hist = np.copy(time_raw[:t_end])
                 data_hist = np.copy(data_raw[:t_end])
-            else:
+            elif expt_names[n] != 'PACE':
                 # Concatenate with historical data for smoothing
                 time_raw = np.concatenate((time_hist, time_raw))
                 data_raw = np.concatenate((data_hist, data_raw))
             # Smooth
             data_smooth, time_smooth = moving_average(data_raw, smooth, time=time_raw)
             # Trim
-            t_start = index_year_start(time_smooth, start_year)
+            t_start = index_year_start(time_smooth, start_year[n])
             if expt_names[n] == 'Historical':
-                t_end = index_year_end(time_smooth, end_year)
+                t_end = index_year_end(time_smooth, end_year[n])
             else:
                 t_end = time_smooth.size
             time_smooth = time_smooth[t_start:t_end]
@@ -3504,8 +3492,8 @@ def timeseries_shelf_temp (fig_name=None):
             ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
             plt.text(datetime.date(rcp85_div_year+2,1,1), -0.8, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
     ax.grid(linestyle='dotted')
-    ax.set_xlim([datetime.date(start_year_hist,1,1), np.amax(time[-1])])
-    ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year_hist, end_year_future, 20)])
+    ax.set_xlim([datetime.date(start_year[0],1,1), np.amax(time[-1])])
+    ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year[0], end_year[-1], 20)])
     ax.set_xlabel('Year', fontsize=12)
     ax.set_ylabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
     ax.set_title('Evolution of ocean temperature', fontsize=17)
