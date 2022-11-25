@@ -3755,16 +3755,16 @@ def melt_trend_buttressing (fig_name=None):
         bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
         bin_trends_all.append(bin_trends)
 
-    fig = plt.figure(figsize=(7,7))
+    fig = plt.figure(figsize=(7,8))
     gs = plt.GridSpec(2,1)
-    gs.update(left=0.1, right=0.88, bottom=0.12, top=0.93, hspace=0.25)
+    gs.update(left=0.1, right=0.88, bottom=0.15, top=0.95, hspace=0.25)
     # Plot BFRN
     ax = plt.subplot(gs[0,0])
     img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='hot_r', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=14)
     ytick_labels = ax.get_yticklabels()
     for label in ytick_labels[1::2]:
         label.set_visible(False)
-    cax = fig.add_axes([0.9, 0.58, 0.02, 0.34])
+    cax = fig.add_axes([0.9, 0.6, 0.02, 0.34])
     cbar = plt.colorbar(img, cax=cax, extend='both')
     ctick_labels = cax.get_yticklabels()
     for label in ctick_labels:
@@ -3797,7 +3797,7 @@ def melt_trend_buttressing (fig_name=None):
     ax.set_xlabel('Buttressing flux response number', fontsize=10)
     ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
     ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=14)
-    ax.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, -0.33))
+    ax.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, -0.42))
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
