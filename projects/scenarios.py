@@ -3781,7 +3781,8 @@ def melt_trend_buttressing (fig_name=None):
     cax.set_yticklabels(ctick_labels)
     # Plot melt as function of BFRN
     ax = plt.subplot(gs[1,0])
-    for n in range(num_periods):
+    # Hack the order of plotting so the legend is intuitive
+    for n in [0, 2, 5, 3, 1, 4]:
         ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
     ax.set_xscale('log')
     xticks = ax.get_xticks()
@@ -3796,7 +3797,7 @@ def melt_trend_buttressing (fig_name=None):
     ax.set_xlabel('Buttressing flux response number', fontsize=10)
     ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
     ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=14)
-    ax.legend(ncol=num_periods//2, loc='lower center', bbox_to_anchor=(0.5, -0.33))
+    ax.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, -0.33))
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
