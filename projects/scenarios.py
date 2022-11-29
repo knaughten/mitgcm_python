@@ -3361,7 +3361,9 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         expt_ens_prec = [3]*num_expt
         expt_ens_prec[2] = 2
         expt_dir_tail = ['_O', '_noOBC', '', '_O', '_noOBC']
-        colours = [(0.6,0.6,0.6), 'BlueViolet', (0.34,0.71,0.91), (0.8,0.47,0.65), 'OrangeRed']
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.8,0.47,0.65), (0.9,0.62,0)]
+        expt_file_tail = ['/output/timeseries.nc']*num_expt
+        expt_file_tail[2] = '/output/timeseries_final.nc'
     else:
         expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
         num_expt = len(expt_names)
@@ -3373,7 +3375,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         expt_ens_prec = [3]*num_expt
         expt_dir_tail = ['_O']*num_expt
         colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
-    expt_file_tail = '/output/timeseries.nc'
+        expt_file_tail = ['/output/timeseries.nc']*num_expt
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     
     smooth = 24
@@ -3388,7 +3390,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         # Loop over ensemble members
         for e in range(num_ens[n]):
             # Read data
-            file_path = expt_file_head[n] + expt_file_mid[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tail[n] + expt_file_tail
+            file_path = expt_file_head[n] + expt_file_mid[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tail[n] + expt_file_tail[n]
             time_raw = netcdf_time(file_path, monthly=False)
             data_raw = read_netcdf(file_path, var_name)
             if expt_names[n] == 'Historical':
@@ -3396,22 +3398,30 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
                 t_end = index_year_end(time_raw, end_year[n])
                 time_hist = np.copy(time_raw[:t_end])
                 data_hist = np.copy(data_raw[:t_end])
+            elif expt_names[n] == 'Historical fixed BCs':
+                t_end = index_year_end(time_raw, end_year[n])
+                time_hist_noBC = np.copy(time_raw[:t_end])
+                data_hist_noBC = np.copy(data_raw[:t_end])
             elif expt_names[n] != 'PACE':
                 # Concatenate with historical data for smoothing
-                time_raw = np.concatenate((time_hist, time_raw))
-                data_raw = np.concatenate((data_hist, data_raw))
+                if expt_names[n] == 'RCP 8.5 fixed BCs':
+                    time_raw = np.concatenate((time_hist_noBC, time_raw))
+                    data_raw = np.concatenate((data_hist_noBC, data_raw))
+                else:
+                    time_raw = np.concatenate((time_hist, time_raw))
+                    data_raw = np.concatenate((data_hist, data_raw))
             # Smooth
             data_smooth, time_smooth = moving_average(data_raw, smooth, time=time_raw)
             # Trim
             t_start = index_year_start(time_smooth, start_year[n])
-            if expt_names[n] == 'Historical':
+            if expt_names[n] in ['Historical', 'Historical fixed BCs']:
                 t_end = index_year_end(time_smooth, end_year[n])
             else:
                 t_end = time_smooth.size
             time_smooth = time_smooth[t_start:t_end]
             data_smooth = data_smooth[t_start:t_end]
             if e == 0:
-                data_sim = np.empty([num_ens, time_smooth.size])
+                data_sim = np.empty([num_ens[n], time_smooth.size])
                 time.append(time_smooth)
             # Store the timeseries for this ensemble member
             data_sim[e,:] = data_smooth
@@ -3430,11 +3440,10 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
         # Plot ensemble mean as solid line
         ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
-        if n == 1:
+        if n == num_expt-1 and not supp:
             # Label beginning of future scenarios
             ax.axvline(time[n][0], color=colours[0], linestyle='dashed')
             plt.text(datetime.date(2008,1,1), -0.8, 'Future scenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
-        if n == num_expt-1:
             # Label year of RCP 8.5 divergence
             ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
             plt.text(datetime.date(rcp85_div_year+2,1,1), -0.8, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
