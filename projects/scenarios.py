@@ -3457,7 +3457,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
 
 
 # Main text figure with option for supplementary figure to show extra simulations
-def temp_profiles (fig_name=None, supp=False):
+def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
 
     if supp:
         expt_names = ['Historical', 'Historical fixed BCs', 'PACE', 'RCP 8.5', 'RCP 8.5 fixed BCs']
@@ -3487,7 +3487,6 @@ def temp_profiles (fig_name=None, supp=False):
         end_years = [2005, 2100, 2100, 2080, 2100]
         colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]    
     final_period = 20
-    region = 'amundsen_shelf' #'pine_island_bay'    
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
     smooth = 24
