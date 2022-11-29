@@ -1221,6 +1221,13 @@ def set_parameters (var):
         title = 'Total freshwater flux from precipitation, evaporation, and runoff over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
+    elif var.endswith('fwflx'):
+        option = 'int_sfc'
+        var_name = 'oceFWflx'
+        region = var[:var.index('_fwlfx')]
+        title = 'Total freshwater flux over ' + region_names[region]
+        units = r'10$^3$ m$^3$/s'
+        factor = 1e-6
     elif 'salt_adv' in var:
         var_name = 'ADVx_SLT'
         region = var[:var.index('_salt_adv')]
