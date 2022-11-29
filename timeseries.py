@@ -1224,7 +1224,7 @@ def set_parameters (var):
     elif var.endswith('fwflx'):
         option = 'int_sfc'
         var_name = 'oceFWflx'
-        region = var[:var.index('_fwlfx')]
+        region = var[:var.index('_fwflx')]
         title = 'Total freshwater flux over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
