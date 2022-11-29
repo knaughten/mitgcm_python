@@ -2406,71 +2406,6 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
     return slope, sig
 
 
-# Plot a scatterplot of the trends in any 2 variables across all ensemble members and scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, fig_name=None):
-
-    base_dir = real_dir(base_dir)
-    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
-    num_expt = len(num_ens)
-    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
-    expt_mid = ['', '_', '_', '_']
-    expt_tail = '_O'
-    expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
-    smooth = 24
-    p0 = 0.05
-    if timeseries_file_2 is None:
-        timeseries_file_2 = timeseries_file
-    timeseries_files = [timeseries_file, timeseries_file_2]
-
-    trend1 = []
-    trend2 = []
-    labels = []
-    colours = []
-    for n in range(num_expt):
-        for e in range(num_ens[n]):
-            both_trends = []
-            for var, k in zip([var1, var2], range(2)):
-                if var == 'TS_global_mean':
-                    file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
-                else:
-                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_files[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0)
-                if sig:
-                    both_trends.append(trend_tmp)
-                else:
-                    both_trends.append(0)
-            trend1.append(both_trends[0])
-            trend2.append(both_trends[1])
-            if expt_names[n] not in labels:
-                labels.append(expt_names[n])
-            else:
-                labels.append(None)
-            colours.append(expt_colours[n])
-
-    fig, ax = plt.subplots(figsize=(10,6))
-    ax.axhline()
-    ax.axvline()
-    for m in range(len(trend1)):
-        ax.plot(trend1[m], trend2[m], 'o', color=colours[m], label=labels[m])
-    ax.grid(linestyle='dotted')
-    slope, intercept, r_value, p_value, std_err = linregress(np.array(trend1), np.array(trend2))
-    if p_value < p0:
-        [x0, x1] = ax.get_xlim()
-        [y0, y1] = slope*np.array([x0, x1]) + intercept
-        ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
-        trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
-    else:
-        trend_title = 'no significant relationship'
-    ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
-    ax.set_xlabel(var1, fontsize=14)
-    ax.set_ylabel(var2, fontsize=14)
-    ax.set_title('Trends per century, 2006-2080', fontsize=18)
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
-    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
-    finished_plot(fig, fig_name=fig_name)
-
-
 # For the given timeseries variable, create a bar graph showing when each combination of 2 scenarios is statistically distinct. Also print out the year at which they diverge for good, as well as the year at which the ensemble means last intersect.
 def plot_scenario_divergence (var, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, window=11, timeseries_file='timeseries.nc', base_dir='./', fig_name=None):
 
@@ -3975,6 +3910,71 @@ def all_trends_distinct ():
                 trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
         # RCP 8.5 with and without transient BCs
         trend_scenarios_distinct(var, expt_names[5], expt_names[6])
+
+
+# Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios (but not no-OBCS or PACE)
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, fig_name=None):
+
+    base_dir = real_dir(base_dir)
+    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    num_expt = len(num_ens)
+    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_mid = ['', '_', '_', '_']
+    expt_tail = '_O'
+    expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
+    smooth = 24
+    p0 = 0.05
+    if timeseries_file_2 is None:
+        timeseries_file_2 = timeseries_file
+    timeseries_files = [timeseries_file, timeseries_file_2]
+
+    trend1 = []
+    trend2 = []
+    labels = []
+    colours = []
+    for n in range(num_expt):
+        for e in range(num_ens[n]):
+            both_trends = []
+            for var, k in zip([var1, var2], range(2)):
+                if var == 'TS_global_mean':
+                    file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
+                else:
+                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_files[k]
+                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=2006, end_year=2080)
+                if sig:
+                    both_trends.append(trend_tmp)
+                else:
+                    both_trends.append(0)
+            trend1.append(both_trends[0])
+            trend2.append(both_trends[1])
+            if expt_names[n] not in labels:
+                labels.append(expt_names[n])
+            else:
+                labels.append(None)
+            colours.append(expt_colours[n])
+
+    fig, ax = plt.subplots(figsize=(10,6))
+    ax.axhline()
+    ax.axvline()
+    for m in range(len(trend1)):
+        ax.plot(trend1[m], trend2[m], 'o', color=colours[m], label=labels[m])
+    ax.grid(linestyle='dotted')
+    slope, intercept, r_value, p_value, std_err = linregress(np.array(trend1), np.array(trend2))
+    if p_value < p0:
+        [x0, x1] = ax.get_xlim()
+        [y0, y1] = slope*np.array([x0, x1]) + intercept
+        ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+        trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
+    else:
+        trend_title = 'no significant relationship'
+    ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
+    ax.set_xlabel(var1, fontsize=14)
+    ax.set_ylabel(var2, fontsize=14)
+    ax.set_title('Trends per century, 2006-2080', fontsize=18)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
+    ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
+    finished_plot(fig, fig_name=fig_name)
         
     
     
