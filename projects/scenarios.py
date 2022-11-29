@@ -3369,7 +3369,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         num_expt = len(expt_names)
         num_ens = [10, 5, 10, 10, 10]
         start_year = [1920, 2006, 2006, 2006, 2006]
-        end_year = [2005, 2100, 2080, 2100, 2100]
+        end_year = [2005, 2100, 2100, 2080, 2100]
         expt_file_head = ['PAS_']*num_expt
         expt_file_mid = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
         expt_ens_prec = [3]*num_expt
@@ -3377,7 +3377,6 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
         expt_file_tail = ['/output/timeseries.nc']*num_expt
     var_name = 'amundsen_shelf_temp_btw_200_700m'
-    
     smooth = 24
     rcp85_div_year = calc_rcp85_divergence(return_year=True)
 
@@ -3457,22 +3456,38 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
-# Main text figure
-def temp_profiles (fig_name=None):
+# Main text figure with option for supplementary figure to show extra simulations
+def temp_profiles (fig_name=None, supp=False):
 
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
-    num_expt = len(expt_names)
-    expt_dir_heads = ['PAS_']*(num_expt-1) + ['../mitgcm/PAS_']
-    expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'PACE']
-    expt_ens_prec = [3]*(num_expt-1) + [2]
-    expt_dir_tails = ['_O']*(num_expt-1) + ['']
-    hovmoller_file = ['/output/hovmoller_shelf.nc']*(num_expt-1) + ['/output/hovmoller3.nc']
-    num_ens = [10, 5, 10, 10, 10, 20]
-    start_years = [1920, 2006, 2006, 2006, 2006, 1920]
-    end_years = [2005, 2100, 2100, 2080, 2100, 2013]
+    if supp:
+        expt_names = ['Historical', 'Historical fixed BCs', 'PACE', 'RCP 8.5', 'RCP 8.5 fixed BCs']
+        num_expt = len(expt_names)
+        expt_dir_heads = ['PAS_']*num_expt
+        expt_dir_heads[2] = '../mitgcm/PAS_'
+        expt_dir_mids = ['LENS', 'LENS', 'PACE', 'LENS', 'LENS']
+        expt_ens_prec = [3]*num_expt
+        expt_ens_prec[2] = 2
+        expt_dir_tails = ['_O', '_noOBC', '', '_O', '_noOBC']
+        hovmoller_file = ['/output/hovmoller_shelf.nc']*num_expt
+        hovmoller_file[2] = '/output/hovmoller3.nc'
+        num_ens = [10, 5, 20, 10, 5]
+        start_years = [1920, 1920, 1920, 2006, 2006]
+        end_years = [2005, 2005, 2013, 2100, 2100]
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.8,0.47,0.65), (0.9,0.62,0)]
+    else:
+        expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+        num_expt = len(expt_names)
+        expt_dir_heads = ['PAS_']*num_expt
+        expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+        expt_ens_prec = [3]*num_expt
+        expt_dir_tails = ['_O']*num_expt
+        hovmoller_file = ['/output/hovmoller_shelf.nc']*num_expt
+        num_ens = [10, 5, 10, 10, 10]
+        start_years = [1920, 2006, 2006, 2006, 2006]
+        end_years = [2005, 2100, 2100, 2080, 2100]
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]    
     final_period = 20
     region = 'amundsen_shelf' #'pine_island_bay'    
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65), (0.34,0.71,0.91)]
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
     smooth = 24
@@ -3535,15 +3550,14 @@ def temp_profiles (fig_name=None):
     # Plot
     fig = plt.figure(figsize=(8,5.5))
     gs = plt.GridSpec(1,3)
-    gs.update(left=0.1, right=0.95, bottom=0.2, top=0.82, wspace=0.05)
+    gs.update(left=0.1, right=0.95, bottom=0.18, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
     titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
         ax = plt.subplot(gs[0,v])
-        # Hack the order of plotting so the legend is intuitive
-        for n in [0, 2, 5, 3, 1, 4]:
+        for n in range(num_expt): #[0, 2, 5, 3, 1, 4]:
             ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])     
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
@@ -3557,7 +3571,7 @@ def temp_profiles (fig_name=None):
             ax.set_yticklabels([])
         ax.axhline(np.abs(mean_draft), color='black', linestyle='dashed', linewidth=1)
         ax.axhline(np.abs(mean_bathy), color='black', linestyle='dashed', linewidth=1)
-    ax.legend(loc='lower center', bbox_to_anchor=(-0.75,-0.33), fontsize=12, ncol=3)
+    ax.legend(loc='lower center', bbox_to_anchor=(-0.65,-0.25), fontsize=12, ncol=num_expt)
     plt.suptitle('Temperature profiles over '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
@@ -3583,6 +3597,7 @@ def velocity_trends (fig_name=None):
     ymax = -70
     p0 = 0.05
     threshold = 0.02
+    z_shelf = -1750
 
     grid = Grid(grid_dir)
 
@@ -3620,9 +3635,9 @@ def velocity_trends (fig_name=None):
             img = latlon_plot(vel_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax)
             overlay_vectors(ax, u_trend, v_trend, grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
             ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linewidth=1.5)
-            plt.text(lon0[1], h_bounds[1][1]+0.1, 'a', color='blue', weight='bold', ha='center', va='bottom')
+            plt.text(lon0[1], h_bounds[1][1]+0.1, 'b', color='blue', weight='bold', ha='center', va='bottom')
             ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linewidth=1.5)
-            plt.text(h_bounds[2][0]-0.2, lat0[2], 'b', color='blue', weight='bold', ha='right', va='center')
+            plt.text(h_bounds[2][0]-0.2, lat0[2], 'c', color='blue', weight='bold', ha='right', va='center')
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
