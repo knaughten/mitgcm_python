@@ -3346,24 +3346,36 @@ def calc_rcp85_divergence (window=11, return_year=False):
     fig.show()
 
 
-# Main text figure
-def timeseries_shelf_temp (fig_name=None):
+# Main text figure with option for supplementary figure to show extra simulations
+def timeseries_shelf_temp (fig_name=None, supp=False):
 
-    expt_names = ['Historical', 'PACE', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
-    num_expt = len(expt_names)
-    num_ens = [10, 20, 5, 10, 10, 10]
-    start_year = [1920, 1920, 2006, 2006, 2006, 2006]
-    end_year = [2005, 2013, 2100, 2080, 2100, 2100]
-    expt_file_head = ['PAS_']*num_expt
-    expt_file_head[1] = '../mitgcm/PAS_'
-    expt_file_mid = ['LENS', 'PACE', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
-    expt_ens_prec = [3]*num_expt
-    expt_ens_prec[1] = 2
-    expt_dir_tail = ['_O']*num_expt
-    expt_dir_tail[1] = ''
+    if supp:
+        expt_names = ['Historical', 'Historical fixed BCs', 'PACE', 'RCP 8.5', 'RCP 8.5 fixed BCs']
+        num_expt = len(expt_names)
+        num_ens = [10, 5, 20, 10, 5]
+        start_year = [1920, 1920, 1920, 2006, 2006]
+        end_year = [2005, 2005, 2013, 2100, 2100]
+        expt_file_head = ['PAS_']*num_expt
+        expt_file_head[2] = '../mitgcm/PAS_'
+        expt_file_mid = ['LENS', 'LENS', 'PACE', 'LENS', 'LENS']
+        expt_ens_prec = [3]*num_expt
+        expt_ens_prec[2] = 2
+        expt_dir_tail = ['_O', '_noOBC', '', '_O', '_noOBC']
+        colours = [(0.6,0.6,0.6), 'BlueViolet', (0.34,0.71,0.91), (0.8,0.47,0.65), 'OrangeRed']
+    else:
+        expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+        num_expt = len(expt_names)
+        num_ens = [10, 5, 10, 10, 10]
+        start_year = [1920, 2006, 2006, 2006, 2006]
+        end_year = [2005, 2100, 2080, 2100, 2100]
+        expt_file_head = ['PAS_']*num_expt
+        expt_file_mid = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+        expt_ens_prec = [3]*num_expt
+        expt_dir_tail = ['_O']*num_expt
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     expt_file_tail = '/output/timeseries.nc'
     var_name = 'amundsen_shelf_temp_btw_200_700m'
-    colours = [(0.6,0.6,0.6), (0.34,0.71,0.91), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    
     smooth = 24
     rcp85_div_year = calc_rcp85_divergence(return_year=True)
 
