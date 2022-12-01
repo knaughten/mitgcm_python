@@ -3727,7 +3727,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
     gs.update(left=0.1, right=0.88, bottom=0.15, top=0.95, hspace=0.25)
     # Plot BFRN
     ax = plt.subplot(gs[0,0])
-    img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='hot_r', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=14)
+    img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='buttressing', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=14)
     ytick_labels = ax.get_yticklabels()
     for label in ytick_labels[1::2]:
         label.set_visible(False)
