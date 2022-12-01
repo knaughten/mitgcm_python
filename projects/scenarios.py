@@ -3666,7 +3666,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None):
+def melt_trend_buttressing (fig_name=None, shelf='all'):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3683,14 +3683,8 @@ def melt_trend_buttressing (fig_name=None):
     vmin = 1e-2
     vmax = 40
     ymax = -71.5
-    min_open_cells = 4
     grid = Grid(grid_dir)
-
-    # Identify cavity points with less than 4 open vertical cells
-    num_open_cells = np.sum(np.ceil(grid.hfac), axis=0)
-    pinch_mask = (num_open_cells < min_open_cells)*grid.ice_mask
-    print('Masking '+str(np.count_nonzero(pinch_mask))+' cells which have water columns too thin')
-    final_mask = grid.ice_mask*np.invert(pinch_mask)
+    ice_mask = grid.get_ice_mask(shelf=shelf)
 
     f = loadmat(buttressing_file)
     buttressing = f['BFRN']
@@ -3706,7 +3700,7 @@ def melt_trend_buttressing (fig_name=None):
     bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing_fill, grid.lon_1d, grid.lat_1d, fill_value=0)
     #bin_quantity = np.abs(grid.draft)
     #bin_quantity = distance_to_grounding_line(grid)
-    bin_quantity = np.ma.masked_where(np.invert(final_mask), bin_quantity)
+    bin_quantity = np.ma.masked_where(np.invert(ice_mask), bin_quantity)
 
     bin_centres = np.logspace(np.log10(vmin), np.log10(vmax), num=num_bins)
     bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
@@ -3719,7 +3713,7 @@ def melt_trend_buttressing (fig_name=None):
         mean_trend = np.mean(trends, axis=0)*1e2
         p_val = ttest_1samp(trends, 0, axis=0)[1]
         mean_trend[p_val > p0] = 0
-        for trend_val_mean, bin_val, dA_val, in zip(mean_trend[final_mask], bin_quantity[final_mask], grid.dA[final_mask]):
+        for trend_val_mean, bin_val, dA_val, in zip(mean_trend[ice_mask], bin_quantity[ice_mask], grid.dA[ice_mask]):
             bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
             bin_trends_mean[bin_index] += trend_val_mean*dA_val
             bin_area[bin_index] += dA_val
