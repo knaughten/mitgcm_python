@@ -534,7 +534,7 @@ def interp_to_depth (data, z0, grid, time_dependent=False, gtype='t'):
 # Interpolate from a non-regular grid (structured but not regular in lat-lon, e.g. curvilinear) to a another grid (regular or non-regular is fine).
 # The input lat and lon arrays should be 2D for the source grid, and either 1D (if regular) or 2D for the target grid.
 # Fill anything outside the bounds of the source grid with fill_value. If fill_mask=True, fill them with the nearest neighbours instead.
-def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, fill_mask=False):
+def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_lat, fill_value=-9999, fill_mask=False, method='linear'):
 
     from scipy.interpolate import griddata
 
@@ -557,7 +557,7 @@ def interp_nonreg_xy (source_lon, source_lat, source_data, target_lon, target_la
     source_values = np.ravel(source_data[~missing])
     
     # Interpolate
-    data_interp = griddata(source_points, source_values, target_points, method='linear', fill_value=fill_value)
+    data_interp = griddata(source_points, source_values, target_points, fill_value=fill_value, method=method)
     if fill_mask:
         data_interp_2 = griddata(source_points, source_values, target_points, method='nearest')
         index = data_interp==fill_value
