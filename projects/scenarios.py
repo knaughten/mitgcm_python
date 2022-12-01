@@ -3683,7 +3683,14 @@ def melt_trend_buttressing (fig_name=None):
     vmin = 1e-2
     vmax = 40
     ymax = -71.5
+    min_open_cells = 4
     grid = Grid(grid_dir)
+
+    # Identify cavity points with less than 4 open vertical cells
+    num_open_cells = np.sum(np.ceil(grid.hfac), axis=0)
+    pinch_mask = (num_open_cells < min_open_cells)*grid.ice_mask
+    print('Masking '+str(np.count_nonzero(pinch_mask))+' cells which have water columns too thin')
+    final_mask = grid.ice_mask*np.invert(pinch_mask)
 
     f = loadmat(buttressing_file)
     buttressing = f['BFRN']
@@ -3699,47 +3706,27 @@ def melt_trend_buttressing (fig_name=None):
     bin_quantity = interp_nonreg_xy(rlon, rlat, buttressing_fill, grid.lon_1d, grid.lat_1d, fill_value=0)
     #bin_quantity = np.abs(grid.draft)
     #bin_quantity = distance_to_grounding_line(grid)
-    bin_quantity = np.ma.masked_where(np.invert(grid.ice_mask), bin_quantity)
+    bin_quantity = np.ma.masked_where(np.invert(final_mask), bin_quantity)
 
     bin_centres = np.logspace(np.log10(vmin), np.log10(vmax), num=num_bins)
     bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
-    #bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
-    #bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    bin_trends_min_all = []
-    bin_trends_max_all = []
     bin_trends_mean_all = []
     for n in range(num_periods):
         bin_trends_mean = np.zeros(num_bins)
-        bin_trends_min = np.zeros(num_bins)
-        bin_trends_max = np.zeros(num_bins)
         bin_area = np.zeros(num_bins)
         trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
         trends = read_netcdf(trend_file, 'ismr_trend')
         mean_trend = np.mean(trends, axis=0)*1e2
-        min_trend = np.amin(trends, axis=0)*1e2
-        max_trend = np.amax(trends, axis=0)*1e2
         p_val = ttest_1samp(trends, 0, axis=0)[1]
         mean_trend[p_val > p0] = 0
-        min_trend[p_val > p0] = 0
-        max_trend[p_val > p0] = 0
-        for trend_val_mean, trend_val_min, trend_val_max, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], min_trend[grid.ice_mask], max_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
+        for trend_val_mean, bin_val, dA_val, in zip(mean_trend[final_mask], bin_quantity[final_mask], grid.dA[final_mask]):
             bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
             bin_trends_mean[bin_index] += trend_val_mean*dA_val
-            bin_trends_min[bin_index] += trend_val_min*dA_val
-            bin_trends_max[bin_index] += trend_val_max*dA_val
             bin_area[bin_index] += dA_val
         bin_trends_mean /= bin_area
-        bin_trends_min /= bin_area
-        bin_trends_max /= bin_area
         bin_trends_mean = np.ma.masked_where(bin_area==0, bin_trends_mean)
-        bin_trends_min = np.ma.masked_where(bin_area==0, bin_trends_min)
-        bin_trends_max = np.ma.masked_where(bin_area==0, bin_trends_max)
         bin_trends_mean = np.ma.masked_where(bin_trends_mean==0, bin_trends_mean)
-        bin_trends_min = np.ma.masked_where(bin_trends_mean==0, bin_trends_min)
-        bin_trends_max = np.ma.masked_where(bin_trends_mean==0, bin_trends_max)
         bin_trends_mean_all.append(bin_trends_mean)
-        bin_trends_min_all.append(bin_trends_min)
-        bin_trends_max_all.append(bin_trends_max)
 
     fig = plt.figure(figsize=(7,7))
     gs = plt.GridSpec(2,1)
@@ -3769,7 +3756,6 @@ def melt_trend_buttressing (fig_name=None):
     ax = plt.subplot(gs[1,0])
     for n in range(num_periods):
         ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
-        ax.fill_between(bin_centres, bin_trends_min_all[n], bin_trends_max_all[n], color=colours[n], alpha=0.3)
     ax.set_xscale('log')
     xticks = ax.get_xticks()
     xtick_labels = []
