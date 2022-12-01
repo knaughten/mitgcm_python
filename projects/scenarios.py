@@ -3459,6 +3459,12 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
 # Main text figure with option for supplementary figure to show extra simulations
 def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
 
+    if region == 'amundsen_shelf':
+        hovmoller_file_main = '/output/hovmoller_shelf.nc'
+        hovmoller_file_pace = '/output/hovmoller3.nc'
+    elif region == 'pine_island_bay':
+        hovmoller_file_main = '/output/hovmoller.nc'
+        hovmoller_file_pace = '/output/hovmoller1.nc'
     if supp:
         expt_names = ['Historical', 'Historical fixed BCs', 'PACE', 'RCP 8.5', 'RCP 8.5 fixed BCs']
         num_expt = len(expt_names)
@@ -3468,8 +3474,8 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
         expt_ens_prec = [3]*num_expt
         expt_ens_prec[2] = 2
         expt_dir_tails = ['_O', '_noOBC', '', '_O', '_noOBC']
-        hovmoller_file = ['/output/hovmoller_shelf.nc']*num_expt
-        hovmoller_file[2] = '/output/hovmoller3.nc'
+        hovmoller_file = [hovmoller_file_main]*num_expt
+        hovmoller_file[2] = hovmoller_file_pace
         num_ens = [10, 5, 20, 10, 5]
         start_years = [1920, 1920, 1920, 2006, 2006]
         end_years = [2005, 2005, 2013, 2100, 2100]
@@ -3481,7 +3487,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
         expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
         expt_ens_prec = [3]*num_expt
         expt_dir_tails = ['_O']*num_expt
-        hovmoller_file = ['/output/hovmoller_shelf.nc']*num_expt
+        hovmoller_file = [hovmoller_file_main]*num_expt
         num_ens = [10, 5, 10, 10, 10]
         start_years = [1920, 2006, 2006, 2006, 2006]
         end_years = [2005, 2100, 2100, 2080, 2100]
@@ -3570,7 +3576,11 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
             ax.set_yticklabels([])
         ax.axhline(np.abs(mean_draft), color='black', linestyle='dashed', linewidth=1)
         ax.axhline(np.abs(mean_bathy), color='black', linestyle='dashed', linewidth=1)
-    ax.legend(loc='lower center', bbox_to_anchor=(-0.65,-0.25), fontsize=12, ncol=num_expt)
+    if supp:
+        legend_fontsize = 10
+    else:
+        legend_fontsize = 12
+    ax.legend(loc='lower center', bbox_to_anchor=(-0.65,-0.25), fontsize=legend_fontsize, ncol=num_expt)
     plt.suptitle('Temperature profiles over '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
@@ -3664,10 +3674,10 @@ def melt_trend_buttressing (fig_name=None):
     grid_dir = 'PAS_grid/'
     trend_dir='precomputed_trends/'
     num_bins = 40
-    buttressing_file='/data/oceans_output/shelf/kaight/BFRN/AMUND_BFRN_Bedmachinev2_withLatLon.mat'
-    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS', 'PACE']
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'PACE']
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65), (0.34,0.71,0.91)]
+    buttressing_file='/data/oceans_output/shelf/kaight/BFRN/AMUND_BFRN_Bedmachinev2_mainGL_withLatLon.mat'
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     num_periods = len(periods)
     p0 = 0.05
     vmin = 1e-2
@@ -3695,25 +3705,43 @@ def melt_trend_buttressing (fig_name=None):
     bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
     #bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)
     #bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    bin_trends_all = []
+    bin_trends_min_all = []
+    bin_trends_max_all = []
+    bin_trends_mean_all = []
     for n in range(num_periods):
-        bin_trends = np.zeros(num_bins)
+        bin_trends_mean = np.zeros(num_bins)
+        bin_trends_min = np.zeros(num_bins)
+        bin_trends_max = np.zeros(num_bins)
         bin_area = np.zeros(num_bins)
         trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
         trends = read_netcdf(trend_file, 'ismr_trend')
         mean_trend = np.mean(trends, axis=0)*1e2
+        min_trend = np.amin(trends, axis=0)*1e2
+        max_trend = np.amax(trends, axis=0)*1e2
         p_val = ttest_1samp(trends, 0, axis=0)[1]
         mean_trend[p_val > p0] = 0
-        for trend_val, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
+        min_trend[p_val > p0] = 0
+        max_trend[p_val > p0] = 0
+        for trend_val_mean, trend_val_min, trend_val_max, bin_val, dA_val, in zip(mean_trend[grid.ice_mask], min_trend[grid.ice_mask], max_trend[grid.ice_mask], bin_quantity[grid.ice_mask], grid.dA[grid.ice_mask]):
             bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
-            bin_trends[bin_index] += trend_val*dA_val
+            bin_trends_mean[bin_index] += trend_val_mean*dA_val
+            bin_trends_min[bin_index] += trend_val_min*dA_val
+            bin_trends_max[bin_index] += trend_val_max*dA_val
             bin_area[bin_index] += dA_val
-        bin_trends /= bin_area
-        bin_trends = np.ma.masked_where(bin_area==0, bin_trends)
-        bin_trends = np.ma.masked_where(bin_trends==0, bin_trends)
-        bin_trends_all.append(bin_trends)
+        bin_trends_mean /= bin_area
+        bin_trends_min /= bin_area
+        bin_trends_max /= bin_area
+        bin_trends_mean = np.ma.masked_where(bin_area==0, bin_trends_mean)
+        bin_trends_min = np.ma.masked_where(bin_area==0, bin_trends_min)
+        bin_trends_max = np.ma.masked_where(bin_area==0, bin_trends_max)
+        bin_trends_mean = np.ma.masked_where(bin_trends_mean==0, bin_trends_mean)
+        bin_trends_min = np.ma.masked_where(bin_trends_mean==0, bin_trends_min)
+        bin_trends_max = np.ma.masked_where(bin_trends_mean==0, bin_trends_max)
+        bin_trends_mean_all.append(bin_trends_mean)
+        bin_trends_min_all.append(bin_trends_min)
+        bin_trends_max_all.append(bin_trends_max)
 
-    fig = plt.figure(figsize=(7,8))
+    fig = plt.figure(figsize=(7,7))
     gs = plt.GridSpec(2,1)
     gs.update(left=0.1, right=0.88, bottom=0.15, top=0.95, hspace=0.25)
     # Plot BFRN
@@ -3739,9 +3767,9 @@ def melt_trend_buttressing (fig_name=None):
     cax.set_yticklabels(ctick_labels)
     # Plot melt as function of BFRN
     ax = plt.subplot(gs[1,0])
-    # Hack the order of plotting so the legend is intuitive
-    for n in [0, 2, 5, 3, 1, 4]:
-        ax.plot(bin_centres, bin_trends_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+    for n in range(num_periods):
+        ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+        ax.fill_between(bin_centres, bin_trends_min_all[n], bin_trends_max_all[n], color=colours[n], alpha=0.3)
     ax.set_xscale('log')
     xticks = ax.get_xticks()
     xtick_labels = []
@@ -3755,7 +3783,7 @@ def melt_trend_buttressing (fig_name=None):
     ax.set_xlabel('Buttressing flux response number', fontsize=10)
     ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
     ax.set_title(r'$\bf{b}$. '+'Melting trends as function of buttressing', fontsize=14)
-    ax.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, -0.42))
+    ax.legend(ncol=num_periods, loc='lower center', bbox_to_anchor=(0.5, -0.33))
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
