@@ -3690,7 +3690,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
     buttressing = f['BFRN']
     rlat = f['lat']
     rlon = f['lon']
-    buttressing_mask = np.isnan(buttressing)
+    buttressing_mask = (np.isnan(buttressing) + np.isinf(buttressing)).astype(bool)
     buttressing[buttressing_mask]=0
     # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
     fill = np.ceil(np.minimum(interp_reg_xy(grid.lon_1d, grid.lat_1d, grid.ice_mask.astype(float), rlon, rlat, fill_value=0),1))

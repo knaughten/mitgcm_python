@@ -241,6 +241,41 @@ def polar_stereo (lon, lat, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     return x, y
 
 
+# Convert from polar stereographic coordinates to lat-lon. Adapated from the function psxy2ll.m used by Ua (with credits to Craig Stewart, Adrian Jenkins, Pierre Dutrieux) and made more consistent with naming convections of function above.
+def polar_stereo_inv (x, y, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
+
+    x = np.copy(x)
+    y = np.copy(y)
+    if lat_c < 0:
+        pm = -1
+    else:
+        pm = 1
+    lat_c = lat_c*pm*deg2rad
+    lon0 = lon0*pm*deg2rad
+    epsilon = 1e-12
+
+    tc = np.tan(np.pi/4 - lat_c/2)/((1 - e*np.sin(lat_c))/(1 + e*np.sin(lat_c)))**(e/2)
+    mc = np.cos(lat_c)/np.sqrt(1 - e**2*(np.sin(lat_c))**2)
+    rho = np.sqrt(x**2 + y**2)
+    t = rho*tc/(a*mc)
+    lon = lon0 + np.arctan2(x,y)
+
+    lat_new = np.pi/2 - 2*np.arctan(t)
+    dlat = 2*epsilon
+    while dlat > epsilon:
+        lat_old = lat_new
+        lat_new = np.pi/2 - 2*np.arctan(t*((1 - e*np.sin(lat_old))/(1 + e*np.sin(lat_old)))**(e/2))
+        dlat = lat_new - lat_old
+    lat = lat_new
+
+    lat = lat*pm/deg2rad
+    lon = lon*pm/deg2rad
+
+    return lon, lat
+
+    
+
+
 # Determine the x and y coordinates based on whether the user wants polar stereographic or not.
 def get_x_y (lon, lat, pster=False):
     if pster:
