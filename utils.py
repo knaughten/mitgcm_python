@@ -17,7 +17,7 @@ def fix_lon_range (lon, max_lon=180):
             lon[index] = lon[index] - 360
         except(TypeError):
             # lon could be a single value
-            return fix_lon_range([lon], max_lon=max_lon)[0]
+            return fix_lon_range(np.array([lon]), max_lon=max_lon)[0]
         index = lon < max_lon-360
         lon[index] = lon[index] + 360
     return lon
