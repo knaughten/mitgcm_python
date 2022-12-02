@@ -13,7 +13,11 @@ def fix_lon_range (lon, max_lon=180):
 
     if max_lon is not None:
         index = lon >= max_lon
-        lon[index] = lon[index] - 360
+        try:
+            lon[index] = lon[index] - 360
+        except(TypeError):
+            # lon could be a single value
+            return fix_lon_range([lon], max_lon=max_lon)[0]
         index = lon < max_lon-360
         lon[index] = lon[index] + 360
     return lon
@@ -251,7 +255,7 @@ def polar_stereo_inv (x, y, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     else:
         pm = 1
     lat_c = lat_c*pm*deg2rad
-    lon0 = lon0*pm*deg2rad
+    lon0 = lon0*deg2rad
     epsilon = 1e-12
 
     tc = np.tan(np.pi/4 - lat_c/2)/((1 - e*np.sin(lat_c))/(1 + e*np.sin(lat_c)))**(e/2)
@@ -269,7 +273,7 @@ def polar_stereo_inv (x, y, a=6378137., e=0.08181919, lat_c=-71, lon0=0):
     lat = lat_new
 
     lat = lat*pm/deg2rad
-    lon = lon*pm/deg2rad
+    lon = fix_lon_range(lon/deg2rad)
 
     return lon, lat
 
