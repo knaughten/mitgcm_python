@@ -3666,7 +3666,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3688,6 +3688,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
     vmax = 40
     ymax = -71.5
     n_subgrid = 10
+    test_distinct = group1 is not None and group2 is not None
     
     grid = Grid(grid_dir)
     ice_mask = grid.get_ice_mask(shelf=shelf)
@@ -3716,15 +3717,23 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
     else:
         bin_centres = np.logspace(np.log10(vmin), np.log10(vmax), num=num_bins)
         bin_edges = np.concatenate(([np.amin(bin_quantity)], 0.5*(bin_centres[:-1] + bin_centres[1:]), [np.amax(bin_quantity)]))
-    bin_trends_mean_all = []
-    for n in range(num_periods):
+
+    # Inner function to read trends, for a single member or the mean for all members in the given period.
+    def read_trends (period, ens='all'):
+        trend_file = real_dir(trend_dir) + 'ismr_trend_' + period + '.nc'
+        trends = read_netcdf(trend_file, 'ismr_trend')
+        if ens == 'all':
+            mean_trend = np.mean(trends, axis=0)*1e2
+            p_val = ttest_1samp(trends, 0, axis=0)[1]
+            mean_trend[p_val > p0] = 0
+            return mean_trend
+        else:
+            return trends[ens,:]
+
+    # Inner function to bin the given mean trends into classes
+    def bin_trends (mean_trend):
         bin_trends_mean = np.zeros(num_bins)
         bin_area = np.zeros(num_bins)
-        trend_file = real_dir(trend_dir) + 'ismr_trend_' + periods[n] + '.nc'
-        trends = read_netcdf(trend_file, 'ismr_trend')
-        mean_trend = np.mean(trends, axis=0)*1e2
-        p_val = ttest_1samp(trends, 0, axis=0)[1]
-        mean_trend[p_val > p0] = 0
         for trend_val_mean, bin_val, dA_val, in zip(mean_trend[ice_mask], bin_quantity[ice_mask], grid.dA[ice_mask]):
             bin_index = np.nonzero(bin_edges >= bin_val)[0][0]-1
             bin_trends_mean[bin_index] += trend_val_mean*dA_val
@@ -3732,8 +3741,73 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         bin_trends_mean /= bin_area
         bin_trends_mean = np.ma.masked_where(bin_area==0, bin_trends_mean)
         bin_trends_mean = np.ma.masked_where(bin_trends_mean==0, bin_trends_mean)
-        bin_trends_mean_all.append(bin_trends_mean)
+        return bin_trends_mean
 
+    # Read and bin the mean trends for each scenario
+    bin_trends_mean_all = []
+    for n in range(num_periods):
+        mean_trend = read_trends(periods[n])
+        bin_trends_mean_all.append(bin_trends(mean_trend))
+
+    # Inner functions to get the ensemble size for the given period, and total for the group of periods.
+    def read_ens_size (period):
+        file_path = real_dir(trend_dir) + 'ismr_trend_' + period + '.nc'
+        return read_netcdf(file_path, 'ismr_trend').shape[0]
+    def read_total_ens_size (group):
+        num_ens = 0
+        for period in group:
+            num_ens += read_ens_size(period)
+        return num_ens 
+
+    # Inner function to read individual trends for each member of each scenario in the group, and then test significance for the whole group at each point. If the group-ensemble mean trend is not significant, set all individual trends to zero at that point.
+    def read_group_trends (group):
+        num_ens = read_total_ens_size(group)
+        trends = np.ma.empty([num_ens, grid.ny, grid.nx])
+        posn = 0
+        for period in group:
+            num_ens_tmp = read_ens_size(period)
+            for e in range(num_ens_tmp):
+                trends[posn+e,:] = read_trends(period, ens=e)
+            posn += num_ens_tmp
+        p_val = ttest_1samp(trends, 0, axis=0)[1]
+        p_val = np.tile(p_val, (num_ens,1,1))
+        trends[p_val > p0] = 0
+        return trends
+
+    # Inner function to read and bin the trends for each member of the group.
+    def read_bin_group_trends (group):
+        trends = read_group_trends(group)
+        num_ens = trends.shape[0]
+        bin_trends_group = np.ma.empty([num_ens, num_bins])
+        for e in range(num_ens):
+            bin_trends_group[e,:] = bin_trends(trends[e,:])
+        return bin_trends_group    
+
+    if test_distinct:
+        # Need to re-read and bin the individual trends for each member.
+        bin_trends_group1 = read_bin_group_trends(group1)
+        bin_trends_group2 = read_bin_group_trends(group2)
+        # Now test if they're distinct in each bin.
+        distinct = np.zeros(num_bins)
+        for n in range(num_bins):
+            sample1 = bin_trends_group1[:,n]
+            sample2 = bin_trends_group2[:,n]
+            min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
+            min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
+            mean1 = np.mean(sample1)
+            mean2 = np.mean(sample2)
+            distinct[n] = ((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1)).astype(float)
+        # Find first bin where they are not distinct.
+        try:
+            n0 = np.where(distinct==0)[0][0]
+            print('Groups are distinct for all bins less than '+str(bin_edges[n0])+'%')
+            if np.count_nonzero(distinct[n0:]) > 0:
+                print('and for '+str(np.count_nonzero(distinct[n0:]))+' bins after that')
+        except(IndexError):
+            print('Groups are always distinct')        
+        # Now get this on the bin edges. If a bin centre is true, want both edges to be true.
+        #distinct_edges = np.concatenate(([distinct[0]], np.maximum(distinct[:-1],distinct[1:]), [distinct[-1]])).astype(bool)
+        
     if supp or depth_classes:
         # Just plot bottom panel - melt as function of BFRN or depth classes
         fig = plt.figure(figsize=(6.5,4.5))
@@ -3747,6 +3821,8 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
             n_vals = range(num_periods)
         for n in n_vals:
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+        #if test_distinct:
+            #ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
         if depth_classes:
             ax.set_xlabel('Ice draft (m)', fontsize=10)
             ax.set_title('Melting trends as function of depth', fontsize=14)
@@ -3802,6 +3878,8 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         ax = plt.subplot(gs[3:,0])
         for n in range(num_periods):
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
+        #if test_distinct:
+            #ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
         ax.set_xscale('log')
         xticks = ax.get_xticks()
         xtick_labels = []
@@ -4070,6 +4148,8 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     finished_plot(fig, fig_name=fig_name)
+
+    
         
     
     
