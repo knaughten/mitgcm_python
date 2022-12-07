@@ -112,8 +112,7 @@ def shade_mask (ax, mask, grid, gtype='t', pster=False, colour='grey', rasterize
     elif colour == 'white':
         rgb = (1, 1, 1)
     else:
-        print(('Error (shade_mask): invalid colour ' + colour))
-        sys.exit()
+        rgb = colour
     # Add to plot        
     img = ax.pcolormesh(x, y, mask_plot, cmap=cl.ListedColormap([rgb]), linewidth=0, rasterized=rasterized)
     img.set_edgecolor('face')

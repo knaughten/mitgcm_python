@@ -24,7 +24,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
 from ..plot_utils.slices import slice_patches, slice_values
-from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries
+from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg, extend_into_mask, interp_nonreg_xy
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
@@ -3666,7 +3666,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all'):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3675,31 +3675,37 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
     trend_dir='precomputed_trends/'
     num_bins = 40
     buttressing_file='/data/oceans_output/shelf/kaight/BFRN/AMUND_BFRN_Bedmachinev2_mainGL_withLatLon.mat'
-    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
-    colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    if supp:
+        periods = ['historical', 'historical_noOBCs', 'PACE', 'LENS', 'LENS_noOBCs']
+        expt_names = ['Historical', 'Historical Fixed BCs', 'PACE Fixed BCs', 'RCP 8.5', 'RCP 8.5 Fixed BCs']
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.8,0.47,0.65), (0.9,0.62,0)]
+    else:
+        periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+        expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
     num_periods = len(periods)
     p0 = 0.05
     vmin = 1e-2
     vmax = 40
     ymax = -71.5
+    n_subgrid = 10
     
     grid = Grid(grid_dir)
     ice_mask = grid.get_ice_mask(shelf=shelf)
     x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
 
     f = loadmat(buttressing_file)
-    buttressing = f['BFRN']
-    x_ua = f['x']
-    y_ua = f['y']
+    buttressing = np.transpose(f['BFRN'])
+    x_ua = f['x'][:,0]
+    y_ua = f['y'][0,:]
     buttressing_mask = (np.isnan(buttressing) + np.isinf(buttressing)).astype(bool)
     buttressing[buttressing_mask]=0
     # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
     fill = np.ceil(np.minimum(interp_nonreg_xy(x_mit, y_mit, grid.ice_mask.astype(float), x_ua, y_ua, fill_value=0),1))
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
-    buttressing_fill = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
+    buttressing_fill = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False) 
     # Now interpolate to MITgcm grid
-    bin_quantity = interp_reg_xy(x_ua, y_ua, buttressing_fill, x_mit, y_mit, fill_value=0, method='nearest')
+    bin_quantity = interp_reg_xy(x_ua, y_ua, buttressing_fill, x_mit, y_mit, fill_value=0)
     #bin_quantity = np.abs(grid.draft)
     #bin_quantity = distance_to_grounding_line(grid)
     bin_quantity = np.ma.masked_where(np.invert(ice_mask), bin_quantity)
@@ -3724,16 +3730,19 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
         bin_trends_mean = np.ma.masked_where(bin_trends_mean==0, bin_trends_mean)
         bin_trends_mean_all.append(bin_trends_mean)
 
-    fig = plt.figure(figsize=(7,7))
-    gs = plt.GridSpec(2,1)
-    gs.update(left=0.1, right=0.88, bottom=0.15, top=0.95, hspace=0.25)
+    fig = plt.figure(figsize=(7,6))
+    gs = plt.GridSpec(7,1)
+    gs.update(left=0.1, right=0.88, bottom=0.15, top=0.95, hspace=3)
     # Plot BFRN
-    ax = plt.subplot(gs[0,0])
+    ax = plt.subplot(gs[0:3,0])
     img = latlon_plot(bin_quantity, grid, norm=cl.LogNorm(), vmin=vmin, vmax=vmax, ymax=ymax, ctype='buttressing', ax=ax, make_cbar=False, title=r'$\bf{a}$. '+'Buttressing flux response number', titlesize=14)
+    # Shade negative values in light blue
+    neg_mask = bin_quantity < 0
+    shade_mask(ax, neg_mask, grid, colour='PowderBlue')
     ytick_labels = ax.get_yticklabels()
     for label in ytick_labels[1::2]:
         label.set_visible(False)
-    cax = fig.add_axes([0.9, 0.6, 0.02, 0.34])
+    cax = fig.add_axes([0.9, 0.665, 0.02, 0.28])
     cbar = plt.colorbar(img, cax=cax, extend='both')
     ctick_labels = cax.get_yticklabels()
     for label in ctick_labels:
@@ -3749,7 +3758,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
                 label.set_text(str(y)+'%')
     cax.set_yticklabels(ctick_labels)
     # Plot melt as function of BFRN
-    ax = plt.subplot(gs[1,0])
+    ax = plt.subplot(gs[3:,0])
     for n in range(num_periods):
         ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
     ax.set_xscale('log')
