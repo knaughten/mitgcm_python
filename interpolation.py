@@ -198,7 +198,7 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3
         # Remask the MaskedArray
         data = ma.masked_where(data==missing_val, data)
 
-    return data
+    return data    
 
 
 # Interpolate a topography field "data" (eg bathymetry, ice shelf draft, mask) to grid cells. We want the area-averaged value over each grid cell. So it's not enough to just interpolate to a point (because the source data might be much higher resolution than the new grid) or to average all points within the cell (because the source data might be lower or comparable resolution). Instead, interpolate to a finer grid within each grid cell (default 10x10) and then average over these points.
