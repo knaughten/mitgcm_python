@@ -3686,7 +3686,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
     
     grid = Grid(grid_dir)
     ice_mask = grid.get_ice_mask(shelf=shelf)
-    x_mit, y_mit = polar_stereo(grid.lon_1d, grid.lat_1d)
+    x_mit, y_mit = polar_stereo(grid.lon_2d, grid.lat_2d)
 
     f = loadmat(buttressing_file)
     buttressing = f['BFRN']
@@ -3695,11 +3695,11 @@ def melt_trend_buttressing (fig_name=None, shelf='all'):
     buttressing_mask = (np.isnan(buttressing) + np.isinf(buttressing)).astype(bool)
     buttressing[buttressing_mask]=0
     # Extend into mask so that we can interpolate to MITgcm ice shelf points without having missing values
-    fill = np.ceil(np.minimum(interp_nonreg_xy(x_mit, y_mit, grid.ice_mask.astype(float), x_ua, ya_ua, fill_value=0),1))
+    fill = np.ceil(np.minimum(interp_nonreg_xy(x_mit, y_mit, grid.ice_mask.astype(float), x_ua, y_ua, fill_value=0),1))
     fill = extend_into_mask(fill, missing_val=0, num_iters=3)
     buttressing_fill = discard_and_fill(buttressing, buttressing==0, fill, missing_val=0, use_3d=False, log=False)
     # Now interpolate to MITgcm grid
-    bin_quantity = interp_reg_xy(x_ua, y_ua, buttressing_fill, x_mit, y_mit, fill_value=0, method='linear')
+    bin_quantity = interp_reg_xy(x_ua, y_ua, buttressing_fill, x_mit, y_mit, fill_value=0, method='nearest')
     #bin_quantity = np.abs(grid.draft)
     #bin_quantity = distance_to_grounding_line(grid)
     bin_quantity = np.ma.masked_where(np.invert(ice_mask), bin_quantity)
