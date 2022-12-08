@@ -4167,10 +4167,11 @@ def hovmoller_anomaly_std (fig_name=None):
     end_years = [2005, 2100, 2100]
     num_expt = len(expt_names)
     grid_dir = 'PAS_grid/'
-    vmin_anom = -1.25
-    vmax_anom = 2
+    vmin_anom = -1
+    vmax_anom = 1.75
     vmin_std = 0
-    vmax_std = 0.75
+    vmax_std = 0.5
+    contours_std = 0.2
     smooth = 12
     grid = Grid(grid_dir)
 
@@ -4178,7 +4179,7 @@ def hovmoller_anomaly_std (fig_name=None):
     anom_plot = []
     std_plot = []
     for n in range(num_expt):
-        for e in range(num_ens[n]):
+        for e in range(num_ens):
             file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + hovmoller_file
             time = netcdf_time(file_path, monthly=False)
             data = read_netcdf(file_path, region+'_'+var)
@@ -4187,7 +4188,7 @@ def hovmoller_anomaly_std (fig_name=None):
             time = time[t_start:t_end]
             if e==0:
                 time_plot.append(time)
-                data_ens = np.ma.empty([num_ens[n], time.size, grid.nz])
+                data_ens = np.ma.empty([num_ens, time.size, grid.nz])
             data_ens[e,:] = data
         if n==0:
             data_baseline = np.ma.mean(data_ens, axis=(0,1))
@@ -4196,34 +4197,40 @@ def hovmoller_anomaly_std (fig_name=None):
 
     fig = plt.figure(figsize=(8,8))
     gs = plt.GridSpec(num_expt,2)
-    gs.update(left=0.07, right=0.85, bottom=0.1, top=0.9, hspace=0.2, wspace=0.05)
-    cax1 = fig.add_axes([0.1, 0.02, 0.3, 0.02])
-    cax2 = fig.add_axes([0.5, 0.02, 0.3, 0.02])
+    gs.update(left=0.07, right=0.97, bottom=0.12, top=0.9, hspace=0.4, wspace=0.05)
+    cax1 = fig.add_axes([0.095, 0.06, 0.4, 0.02])
+    cax2 = fig.add_axes([0.555, 0.06, 0.4, 0.02])
     data_plot = [anom_plot, std_plot]
     vmin = [vmin_anom, vmin_std]
     vmax = [vmax_anom, vmax_std]
     var_title = ['Anomaly', 'Standard deviation']
     cax = [cax1, cax2]
+    ctype = ['plusminus', 'Purples']
+    contours = [None, contours_std]
     for n in range(num_expt):
         for m in range(2):
             ax = plt.subplot(gs[n,m])
-            img = hovmoller_plot(data_plot[m][n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[m], vmax=vmax[m], ctype='plusminus')
-            ax.set_xlim([datetime.date(start_years[n], 1, 1), datetime.date(end_years[n], 12, 31)])
-            ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_years[n], end_years[n], 20)])
+            img = hovmoller_plot(data_plot[m][n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[m], vmax=vmax[m], ctype=ctype[m], contours=contours[m])
+            ax.set_xlim([datetime.date(start_years[n], 1, 1), datetime.date(end_years[n]-1, 12, 31)])
+            if n==0 and m==1:
+                ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_years[n]+20, end_years[n], 20)])
+            else:
+                ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(int(np.ceil(start_years[n]/10)*10), end_years[n], 20)])
             ax.set_yticks([0, -500, -1000])
             if m==0:
-                ax.set_yticklabels(['0', '0.5', '1'])
-                if n==0:
-                    ax.set_ylabel('Depth (km)', fontsize=10)
+                ax.set_yticklabels(['0', '0.5', '1'])                    
             else:
                 ax.set_yticklabels([])
+            if m==0 and n==0:
+                ax.set_ylabel('Depth (km)', fontsize=12)
+            else:
                 ax.set_ylabel('')
             ax.tick_params(direction='in')
             ax.set_xlabel('')
             if n==num_expt-1:
                 cbar = plt.colorbar(img, cax=cax[m], orientation='horizontal', extend='both')
-                plt.text(0, -1.5, var_title[m], ha='center', va='center', transform=fig.transFigure, fontsize=12)
-        plt.text(0, 0.9-0.3*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=14)
+                plt.text(0.3+0.46*m, 0.015, var_title[m], ha='center', va='center', transform=fig.transFigure, fontsize=12)
+        plt.text(0.5, 0.92-0.285*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=14)
     plt.suptitle(var_name+' ('+units+') on '+region_names[region], fontsize=16)
     finished_plot(fig, fig_name=fig_name)
         
