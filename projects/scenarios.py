@@ -4149,6 +4149,88 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
     finished_plot(fig, fig_name=fig_name)
 
+
+# Supplementary figure
+def hovmoller_anomaly_std (fig_name=None):
+
+    var = 'temp'
+    region = 'amundsen_shelf'
+    var_name = 'Temperature'
+    units = deg_string + 'C'
+    hovmoller_file = 'hovmoller_shelf.nc'
+    expt_names = [r'$\bf{a}$. Historical', r'$\bf{b}$. Paris 2'+deg_string+'C', r'$\bf{c}$. RCP 8.5']
+    expt_dir_head = 'PAS_'
+    expt_dir_mids = ['LENS', 'LW2.0_', 'LENS']
+    expt_dir_tail = '_O/output/'
+    num_ens = 10
+    start_years = [1920, 2006, 2006]
+    end_years = [2005, 2100, 2100]
+    num_expt = len(expt_names)
+    grid_dir = 'PAS_grid/'
+    vmin_anom = -1.25
+    vmax_anom = 2
+    vmin_std = 0
+    vmax_std = 0.75
+    smooth = 12
+    grid = Grid(grid_dir)
+
+    time_plot = []
+    anom_plot = []
+    std_plot = []
+    for n in range(num_expt):
+        for e in range(num_ens[n]):
+            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + hovmoller_file
+            time = netcdf_time(file_path, monthly=False)
+            data = read_netcdf(file_path, region+'_'+var)
+            t_start, t_end = index_period(time, start_years[n], end_years[n])
+            data = data[t_start:t_end,:]
+            time = time[t_start:t_end]
+            if e==0:
+                time_plot.append(time)
+                data_ens = np.ma.empty([num_ens[n], time.size, grid.nz])
+            data_ens[e,:] = data
+        if n==0:
+            data_baseline = np.ma.mean(data_ens, axis=(0,1))
+        anom_plot.append(np.ma.mean(data_ens, axis=0) - data_baseline[None,:])
+        std_plot.append(np.ma.std(data_ens, axis=0))
+
+    fig = plt.figure(figsize=(8,8))
+    gs = plt.GridSpec(num_expt,2)
+    gs.update(left=0.07, right=0.85, bottom=0.1, top=0.9, hspace=0.2, wspace=0.05)
+    cax1 = fig.add_axes([0.1, 0.02, 0.3, 0.02])
+    cax2 = fig.add_axes([0.5, 0.02, 0.3, 0.02])
+    data_plot = [anom_plot, std_plot]
+    vmin = [vmin_anom, vmin_std]
+    vmax = [vmax_anom, vmax_std]
+    var_title = ['Anomaly', 'Standard deviation']
+    cax = [cax1, cax2]
+    for n in range(num_expt):
+        for m in range(2):
+            ax = plt.subplot(gs[n,m])
+            img = hovmoller_plot(data_plot[m][n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[m], vmax=vmax[m], ctype='plusminus')
+            ax.set_xlim([datetime.date(start_years[n], 1, 1), datetime.date(end_years[n], 12, 31)])
+            ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_years[n], end_years[n], 20)])
+            ax.set_yticks([0, -500, -1000])
+            if m==0:
+                ax.set_yticklabels(['0', '0.5', '1'])
+                if n==0:
+                    ax.set_ylabel('Depth (km)', fontsize=10)
+            else:
+                ax.set_yticklabels([])
+                ax.set_ylabel('')
+            ax.tick_params(direction='in')
+            ax.set_xlabel('')
+            if n==num_expt-1:
+                cbar = plt.colorbar(img, cax=cax[m], orientation='horizontal', extend='both')
+                plt.text(0, -1.5, var_title[m], ha='center', va='center', transform=fig.transFigure, fontsize=12)
+        plt.text(0, 0.9-0.3*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=14)
+    plt.suptitle(var_name+' ('+units+') on '+region_names[region], fontsize=16)
+    finished_plot(fig, fig_name=fig_name)
+        
+                    
+        
+    
+
     
         
     
