@@ -3955,7 +3955,7 @@ def sfc_forcing_trends (var, fig_name=None):
         if var == 'wind':
             trends_u = read_single_trend(var_name_u)
             trends_v = read_single_trend(var_name_v)
-            index = np.abs(data_plot[t,:]) < threshold
+            index = ((np.abs(data_plot[t,:]) < threshold) + (trends_u==0)*(trends_v==0)).astype(bool)
             trends_u = np.ma.masked_where(index, trends_u)
             trends_v = np.ma.masked_where(index, trends_v)
             data_plot_u[t,:] = trends_u
