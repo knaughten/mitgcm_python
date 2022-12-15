@@ -3106,7 +3106,7 @@ def trend_box_plot (fig_name=None):
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
     var_titles = ['Trend over continental shelf,\n200-700m ', 'Basal mass loss trend\nfrom Dotson to Cosgrove']
     units = [deg_string+'C/century', '%/century']
-    expt_names = ['Historical', 'Historical\nfixed BCs', 'PACE', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nfixed BCs']
+    expt_names = ['Historical', 'Historical\nFixed BCs', 'PACE\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
     num_expt = len(expt_names)
     expt_dir_heads = ['PAS_']*num_expt
     expt_dir_heads[2] = '../mitgcm/PAS_'
@@ -4229,9 +4229,9 @@ def hovmoller_anomaly_std (fig_name=None):
             ax.set_xlabel('')
             if n==num_expt-1:
                 cbar = plt.colorbar(img, cax=cax[m], orientation='horizontal', extend='both')
-                plt.text(0.3+0.46*m, 0.015, var_title[m], ha='center', va='center', transform=fig.transFigure, fontsize=12)
-        plt.text(0.5, 0.92-0.285*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=14)
-    plt.suptitle(var_name+' ('+units+') on '+region_names[region], fontsize=16)
+                plt.text(0.3+0.46*m, 0.015, var_title[m], ha='center', va='center', transform=fig.transFigure, fontsize=14)
+        plt.text(0.5, 0.92-0.285*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=16)
+    plt.suptitle(var_name+' ('+units+') on '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name)
         
                     
