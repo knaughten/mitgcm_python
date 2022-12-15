@@ -3666,7 +3666,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3804,9 +3804,10 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
             if np.count_nonzero(distinct[n0:]) > 0:
                 print('and for '+str(np.count_nonzero(distinct[n0:]))+' bins after that')
         except(IndexError):
-            print('Groups are always distinct')        
-        # Now get this on the bin edges. If a bin centre is true, want both edges to be true.
-        #distinct_edges = np.concatenate(([distinct[0]], np.maximum(distinct[:-1],distinct[1:]), [distinct[-1]])).astype(bool)
+            print('Groups are always distinct')
+        if plot_distinct:
+            # Now get this on the bin edges. If a bin centre is true, want both edges to be true.
+            distinct_edges = np.concatenate(([distinct[0]], np.maximum(distinct[:-1],distinct[1:]), [distinct[-1]])).astype(bool)
         
     if supp or depth_classes:
         # Just plot bottom panel - melt as function of BFRN or depth classes
@@ -3821,8 +3822,9 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
             n_vals = range(num_periods)
         for n in n_vals:
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
-        #if test_distinct:
-            #ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+        if test_distinct and plot_distinct:
+            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+        ax.grid(linestyle='dotted')
         if depth_classes:
             ax.set_xlabel('Ice draft (m)', fontsize=10)
             ax.set_title('Melting trends as function of depth', fontsize=14)
@@ -3836,7 +3838,6 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
                 else:
                     xtick_labels.append(str(x)+'%')
             ax.set_xticklabels(xtick_labels)
-            ax.grid(linestyle='dotted')
             ax.set_xlabel('Buttressing flux response number', fontsize=10)
             ax.set_title('Melting trends as function of buttressing', fontsize=14)
         ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
@@ -3878,8 +3879,8 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         ax = plt.subplot(gs[3:,0])
         for n in range(num_periods):
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
-        #if test_distinct:
-            #ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+        if test_distinct and plot_distinct:
+            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
         ax.set_xscale('log')
         xticks = ax.get_xticks()
         xtick_labels = []
