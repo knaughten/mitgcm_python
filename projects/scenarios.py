@@ -3500,16 +3500,16 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
 
     # Get mask of all ice front points
-    icefront_mask = grid.get_icefront_mask()
+    #icefront_mask = grid.get_icefront_mask()
     # Mask out everywhere outside given region
-    [xmin, xmax, ymin, ymax] = region_bounds[region]
-    outside_region = np.invert((grid.lon_2d>=xmin)*(grid.lon_2d<=xmax)*(grid.lat_2d>=ymin)*(grid.lat_2d<=ymax))
-    icefront_mask[outside_region] = 0
-    icefront_mask = icefront_mask.astype(bool)
-    draft_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.draft)
-    bathy_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.bathy)
-    mean_draft = area_average(draft_icefront, grid)
-    mean_bathy = area_average(bathy_icefront, grid)   
+    #[xmin, xmax, ymin, ymax] = region_bounds[region]
+    #outside_region = np.invert((grid.lon_2d>=xmin)*(grid.lon_2d<=xmax)*(grid.lat_2d>=ymin)*(grid.lat_2d<=ymax))
+    #icefront_mask[outside_region] = 0
+    #icefront_mask = icefront_mask.astype(bool)
+    #draft_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.draft)
+    #bathy_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.bathy)
+    #mean_draft = area_average(draft_icefront, grid)
+    #mean_bathy = area_average(bathy_icefront, grid)   
 
     mean_profiles = np.ma.empty([num_expt, grid.nz])
     std_profiles = np.ma.empty([num_expt, grid.nz])
@@ -3574,8 +3574,8 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
             ax.set_ylabel('depth (m)', fontsize=12)
         else:
             ax.set_yticklabels([])
-        ax.axhline(np.abs(mean_draft), color='black', linestyle='dashed', linewidth=1)
-        ax.axhline(np.abs(mean_bathy), color='black', linestyle='dashed', linewidth=1)
+        ax.axhline(200, color='black', linestyle='dashed', linewidth=1)
+        ax.axhline(700, color='black', linestyle='dashed', linewidth=1)
     if supp:
         legend_fontsize = 10
     else:
