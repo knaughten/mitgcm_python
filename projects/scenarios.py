@@ -31,7 +31,7 @@ from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
 from ..timeseries import monthly_to_annual
-from ..calculus import area_average
+from ..calculus import area_average, vertical_integral
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -3808,6 +3808,9 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         if plot_distinct:
             # Now get this on the bin edges. If a bin centre is true, want both edges to be true.
             distinct_edges = np.concatenate(([distinct[0]], np.maximum(distinct[:-1],distinct[1:]), [distinct[-1]])).astype(bool)
+            if group1 == ['LW1.5', 'LW2.0', 'MENS'] and group2 == ['LENS']:
+                max_distinct = bin_edges[n0]
+                distinct_label_posn = bin_edges[n0//2]
         
     if supp or depth_classes:
         # Just plot bottom panel - melt as function of BFRN or depth classes
@@ -3823,7 +3826,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         for n in n_vals:
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
         if test_distinct and plot_distinct:
-            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())            
         ax.grid(linestyle='dotted')
         if depth_classes:
             ax.set_xlabel('Ice draft (m)', fontsize=10)
@@ -3880,7 +3883,11 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         for n in range(num_periods):
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
         if test_distinct and plot_distinct:
-            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+            if group1 == ['LW1.5', 'LW2.0', 'MENS'] and group2 == ['LENS']:
+                ax.axvline(max_distinct, color='black', linestyle='dashed', linewidth=1)
+                plt.text(distinct_label_posn, 9, 'RCP 8.5 distinct', fontsize=12, color=colours[-1], ha='center', va='center', weight='bold')
+            else:
+                ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())    
         ax.set_xscale('log')
         xticks = ax.get_xticks()
         xtick_labels = []
@@ -4234,6 +4241,59 @@ def hovmoller_anomaly_std (fig_name=None):
         plt.text(0.5, 0.92-0.285*n, expt_names[n], ha='center', va='center', transform=fig.transFigure, fontsize=16)
     plt.suptitle(var_name+' ('+units+') on '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name)
+
+
+def plot_barotropic_transport_mit (expt_name, num_ens, start_year, end_year, fig_name=None):
+
+    grid_dir = 'PAS_grid/'
+    if expt_name == 'LENS':
+        expt_dir_head = 'PAS_'+expt_name
+    elif expt_name in ['MENS', 'LW1.5', 'LW2.0']:
+        ens_dir_head = 'PAS_'+expt_name+'_'
+    else:
+        print('Error (plot_barotropic_transport_mit): invalid expt_name '+expt_name)
+        sys.exit()
+    expt_dir = [expt_dir_head+str(n+1).zfill(3)+'_O/output/' for n in range(num_ens)]
+    
+    grid = Grid(grid_dir)
+    dz = z_to_xyz(grid.dz, grid)
+    dy = grid.dy_w
+    strf_accum = np.ma.zeros([grid.ny, grid.nx])
+
+    for n in range(num_ens):
+        for year in range(start_year, end_year+1):
+            file_path = expt_dir[n] + str(year) + '01/MITgcm/output.nc'
+            # Calculate based on annual means of u
+            u = mask_3d(read_netcdf(file_path, 'UVEL', time_average=True), grid, gtype='u')
+            zonal_trans = vertical_integral(u*dz, grid, gtype='u')
+            strf_accum += np.ma.cumsum(zonal_trans*dy, axis=0)*1e-6
+    strf = strf_accum /= (num_ens*(end_year-start_year+1))
+
+    latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name)
+                
+
+
+def plot_barotropic_transport_cesm (expt_name, num_ens, start_year, end_year, fig_name=None):
+
+    pass
+
+    # Read grid, set up dz and dy
+    # Loop over members
+    # Loop over years
+    # Read u
+    # Depth-integral of u*dz for zonal transport
+    # Indefinite integral (cumsum) from south to north of zonal transport * dy
+    # Convert from m^3/s to Sv (*1e-6)
+    # Annual mean
+    # Accumulate mean
+    # Time-mean, ensemble mean
+    # Plot all longitudes but split at 0E
+    # Contour 0 Sv
+    
+
+    
+
+
         
                     
         
