@@ -4243,7 +4243,7 @@ def hovmoller_anomaly_std (fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-def plot_barotropic_transport_mit (expt_name, num_ens, start_year, end_year, fig_name=None):
+def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name=None):
 
     grid_dir = 'PAS_grid/'
     if expt_name == 'LENS':
@@ -4267,13 +4267,13 @@ def plot_barotropic_transport_mit (expt_name, num_ens, start_year, end_year, fig
             u = mask_3d(read_netcdf(file_path, 'UVEL', time_average=True), grid, gtype='u')
             zonal_trans = vertical_integral(u*dz, grid, gtype='u')
             strf_accum += np.ma.cumsum(zonal_trans*dy, axis=0)*1e-6
-    strf = strf_accum /= (num_ens*(end_year-start_year+1))
+    strf = strf_accum/(num_ens*(end_year-start_year+1))
 
     latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name)
                 
 
 
-def plot_barotropic_transport_cesm (expt_name, num_ens, start_year, end_year, fig_name=None):
+def plot_barotropic_strf_cesm (expt_name, num_ens, start_year, end_year, fig_name=None):
 
     pass
 
