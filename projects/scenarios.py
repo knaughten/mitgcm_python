@@ -1545,12 +1545,12 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['UVEL', 'VVEL'] #['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
+    var_names = ['ismr'] #['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     start_years = [1920, 2006, 2006, 2006, 2006]
-    end_years = [2005, 2100, 2080, 2100, 2100]
+    end_years = [2005, 2080, 2080, 2080, 2080] #[2005, 2100, 2080, 2100, 2100]
     num_periods = len(periods)
 
     for var in var_names:
@@ -1568,9 +1568,9 @@ def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MEN
             gtype = 'v'
         else:
             gtype = 't'
-        for t in range(1, num_periods-1): #num_periods):
+        for t in range(1, num_periods): #num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
-            out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
+            out_file = out_dir + var + '_trend_' + periods[t] + '_to2080.nc'
             if periods[t] in ['historical', 'LENS']:
                 if periods[t] == 'historical':
                     num_ens = num_hist
@@ -4243,62 +4243,36 @@ def hovmoller_anomaly_std (fig_name=None):
     finished_plot(fig, fig_name=fig_name)
 
 
-def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name=None):
+def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name=None, vmin=None, vmax=None, ymax=None):
 
     grid_dir = 'PAS_grid/'
     if expt_name == 'LENS':
         expt_dir_head = 'PAS_'+expt_name
     elif expt_name in ['MENS', 'LW1.5', 'LW2.0']:
-        ens_dir_head = 'PAS_'+expt_name+'_'
+        expt_dir_head = 'PAS_'+expt_name+'_'
     else:
         print('Error (plot_barotropic_transport_mit): invalid expt_name '+expt_name)
         sys.exit()
     expt_dir = [expt_dir_head+str(n+1).zfill(3)+'_O/output/' for n in range(num_ens)]
     
     grid = Grid(grid_dir)
-    dz = z_to_xyz(grid.dz, grid)
+    wct = abs(mask_land(grid.draft-grid.bathy, grid))
     dy = grid.dy_w
     strf_accum = np.ma.zeros([grid.ny, grid.nx])
 
     for n in range(num_ens):
+        print('Processing member '+str(n+1))
         for year in range(start_year, end_year+1):
+            print('...'+str(year))
             file_path = expt_dir[n] + str(year) + '01/MITgcm/output.nc'
             # Calculate based on annual means of u
             u = mask_3d(read_netcdf(file_path, 'UVEL', time_average=True), grid, gtype='u')
-            zonal_trans = vertical_integral(u*dz, grid, gtype='u')
-            strf_accum += np.ma.cumsum(zonal_trans*dy, axis=0)*1e-6
+            ubar = vertical_average(u, grid, gtype='u')
+            strf_accum += np.ma.cumsum(ubar*wct*dy, axis=0)*1e-6
     strf = strf_accum/(num_ens*(end_year-start_year+1))
 
-    latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name)
-                
-
-
-def plot_barotropic_strf_cesm (expt_name, num_ens, start_year, end_year, fig_name=None):
-
-    pass
-
-    # Read grid, set up dz and dy
-    # Loop over members
-    # Loop over years
-    # Read u
-    # Depth-integral of u*dz for zonal transport
-    # Indefinite integral (cumsum) from south to north of zonal transport * dy
-    # Convert from m^3/s to Sv (*1e-6)
-    # Annual mean
-    # Accumulate mean
-    # Time-mean, ensemble mean
-    # Plot all longitudes but split at 0E
-    # Contour 0 Sv
-    
-
-    
-
-
-        
-                    
-        
-    
-
+    latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name, vmin=vmin, vmax=vmax, ymax=ymax)
+           
     
         
     
