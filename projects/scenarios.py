@@ -4094,7 +4094,7 @@ def all_trends_distinct ():
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
-def trend_scatterplots (option='future', var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, num_PACE=20, num_noOBC=5, fig_name=None):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, num_PACE=20, num_noOBC=5, fig_name=None, option='future'):
 
     base_dir = real_dir(base_dir)
     if option == 'future':
