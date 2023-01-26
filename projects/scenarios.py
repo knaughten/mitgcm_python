@@ -4093,16 +4093,30 @@ def all_trends_distinct ():
         trend_scenarios_distinct(var, expt_names[5], expt_names[6])
 
 
-# Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios (but not no-OBCS or PACE)
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, fig_name=None):
+# Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
+def trend_scatterplots (option='future', var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, num_PACE=20, num_noOBC=5, fig_name=None):
 
     base_dir = real_dir(base_dir)
-    num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+    if option == 'future':
+        num_ens = [num_LENS, num_MENS, num_LW2, num_LW1]
+        expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+        expt_mid = ['', '_', '_', '_']
+        expt_tail = ['_O', '_O', '_O', '_O']
+        expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
+        expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
+        start_year = 2006
+        end_year = 2080
+    elif option == 'historical':
+        num_ens = [num_LENS, num_noOBC, num_PACE]
+        expt_names = ['LENS', 'LENS', 'PACE']
+        expt_mid = ['', '', '']
+        expt_tail = ['_O', '_noOBC', '']
+        expt_titles = ['Historical', 'Historical fixed BCs', 'PACE fixed BCs']
+        expt_colours = ['DarkGrey', 'DodgerBlue', 'MediumSeaGreen']
+        start_year = 1920
+        end_year = 2005        
+    
     num_expt = len(num_ens)
-    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
-    expt_mid = ['', '_', '_', '_']
-    expt_tail = '_O'
-    expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
     smooth = 24
     p0 = 0.05
     if timeseries_file_2 is None:
@@ -4114,22 +4128,28 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     labels = []
     colours = []
     for n in range(num_expt):
+        if expt_names[n] == 'PACE':
+            expt_prec = 2
+            head_dir = base_dir + '../mitgcm/'
+        else:
+            expt_prec = 3
+            head_dir = base_dir
         for e in range(num_ens[n]):
             both_trends = []
             for var, k in zip([var1, var2], range(2)):
                 if var == 'TS_global_mean':
-                    file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(3) + '_TS_global_mean.nc'
+                    file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
-                    file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + expt_tail + '/output/' + timeseries_files[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=2006, end_year=2080)
+                    file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files[k]
+                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year)
                 if sig:
                     both_trends.append(trend_tmp)
                 else:
                     both_trends.append(0)
             trend1.append(both_trends[0])
             trend2.append(both_trends[1])
-            if expt_names[n] not in labels:
-                labels.append(expt_names[n])
+            if expt_titles[n] not in labels:
+                labels.append(expt_titles[n])
             else:
                 labels.append(None)
             colours.append(expt_colours[n])
@@ -4151,7 +4171,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
     ax.set_xlabel(var1, fontsize=14)
     ax.set_ylabel(var2, fontsize=14)
-    ax.set_title('Trends per century, 2006-2080', fontsize=18)
+    ax.set_title('Trends per century, '+str(start_year)+'-'+str(end_year), fontsize=18)
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width*0.9, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1,0.5))
