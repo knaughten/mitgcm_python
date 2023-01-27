@@ -281,7 +281,7 @@ class Grid:
         open_ocean[self.get_land_mask(gtype=gtype)] = 0
         open_ocean[self.get_ice_mask(gtype=gtype)] = 0
 
-        return open_ocean
+        return open_ocean.astype(bool)
     
     
     # Build and return a mask for a given region of the ocean. These points must be:

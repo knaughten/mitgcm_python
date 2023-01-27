@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from ..grid import Grid
 from ..utils import real_dir, average_12_months
 from ..calculus import area_average, derivative
+from ..file_io import read_netcdf
+from ..constants import deg_string, region_names
+from ..plot_utils.windows import finished_plot
 
 
 # Global variables
@@ -26,7 +29,7 @@ def simulation_path (expt, ens, base_dir='./'):
         path += 'MENS_'
     elif expt == 'RCP 8.5':
         path += 'LENS'
-    path += '_O/'
+    path += str(ens).zfill(3) + '_O/'
     return path
 
 
@@ -46,7 +49,7 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     depth = -grid.z
         
     # Get a 3D mask of ocean cells at this ice front
-    icefront_mask = grid.get_icefront_mask(shelf=shelf, is_3d=True)
+    icefront_mask = grid.get_icefront_mask(shelf=shelf, is_3d=True, side='ocean')
     # Read temperature data for this year and annually average
     temp = average_12_months(read_netcdf(file_path, 'THETA'), calendar='noleap')
     # Mask everything except the ice front
@@ -60,8 +63,8 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
 
     # Plot
     fig = plt.figure(figsize=(8,5.5))
-    gs = plt.GridSpec(3,1)
-    gs.update(left=0.1, right=0.95, bottom=0.05, top=0.8, wspace=0.05)
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.1, right=0.95, bottom=0.1, top=0.8, wspace=0.05)
     data_plot = [temp, dtemp_dz, d2temp_dz2]
     base_units = deg_string+'C'
     units = [base_units, base_units+'/m', base_units+'/m$^2$']
@@ -70,6 +73,7 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
         ax = plt.subplot(gs[0,n])
         ax.plot(data_plot[n], depth, color='blue', linewidth=1.5)
         ax.grid(linestyle='dotted')
+        ax.set_ylim([0, None])
         ax.invert_yaxis()
         ax.set_title(titles[n], fontsize=14)
         ax.set_xlabel(units[n], fontsize=12)
