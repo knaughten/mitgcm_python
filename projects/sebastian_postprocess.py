@@ -58,7 +58,7 @@ def select_profile (shelf, year, expt, ens, grid, base_dir='./'):
 def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None):
     
     if grid is None:
-        grid = Grid(base_dir + grid_path)
+        grid = Grid(base_dir + grid_dir)
     depth = -grid.z
 
     temp = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir)
