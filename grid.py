@@ -398,7 +398,7 @@ class Grid:
 
 
     # Build and return a mask for the ice shelf front points of the given ice shelf.
-    def get_icefront_mask (self, shelf='all', gtype='t', is_3d=False):
+    def get_icefront_mask (self, shelf='all', gtype='t', is_3d=False, side='ice'):
 
         if shelf == 'filchner':
             shelf_use = 'fris'
@@ -410,7 +410,7 @@ class Grid:
             shelf_use = shelf
             [xmin, xmax, ymin, ymax] = [None, None, None, None]
         ice_mask = self.get_ice_mask(shelf=shelf_use, gtype=gtype)
-        mask = ice_shelf_front_points(self, ice_mask=ice_mask, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
+        mask = ice_shelf_front_points(self, ice_mask=ice_mask, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, side=side)
         if is_3d:
             mask = mask_2d_to_3d(mask, self)
         return mask

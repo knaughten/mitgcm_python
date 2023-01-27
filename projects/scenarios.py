@@ -4094,7 +4094,7 @@ def all_trends_distinct ():
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
-def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, num_PACE=20, num_noOBC=5, fig_name=None, option='future'):
+def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.nc', timeseries_file_2=None, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, num_PACE=20, num_noOBC=5, fig_name=None, timeseries_file_PACE='timeseries_final.nc', option='future'):
 
     base_dir = real_dir(base_dir)
     if option == 'future':
@@ -4122,6 +4122,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
     if timeseries_file_2 is None:
         timeseries_file_2 = timeseries_file
     timeseries_files = [timeseries_file, timeseries_file_2]
+    timeseries_files_PACE = [timeseries_file_PACE, timeseries_file_PACE]
 
     trend1 = []
     trend2 = []
@@ -4131,16 +4132,18 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         if expt_names[n] == 'PACE':
             expt_prec = 2
             head_dir = base_dir + '../mitgcm/'
+            timeseries_files_expt = timeseries_files_PACE
         else:
             expt_prec = 3
             head_dir = base_dir
+            timeseries_files_expt = timeseries_files
         for e in range(num_ens[n]):
             both_trends = []
             for var, k in zip([var1, var2], range(2)):
                 if var == 'TS_global_mean':
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
-                    file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files[k]
+                    file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files_expt[k]
                 trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year)
                 if sig:
                     both_trends.append(trend_tmp)

@@ -586,7 +586,7 @@ def dist_btw_points (point0, point1):
 
 # Find all ice shelf front points and return them as a list.
 # For a specific ice shelf, pass a special ice_mask 
-def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None):
+def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None, ymin=None, ymax=None, side='ice'):
 
     from .interpolation import neighbours
 
@@ -606,10 +606,14 @@ def ice_shelf_front_points (grid, ice_mask=None, gtype='t', xmin=None, xmax=None
     if ymax is None:
         ymax = np.amax(lat)
 
-    # Find number of open-ocean neighbours for each point
-    num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
-    # Find all ice shelf points within bounds that have at least 1 open-ocean neighbour
-    return ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
+    if side == 'ice':
+        # Return ice shelf points with at least 1 open-ocean neighbour
+        num_open_ocean_neighbours = neighbours(open_ocean, missing_val=0)[-1]
+        return ice_mask*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_open_ocean_neighbours > 0)
+    elif side == 'ocean':
+        # Return ocean points with at least 1 ice shelf neighbour
+        num_ice_shelf_neighbours = neighbours(ice_mask, missing_val=0)[-1]
+        return open_ocean*(lon >= xmin)*(lon <= xmax)*(lat >= ymin)*(lat <= ymax)*(num_ice_shelf_neighbours > 0)
 
 
 # Given an axis with values in the centre of each cell, find the locations of the boundaries of each cell (extrapolating for the outer boundaries).
