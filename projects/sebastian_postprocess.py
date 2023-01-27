@@ -36,11 +36,11 @@ def simulation_path (expt, ens, base_dir='./'):
 # Given an experiment title, ensemble member, and year, return the path to the NetCDF output file.
 def output_year_path (expt, ens, year, base_dir='./'):
 
-    return simulation_path(expt, ens, base_dir=base_dir) + '/output/' + str(year) + '01/MITgcm/output.nc'
+    return simulation_path(expt, ens, base_dir=base_dir) + 'output/' + str(year) + '01/MITgcm/output.nc'
 
 
 # Given an ice shelf, year, scenario, and ensemble member, calculate the annual mean temperature profile averaged over the ice front.
-def select_profile (shelf, year, expt, ens, grid):
+def select_profile (shelf, year, expt, ens, grid, base_dir='./'):
 
     # Select the output file
     file_path = output_year_path(expt, ens, year, base_dir=base_dir)        
@@ -61,7 +61,7 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
         grid = Grid(base_dir + grid_path)
     depth = -grid.z
 
-    temp = select_profile(shelf, year, expt, ens, grid=grid)
+    temp = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir)
     # Take first and second derivatives
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
@@ -102,25 +102,31 @@ def save_profile_collection (out_file, base_dir='./'):
     # Combination of each of the parameters to select a profile
     # shelves defined above
     # Always use ensemble member 1
-    years = np.arange(2000, 2100, 20)
+    years = np.arange(1990, 2100+1, 20)
     expts = ['Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
     ens = 1
 
-    grid = Grid(base_dir+grid_path)
-    id = NCfile(out_file, grid, 'zt')
+    grid = Grid(base_dir+grid_dir)
+    ncfile = NCfile(out_file, grid, 'zt')
 
     n = 0
     for shelf in shelves:
         for year in years:
             for expt in expts:
-                temp = select_profile(shelf, year, expt, ens, grid)
+                if year < 2006 and expt != 'RCP 8.5':
+                    continue
+                if year > 2080 and expt == 'RCP 4.5':
+                    continue
+                print('Profile '+str(n+1))
+                temp = select_profile(shelf, year, expt, ens, grid, base_dir=base_dir)
                 if n == 0:
-                    id.add_time([n+1], units='profile_number')
-                    id.add_variable('temperature', temp[None,:], 'zt', units='degC')
+                    ncfile.add_time([n+1], units='profile_number')
+                    ncfile.add_variable('temperature', temp[None,:], 'zt', units='degC')
                 else:
-                    id.variables['time'][n:] = [n+1]
-                    id.variables['temperature'][n:] = temp[None,:]
-    id.close()    
+                    ncfile.id.variables['time'][n:] = [n+1]
+                    ncfile.id.variables['temperature'][n:] = temp[None,:]
+                n += 1
+    ncfile.close()    
              
     
 
