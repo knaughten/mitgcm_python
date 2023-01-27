@@ -203,11 +203,10 @@ def indefinite_ns_integral (data, grid, gtype='t', time_dependent=False):
 def derivative (data, coordinates, axis=0):
 
     # Forward difference
-    result = np.diff(data, axis=axis)/np.diff(coordinates, axis=axis)
+    result = np.ma.diff(data, axis=axis)/np.ma.diff(coordinates, axis=axis)
     # Just copy the last row/column/whatever
-    pad_width = [(0,0)]*len(data.shape)
-    pad_width[axis] = (0,1)
-    return np.pad(result, pad_width, 'edge')
+    last_row = np.ma.take(result, [-1], axis=axis)
+    return np.ma.concatenate((result, last_row), axis=axis)
 
 
 # Helper function to prepare spatial coordinates to match the shape of the data

@@ -58,6 +58,8 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     temp = area_average(temp, grid)
 
     # Take first and second derivatives
+    pad_width = [(0,0)]*len(temp.shape)
+    pad_width[0] = (0,1)
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
 
@@ -72,6 +74,8 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     for n in range(3):
         ax = plt.subplot(gs[0,n])
         ax.plot(data_plot[n], depth, color='blue', linewidth=1.5)
+        if n > 0:
+            ax.axvline(0, color='black', linewidth=1)
         ax.grid(linestyle='dotted')
         ax.set_ylim([0, None])
         ax.invert_yaxis()
