@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from ..grid import Grid
 from ..utils import real_dir, average_12_months
 from ..calculus import area_average, derivative
-from ..file_io import read_netcdf
+from ..file_io import read_netcdf, NCfile
 from ..constants import deg_string, region_names
 from ..plot_utils.windows import finished_plot
 
@@ -21,7 +21,7 @@ grid_dir = 'PAS_grid/'
 def simulation_path (expt, ens, base_dir='./'):
 
     path = real_dir(base_dir) + 'PAS_'
-    if expt == 'Paris 1.5C':
+    if expt == 'Paris 1.5C', 'Paris_1.5C':
         path += 'LW1.5_'
     elif expt == 'Paris 2C':
         path += 'LW2.0_'
@@ -39,15 +39,11 @@ def output_year_path (expt, ens, year, base_dir='./'):
     return simulation_path(expt, ens, base_dir=base_dir) + '/output/' + str(year) + '01/MITgcm/output.nc'
 
 
-# Given an ice shelf, year, scenario, and ensemble member, plot the annual mean temperature profile averaged over the ice front and its first and second derivatives with respect to depth.
-def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None):
+# Given an ice shelf, year, scenario, and ensemble member, calculate the annual mean temperature profile averaged over the ice front.
+def select_profile (shelf, year, expt, ens, grid):
 
     # Select the output file
-    file_path = output_year_path(expt, ens, year, base_dir=base_dir)
-    if grid is None:
-        grid = Grid(file_path)
-    depth = -grid.z
-        
+    file_path = output_year_path(expt, ens, year, base_dir=base_dir)        
     # Get a 3D mask of ocean cells at this ice front
     icefront_mask = grid.get_icefront_mask(shelf=shelf, is_3d=True, side='ocean')
     # Read temperature data for this year and annually average
@@ -55,11 +51,18 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     # Mask everything except the ice front
     temp = np.ma.masked_where(np.invert(icefront_mask), temp)
     # Average over ice front to get profile
-    temp = area_average(temp, grid)
+    return area_average(temp, grid)
 
+
+# Plot the profile and  its first and second derivatives with respect to depth.
+def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None):
+    
+    if grid is None:
+        grid = Grid(base_dir + grid_path)
+    depth = -grid.z
+
+    temp = select_profile(shelf, year, expt, ens, grid=grid)
     # Take first and second derivatives
-    pad_width = [(0,0)]*len(temp.shape)
-    pad_width[0] = (0,1)
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
 
@@ -77,7 +80,11 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
         if n > 0:
             ax.axvline(0, color='black', linewidth=1)
         ax.grid(linestyle='dotted')
-        ax.set_ylim([0, None])
+        if n == 0:
+            ax.set_ylim([0, None])
+            zlim_deep = ax.get_ylim()[-1]
+        else:
+            ax.set_ylim([0, zlim_deep])
         ax.invert_yaxis()
         ax.set_title(titles[n], fontsize=14)
         ax.set_xlabel(units[n], fontsize=12)
@@ -87,7 +94,33 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
             ax.set_yticklabels([])
     plt.suptitle(region_names[shelf] + ' front, '+expt+', '+str(year), fontsize=18)
     finished_plot(fig, fig_name=fig_name)
-    
+
+
+# Save a selection of profiles to a NetCDF file to give to Sebastian for thermocline definition testing.
+def save_profile_collection (out_file, base_dir='./'):
+
+    # Combination of each of the parameters to select a profile
+    # shelves defined above
+    # Always use ensemble member 1
+    years = np.arange(2000, 2100, 20)
+    expts = ['Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
+    ens = 1
+
+    grid = Grid(base_dir+grid_path)
+    id = NCfile(out_file, grid, 'zt')
+
+    n = 0
+    for shelf in shelves:
+        for year in years:
+            for expt in expts:
+                temp = select_profile(shelf, year, expt, ens, grid)
+                if n == 0:
+                    id.add_time([n+1], units='profile_number')
+                    id.add_variable('temperature', temp[None,:], 'zt', units='degC')
+                else:
+                    id.variables['time'][n:] = [n+1]
+                    id.variables['temperature'][n:] = temp[None,:]
+    id.close()    
              
     
 
