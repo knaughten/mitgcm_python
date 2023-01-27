@@ -37,7 +37,7 @@ def output_year_path (expt, ens, year, base_dir='./'):
 
 
 # Given an ice shelf, year, scenario, and ensemble member, plot the annual mean temperature profile averaged over the ice front and its first and second derivatives with respect to depth.
-def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None)):
+def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None):
 
     # Select the output file
     file_path = output_year_path(expt, ens, year, base_dir=base_dir)
