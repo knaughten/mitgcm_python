@@ -21,7 +21,7 @@ grid_dir = 'PAS_grid/'
 def simulation_path (expt, ens, base_dir='./'):
 
     path = real_dir(base_dir) + 'PAS_'
-    if expt == 'Paris 1.5C', 'Paris_1.5C':
+    if expt == 'Paris 1.5C':
         path += 'LW1.5_'
     elif expt == 'Paris 2C':
         path += 'LW2.0_'
