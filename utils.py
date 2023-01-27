@@ -843,7 +843,7 @@ def mask_2d_to_3d (mask, grid, zmin=None, zmax=None):
 
 
 # Helper function to average 1 year of monthly data from a variable (starting with time index index t0), of any dimension (as long as time is first), with proper monthly weighting for the given calendar (360-day, noleap, or standard - if standard need to provide the year).
-def average_12_months (data, t0, calendar='standard', year=None):
+def average_12_months (data, t0=0, calendar='standard', year=None):
 
     if calendar == 'standard' and year is None:
         print('Error (average_12_months): must provide year')
