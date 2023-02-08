@@ -159,7 +159,7 @@ def save_profile_collection (out_file, base_dir='./'):
 def process_timeseries (expt, ens, out_file, base_dir='./'):
 
     if expt == 'historical':
-        start_year = 1920
+        start_year = 1995 #1920
         end_year = 2005
     else:
         start_year = 2006
@@ -214,7 +214,6 @@ def process_all_timeseries (base_dir='./', out_dir='data_for_sebastian/'):
     expt_names = ['historical', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
     expt_codes = ['historical', 'paris1.5C', 'paris2C', 'rcp45', 'rcp85']
     num_ens = [10, 5, 10, 10, 10]
-    
 
     for n in range(len(expt_names)):
         for e in range(1, num_ens[n]+1):
