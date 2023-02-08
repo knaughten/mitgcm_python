@@ -252,7 +252,7 @@ def extract_ismr (expt, ens, out_file, base_dir='./'):
         ismr[t,:] = mask_except_ice(convert_ismr(average_12_months(read_netcdf(file_path, 'SHIfwFlx'), calendar='noleap')), grid)
     ncfile = NCfile(out_file, grid, 't')
     ncfile.add_time(np.arange(start_year, end_year+1), units='year')
-    ncfile.add_variable('basal_melt_rate', ismr, units='m/y')
+    ncfile.add_variable('basal_melt_rate', ismr, 'xyt', units='m/y')
     ncfile.close()
 
 
