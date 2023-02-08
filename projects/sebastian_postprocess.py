@@ -39,22 +39,32 @@ def output_year_path (expt, ens, year, base_dir='./'):
     return simulation_path(expt, ens, base_dir=base_dir) + 'output/' + str(year) + '01/MITgcm/output.nc'
 
 
-# Given an ice shelf, year, scenario, and ensemble member, calculate the annual mean temperature profile averaged over the ice front.
-def select_profile (shelf, year, expt, ens, grid, base_dir='./'):
+# Given an ice shelf, year, scenario, and ensemble member, calculate the annual mean profile averaged over the ice front (default temperature but can also pass var_name='SALT').
+def select_profile (shelf, year, expt, ens, grid, base_dir='./', var_name='THETA'):
 
     # Select the output file
     file_path = output_year_path(expt, ens, year, base_dir=base_dir)        
     # Get a 3D mask of ocean cells at this ice front
     icefront_mask = grid.get_icefront_mask(shelf=shelf, is_3d=True, side='ocean')
-    # Read temperature data for this year and annually average
-    temp = average_12_months(read_netcdf(file_path, 'THETA'), calendar='noleap')
+    # Read data for this year and annually average
+    data = average_12_months(read_netcdf(file_path, var_name), calendar='noleap')
     # Mask everything except the ice front
-    temp = np.ma.masked_where(np.invert(icefront_mask), temp)
+    data = np.ma.masked_where(np.invert(icefront_mask), data)
     # Average over ice front to get profile
-    return area_average(temp, grid)
+    return area_average(data, grid)
 
 
-# Plot the profile and  its first and second derivatives with respect to depth.
+# Given a temperature profile and a corresponding salinity profile, extract the base of the thermocline and return temperature and salinity at that depth.
+def extract_thermocline_base (temp, salt, grid, threshold=3e-3):
+
+    depth = -grid.z
+    dtemp_dz = derivative(temp, depth)
+    # Select deepest depth at which temperature gradient exceeds threshold
+    k0 = np.where(np.abs(dtemp_dz) > threshold)[0][-1]
+    return depth[k0], temp[k0], salt[k0]
+
+
+# Plot the profile and its first and second derivatives with respect to depth.
 def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', grid=None):
     
     if grid is None:
@@ -65,6 +75,9 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     # Take first and second derivatives
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
+    salt = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir, var_name='SALT')
+    # Get depth of base of thermocline
+    depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid)
 
     # Plot
     fig = plt.figure(figsize=(8,5.5))
@@ -80,6 +93,8 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
         if n > 0:
             ax.axvline(0, color='black', linewidth=1)
         ax.grid(linestyle='dotted')
+        ax.axhline(depth_tcb, color='red', linewidth=1)
+        print('Thermocline base: '+str(depth_tcb)+'m with temp='+str(temp_tcb)+', salt='+str(salt_tcb))
         if n == 0:
             ax.set_ylim([0, None])
             zlim_deep = ax.get_ylim()[-1]
@@ -126,8 +141,10 @@ def save_profile_collection (out_file, base_dir='./'):
                     ncfile.id.variables['time'][n:] = [n+1]
                     ncfile.id.variables['temperature'][n:] = temp[None,:]
                 n += 1
-    ncfile.close()    
-             
+    ncfile.close()
+
+
+    
     
 
     
