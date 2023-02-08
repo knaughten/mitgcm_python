@@ -257,7 +257,7 @@ def extract_ismr (expt, ens, out_file, base_dir='./'):
 
 
 # Do this for all simulations
-def extract_all_timeseries (base_dir='./', out_dir='data_for_sebastian/'):
+def extract_all_ismr (base_dir='./', out_dir='data_for_sebastian/'):
 
     expt_names = ['historical', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
     expt_codes = ['historical', 'paris1.5C', 'paris2C', 'rcp45', 'rcp85']
@@ -267,7 +267,7 @@ def extract_all_timeseries (base_dir='./', out_dir='data_for_sebastian/'):
         for e in range(1, num_ens[n]+1):
             out_file = out_dir + 'basal_melting_' + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
             print('Processing '+out_file)
-            process_timeseries(expt_names[n], e, out_file, base_dir=base_dir)
+            extract_ismr(expt_names[n], e, out_file, base_dir=base_dir)
     
             
         
