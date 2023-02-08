@@ -5,7 +5,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid
-from ..utils import real_dir, average_12_months
+from ..utils import real_dir, average_12_months, convert_ismr
 from ..calculus import area_average, derivative
 from ..file_io import read_netcdf, NCfile
 from ..constants import deg_string, region_names
@@ -60,7 +60,10 @@ def extract_thermocline_base (temp, salt, grid, threshold=3e-3):
     depth = -grid.z
     dtemp_dz = derivative(temp, depth)
     # Select deepest depth at which temperature gradient exceeds threshold - this will select for (slow) warming with depth and disregard the case of temperature inversion at seafloor.
-    k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
+    try:
+        k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
+    except(IndexError):
+        return extract_thermocline_base(temp, salt, grid, threshold=threshold/2)
     return depth[k0], temp[k0], salt[k0]
 
 
@@ -85,7 +88,12 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     d2temp_dz2 = derivative(dtemp_dz, depth)
     salt = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir, var_name='SALT')
     # Extract base of thermocline and Winter Water core
-    depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid)
+    try:
+        depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid)
+    except(IndexError):
+        depth_tcb = None
+        temp_tcb = None
+        salt_tcb = None
     depth_ww, temp_ww, salt_ww = extract_winter_water_core(temp, salt, grid)
 
     # Plot
@@ -102,12 +110,14 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
         if n > 0:
             ax.axvline(0, color='black', linewidth=1)
         ax.grid(linestyle='dotted')
-        ax.axhline(depth_tcb, color='red', linewidth=1)
+        if depth_tcb is not None:
+            ax.axhline(depth_tcb, color='red', linewidth=1)
         ax.axhline(depth_ww, color='red', linewidth=1)
         if n == 0:
             ax.set_ylim([0, None])
             zlim_deep = ax.get_ylim()[-1]
-            print('Thermocline base: '+str(depth_tcb)+'m with temp='+str(temp_tcb)+', salt='+str(salt_tcb))
+            if depth_tcb is not None:
+                print('Thermocline base: '+str(depth_tcb)+'m with temp='+str(temp_tcb)+', salt='+str(salt_tcb))
             print('Winter Water core: '+str(depth_ww)+'m with temp='+str(temp_ww)+', salt='+str(salt_ww))
         else:
             ax.set_ylim([0, zlim_deep])
@@ -217,9 +227,48 @@ def process_all_timeseries (base_dir='./', out_dir='data_for_sebastian/'):
 
     for n in range(len(expt_names)):
         for e in range(1, num_ens[n]+1):
-            out_file = out_dir + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
+            out_file = out_dir + 'timeseries_' + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
             print('Processing '+out_file)
             process_timeseries(expt_names[n], e, out_file, base_dir=base_dir)
+
+
+# Extract annual-mean ice shelf melt rates fields for a given simulation and save to a NetCDF file.
+def extract_ismr (expt, ens, out_file, base_dir='./'):
+
+    if expt == 'historical':
+        start_year = 1995
+        end_year = 2005
+    else:
+        # Just do 20 years
+        start_year = 2006
+        end_year = 2025
+    num_years = end_year-start_year+1
+    grid = Grid(base_dir+grid_dir)
+    ismr = np.ma.empty([num_years, grid.ny, grid.nx])
+
+    for t in range(num_years):
+        print('...'+str(start_year+t))
+        file_path = output_year_path(expt, ens, start_year+t, base_dir=base_dir)
+        ismr[t,:] = mask_except_ice(convert_ismr(average_12_months(read_netcdf(file_path, 'SHIfwFlx'), calendar='noleap')), grid)
+    ncfile = NCfile(out_file, grid, 't')
+    ncfile.add_time(np.arange(start_year, end_year+1), units='year')
+    ncfile.add_variable('basal_melt_rate', ismr, units='m/y')
+    ncfile.close()
+
+
+# Do this for all simulations
+def extract_all_timeseries (base_dir='./', out_dir='data_for_sebastian/'):
+
+    expt_names = ['historical', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
+    expt_codes = ['historical', 'paris1.5C', 'paris2C', 'rcp45', 'rcp85']
+    num_ens = [10, 5, 10, 10, 10]
+
+    for n in range(len(expt_names)):
+        for e in range(1, num_ens[n]+1):
+            out_file = out_dir + 'basal_melting_' + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
+            print('Processing '+out_file)
+            process_timeseries(expt_names[n], e, out_file, base_dir=base_dir)
+    
             
         
         
