@@ -59,8 +59,8 @@ def extract_thermocline_base (temp, salt, grid, threshold=3e-3):
 
     depth = -grid.z
     dtemp_dz = derivative(temp, depth)
-    # Select deepest depth at which temperature gradient exceeds threshold
-    k0 = np.ma.where(np.abs(dtemp_dz) > threshold)[0][-1]
+    # Select deepest depth at which temperature gradient exceeds threshold - this will select for (slow) warming with depth and disregard the case of temperature inversion at seafloor.
+    k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
     return depth[k0], temp[k0], salt[k0]
 
 
