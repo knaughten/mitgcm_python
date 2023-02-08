@@ -27,7 +27,7 @@ def simulation_path (expt, ens, base_dir='./'):
         path += 'LW2.0_'
     elif expt == 'RCP 4.5':
         path += 'MENS_'
-    elif expt == 'RCP 8.5':
+    elif expt in ['historical', 'RCP 8.5']:
         path += 'LENS'
     path += str(ens).zfill(3) + '_O/'
     return path
@@ -153,6 +153,82 @@ def save_profile_collection (out_file, base_dir='./'):
                     ncfile.id.variables['temperature'][n:] = temp[None,:]
                 n += 1
     ncfile.close()
+
+
+# Calculate all timeseries for a given simulation and save to a NetCDF file.
+def process_timeseries (expt, ens, out_file, base_dir='./'):
+
+    if expt == 'historical':
+        start_year = 1920
+        end_year = 2005
+    else:
+        start_year = 2006
+        if expt == 'RCP 4.5':
+            end_year = 2080
+        else:
+            end_year = 2100
+    num_years = end_year-start_year+1
+    num_shelves = len(shelves)
+    depth_tcb = np.ma.empty([num_shelves, num_years])
+    temp_tcb = np.ma.empty([num_shelves, num_years])
+    salt_tcb = np.ma.empty([num_shelves, num_years])
+    depth_ww = np.ma.empty([num_shelves, num_years])
+    temp_ww = np.ma.empty([num_shelves, num_years])
+    salt_ww = np.ma.empty([num_shelves, num_years])
+    grid = Grid(base_dir+grid_dir)
+    icefront_masks = []
+    for shelf in shelves:
+        icefront_masks.append(grid.get_icefront_mask(shelf=shelf, is_3d=True, side='ocean'))
+
+    # Loop over years
+    for t in range(num_years):
+        print('...'+str(start_year+t))
+        # Read and annually average this year's data
+        file_path = output_year_path(expt, ens, start_year+t, base_dir=base_dir)
+        temp = average_12_months(read_netcdf(file_path, 'THETA'), calendar='noleap')
+        salt = average_12_months(read_netcdf(file_path, 'SALT'), calendar='noleap')
+        # Loop over ice shelves
+        for n in range(num_shelves):
+            # Mask everything except the ice front and area-average to get profile
+            temp_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), temp), grid)
+            salt_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), salt), grid)
+            depth_tcb[n,t], temp_tcb[n,t], salt_tcb[n,t] = extract_thermocline_base(temp_profile, salt_profile, grid)
+            depth_ww[n,t], temp_ww[n,t], salt_ww[n,t] = extract_winter_water_core(temp_profile, salt_profile, grid)
+
+    # Now save all the data
+    ncfile = NCfile(out_file, grid, 't')
+    ncfile.add_time(np.arange(start_year,end_year+1), units='year')
+    for n in range(num_shelves):
+        ncfile.add_variable('depth_thermocline_base_'+shelves[n], depth_tcb[n,:], 't', units='m')
+        ncfile.add_variable('temp_thermocline_base_'+shelves[n], temp_tcb[n,:], 't', units='degC')
+        ncfile.add_variable('salt_thermocline_base_'+shelves[n], salt_tcb[n,:], 't', units='psu')
+        ncfile.add_variable('depth_winter_water_'+shelves[n], depth_ww[n,:], 't', units='m')
+        ncfile.add_variable('temp_winter_water_'+shelves[n], temp_ww[n,:], 't', units='degC')
+        ncfile.add_variable('salt_winter_water_'+shelves[n], salt_ww[n,:], 't', units='psu')
+    ncfile.close()
+
+
+# Calculate all timeseries for all simulations.
+def process_all_timeseries (base_dir='./'):
+
+    expt_names = ['historical', 'Paris 1.5C', 'Paris 2C', 'RCP 4.5', 'RCP 8.5']
+    expt_codes = ['historical', 'paris1.5C', 'paris2C', 'rcp45', 'rcp85']
+    num_ens = [10, 5, 10, 10, 10]
+
+    for n in range(len(expt_names)):
+        for e in range(1, num_ens[n]+1):
+            out_file = base_dir + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
+            print('Processing '+out_file)
+            process_timeseries(expt_names[n], e, out_file, base_dir=base_dir)
+            
+        
+        
+
+    
+
+    
+
+    
 
 
     
