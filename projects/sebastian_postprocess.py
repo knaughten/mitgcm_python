@@ -5,7 +5,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from ..grid import Grid
-from ..utils import real_dir, average_12_months, convert_ismr
+from ..utils import real_dir, average_12_months, convert_ismr, mask_except_ice
 from ..calculus import area_average, derivative
 from ..file_io import read_netcdf, NCfile
 from ..constants import deg_string, region_names
