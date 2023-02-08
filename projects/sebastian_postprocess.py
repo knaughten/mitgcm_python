@@ -60,7 +60,15 @@ def extract_thermocline_base (temp, salt, grid, threshold=3e-3):
     depth = -grid.z
     dtemp_dz = derivative(temp, depth)
     # Select deepest depth at which temperature gradient exceeds threshold
-    k0 = np.where(np.abs(dtemp_dz) > threshold)[0][-1]
+    k0 = np.ma.where(np.abs(dtemp_dz) > threshold)[0][-1]
+    return depth[k0], temp[k0], salt[k0]
+
+
+# Similarly, extract the depth of the Winter Water core.
+def extract_winter_water_core (temp, salt, grid):
+
+    depth = -grid.z
+    k0 = np.ma.argmin(temp)
     return depth[k0], temp[k0], salt[k0]
 
 
@@ -76,8 +84,9 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
     salt = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir, var_name='SALT')
-    # Get depth of base of thermocline
+    # Extract base of thermocline and Winter Water core
     depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid)
+    depth_ww, temp_ww, salt_ww = extract_winter_water_core(temp, salt, grid)
 
     # Plot
     fig = plt.figure(figsize=(8,5.5))
@@ -94,10 +103,12 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
             ax.axvline(0, color='black', linewidth=1)
         ax.grid(linestyle='dotted')
         ax.axhline(depth_tcb, color='red', linewidth=1)
-        print('Thermocline base: '+str(depth_tcb)+'m with temp='+str(temp_tcb)+', salt='+str(salt_tcb))
+        ax.axhline(depth_ww, color='red', linewidth=1)
         if n == 0:
             ax.set_ylim([0, None])
             zlim_deep = ax.get_ylim()[-1]
+            print('Thermocline base: '+str(depth_tcb)+'m with temp='+str(temp_tcb)+', salt='+str(salt_tcb))
+            print('Winter Water core: '+str(depth_ww)+'m with temp='+str(temp_ww)+', salt='+str(salt_ww))
         else:
             ax.set_ylim([0, zlim_deep])
         ax.invert_yaxis()
