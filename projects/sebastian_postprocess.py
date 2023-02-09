@@ -54,6 +54,10 @@ def select_profile (shelf, year, expt, ens, grid, base_dir='./', var_name='THETA
     return area_average(data, grid)
 
 
+# Interpolate onto a finer vertical grid
+def 
+
+
 # Extract the depth of the Winter Water core.
 def extract_winter_water_core (temp, salt, grid):
 
