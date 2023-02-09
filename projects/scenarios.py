@@ -30,7 +30,7 @@ from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, ext
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
-from ..timeseries import monthly_to_annual
+from ..timeseries import monthly_to_annual, calc_annual_averages
 from ..calculus import area_average, vertical_integral
 
 
@@ -2389,7 +2389,7 @@ def plot_scenario_timeseries (var_name, base_dir='./', timeseries_file='timeseri
 
 
 # Helper function to read and calculate trend per century.
-def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, p0=0.05, percent=False, baseline=None):
+def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, p0=0.05, percent=False, baseline=None, annual_avg=False):
 
     data = read_netcdf(file_path, var)
     if percent:
@@ -2400,7 +2400,10 @@ def read_calc_trend (var, file_path, start_year=2006, end_year=2080, smooth=24, 
     data = data[t0:tf]
     time_sec = np.array([(t-time[0]).total_seconds() for t in time])
     time = time_sec/(365*sec_per_day*100)
-    data, time = moving_average(data, smooth, time=time)
+    if annual_avg:
+        time, data = calc_annual_averages(time, data)
+    else:
+        data, time = moving_average(data, smooth, time=time)
     slope, intercept, r_value, p_value, std_err = linregress(time, data)
     sig = p_value < p0
     return slope, sig
@@ -4295,6 +4298,99 @@ def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name
     strf = strf_accum/(num_ens*(end_year-start_year+1))
 
     latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name, vmin=vmin, vmax=vmax, ymax=ymax)
+
+
+def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200_700m', direction='u', fig_name=None):
+
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    num_expt = len(periods)
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    num_ens = [10, 5, 10, 10, 10]
+    start_years = [1920, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2100, 2100, 2080, 2100]
+    expt_dir_head = 'PAS_'
+    expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+    expt_dir_tail = '_O/output/'
+    timeseries_file = 'timeseries.nc'
+    wind_var = 'EXF'+direction+'wind_trend'
+    trend_file_head = 'precomputed_trends/'+var_2d+'_trend_'
+    trend_file_tail = '.nc'
+    p0 = 0.05
+    grid_dir = 'PAS_grid/'
+    grid = Grid(grid_dir)
+
+    # Read the wind trend fields for every simulation
+    trends_2d = []
+    for n in range(num_expt):
+        expt_trends = np.ma.empty([num_ens[n], grid.ny, grid.nx])
+        file_path = trend_file_head + periods[n] + trend_file_tail
+        expt_trends[n,:] = read_netcdf(file_path, var_2d+'_trend')
+        trends_2d.append(expt_trends)
+
+    # Read the timeseries and calculate trends for every simulation
+    trends_1d = []
+    for n in range(num_expt):
+        expt_trends = np.ma.empty(num_ens[n])
+        for e in range(num_ens[n]):
+            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + timeseries_file
+            slope, sig = read_calc_trend(var_1d, file_path, start_year=start_years[n], end_year=end_years[n], annual_avg=True)
+            if not sig:
+                print('Warning: '+period[n]+' ens'+str(e+1).zfill(3)+' has no significant timeseries trend')
+                slope = 0
+            expt_trends[e] = slope
+        trends_1d.append(expt_trends)
+
+    # Now calculate the correlation of trends at each point, considering different sets of simulations
+    correlations = np.ma.empty([num_expt+2, grid.ny, grid.nx])
+    mask = grid.get_open_ocean_mask().astype(bool)
+    for j in range(grid.ny):
+        for i in range(grid.nx):
+            if not mask[j,i]:
+                # Land or ice shelf point
+                continue
+            for n in range(num_expt+2):
+                if n < num_expt:
+                    # First calculate intra-ensemble correlations for each scenario (num_ens[n] number of points)
+                    trends1 = trends_1d[n]
+                    trends2 = trends_2d[n][:,j,i]
+                elif n == num_expt:
+                    # Then calculate inter-ensemble correlations considering all members of all scenarios (sum(num_ens) number of points)
+                    for m in range(num_expt):
+                        trends1_tmp = trends_1d[m]
+                        trends2_tmp = trends_2d[m][:,j,i]
+                        if m==0:
+                            trends1 = trends1_tmp
+                            trends2 = trends2_tmp
+                        else:
+                            trends1 = np.concatenate((trends1, trends1_tmp))
+                            trends2 = np.concatenate((trends2, trends2_tmp))
+                elif n == num_expt+1:
+                    # Then calculate inter-ensemble correlations considering the ensemble mean of each scenario (num_expt number of points)
+                    trends1 = np.ma.empty([num_expt])
+                    trends2 = np.ma.empty([num_expt])
+                    for m in range(num_expt):
+                        p_val1 = ttest_1samp(trends_1d[m], 0)[1]
+                        if p_val1 > p0:
+                            trends1[m] = 0
+                        else:
+                            trends1[m] = np.mean(trends_1d[m])
+                        p_val2 = ttest_1samp(trends_2d[m][:,j,i], 0)[1]
+                        if p_val2 > p0:
+                            trends2[m] = 0
+                        else:
+                            trends2[m] = np.mean(trends_2d[m][:,j,i])
+                # Now get the correlation between these two sets of trends
+                slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
+                if p_value > p0:
+                    r_value = 0
+                correlations[n,j,i] = r_value
+                
+            
+
+    
+        
+
+    
            
     
         

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 from ..grid import Grid
-from ..utils import real_dir, average_12_months, convert_ismr, mask_except_ice
+from ..utils import real_dir, average_12_months, convert_ismr, mask_except_ice, polar_stereo
 from ..calculus import area_average, derivative
 from ..file_io import read_netcdf, NCfile
 from ..constants import deg_string, region_names
@@ -291,6 +291,19 @@ def extract_all_ismr (base_dir='./', out_dir='data_for_sebastian/'):
             out_file = out_dir + 'basal_melting_' + expt_codes[n] + '_ens' + str(e).zfill(2) + '.nc'
             print('Processing '+out_file)
             extract_ismr(expt_names[n], e, out_file, base_dir=base_dir)
+
+
+# Save the geometry to a file for Sebastian to use
+def save_geometry (out_file, base_dir='./'):
+
+    grid = Grid(base_dir+grid_dir)
+    x, y = polar_stereo(grid.lon_2d, grid.lat_2d, lat_c=-70)
+    ncfile = NCfile(out_file, grid, 'xy')
+    ncfile.add_variable('bathymetry', grid.bathy, 'xy', units='m')
+    ncfile.add_variable('draft',  grid.draft, 'xy', units='m')
+    ncfile.add_variable('x', x, 'xy', units='m')
+    ncfile.add_variable('y', y, 'xy', units='m')
+    ncfile.close()
     
             
         
