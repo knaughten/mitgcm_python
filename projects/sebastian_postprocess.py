@@ -224,7 +224,7 @@ def process_timeseries (expt, ens, out_file, base_dir='./'):
             temp_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), temp), grid)
             salt_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), salt), grid)
             depth, temp_profile = refine_dz(temp_profile, grid)
-            salt_profile = refine_dz(salt_profile, grid, depth=depth)
+            salt_profile = refine_dz(salt_profile, grid)[1]
             depth_tcb[n,t], temp_tcb[n,t], salt_tcb[n,t] = extract_thermocline_base(temp_profile, salt_profile, grid, depth=depth)
             depth_ww[n,t], temp_ww[n,t], salt_ww[n,t] = extract_winter_water_core(temp_profile, salt_profile, grid, depth=depth)
 
