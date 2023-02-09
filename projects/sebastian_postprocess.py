@@ -91,7 +91,7 @@ def extract_thermocline_base (temp, salt, grid, depth=None, threshold=3e-3):
     try:
         k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
     except(IndexError):
-        return extract_thermocline_base(temp, salt, grid, threshold=threshold/2)
+        return extract_thermocline_base(temp, salt, grid, depth=depth, threshold=threshold/2)
     return depth[k0], temp[k0], salt[k0]
 
 
