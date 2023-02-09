@@ -4384,6 +4384,24 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
                 if p_value > p0:
                     r_value = 0
                 correlations[n,j,i] = r_value
+
+    titles = expt_names + ['All', 'Ensemble Means']
+    vmin = np.amin(correlations)
+    vmax = np.amax(correlations)
+    fig = plt.figure(figsize=(8,10))
+    gs = plt.GridSpec(4,2)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95)
+    cax = fig.add_axes([0.05, 0.8, 0.2, 0.02])
+    for n in range(len(titles)):
+        ax = plt.subplot(gs[(n+1)//2, (n+1)%2])
+        img = latlon_plot(correlations[n,:], grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, title=titles[n], titlesize=14, ctype='plusminus')
+        ax.tick_params(direction='in')
+        if n != 0:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle('Correlation of trends between '+var_1d+' and\ntimeseries of '+var_2d, fontsize=18)
+    finished_plot(fig, fig_name=fig_name)
                 
             
 
