@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 from ..grid import Grid
 from ..utils import real_dir, average_12_months, convert_ismr, mask_except_ice
@@ -55,24 +56,36 @@ def select_profile (shelf, year, expt, ens, grid, base_dir='./', var_name='THETA
 
 
 # Interpolate onto a finer vertical grid
-def 
+def refine_dz (data, grid, dz=10, fill_value=999):
+
+    depth_old = -grid.z
+    depth_new = np.arange(depth_old[0], depth_old[-1], dz)
+    valid_mask = np.invert(data.mask)
+    interpolant = interp1d(depth_old[valid_mask], data[valid_mask], kind='slinear', bounds_error=False, fill_value=fill_value)
+    data_new = interpolant(depth_new)
+    data_new = np.ma.masked_where(data_new==fill_value, data_new)
+    return depth_new, data_new
 
 
 # Extract the depth of the Winter Water core.
-def extract_winter_water_core (temp, salt, grid):
+def extract_winter_water_core (temp, salt, grid, depth=None):
 
-    depth = -grid.z
+    if depth is None:
+        depth, temp = refine_dz(temp, grid)
+        salt = refine_dz(salt, grid)[1]
     k0 = np.ma.argmin(temp)
     return depth[k0], temp[k0], salt[k0]
 
 
 # Given a temperature profile and a corresponding salinity profile, extract the base of the thermocline and return temperature and salinity at that depth.
-def extract_thermocline_base (temp, salt, grid, threshold=3e-3):
+def extract_thermocline_base (temp, salt, grid, depth=None, threshold=3e-3):
 
-    depth = -grid.z
+    if depth is None:
+        depth, temp = refine_dz(temp, grid)
+        salt = refine_dz(salt, grid)[1]
     dtemp_dz = derivative(temp, depth)
     # Mask everything above the Winter Water core - removes weird temperature inversions near surface which happen occasionally.
-    depth_ww = extract_winter_water_core(temp, salt, grid)[0]
+    depth_ww = extract_winter_water_core(temp, salt, grid, depth=depth)[0]
     dtemp_dz[depth <= depth_ww] = 0
     # Select deepest depth at which temperature gradient exceeds threshold - this will select for (slow) warming with depth and disregard the case of temperature inversion at seafloor.
     try:
@@ -87,21 +100,22 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     
     if grid is None:
         grid = Grid(base_dir + grid_dir)
-    depth = -grid.z
 
     temp = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir)
+    depth, temp = refine_dz(temp, grid)
     # Take first and second derivatives
     dtemp_dz = derivative(temp, depth)
     d2temp_dz2 = derivative(dtemp_dz, depth)
     salt = select_profile(shelf, year, expt, ens, grid=grid, base_dir=base_dir, var_name='SALT')
+    salt = refine_dz(salt, grid)[1]
     # Extract base of thermocline and Winter Water core
     try:
-        depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid)
+        depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid, depth=depth)
     except(IndexError):
         depth_tcb = None
         temp_tcb = None
         salt_tcb = None
-    depth_ww, temp_ww, salt_ww = extract_winter_water_core(temp, salt, grid)
+    depth_ww, temp_ww, salt_ww = extract_winter_water_core(temp, salt, grid, depth=depth)
 
     # Plot
     fig = plt.figure(figsize=(8,5.5))
@@ -209,8 +223,10 @@ def process_timeseries (expt, ens, out_file, base_dir='./'):
             # Mask everything except the ice front and area-average to get profile
             temp_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), temp), grid)
             salt_profile = area_average(np.ma.masked_where(np.invert(icefront_masks[n]), salt), grid)
-            depth_tcb[n,t], temp_tcb[n,t], salt_tcb[n,t] = extract_thermocline_base(temp_profile, salt_profile, grid)
-            depth_ww[n,t], temp_ww[n,t], salt_ww[n,t] = extract_winter_water_core(temp_profile, salt_profile, grid)
+            depth, temp_profile = refine_dz(temp_profile, grid)
+            salt_profile = refine_dz(salt_profile, grid, depth=depth)
+            depth_tcb[n,t], temp_tcb[n,t], salt_tcb[n,t] = extract_thermocline_base(temp_profile, salt_profile, grid, depth=depth)
+            depth_ww[n,t], temp_ww[n,t], salt_ww[n,t] = extract_winter_water_core(temp_profile, salt_profile, grid, depth=depth)
 
     # Now save all the data
     ncfile = NCfile(out_file, grid, 't')
