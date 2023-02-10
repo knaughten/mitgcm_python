@@ -75,7 +75,7 @@ def extract_winter_water_core (temp, salt, grid, depth=None):
         salt = refine_dz(salt, grid)[1]
     # Mask out the bottom third of the water column - removes cases where there's a cold blob at the bottom
     bottom_depth = depth[~temp.mask][-1]
-    temp = np.ma.masked_where(depth > bottom_depth*2/3, temp)
+    temp = np.ma.masked_where(depth > bottom_depth*2/3., temp)
     k0 = np.ma.argmin(temp)
     return depth[k0], temp[k0], salt[k0]
 
@@ -90,6 +90,9 @@ def extract_thermocline_base (temp, salt, grid, depth=None, threshold=3e-3):
     # Mask everything above the Winter Water core - removes weird temperature inversions near surface which happen occasionally.
     depth_ww = extract_winter_water_core(temp, salt, grid, depth=depth)[0]
     dtemp_dz[depth <= depth_ww] = 0
+    # Also mask the bottom fifth of the water column - removes cases where there's a warm blob at the bottom
+    bottom_depth = depth[~temp.mask][-1]
+    dtemp_dz[depth > bottom_depth*4/5.] = 0
     # Select deepest depth at which temperature gradient exceeds threshold - this will select for (slow) warming with depth and disregard the case of temperature inversion at seafloor.
     try:
         k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
