@@ -2775,9 +2775,9 @@ def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_di
 
 
 # Calculate some extra timeseries of surface freshwater flux terms
-def calc_sfc_fw_timeseries (base_dir='./', num_LENS=5, num_MENS=5, num_LW2=5, num_LW1=5, timeseries_file='timeseries_fwflx.nc'):
+def calc_sfc_fw_timeseries (base_dir='./', num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, timeseries_file='timeseries_fwflx_shelf.nc'):
 
-    var_names = ['PAS_shelf_seaice_melt', 'PAS_shelf_seaice_freeze', 'PAS_shelf_pmepr']
+    var_names = ['amundsen_shelf_seaice_melt', 'amundsen_shelf_seaice_freeze', 'amundsen_shelf_pmepr']
     base_dir = real_dir(base_dir)
     sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_O/' for n in range(num_LENS)] + ['PAS_MENS_'+str(n+1).zfill(3)+'_O/' for n in range(num_MENS)] + ['PAS_LW2.0_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW2)] + ['PAS_LW1.5_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW1)]
     for sd in sim_dir:
@@ -3936,8 +3936,8 @@ def sfc_forcing_trends (var, fig_name=None):
     expt_names = ['Historical', 'PACE', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
     num_periods = len(periods)
     p0 = 0.05
-    xmin = -138
-    xmax = -82
+    xmin = None # -138
+    xmax = None #-82
     ymin = None
     z_shelf = -1750
     
@@ -4108,7 +4108,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
         expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
         start_year = 2006
-        end_years = [2100, 2080, 2100, 2100]
+        end_year = 2080
     elif option == 'historical':
         num_ens = [num_LENS, num_noOBC, num_PACE]
         expt_names = ['LENS', 'LENS', 'PACE']
@@ -4117,7 +4117,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['Historical', 'Historical fixed BCs', 'PACE fixed BCs']
         expt_colours = ['DarkGrey', 'DodgerBlue', 'MediumSeaGreen']
         start_year = 1920
-        end_years = [2005, 2005, 2013]
+        end_year = 2005        
     
     num_expt = len(num_ens)
     smooth = 24
@@ -4147,7 +4147,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
                     file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files_expt[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_years[n], annual_avg=True) #smooth=smooth)
+                trend_tmp, sig = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_year, smooth=smooth)
                 if sig:
                     both_trends.append(trend_tmp)
                 else:
