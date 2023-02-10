@@ -4108,7 +4108,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
         expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
         start_year = 2006
-        end_year = 2080
+        end_years = [2100, 2080, 2100, 2100]
     elif option == 'historical':
         num_ens = [num_LENS, num_noOBC, num_PACE]
         expt_names = ['LENS', 'LENS', 'PACE']
@@ -4117,7 +4117,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['Historical', 'Historical fixed BCs', 'PACE fixed BCs']
         expt_colours = ['DarkGrey', 'DodgerBlue', 'MediumSeaGreen']
         start_year = 1920
-        end_year = 2005        
+        end_years = [2005, 2005, 2013]
     
     num_expt = len(num_ens)
     smooth = 24
@@ -4147,7 +4147,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
                     file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files_expt[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, smooth=smooth, p0=p0, start_year=start_year, end_year=end_year)
+                trend_tmp, sig = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_years[n], annual_avg=True) #smooth=smooth)
                 if sig:
                     both_trends.append(trend_tmp)
                 else:
@@ -4172,6 +4172,7 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         [y0, y1] = slope*np.array([x0, x1]) + intercept
         ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
         trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
+        print('r='+str(r_value))
     else:
         trend_title = 'no significant relationship'
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
