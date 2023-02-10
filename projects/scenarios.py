@@ -2775,9 +2775,9 @@ def compare_topo (var, grid_dir_old='PAS_grid/', grid_dir_new='AMUND_ini_grid_di
 
 
 # Calculate some extra timeseries of surface freshwater flux terms
-def calc_sfc_fw_timeseries (base_dir='./', num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, timeseries_file='timeseries_fwflx_shelf.nc'):
+def calc_sfc_fw_timeseries (base_dir='./', num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, timeseries_file='timeseries_oceFWflx_shelf.nc'):
 
-    var_names = ['amundsen_shelf_seaice_melt', 'amundsen_shelf_seaice_freeze', 'amundsen_shelf_pmepr']
+    var_names = ['amundsen_shelf_fwflx']
     base_dir = real_dir(base_dir)
     sim_dir = ['PAS_LENS'+str(n+1).zfill(3)+'_O/' for n in range(num_LENS)] + ['PAS_MENS_'+str(n+1).zfill(3)+'_O/' for n in range(num_MENS)] + ['PAS_LW2.0_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW2)] + ['PAS_LW1.5_'+str(n+1).zfill(3)+'_O/' for n in range(num_LW1)]
     for sd in sim_dir:
