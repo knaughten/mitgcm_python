@@ -73,6 +73,9 @@ def extract_winter_water_core (temp, salt, grid, depth=None):
     if depth is None:
         depth, temp = refine_dz(temp, grid)
         salt = refine_dz(salt, grid)[1]
+    # Mask out the bottom third of the water column - removes cases where there's a cold blob at the bottom
+    bottom_depth = depth[~temp.mask][-1]
+    temp = np.ma.masked_where(depth > bottom_depth*2/3, temp)
     k0 = np.ma.argmin(temp)
     return depth[k0], temp[k0], salt[k0]
 
@@ -91,6 +94,7 @@ def extract_thermocline_base (temp, salt, grid, depth=None, threshold=3e-3):
     try:
         k0 = np.ma.where(dtemp_dz > threshold)[0][-1]
     except(IndexError):
+        print('Warning: trying smaller threshold of '+str(threshold/2))
         return extract_thermocline_base(temp, salt, grid, depth=depth, threshold=threshold/2)
     return depth[k0], temp[k0], salt[k0]
 
@@ -111,7 +115,7 @@ def plot_sample_profiles (shelf, year, expt, ens, fig_name=None, base_dir='./', 
     # Extract base of thermocline and Winter Water core
     try:
         depth_tcb, temp_tcb, salt_tcb = extract_thermocline_base(temp, salt, grid, depth=depth)
-    except(IndexError):
+    except(IndexError, RecursionError):
         depth_tcb = None
         temp_tcb = None
         salt_tcb = None

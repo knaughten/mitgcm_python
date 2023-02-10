@@ -4300,7 +4300,7 @@ def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name
     latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name, vmin=vmin, vmax=vmax, ymax=ymax)
 
 
-def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200_700m', direction='u', fig_name=None):
+def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200_700m', fig_name=None):
 
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     num_expt = len(periods)
@@ -4312,7 +4312,6 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
     expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
     expt_dir_tail = '_O/output/'
     timeseries_file = 'timeseries.nc'
-    wind_var = 'EXF'+direction+'wind_trend'
     trend_file_head = 'precomputed_trends/'+var_2d+'_trend_'
     trend_file_tail = '.nc'
     p0 = 0.05
@@ -4322,9 +4321,8 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
     # Read the wind trend fields for every simulation
     trends_2d = []
     for n in range(num_expt):
-        expt_trends = np.ma.empty([num_ens[n], grid.ny, grid.nx])
         file_path = trend_file_head + periods[n] + trend_file_tail
-        expt_trends[n,:] = read_netcdf(file_path, var_2d+'_trend')
+        expt_trends = read_netcdf(file_path, var_2d+'_trend')
         trends_2d.append(expt_trends)
 
     # Read the timeseries and calculate trends for every simulation
@@ -4334,9 +4332,6 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
         for e in range(num_ens[n]):
             file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + timeseries_file
             slope, sig = read_calc_trend(var_1d, file_path, start_year=start_years[n], end_year=end_years[n], annual_avg=True)
-            if not sig:
-                print('Warning: '+period[n]+' ens'+str(e+1).zfill(3)+' has no significant timeseries trend')
-                slope = 0
             expt_trends[e] = slope
         trends_1d.append(expt_trends)
 
