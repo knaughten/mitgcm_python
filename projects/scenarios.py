@@ -4300,7 +4300,7 @@ def plot_barotropic_strf_mit (expt_name, num_ens, start_year, end_year, fig_name
     latlon_plot(strf, grid, gtype='u', ctype='plusminus', title='Barotropic streamfunction (Sv), '+expt_name+' ('+str(start_year)+'-'+str(end_year)+')', fig_name=fig_name, vmin=vmin, vmax=vmax, ymax=ymax)
 
 
-def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200_700m', fig_name=None):
+def plot_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200_700m', fig_name=None):
 
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     num_expt = len(periods)
@@ -4314,16 +4314,26 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
     timeseries_file = 'timeseries.nc'
     trend_file_head = 'precomputed_trends/'+var_2d+'_trend_'
     trend_file_tail = '.nc'
-    p0 = 0.05
+    p0_weak = 0.25
+    p0_strong = 0.05
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
-
-    # Read the wind trend fields for every simulation
-    trends_2d = []
-    for n in range(num_expt):
-        file_path = trend_file_head + periods[n] + trend_file_tail
-        expt_trends = read_netcdf(file_path, var_2d+'_trend')
-        trends_2d.append(expt_trends)
+    if var_2d == 'EXFuwind':
+        var_title_2d = 'zonal wind'
+    elif var_2d == 'EXFvwind':
+        var_title_2d = 'meridional wind'
+    elif var_2d == 'oceFWflx':
+        var_title_2d = 'freshwater flux'
+    else:
+        var_title_2d = var_2d
+    if var_1d == 'amundsen_shelf_temp_btw_200_700m':
+        var_title_1d = 'shelf temperature'
+    elif var_1d == 'dotson_to_cosgrove_massloss':
+        var_title_1d = 'ice shelf basal melting'
+    elif var_1d == 'PITE_trans':
+        var_title_1d = 'PITE transport'
+    else:
+        var_title_1d = var_1d
 
     # Read the timeseries and calculate trends for every simulation
     trends_1d = []
@@ -4335,8 +4345,16 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
             expt_trends[e] = slope
         trends_1d.append(expt_trends)
 
+    # Read the 2D trend fields for every simulation
+    trends_2d = []
+    for n in range(num_expt):
+        file_path = trend_file_head + periods[n] + trend_file_tail
+        expt_trends = read_netcdf(file_path, var_2d+'_trend')
+        trends_2d.append(expt_trends)
+
     # Now calculate the correlation of trends at each point, considering different sets of simulations
-    correlations = np.ma.empty([num_expt+2, grid.ny, grid.nx])
+    correlations = np.ma.zeros([num_expt+2, grid.ny, grid.nx])
+    p_values = np.ma.zeros([num_expt+2, grid.ny, grid.nx])
     mask = grid.get_open_ocean_mask().astype(bool)
     for j in range(grid.ny):
         for i in range(grid.nx):
@@ -4364,38 +4382,31 @@ def plot_wind_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_bt
                     trends1 = np.ma.empty([num_expt])
                     trends2 = np.ma.empty([num_expt])
                     for m in range(num_expt):
-                        p_val1 = ttest_1samp(trends_1d[m], 0)[1]
-                        if p_val1 > p0:
-                            trends1[m] = 0
-                        else:
-                            trends1[m] = np.mean(trends_1d[m])
-                        p_val2 = ttest_1samp(trends_2d[m][:,j,i], 0)[1]
-                        if p_val2 > p0:
-                            trends2[m] = 0
-                        else:
-                            trends2[m] = np.mean(trends_2d[m][:,j,i])
+                        trends1[m] = np.mean(trends_1d[m])
+                        trends2[m] = np.mean(trends_2d[m][:,j,i])
                 # Now get the correlation between these two sets of trends
                 slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
-                if p_value > p0:
-                    r_value = 0
                 correlations[n,j,i] = r_value
+                p_values[n,j,i] = p_value
+    correlations = np.ma.masked_where(p_values > p0_weak, correlations)
 
     titles = expt_names + ['All', 'Ensemble Means']
     vmin = np.amin(correlations)
     vmax = np.amax(correlations)
-    fig = plt.figure(figsize=(8,10))
+    fig = plt.figure(figsize=(7,10))
     gs = plt.GridSpec(4,2)
-    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.95)
-    cax = fig.add_axes([0.05, 0.8, 0.2, 0.02])
+    gs.update(left=0.05, right=0.95, bottom=0.02, top=0.95)
+    cax = fig.add_axes([0.05, 0.78, 0.4, 0.02])
     for n in range(len(titles)):
         ax = plt.subplot(gs[(n+1)//2, (n+1)%2])
-        img = latlon_plot(correlations[n,:], grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, title=titles[n], titlesize=14, ctype='plusminus')
+        img = latlon_plot(mask_land_ice(correlations[n,:], grid), grid, ax=ax, make_cbar=False, vmin=vmin, vmax=vmax, title=titles[n], titlesize=14, ctype='plusminus')
+        ax.contour(grid.lon_2d, grid.lat_2d, p_values[n,:], levels=[p0_strong], colors=('black'), linewidths=1, linestyles='solid')
         ax.tick_params(direction='in')
         if n != 0:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
     plt.colorbar(img, cax=cax, orientation='horizontal')
-    plt.suptitle('Correlation of trends between '+var_1d+' and\ntimeseries of '+var_2d, fontsize=18)
+    plt.text(0.02, 0.98, 'Correlation between trends in\n'+var_title_2d+' (2D)\n and trends in\n'+var_title_1d+' (1D)', fontsize=16, ha='left', va='top', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
                 
             
