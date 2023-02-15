@@ -1545,12 +1545,12 @@ def plot_obcs_anomalies (bdry, ens, year, month, fig_name=None, zmin=None):
 # Precompute the trend at every point in every ensemble member, for a bunch of variables. Split it into historical (1920-2005) and each future scenario (2006-2100).
 def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MENS=10, num_LW2=10, num_LW1=5, out_dir='precomputed_trends/', grid_dir='PAS_grid/'):
 
-    var_names = ['EXFpress', 'EXFaqh', 'EXFswdn', 'EXFlwdn'] #['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
+    var_names = ['wind_speed'] #['ismr', 'u_bottom100m', 'v_bottom100m', 'vel_bottom100m_speed', 'barotropic_u', 'barotropic_v', 'barotropic_vel_speed', 'THETA', 'temp_btw_200_700m', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx'] #['ismr', 'sst', 'sss', 'temp_btw_200_700m', 'salt_btw_200_700m', 'SIfwfrz', 'SIfwmelt', 'EXFatemp', 'EXFpreci', 'EXFuwind', 'EXFvwind', 'wind_speed', 'oceFWflx', 'barotropic_u', 'barotropic_v', 'baroclinic_u_bottom100m', 'baroclinic_v_bottom100m', 'THETA', 'SALT', 'thermocline', 'UVEL', 'VVEL', 'isotherm_0.5C_below_100m', 'isotherm_1.5C_below_100m', 'barotropic_vel_speed', 'baroclinic_vel_bottom100m_speed']
     base_dir = real_dir(base_dir)
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     start_years = [1920, 2006, 2006, 2006, 2006]
-    end_years = [2005, 2100, 2080, 2100, 2100]
+    end_years = [2005, 2080, 2080, 2080, 2080] #2100, 2080, 2100, 2100]
     num_periods = len(periods)
 
     for var in var_names:
@@ -1568,9 +1568,9 @@ def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MEN
             gtype = 'v'
         else:
             gtype = 't'
-        for t in range(num_periods):
+        for t in range(1, num_periods): #(num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
-            out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
+            out_file = out_dir + var + '_trend_' + periods[t] + '_to2080.nc'
             if periods[t] in ['historical', 'LENS']:
                 if periods[t] == 'historical':
                     num_ens = num_hist
@@ -3109,19 +3109,16 @@ def trend_box_plot (fig_name=None):
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
     var_titles = ['Trend over continental shelf,\n200-700m ', 'Basal mass loss trend\nfrom Dotson to Cosgrove']
     units = [deg_string+'C/century', '%/century']
-    expt_names = ['Historical', 'Historical\nFixed BCs', 'PACE\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
+    expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
     num_expt = len(expt_names)
     expt_dir_heads = ['PAS_']*num_expt
-    expt_dir_heads[2] = '../mitgcm/PAS_'
-    expt_dir_mids = ['LENS', 'LENS', 'PACE', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS']
+    expt_dir_mids = ['LENS', 'LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS']
     expt_ens_prec = [3]*num_expt
-    expt_ens_prec[2] = 2
-    expt_dir_tails = ['_O', '_noOBC', '', '_O', '_O', '_O', '_O', '_noOBC']
+    expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC']
     timeseries_file = ['/output/timeseries.nc']*num_expt
-    timeseries_file[2] = '/output/timeseries_final.nc'
-    num_ens = [10, 5, 20, 5, 10, 10, 10, 5]
-    start_years = [1920, 1920, 1920, 2006, 2006, 2006, 2006, 2006]
-    end_years = [2005, 2005, 2013, 2100, 2100, 2080, 2100, 2100]
+    num_ens = [10, 5, 5, 10, 10, 10, 5]
+    start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100]
     baseline_period = 30
     smooth = 24
     p0 = 0.05
@@ -3170,9 +3167,9 @@ def trend_box_plot (fig_name=None):
         all_trends.append(var_trends)
 
     # Make the box plot - just show warming trends
-    fig = plt.figure(figsize=(8,5))
+    fig = plt.figure(figsize=(7.5,5))
     gs = plt.GridSpec(1,1)
-    gs.update(left=0.13, right=0.97, bottom=0.1, top=0.9)
+    gs.update(left=0.14, right=0.97, bottom=0.1, top=0.9)
     ax = plt.subplot(gs[0,0])
     bplot = ax.boxplot(all_trends[0], positions=range(num_expt), showmeans=True, whis='range', medianprops=dict(color='blue'), meanprops=dict(markeredgecolor='black', markerfacecolor='black', marker='*'), patch_artist=True)
     for patch in bplot['boxes']:
@@ -3181,9 +3178,9 @@ def trend_box_plot (fig_name=None):
     ax.set_ylabel(var_titles[0]+'('+units[0]+')', fontsize=11)
     ax.set_xticklabels(expt_names, fontsize=11)
     ax.axhline(color='black', linewidth=1, linestyle='dashed')
-    ax.axvline(2.5, color='black', linewidth=1)
+    ax.axvline(1.5, color='black', linewidth=1)
     plt.text(-0.4, 1.75, 'Historical\nscenarios', fontsize=14, ha='left', va='top')
-    plt.text(2.6, 1.75, 'Future\nscenarios', fontsize=14, ha='left', va='top')
+    plt.text(1.6, 1.75, 'Future\nscenarios', fontsize=14, ha='left', va='top')
     ax.set_title('Ocean temperature trends in each scenario', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
     
@@ -3947,8 +3944,11 @@ def sfc_forcing_trends (var, fig_name=None):
     bathy[grid.lat_2d > -69] = 2*z_shelf
     bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
 
-    def read_single_trend (var_in_file):
-        file_path = trend_dir + var_in_file + '_trend_' + periods[t] + '.nc'
+    def read_single_trend (var_in_file, period):
+        file_path = trend_dir + var_in_file + '_trend_' + period
+        if period not in ['historical', 'PACE']:
+            file_path += '_to2080'
+        file_path += '.nc'
         trends = read_netcdf(file_path, var_in_file+'_trend')
         mean_trend = np.mean(trends, axis=0)
         p_val = ttest_1samp(trends, 0, axis=0)[1]
@@ -3962,10 +3962,10 @@ def sfc_forcing_trends (var, fig_name=None):
         data_plot_u = np.ma.empty([num_periods, grid.ny, grid.nx])
         data_plot_v = np.ma.empty([num_periods, grid.ny, grid.nx])
     for t in range(num_periods):
-        data_plot[t,:] = read_single_trend(var_name)
+        data_plot[t,:] = read_single_trend(var_name, periods[t])
         if var == 'wind':
-            trends_u = read_single_trend(var_name_u)
-            trends_v = read_single_trend(var_name_v)
+            trends_u = read_single_trend(var_name_u, periods[t])
+            trends_v = read_single_trend(var_name_v, periods[t])
             index = ((np.abs(data_plot[t,:]) < threshold) + (trends_u==0)*(trends_v==0)).astype(bool)
             trends_u = np.ma.masked_where(index, trends_u)
             trends_v = np.ma.masked_where(index, trends_v)
