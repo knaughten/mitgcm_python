@@ -1550,7 +1550,7 @@ def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MEN
     out_dir = real_dir(out_dir)
     periods = ['historical', 'LENS', 'MENS', 'LW2.0', 'LW1.5']
     start_years = [1920, 2006, 2006, 2006, 2006]
-    end_years = [2005, 2080, 2080, 2080, 2080] #2100, 2080, 2100, 2100]
+    end_years = [2005, 2100, 2080, 2100, 2100]
     num_periods = len(periods)
 
     for var in var_names:
@@ -1568,9 +1568,9 @@ def precompute_ensemble_trends (base_dir='./', num_hist=10, num_LENS=10, num_MEN
             gtype = 'v'
         else:
             gtype = 't'
-        for t in range(1, num_periods): #(num_periods):
+        for t in range(num_periods):
             print('Calculating '+periods[t]+' trends in '+var)
-            out_file = out_dir + var + '_trend_' + periods[t] + '_to2080.nc'
+            out_file = out_dir + var + '_trend_' + periods[t] + '.nc'
             if periods[t] in ['historical', 'LENS']:
                 if periods[t] == 'historical':
                     num_ens = num_hist
@@ -3273,7 +3273,7 @@ def warming_melting_trend_map (fig_name=None):
 
 
 # Calculate year at which RCP 8.5 diverges from rest of scenarios, to print onto timeseries figure 
-def calc_rcp85_divergence (window=11, return_year=False):
+def calc_rcp85_divergence (window=11, return_year=False, use_ttest=False):
 
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
@@ -3318,17 +3318,22 @@ def calc_rcp85_divergence (window=11, return_year=False):
     for t in range(radius, num_years-radius):
         sample1 = data_rcp85[:,t-radius:t+radius+1].ravel()
         sample2 = data_other[:,t-radius:t+radius+1].ravel()
-        min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
-        min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
-        mean1 = np.mean(sample1)
-        mean2 = np.mean(sample2)
-        distinct.append((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1))
-        min1_vals.append(min1)
-        max1_vals.append(max1)
-        mean1_vals.append(mean1)
-        min2_vals.append(min2)
-        max2_vals.append(max2)
-        mean2_vals.append(mean2)
+        if use_ttest:
+            t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
+            distinct.append(p_val < p0)
+        else:
+            # Compare 5-95% range
+            min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
+            min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
+            mean1 = np.mean(sample1)
+            mean2 = np.mean(sample2)
+            distinct.append((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1))
+            min1_vals.append(min1)
+            max1_vals.append(max1)
+            mean1_vals.append(mean1)
+            min2_vals.append(min2)
+            max2_vals.append(max2)
+            mean2_vals.append(mean2)
     if not distinct[-1]:
         print('RCP 8.5 never diverges for good')
     else:
@@ -3336,14 +3341,25 @@ def calc_rcp85_divergence (window=11, return_year=False):
         print('RCP 8.5 diverges for good at '+str(time[t0]))
         if return_year:
             return time[t0].year
-    fig, ax = plt.subplots()
-    ax.fill_between(time, min1_vals, max1_vals, color='red', alpha=0.3)
-    ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='RCP 8.5')
-    ax.fill_between(time, min2_vals, max2_vals, color='blue', alpha=0.3)
-    ax.plot(time, mean2_vals, color='blue', linewidth=1.5, label='Other scenarios')
-    ax.legend(loc='upper left')
-    ax.grid(linestyle='dotted')
-    fig.show()
+    if use_ttest:
+        fig, ax = plt.subplots()
+        for t in range(time.size):
+            if distinct[t]:
+                colour = 'IndianRed'
+            else:
+                colour = 'DodgerBlue'
+            ax.barh('RCP 8.5', 1, left=t, color=colour)
+        plt.title('Distinct = red, not distinct = blue')
+        fig.show()
+    else:
+        fig, ax = plt.subplots()
+        ax.fill_between(time, min1_vals, max1_vals, color='red', alpha=0.3)
+        ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='RCP 8.5')
+        ax.fill_between(time, min2_vals, max2_vals, color='blue', alpha=0.3)
+        ax.plot(time, mean2_vals, color='blue', linewidth=1.5, label='Other scenarios')
+        ax.legend(loc='upper left')
+        ax.grid(linestyle='dotted')
+        fig.show()
 
 
 # Main text figure with option for supplementary figure to show extra simulations
@@ -3666,7 +3682,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False, use_ttest=False):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3792,11 +3808,15 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         for n in range(num_bins):
             sample1 = bin_trends_group1[:,n]
             sample2 = bin_trends_group2[:,n]
-            min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
-            min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
-            mean1 = np.mean(sample1)
-            mean2 = np.mean(sample2)
-            distinct[n] = ((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1)).astype(float)
+            if use_ttest:
+                t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
+                distinct[n] = p_val < p0
+            else:
+                min1, max1 = norm.interval(1-p0, loc=np.mean(sample1), scale=np.std(sample1))
+                min2, max2 = norm.interval(1-p0, loc=np.mean(sample2), scale=np.std(sample2))
+                mean1 = np.mean(sample1)
+                mean2 = np.mean(sample2)
+                distinct[n] = ((mean1 > max2) or (mean1 < min2) or (mean2 > max1) or (mean2 < min1)).astype(float)
         # Find first bin where they are not distinct.
         try:
             n0 = np.where(distinct==0)[0][0]
@@ -3945,10 +3965,7 @@ def sfc_forcing_trends (var, fig_name=None):
     bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
 
     def read_single_trend (var_in_file, period):
-        file_path = trend_dir + var_in_file + '_trend_' + period
-        if period not in ['historical', 'PACE']:
-            file_path += '_to2080'
-        file_path += '.nc'
+        file_path = trend_dir + var_in_file + '_trend_' + period + '.nc'
         trends = read_netcdf(file_path, var_in_file+'_trend')
         mean_trend = np.mean(trends, axis=0)
         p_val = ttest_1samp(trends, 0, axis=0)[1]
