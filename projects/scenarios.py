@@ -4452,6 +4452,8 @@ def plot_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200
 # Supplementary figure
 def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
 
+    import matplotlib.patheffects as pthe
+
     forcing_var_names = ['EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']
     forcing_var_titles = [r'$\bf{a}$. Zonal wind', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Surface air temperature', r'$\bf{d}$. Precipitation']
     num_forcing = len(forcing_var_names)
@@ -4467,6 +4469,7 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     timeseries_file = 'timeseries.nc'
     trend_dir = base_dir+'precomputed_trends/'
     temp_var_name = 'amundsen_shelf_temp_btw_200_700m'
+    p0_weak = 0.25
     p0 = 0.05
     main_title = 'Correlation between trends in atmospheric forcing (2D)\nand trends in continental shelf temperature (1D)'
     grid_dir = 'PAS_grid/'
@@ -4522,25 +4525,25 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
                     slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
                     correlations[v,n,j,i] = r_value
                     p_values[v,n,j,i] = p_value
-    # Save two weaker versions for testing p0 sensitivity
-    correlations_75 = np.ma.masked_where(p_values > 0.25, correlations)
-    correlations_90 = np.ma.masked_where(p_values > 0.1, correlations)
-    correlations = np.ma.masked_where(p_values > p0, correlations)
+    correlations = np.ma.masked_where(p_values > p0_weak, correlations)
     
     # Set up figure
-    fig = plt.figure(figsize=(8,12))
-    gs = plt.GridSpec(num_var, num_expt+1)
-    gs.update(left=0.02, right=0.98, bottom=0.05, top=0.9, hspace=0.1, wspace=0.02)
-    cax = fig.add_axes([0.2, 0.02, 0.6, 0.02])
+    fig = plt.figure(figsize=(9,7.5))
+    gs = plt.GridSpec(num_forcing, num_expt+1)
+    gs.update(left=0.02, right=0.98, bottom=0.08, top=0.86, hspace=0.4, wspace=0.05)
+    cax = fig.add_axes([0.2, 0.035, 0.6, 0.025])
     for v in range(num_forcing):
         for n in range(num_expt+1):
             ax = plt.subplot(gs[v,n])
-            img = latlon_plot(mask_land_ice(correlations[v,n,:], grid), grid, ax=ax, make_cbar=False, vmin=-1, vmax=1, ctype='plusminus')
-            plt.text(0.01, 0.99, expt_names[n], ha='left', va='top', fontsize=12, transform=ax.transAxes)
+            img = latlon_plot(mask_land_ice(correlations[v,n,:], grid), grid, ax=ax, make_cbar=False, vmin=-1, vmax=1, ctype='plusminus', include_shelf=False)
+            ax.contour(grid.lon_2d, grid.lat_2d, mask_land_ice(p_values[v,n,:],grid), levels=[p0], colors=('black'), linewidths=1, linestyles='solid')
+            txt = plt.text(0.97, 0.97, expt_names[n], ha='right', va='top', fontsize=12, transform=ax.transAxes)
+            txt.set_path_effects([pthe.withStroke(linewidth=1.5, foreground='w')])
             ax.set_xticks([])
             ax.set_yticks([])
-        plt.text(0.5, 0.99-0.2*v, forcing_var_titles[v], ha='center', va='top', fontsize=14, transform=fig.transFigure)
+        plt.text(0.5, 0.895-0.21*v, forcing_var_titles[v], ha='center', va='top', fontsize=15, transform=fig.transFigure)
     plt.colorbar(img, cax=cax, orientation='horizontal')
+    plt.suptitle(main_title, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
             
         
