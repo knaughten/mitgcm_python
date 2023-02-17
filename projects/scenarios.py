@@ -3458,7 +3458,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         if n == num_expt-1 and not supp:
             # Label beginning of future scenarios
             ax.axvline(time[n][0], color=colours[0], linestyle='dashed')
-            plt.text(datetime.date(2008,1,1), -0.8, 'Future scenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
+            plt.text(datetime.date(2008,1,1), -0.8, 'Future\nscenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
             # Label year of RCP 8.5 divergence
             ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
             plt.text(datetime.date(rcp85_div_year+2,1,1), -0.5, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
@@ -3682,7 +3682,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False, use_ttest=False):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False, use_ttest=True):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3820,9 +3820,13 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         # Find first bin where they are not distinct.
         try:
             n0 = np.where(distinct==0)[0][0]
-            print('Groups are distinct for all bins less than '+str(bin_edges[n0])+'%')
+            print('Groups are distinct for all bins less than '+str(bin_edges[n0]))
             if np.count_nonzero(distinct[n0:]) > 0:
                 print('and for '+str(np.count_nonzero(distinct[n0:]))+' bins after that')
+                for m in range(n0, distinct.size):
+                    if distinct[m]:
+                        print(str(bin_edges[m])+'-'+str(bin_edges[m+1]))
+                
         except(IndexError):
             print('Groups are always distinct')
         if plot_distinct:
@@ -3846,7 +3850,8 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         for n in n_vals:
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
         if test_distinct and plot_distinct:
-            ax.fill_between(bin_edges, 0, 1, where=distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())            
+            ax.fill_between(bin_edges, 0, 1, where=np.invert(distinct_edges), color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+            plt.text(bin_centres[n0+1], 14, 'RCP 8.5\nnot distinct', fontsize=12, color=colours[-1], ha='left', va='center', weight='bold')
         ax.grid(linestyle='dotted')
         if depth_classes:
             ax.set_xlabel('Ice draft (m)', fontsize=10)
@@ -3864,6 +3869,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
             ax.set_xlabel('Buttressing flux response number', fontsize=10)
             ax.set_title('Melting trends as function of buttressing', fontsize=14)
         ax.set_ylabel('Mean basal melting trend (m/y/century)', fontsize=10)
+        ax.set_xlim([0, bin_edges[-1]])
         if supp:
             ax.legend(ncol=3, loc='lower center', bbox_to_anchor=(0.5, -0.36))
         else:
