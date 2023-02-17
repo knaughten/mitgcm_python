@@ -3273,7 +3273,7 @@ def warming_melting_trend_map (fig_name=None):
 
 
 # Calculate year at which RCP 8.5 diverges from rest of scenarios, to print onto timeseries figure 
-def calc_rcp85_divergence (window=11, return_year=False, use_ttest=False):
+def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
 
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
@@ -3461,7 +3461,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
             plt.text(datetime.date(2008,1,1), -0.8, 'Future scenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
             # Label year of RCP 8.5 divergence
             ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
-            plt.text(datetime.date(rcp85_div_year+2,1,1), -0.8, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
+            plt.text(datetime.date(rcp85_div_year+2,1,1), -0.5, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
     ax.grid(linestyle='dotted')
     ax.set_xlim([datetime.date(start_year[0],1,1), np.amax(time[-1])])
     ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year[0], end_year[-1], 20)])
