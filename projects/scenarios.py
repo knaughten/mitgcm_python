@@ -3830,8 +3830,9 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         except(IndexError):
             print('Groups are always distinct')
         if plot_distinct:
-            # Now get this on the bin edges. If a bin centre is true, want both edges to be true.
-            distinct_edges = np.concatenate(([distinct[0]], np.maximum(distinct[:-1],distinct[1:]), [distinct[-1]])).astype(bool)
+            # Now get the inverse of distinct on the bin edges. If a bin centre is true, want both edges to be true.
+            not_distinct = 1-distinct
+            not_distinct_edges = np.concatenate(([not_distinct[0]], np.maximum(not_distinct[:-1],not_distinct[1:]), [not_distinct[-1]])).astype(bool)
             if group1 == ['LW1.5', 'LW2.0', 'MENS'] and group2 == ['LENS']:
                 max_distinct = bin_edges[n0]
                 distinct_label_posn = bin_edges[n0//2]
@@ -3850,8 +3851,8 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         for n in n_vals:
             ax.plot(bin_centres, bin_trends_mean_all[n], color=colours[n], marker='o', markersize=5, label=expt_names[n])
         if test_distinct and plot_distinct:
-            ax.fill_between(bin_edges, 0, 1, where=np.invert(distinct_edges), color='black', alpha=0.1, transform=ax.get_xaxis_transform())
-            plt.text(bin_centres[n0+1], 14, 'RCP 8.5\nnot distinct', fontsize=12, color=colours[-1], ha='left', va='center', weight='bold')
+            ax.fill_between(bin_edges, 0, 1, where=not_distinct_edges, color='black', alpha=0.1, transform=ax.get_xaxis_transform())
+            plt.text(bin_centres[n0], 14, 'RCP 8.5\nnot distinct', fontsize=12, color=colours[-1], ha='left', va='center', weight='bold')
         ax.grid(linestyle='dotted')
         if depth_classes:
             ax.set_xlabel('Ice draft (m)', fontsize=10)
