@@ -3199,10 +3199,9 @@ def warming_melting_trend_map (fig_name=None):
     trend_dir = 'precomputed_trends/'
     trend_var = ['temp_btw_200_700m', 'ismr']
     grid_dir = 'PAS_grid/'
-    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A', 'V', 'DG', 'PITW', 'PITE', 'PIB']
-    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95, -87, -117, -111.5, -106, -103.2]
-    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.6, -72.9, -73.1, -72.25, -71.45, -71.34, -74.75]
-    labelsize = [11]*8 + [10]*4
+    region_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A']
+    label_x = [-124, -112.3, -111.5, -106.5, -100.4, -100.5, -95]
+    label_y = [-74.5, -74.375, -75, -75, -75.2, -73.6, -72.9]
     num_labels = len(region_labels)
     z_shelf = -1750
     p0 = 0.05
@@ -3258,7 +3257,7 @@ def warming_melting_trend_map (fig_name=None):
         ax.contour(grid.lon_2d, grid.lat_2d, mask, levels=[0.5], colors=(region_colours[n]), linewidths=1, linestyles='dashed')
     # Add region labels
     for n in range(num_labels):
-        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=labelsize[n], ha='center', va='center', weight='bold', color='black', transform=ax.transData)
+        txt = plt.text(label_x[n], label_y[n], region_labels[n], fontsize=11, ha='center', va='center', weight='bold', color='black', transform=ax.transData)
         txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
     # Map inset
     ax3 = inset_axes(ax, "18%", "25%", loc='upper left')
@@ -3604,6 +3603,8 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
 # Main text figure
 def velocity_trends (fig_name=None):
 
+    import matplotlib.patheffects as pthe
+
     expt_name = 'LW2.0'
     expt_title = 'Paris 2'+deg_string+'C'
     trend_dir = 'precomputed_trends/'
@@ -3622,16 +3623,17 @@ def velocity_trends (fig_name=None):
     ymax = -70
     p0 = 0.05
     threshold = 0.02
-    z_shelf = -1750
+    z_shelf = -1000
     region_labels = ['DG', 'PITE']
-    label_x = [-117, -106]
-    label_y = [-72.25, -71.34]
+    label_x = [-116, -107]
+    label_y = [-71.8, -71.34]
 
     grid = Grid(grid_dir)
     bathy = grid.bathy
     bathy[grid.ice_mask] = 0
-    bathy[grid.lat_2d > -69] = 2*z_shelf
-    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
+    bathy[grid.lat_2d < -74.2] = 0
+    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
+    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
 
     def read_single_trend (var_name, dim=2, gtype='t'):
         file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
@@ -3673,7 +3675,8 @@ def velocity_trends (fig_name=None):
             ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linewidth=1.5)
             plt.text(h_bounds[2][0]-0.2, lat0[2], 'c', color='blue', weight='bold', ha='right', va='center')
             for m in range(len(region_labels)):
-                plt.text(label_x[m], label_y[m], region_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='green')
+                txt = plt.text(label_x[m], label_y[m], region_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='blue')
+                txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
@@ -4444,6 +4447,103 @@ def plot_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.text(0.02, 0.98, 'Correlation between trends in\n'+var_title_2d+' (2D)\n and trends in\n'+var_title_1d+' (1D)', fontsize=16, ha='left', va='top', transform=fig.transFigure)
     finished_plot(fig, fig_name=fig_name)
+
+
+# Supplementary figure
+def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
+
+    forcing_var_names = ['EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']
+    forcing_var_titles = [r'$\bf{a}$. Zonal wind', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Surface air temperature', r'$\bf{d}$. Precipitation']
+    num_forcing = len(forcing_var_names)
+    periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
+    num_expt = len(periods)
+    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'All']
+    num_ens = [10, 5, 10, 10, 10]
+    start_years = [1920, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2100, 2100, 2080, 2100]
+    expt_dir_head = base_dir+'PAS_'
+    expt_dir_mids = ['LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+    expt_dir_tail = '_O/output/'
+    timeseries_file = 'timeseries.nc'
+    trend_dir = base_dir+'precomputed_trends/'
+    temp_var_name = 'amundsen_shelf_temp_btw_200_700m'
+    p0 = 0.05
+    main_title = 'Correlation between trends in atmospheric forcing (2D)\nand trends in continental shelf temperature (1D)'
+    grid_dir = 'PAS_grid/'
+    grid = Grid(grid_dir)
+
+    # Read the timeseries and calculate trends for every simulation
+    trends_1d = []
+    for n in range(num_expt):
+        expt_trends = np.ma.empty(num_ens[n])
+        for e in range(num_ens[n]):
+            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + timeseries_file
+            slope, sig = read_calc_trend(temp_var_name, file_path, start_year=start_years[n], end_year=end_years[n], annual_avg=True)
+            expt_trends[e] = slope
+        trends_1d.append(expt_trends)
+
+    # Read the 2D trend fields for every simulation and forcing variable
+    trends_2d = []
+    for n in range(num_expt):
+        expt_trends = np.ma.empty([num_forcing, num_ens[n], grid.ny, grid.nx])
+        for v in range(num_forcing):
+            file_path = trend_dir + forcing_var_names[v] + '_trend_' + periods[n] + '.nc'
+            expt_trends[v,:] = read_netcdf(file_path, forcing_var_names[v]+'_trend')
+        trends_2d.append(expt_trends)
+
+    # Calculate the correlations of trends at each point, considering different sets of simulations
+    correlations = np.ma.zeros([num_forcing, num_expt+1, grid.ny, grid.nx])
+    p_values = np.ma.zeros([num_forcing, num_expt+1, grid.ny, grid.nx])
+    mask = grid.get_open_ocean_mask().astype(bool)
+    for j in range(grid.ny):
+        print('...latitude index '+str(j+1)+' of '+str(grid.ny))
+        for i in range(grid.nx):
+            if not mask[j,i]:
+                # Land or ice shelf point
+                continue
+            for v in range(num_forcing):
+                for n in range(num_expt+1):
+                    if n < num_expt:
+                        # Intra-ensemble correlations for each scenario
+                        trends1 = trends_1d[n]
+                        trends2 = trends_2d[n][v,:,j,i]
+                    else:
+                        # Inter-ensemble correlations considering all members of all scenarios
+                        for m in range(num_expt):
+                            trends1_tmp = trends_1d[m]
+                            trends2_tmp = trends_2d[m][v,:,j,i]
+                            if m==0:
+                                trends1 = trends1_tmp
+                                trends2 = trends2_tmp
+                            else:
+                                trends1 = np.concatenate((trends1, trends1_tmp))
+                                trends2 = np.concatenate((trends2, trends2_tmp))
+                    # Now get the correlation between these two sets of trends
+                    slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
+                    correlations[v,n,j,i] = r_value
+                    p_values[v,n,j,i] = p_value
+    # Save two weaker versions for testing p0 sensitivity
+    correlations_75 = np.ma.masked_where(p_values > 0.25, correlations)
+    correlations_90 = np.ma.masked_where(p_values > 0.1, correlations)
+    correlations = np.ma.masked_where(p_values > p0, correlations)
+    
+    # Set up figure
+    fig = plt.figure(figsize=(8,12))
+    gs = plt.GridSpec(num_var, num_expt+1)
+    gs.update(left=0.02, right=0.98, bottom=0.05, top=0.9, hspace=0.1, wspace=0.02)
+    cax = fig.add_axes([0.2, 0.02, 0.6, 0.02])
+    for v in range(num_forcing):
+        for n in range(num_expt+1):
+            ax = plt.subplot(gs[v,n])
+            img = latlon_plot(mask_land_ice(correlations[v,n,:], grid), grid, ax=ax, make_cbar=False, vmin=-1, vmax=1, ctype='plusminus')
+            plt.text(0.01, 0.99, expt_names[n], ha='left', va='top', fontsize=12, transform=ax.transAxes)
+            ax.set_xticks([])
+            ax.set_yticks([])
+        plt.text(0.5, 0.99-0.2*v, forcing_var_titles[v], ha='center', va='top', fontsize=14, transform=fig.transFigure)
+    plt.colorbar(img, cax=cax, orientation='horizontal')
+    finished_plot(fig, fig_name=fig_name)
+            
+        
                 
             
 
