@@ -3623,8 +3623,15 @@ def velocity_trends (fig_name=None):
     p0 = 0.05
     threshold = 0.02
     z_shelf = -1750
+    region_labels = ['DG', 'PITE']
+    label_x = [-117, -106]
+    label_y = [-72.25, -71.34]
 
     grid = Grid(grid_dir)
+    bathy = grid.bathy
+    bathy[grid.ice_mask] = 0
+    bathy[grid.lat_2d > -69] = 2*z_shelf
+    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
 
     def read_single_trend (var_name, dim=2, gtype='t'):
         file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
@@ -3654,15 +3661,19 @@ def velocity_trends (fig_name=None):
             u_trend, v_trend, vel_trend = read_trend_vector(trend_var[n], dim=2)
             u_trend = interp_grid(u_trend, grid, 'u', 't')
             v_trend = interp_grid(v_trend, grid, 'v', 't')
-            index = vel_trend < threshold
+            magnitude_trend = np.sqrt(u_trend**2 + v_trend**2)
+            index = magnitude_trend < threshold
             u_trend = np.ma.masked_where(index, u_trend)
             v_trend = np.ma.masked_where(index, v_trend)
-            img = latlon_plot(vel_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax)
+            img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax)
+            ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('magenta'), linewidths=1)
             overlay_vectors(ax, u_trend, v_trend, grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
             ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linewidth=1.5)
             plt.text(lon0[1], h_bounds[1][1]+0.1, 'b', color='blue', weight='bold', ha='center', va='bottom')
             ax.plot(h_bounds[2], [lat0[2], lat0[2]], color='blue', linewidth=1.5)
             plt.text(h_bounds[2][0]-0.2, lat0[2], 'c', color='blue', weight='bold', ha='right', va='center')
+            for m in range(len(region_labels)):
+                plt.text(label_x[m], label_y[m], region_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='green')
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
