@@ -4545,6 +4545,108 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle(main_title, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
+
+
+# 2 supplementary figures showing example of OBCS correction
+def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
+
+    expt = 'LENS'
+    bdry = 'E'
+    year = 2100
+    month = 7
+    case_label = 'RCP 8.5, July 2100, eastern boundary'
+    main_title_physical_space = 'Bias correction of T/S fields:\n'+case_label
+    main_title_ts_space = 'Water masses in normalised T/S space:\n'+case_label
+    grid_dir = 'PAS_grid/'
+    grid = Grid(grid_dir)
+
+    mit_h, mit_z, woa_clim, cesm_h, cesm_z, cesm_data, cesm_clim, cesm_anom, bin_edges, woa_volume_perbin, cesm_volume_perbin, cesm_anom_ts, cesm_anom_ts_filled, final_anom, data_corrected = read_correct_cesm_ts_space(expt, bdry, ens, year, month, return_all_for_plotting=True)
+
+    # Overview figure in physical space
+    fig = plt.figure(figsize=(6,12))
+    gs = plt.GridSpec(6,2)
+    gs.update(left=0.05, right=0.95, bottom=0.01, top=0.95, hspace=0.1, wspace=0.05)
+    data_plot = [woa_clim, cesm_clim, cesm_data, cesm_anom, final_anom, data_corrected]
+    h_axis = [mit_h, cesm_h, cesm_h, cesm_h, mit_h, mit_h]
+    z_axis = [mit_z, cesm_z, cesm_z, cesm_z, mit_z, mit_z]
+    titles = [r'$\bf{a}$. WOA climatology', r'$\bf{b}$. CESM climatology', r'$\bf{c}$. CESM raw fields', r'$\bf{d}$. CESM raw anomalies', r'$\bf{e}$. Corrected anomalies', r'$\bf{f}$. Final corrected fields']
+    # Inner function to set colour bounds to the min/max of a number of arrays
+    def set_colour_bounds (arrays, index, ctype):
+        vmin = np.amin([np.amin(A[index,:]) for A in arrays])
+        vmax = np.amax([np.amax(A[index,:]) for A in arrays])
+        cmap = set_colours(arrays[0][index,:], ctype=ctype, vmin=vmin, vmax=vmax)[0]
+        return vmin, vmax, cmap
+    tmin_abs, tmax_abs, cmap_temp_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 0, 'parula')
+    smin_abs, smax_abs, cmap_salt_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 1, 'parula')
+    tmin_anom, tmax_anom, cmap_temp_anom = set_colour_bounds([cesm_anom, final_anom], 0, 'plusminus')
+    smin_anom, smax_anom, cmap_salt_anom = set_colour_bounds([cesm_anom, final_anom], 1, 'plusminus')
+    colour_set = ['abs', 'abs', 'abs', 'anom', 'anom', 'abs']
+    make_cbar = [True, False, False, True, False, False]
+    for n in range(6):
+        if colour_set[n] == 'abs':
+            vmin = [tmin_abs, smin_abs]
+            vmax = [tmax_abs, smax_abs]
+            cmap = [cmap_temp_abs, cmap_salt_abs]
+        elif colour_set[n] == 'anom':
+            vmin = [tmin_anom, smin_anom]
+            vmax = [tmax_anom, smax_anom]
+            cmap = [cmap_temp_anom, cmap_salt_anom]
+        if make_cbar[n]:
+            cax_temp = fig.add_axes([0.02, 0.85-0.14*n, 0.02, 0.05])
+            cax_salt = fig.add_axes([0.96, 0.85-0.14*n, 0.02, 0.05])
+            cax = [cax_temp, cax_salt]
+        for v in range(2):
+            img = ax.pcolormesh(h_axis[n], z_axis[n], data_plot[n][v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            if make_cbar[n]:
+                plt.colorbar(img, cax=cax[v])
+        if make_cbar[n]:
+            plt.text(0.01, 0.85-0.14*n, 'Temperature ('+deg_string+'C)', ha='left', va='top', fontsize=10, rotation=90)
+            plt.text(0.99, 0.85-0.14*n, 'Salinity (psu)', ha='right', va='top', fontsize=10, rotation=-90)
+        plt.text(0.5, 0.88-0.14*n, titles[n], ha='center', va='top', fontsize=14)
+    plt.suptitle(main_title_physical_space, fontsize=18)
+    finished_plot(fig, fig_name=fig_name_physical_space, dpi=300)
+
+    # Water mass figure in normalised T/S space
+    fig = plt.figure(figsize=(7,8))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.85, hspace=0.1, wspace=0.05)
+    log_volume = np.ma.empty([2, bin_edges.size, bin_edges.size])
+    log_volume[0,:] = np.log(cesm_volume_perbin)
+    log_volume[1,:] = np.log(woa_volume_perbin)
+    data_plot = [log_volume, cesm_anom_ts, cesm_anom_ts_filled]
+    labels = [[r'$\bf{a}$. CESM', r'$\bf{b}$. WOA'], [r'$\bf{c}$. Temperature', r'$\bf{d}$. Salinity'], [r'$\bf{e}$. Temperature', r'$\bf{f}$. Salinity']]
+    titles = ['Volume of each class at climatology', 'CESM anomalies from climatology', 'Filled surface to look up anomalies']
+    cmap_vol, vmin_vol, vmax_vol = set_colours(log_volume, ctype='parula')
+    vmin_temp, vmax_temp, cmap_temp = set_colour_bounds([cesm_anom_ts, cesm_anom_ts_filled], 0, 'plusminus')
+    vmin_salt, vmax_salt, cmap_salt = set_colour_bounds([cesm_anom_ts, cesm_anom_ts_filled], 1, 'plusminus')
+    make_cbar = [[False,  True], [True, True], [False, False]]
+    cbar_label = [[None, r'log (m$^3$)'], [deg_string+'C', 'psu'], [None, None]]
+    for n in range(3):
+        if n==0:
+            vmin = [vmin_vol, vmin_vol]
+            vmax = [vmax_vol, vmax_vol]
+            cmap = [cmap_vol, cmap_vol]
+        else:
+            vmin = [vmin_temp, vmin_salt]
+            vmax = [vmax_temp, vmax_salt]
+            cmap = [cmap_temp, cmap_salt]
+        for v in range(2):
+            img = ax.pcolormesh(bin_edges, bin_edges, data_plot[n][v,:], cmap=cmap, vmin=vmin, vmax=vmax)
+            if make_cbar[n][v]:
+                cax = fig.add_axes([0.02+0.9*v, 0.8-0.25*n, 0.02, 0.2])
+                plt.colorbar(img, cax=cax)
+                plt.text(0.01+0.98*v, 0.85-0.25*n, cbar_label[n][v], fontsize=10, rotation=(1-2*v)*90)
+        plt.text(0.5, 0.88-0.25*n, titles[n], fontsize=14)
+    plt.suptitle(main_title_ts_space, fontsize=18)
+    finished_plot(fig, fig_name=fig_name_ts_space, dpi=300)
+            
+                
+
+            
+    
+
+    
+
             
         
                 

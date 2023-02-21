@@ -1197,7 +1197,7 @@ def get_hfac_bdry (grid, bdry, gtype='t'):
 
 
 # Helper function to read and correct the CESM temperature and salinity in T/S space for a given experiment, year, month, boundary, and ensemble member. Both month and ens are 1-indexed.
-def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/PAS/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False):
+def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/oceans_output/shelf/kaight/CESM_bias_correction/PAS/obcs/', obcs_dir='/data/oceans_output/shelf/kaight/ics_obcs/PAS/', mit_grid_dir='/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_grid/', return_raw=False, plot=False, return_all_for_plotting=False):
 
     if plot:
         import matplotlib
@@ -1488,6 +1488,8 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
 
     if return_raw:
         return data_corrected[0,:], data_corrected[1,:], cesm_data[0,:], cesm_data[1,:], cesm_h, cesm_z
+    elif return_all_for_plotting:
+        return mit_h, mit_grid.z*1e-3, woa_clim, cesm_h, cesm_z, cesm_data, cesm_clim, cesm_anom, bin_edges, woa_volume_perbin, cesm_volume_perbin, cesm_anom_ts, cesm_anom_ts_filled, woa_anom, data_corrected
     else:
         return data_corrected[0,:], data_corrected[1,:]
 
