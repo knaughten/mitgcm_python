@@ -1490,7 +1490,7 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
     if return_raw:
         return data_corrected[0,:], data_corrected[1,:], cesm_data[0,:], cesm_data[1,:], cesm_h, cesm_z
     elif return_all_for_plotting:
-        return mit_h, mit_grid.z*1e-3, woa_clim, cesm_h, cesm_z, cesm_data, cesm_clim, cesm_anom, bin_edges, woa_volume_perbin, cesm_volume_perbin, cesm_anom_ts, cesm_anom_ts_filled, woa_anom, data_corrected
+        return mit_h, mit_grid.z, woa_clim, cesm_h, cesm_z, cesm_data, cesm_clim, cesm_anom, bin_edges, woa_volume_perbin, cesm_volume_perbin, cesm_anom_ts, cesm_anom_ts_filled, woa_anom, data_corrected
     else:
         return data_corrected[0,:], data_corrected[1,:]
 
