@@ -24,7 +24,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
 from ..plot_utils.slices import slice_patches, slice_values
-from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries
+from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries, shade_background
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg, extend_into_mask, interp_nonreg_xy
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
@@ -4556,14 +4556,15 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     month = 7
     ens = 1
     case_label = 'RCP 8.5 (member 1), July 2100, eastern boundary'
-    main_title_physical_space = 'Bias correction of T/S fields:\n'+case_label
+    main_title_physical_space = 'Bias correction of salinity (psu):\n'+case_label
     main_title_ts_space = 'Water masses in normalised T/S space:\n'+case_label
-    hmin = -73
-    zmin = -1000
+    hmin = -73.25
+    zmin = -1500
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
 
     mit_h, mit_z, woa_clim, cesm_h, cesm_z, cesm_data, cesm_clim, cesm_anom, bin_edges, woa_volume_perbin, cesm_volume_perbin, cesm_anom_ts, cesm_anom_ts_filled, final_anom, data_corrected = read_correct_cesm_ts_space(expt, bdry, ens, year, month, return_all_for_plotting=True)
+    final_anom = np.ma.masked_where(woa_clim.mask, final_anom)
 
     # Inner function to set colour bounds to the min/max of a number of arrays
     def set_colour_bounds (arrays, index, ctype):
@@ -4573,48 +4574,42 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
         return vmin, vmax, cmap
 
     # Overview figure in physical space
-    fig = plt.figure(figsize=(5,10))
-    gs = plt.GridSpec(6,2)
-    gs.update(left=0.1, right=0.9, bottom=0.01, top=0.9, hspace=0.5, wspace=0.05)
-    data_plot = [woa_clim, cesm_clim, cesm_data, cesm_anom, final_anom, data_corrected]
-    h_axis = [mit_h, cesm_h, cesm_h, cesm_h, mit_h, mit_h]
-    z_axis = [mit_z, cesm_z, cesm_z, cesm_z, mit_z, mit_z]
-    titles = [r'$\bf{a}$. WOA climatology', r'$\bf{b}$. CESM climatology', r'$\bf{c}$. CESM raw fields', r'$\bf{d}$. CESM raw anomalies', r'$\bf{e}$. Corrected anomalies', r'$\bf{f}$. Final corrected fields']
-    tmin_abs, tmax_abs, cmap_temp_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 0, 'parula')
-    smin_abs, smax_abs, cmap_salt_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 1, 'parula')
-    tmin_anom, tmax_anom, cmap_temp_anom = set_colour_bounds([cesm_anom, final_anom], 0, 'plusminus')
-    smin_anom, smax_anom, cmap_salt_anom = set_colour_bounds([cesm_anom, final_anom], 1, 'plusminus')
-    colour_set = ['abs', 'abs', 'abs', 'anom', 'anom', 'abs']
-    make_cbar = [True, False, False, True, False, False]
+    fig = plt.figure(figsize=(8,8))
+    gs = plt.GridSpec(3,2)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.87, hspace=0.25, wspace=0.05)
+    data_plot = [woa_clim[1,:], cesm_clim[1,:], cesm_data[1,:], data_corrected[1,:], cesm_anom[1,:], final_anom[1,:]]
+    h_axis = [mit_h, cesm_h, cesm_h, mit_h, cesm_h, mit_h]
+    z_axis = [mit_z, cesm_z, cesm_z, mit_z, cesm_z, mit_z]
+    titles = [r'$\bf{a}$. WOA climatology', r'$\bf{b}$. CESM climatology', r'$\bf{c}$. CESM raw fields', r'$\bf{d}$. Corrected fields', r'$\bf{e}$. CESM raw anomalies', r'$\bf{f}$. Corrected anomalies']
+    vmin_abs, vmax_abs, cmap_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 1, 'parula')
+    vmin_anom, vmax_anom, cmap_anom = set_colour_bounds([cesm_anom, final_anom], 1, 'plusminus')
+    colour_set = ['abs', 'abs', 'abs', 'abs', 'anom', 'anom']
     for n in range(6):
         if colour_set[n] == 'abs':
-            vmin = [tmin_abs, smin_abs]
-            vmax = [tmax_abs, smax_abs]
-            cmap = [cmap_temp_abs, cmap_salt_abs]
+            vmin = vmin_abs
+            vmax = vmax_abs
+            cmap = cmap_abs
         elif colour_set[n] == 'anom':
-            vmin = [tmin_anom, smin_anom]
-            vmax = [tmax_anom, smax_anom]
-            cmap = [cmap_temp_anom, cmap_salt_anom]
-        if make_cbar[n]:
-            cax_temp = fig.add_axes([0.02, 0.85-0.14*n, 0.02, 0.05])
-            cax_salt = fig.add_axes([0.96, 0.85-0.14*n, 0.02, 0.05])
-            cax = [cax_temp, cax_salt]
-        for v in range(2):
-            ax = plt.subplot(gs[n,v])
-            img = ax.pcolormesh(h_axis[n], z_axis[n], data_plot[n][v,:], cmap=cmap[v], vmin=vmin[v], vmax=vmax[v])
-            ax.set_xlim([hmin, None])
-            ax.set_ylim([zmin, 0])
-            ax.tick_params(direction='in')
-            if n!=0 or v!=0:
-                ax.set_xticklabels([])
-                ax.set_yticklabels([])
-            if make_cbar[n]:
-                plt.colorbar(img, cax=cax[v])
-        if make_cbar[n]:
-            plt.text(0.01, 0.85-0.14*n, 'Temperature ('+deg_string+'C)', ha='left', va='top', fontsize=8, rotation=90, transform=fig.transFigure)
-            plt.text(0.99, 0.85-0.14*n, 'Salinity (psu)', ha='right', va='top', fontsize=8, rotation=-90, transform=fig.transFigure)
-        plt.text(0.5, 0.88-0.14*n, titles[n], ha='center', va='top', fontsize=12, transform=fig.transFigure)
-    plt.suptitle(main_title_physical_space, fontsize=14)
+            vmin = vmin_anom
+            vmax = vmax_anom
+            cmap = cmap_anom
+        ax = plt.subplot(gs[n//2, n%2])
+        shade_background(ax)
+        img = ax.pcolormesh(h_axis[n], z_axis[n], data_plot[n], cmap=cmap, vmin=vmin, vmax=vmax)
+        ax.set_title(titles[n], fontsize=16)
+        ax.set_xlim([hmin, None])
+        ax.set_ylim([zmin, 0])
+        ax.tick_params(direction='in')
+        if n==0:
+            slice_axes(ax, h_axis='lat')
+            ax.set_ylabel('depth (m)', fontsize=10)
+        else:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        if n==1 or n==5:
+            cax = fig.add_axes([0.92, 0.655-0.295*(n//2), 0.02, 0.2])
+            plt.colorbar(img, cax=cax)
+    plt.suptitle(main_title_physical_space, fontsize=18)
     finished_plot(fig, fig_name=fig_name_physical_space, dpi=300)
 
     # Water mass figure in normalised T/S space
