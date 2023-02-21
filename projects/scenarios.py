@@ -4554,7 +4554,8 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     bdry = 'E'
     year = 2100
     month = 7
-    case_label = 'RCP 8.5, July 2100, eastern boundary'
+    ens = 1
+    case_label = 'RCP 8.5 (member 1), July 2100, eastern boundary'
     main_title_physical_space = 'Bias correction of T/S fields:\n'+case_label
     main_title_ts_space = 'Water masses in normalised T/S space:\n'+case_label
     grid_dir = 'PAS_grid/'

@@ -1367,7 +1367,7 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
     # Normalise T and S in WOA
     woa_temp_norm = normalise(woa_clim[0,:])
     woa_salt_norm = normalise(woa_clim[1,:])
-    if plot:
+    if plot or return_all_for_plotting:
         # Calculate volume of T/S distribution in WOA for plotting purposes only        
         woa_volume_perbin = np.zeros([num_bins, num_bins])
         valid = np.invert(woa_temp_norm.mask)
@@ -1376,6 +1376,7 @@ def read_correct_cesm_ts_space (expt, bdry, ens, year, month, in_dir='/data/ocea
             salt_index = np.nonzero(bin_edges >= salt_val)[0][0]-1
             woa_volume_perbin[temp_index, salt_index] += dV_val
         woa_volume_perbin = np.ma.masked_where(woa_volume_perbin==0, woa_volume_perbin)
+    if plot:
         # Now plot
         fig, gs, cax1, cax2 = set_panels('1x2C2')
         cax = [cax1, cax2]
