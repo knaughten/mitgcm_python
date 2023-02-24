@@ -4580,7 +4580,7 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     data_plot = [woa_clim[1,:], cesm_clim[1,:], cesm_data[1,:], data_corrected[1,:], cesm_anom[1,:], final_anom[1,:]]
     h_axis = [mit_h, cesm_h, cesm_h, mit_h, cesm_h, mit_h]
     z_axis = [mit_z, cesm_z, cesm_z, mit_z, cesm_z, mit_z]
-    titles = [r'$\bf{a}$. WOA climatology', r'$\bf{b}$. CESM climatology', r'$\bf{c}$. CESM raw fields', r'$\bf{d}$. Corrected fields', r'$\bf{e}$. CESM raw anomalies', r'$\bf{f}$. Corrected anomalies']
+    titles = [r'$\bf{a}$. WOA climatology', r'$\bf{b}$. CESM1 climatology', r'$\bf{c}$. CESM1 raw fields', r'$\bf{d}$. Corrected fields', r'$\bf{e}$. CESM1 raw anomalies', r'$\bf{f}$. Corrected anomalies']
     vmin_abs, vmax_abs, cmap_abs = set_colour_bounds([woa_clim, cesm_clim, cesm_data, data_corrected], 1, 'parula')
     vmin_anom, vmax_anom, cmap_anom = set_colour_bounds([cesm_anom, final_anom], 1, 'plusminus')
     colour_set = ['abs', 'abs', 'abs', 'abs', 'anom', 'anom']
@@ -4615,14 +4615,14 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     # Water mass figure in normalised T/S space
     fig = plt.figure(figsize=(7,8))
     gs = plt.GridSpec(3,2)
-    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.84, hspace=0.4, wspace=0.1)
+    gs.update(left=0.1, right=0.89, bottom=0.05, top=0.84, hspace=0.4, wspace=0.1)
     num_bins = bin_edges.size-1
     log_volume = np.ma.empty([2, num_bins, num_bins])
     log_volume[0,:] = np.log(cesm_volume_perbin)
     log_volume[1,:] = np.log(woa_volume_perbin)
     data_plot = [log_volume, cesm_anom_ts, cesm_anom_ts_filled]
-    labels = [[r'$\bf{a}$. CESM', r'$\bf{b}$. WOA'], [r'$\bf{c}$. Temperature', r'$\bf{d}$. Salinity'], [r'$\bf{e}$. Temperature', r'$\bf{f}$. Salinity']]
-    titles = ['Volume of each class at climatology', 'CESM anomalies from climatology', 'Filled surface to look up anomalies']
+    labels = [[r'$\bf{a}$. CESM1', r'$\bf{b}$. WOA'], [r'$\bf{c}$. Temperature', r'$\bf{d}$. Salinity'], [r'$\bf{e}$. Temperature', r'$\bf{f}$. Salinity']]
+    titles = ['Volume of each class at climatology', 'CESM1 anomalies from climatology', 'Filled surface to look up anomalies']
     vmin_temp, vmax_temp, cmap_temp = set_colour_bounds([cesm_anom_ts, cesm_anom_ts_filled], 0, 'plusminus')
     vmin_salt, vmax_salt, cmap_salt = set_colour_bounds([cesm_anom_ts, cesm_anom_ts_filled], 1, 'plusminus')
     make_cbar = [[True,  True], [True, True], [False, False]]
