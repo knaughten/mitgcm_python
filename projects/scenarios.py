@@ -4652,7 +4652,7 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
             if make_cbar[n][v]:
                 cax = fig.add_axes([0.02+0.89*v, 0.645-0.29*n, 0.02, 0.18])
                 plt.colorbar(img, cax=cax)
-                plt.text(0.02+0.9*v, 0.825-0.29*n, cbar_label[n][v], fontsize=10, ha='left', va='bottom', transform=fig.transFigure)
+                plt.text(0.02+0.89*v, 0.825-0.29*n, cbar_label[n][v], fontsize=10, ha='left', va='bottom', transform=fig.transFigure)
         plt.text(0.5, 0.885-0.2925*n, titles[n], fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.suptitle(main_title_ts_space, fontsize=18)
     finished_plot(fig, fig_name=fig_name_ts_space, dpi=300)
