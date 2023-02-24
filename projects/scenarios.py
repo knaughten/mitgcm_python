@@ -4615,7 +4615,7 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     # Water mass figure in normalised T/S space
     fig = plt.figure(figsize=(7,8))
     gs = plt.GridSpec(3,2)
-    gs.update(left=0.1, right=0.89, bottom=0.05, top=0.84, hspace=0.4, wspace=0.1)
+    gs.update(left=0.1, right=0.9, bottom=0.05, top=0.84, hspace=0.4, wspace=0.1)
     num_bins = bin_edges.size-1
     log_volume = np.ma.empty([2, num_bins, num_bins])
     log_volume[0,:] = np.log(cesm_volume_perbin)
@@ -4650,7 +4650,7 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
             if make_cbar[n][v]:
-                cax = fig.add_axes([0.02+0.9*v, 0.645-0.29*n, 0.02, 0.18])
+                cax = fig.add_axes([0.02+0.89*v, 0.645-0.29*n, 0.02, 0.18])
                 plt.colorbar(img, cax=cax)
                 plt.text(0.02+0.9*v, 0.825-0.29*n, cbar_label[n][v], fontsize=10, ha='left', va='bottom', transform=fig.transFigure)
         plt.text(0.5, 0.885-0.2925*n, titles[n], fontsize=16, transform=fig.transFigure, ha='center', va='center')
