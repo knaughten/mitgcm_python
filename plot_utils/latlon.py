@@ -260,7 +260,7 @@ def average_blocks (lon, lat, data_x, data_y, chunk_x, chunk_y, option):
     return lon_blocked, lat_blocked, data_x_blocked, data_y_blocked
 
 
-def overlay_vectors (ax, u_vec, v_vec, grid, option='avg', chunk=10, chunk_x=None, chunk_y=None, scale=0.8, headwidth=6, headlength=7):
+def overlay_vectors (ax, u_vec, v_vec, grid, option='avg', chunk=10, chunk_x=None, chunk_y=None, scale=0.8, headwidth=6, headlength=7, colour='black'):
 
     if chunk_x is None:
         chunk_x = chunk
@@ -269,4 +269,4 @@ def overlay_vectors (ax, u_vec, v_vec, grid, option='avg', chunk=10, chunk_x=Non
 
     lon, lat = grid.get_lon_lat()
     lon_plot, lat_plot, u_plot, v_plot = average_blocks(lon, lat, u_vec, v_vec, chunk_x, chunk_y, option)
-    ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength)
+    ax.quiver(lon_plot, lat_plot, u_plot, v_plot, scale=scale, headwidth=headwidth, headlength=headlength, color=colour)

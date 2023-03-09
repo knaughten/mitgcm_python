@@ -24,7 +24,7 @@ from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
 from ..plot_utils.slices import slice_patches, slice_values
-from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries, shade_background
+from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries, shade_background, average_blocks
 from ..plot_misc import ts_binning, hovmoller_plot
 from ..interpolation import interp_slice_helper, interp_slice_helper_nonreg, extract_slice_nonreg, interp_bdry, fill_into_mask, distance_weighted_nearest_neighbours, interp_to_depth, interp_grid, interp_reg_xy, interp_reg_xyz, discard_and_fill, interp_reg, extend_into_mask, interp_nonreg_xy
 from ..postprocess import precompute_timeseries_coupled, make_trend_file
@@ -1772,6 +1772,21 @@ def plot_ts_trend_slice (lon0, ymax=None, tmin=None, tmax=None, smin=None, smax=
     finished_plot(fig, fig_name=fig_name)
 
 
+# Helper function to contour shelf break
+def contour_shelf_break (grid, ax, colour='black', z_shelf=-1750):
+
+    bathy = grid.bathy
+    if z_shelf == -1000:
+        bathy[grid.lat_2d < -74.2] = 0
+        bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
+        bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
+    elif z_shelf == -1750:
+        bathy[grid.ice_mask] = 0
+        bathy[grid.lat_2d > -69] = 2*z_shelf
+        bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
+    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=(colour), linewidths=1)
+        
+
 # Recreate the PACE advection trend map for the historical and future trends in LENS, side by side - now using velocity not advection
 def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir='PAS_grid/', fig_name=None):
 
@@ -1784,11 +1799,6 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
     num_periods = len(periods)
     ymax = -70
     vmax = 1
-
-    bathy = grid.bathy
-    bathy[grid.lat_2d < -74.2] = 0
-    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
-    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
     
     def read_component (key, period):
         var_name = key+'VEL' 
@@ -1820,7 +1830,7 @@ def plot_velocity_trend_maps (z0=-400, trend_dir='precomputed_trends/', grid_dir
     for t in range(num_periods):
         ax = plt.subplot(gs[0,t])
         img = latlon_plot(magnitude_trend[t,:], grid, ax=ax, make_cbar=False, ctype='plusminus', ymax=ymax, title=periods[t], titlesize=14, vmax=vmax)
-        ax.contour(grid.lon_2d, grid.lat_2d, bathy, levels=[z_shelf], colors=('blue'), linewidths=1)
+        contour_shelf_break(grid, ax, colour='blue', z_shelf=z_shelf)
         overlay_vectors(ax, uvel_trend[t,:], vvel_trend[t,:], grid, chunk_x=9, chunk_y=6, scale=8, headwidth=4, headlength=5)
         if t > 0:
             ax.set_xticklabels([])
@@ -3240,12 +3250,7 @@ def warming_melting_trend_map (fig_name=None):
     cbar2 = plt.colorbar(img2, cax=cax2, orientation='horizontal')
     cbar2.ax.xaxis.set_ticks_position('top')
     plt.text(0.885, 0.16, 'Basal melting trend\n(m/y/century)', fontsize=12, transform=ax.transAxes, ha='center', va='center')
-    # Contour shelf break
-    bathy = grid.bathy
-    bathy[grid.ice_mask] = 0
-    bathy[grid.lat_2d > -69] = 2*z_shelf
-    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
-    ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('black'), linewidths=1)
+    contour_shelf_break(grid, ax, colour='black', z_shelf=z_shelf)
     # Contour Amundsen Shelf region
     for n in range(len(regions)):
         mask = grid.get_region_mask(regions[n])
@@ -3629,11 +3634,6 @@ def velocity_trends (fig_name=None):
     label_y = [-71.8, -71.34]
 
     grid = Grid(grid_dir)
-    bathy = grid.bathy
-    bathy[grid.ice_mask] = 0
-    bathy[grid.lat_2d < -74.2] = 0
-    bathy[(grid.lon_2d > -125)*(grid.lat_2d < -73)] = 0
-    bathy[(grid.lon_2d > -110)*(grid.lat_2d < -72)] = 0
 
     def read_single_trend (var_name, dim=2, gtype='t'):
         file_path = trend_dir + var_name + '_trend_' + expt_name + '.nc'
@@ -3668,7 +3668,7 @@ def velocity_trends (fig_name=None):
             u_trend = np.ma.masked_where(index, u_trend)
             v_trend = np.ma.masked_where(index, v_trend)
             img = latlon_plot(magnitude_trend, grid, ax=ax, make_cbar=False, ctype='plusminus', xmin=xmin, xmax=xmax, ymax=ymax)
-            ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('magenta'), linewidths=1)
+            contour_shelf_break(grid, ax, colour='magenta', z_shelf=z_shelf)
             overlay_vectors(ax, u_trend, v_trend, grid, chunk_x=5, chunk_y=8, scale=0.6, headwidth=6, headlength=7)
             ax.plot([lon0[1], lon0[1]], h_bounds[1], color='blue', linewidth=1.5)
             plt.text(lon0[1], h_bounds[1][1]+0.1, 'b', color='blue', weight='bold', ha='center', va='bottom')
@@ -3978,12 +3978,6 @@ def sfc_forcing_trends (var, fig_name=None):
     xmax = None #-82
     ymin = None
     z_shelf = -1750
-    
-    grid = Grid(grid_dir)
-    bathy = grid.bathy
-    bathy[grid.ice_mask] = 0
-    bathy[grid.lat_2d > -69] = 2*z_shelf
-    bathy[(grid.lon_2d < -110)*(grid.lat_2d > -71)] = 2*z_shelf
 
     def read_single_trend (var_in_file, period):
         file_path = trend_dir + var_in_file + '_trend_' + period + '.nc'
@@ -4024,7 +4018,7 @@ def sfc_forcing_trends (var, fig_name=None):
         if var == 'wind':
             overlay_vectors(ax, data_plot_u[t,:], data_plot_v[t,:], grid, chunk_x=chunk_x, chunk_y=chunk_y, scale=scale, headwidth=4, headlength=5)
         ax.tick_params(direction='in')
-        ax.contour(grid.lon_2d, grid.lat_2d, grid.bathy, levels=[z_shelf], colors=('magenta'), linewidths=1)
+        contour_shelf_break(grid, ax, colour='magenta', z_shelf=z_shelf)
         if t != 0:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
@@ -4455,11 +4449,10 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     import matplotlib.patheffects as pthe
 
     forcing_var_names = ['EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']
-    forcing_var_titles = [r'$\bf{a}$. Zonal wind', r'$\bf{b}$. Meridional wind', r'$\bf{c}$. Surface air temperature', r'$\bf{d}$. Precipitation']
+    forcing_var_titles = [r'$\bf{a}$. Winds', None, r'$\bf{b}$. Surface air temperature', r'$\bf{c}$. Precipitation']
     num_forcing = len(forcing_var_names)
     periods = ['historical', 'LW1.5', 'LW2.0', 'MENS', 'LENS']
     num_expt = len(periods)
-    expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'All']
     num_ens = [10, 5, 10, 10, 10]
     start_years = [1920, 2006, 2006, 2006, 2006]
     end_years = [2005, 2100, 2100, 2080, 2100]
@@ -4471,6 +4464,7 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     temp_var_name = 'amundsen_shelf_temp_btw_200_700m'
     p0_weak = 0.25
     p0 = 0.05
+    z_shelf = -1750
     main_title = 'Correlation between trends in atmospheric forcing (2D)\nand trends in continental shelf temperature (1D)'
     grid_dir = 'PAS_grid/'
     grid = Grid(grid_dir)
@@ -4494,9 +4488,9 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
             expt_trends[v,:] = read_netcdf(file_path, forcing_var_names[v]+'_trend')
         trends_2d.append(expt_trends)
 
-    # Calculate the correlations of trends at each point, considering different sets of simulations
-    correlations = np.ma.zeros([num_forcing, num_expt+1, grid.ny, grid.nx])
-    p_values = np.ma.zeros([num_forcing, num_expt+1, grid.ny, grid.nx])
+    # Calculate the correlations of trends at each point, considering all simulations together
+    correlations = np.ma.zeros([num_forcing, grid.ny, grid.nx])
+    p_values = np.ma.zeros([num_forcing, grid.ny, grid.nx])
     mask = grid.get_open_ocean_mask().astype(bool)
     for j in range(grid.ny):
         print('...latitude index '+str(j+1)+' of '+str(grid.ny))
@@ -4505,43 +4499,56 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
                 # Land or ice shelf point
                 continue
             for v in range(num_forcing):
-                for n in range(num_expt+1):
-                    if n < num_expt:
-                        # Intra-ensemble correlations for each scenario
-                        trends1 = trends_1d[n]
-                        trends2 = trends_2d[n][v,:,j,i]
+                for m in range(num_expt):
+                    trends1_tmp = trends_1d[m]
+                    trends2_tmp = trends_2d[m][v,:,j,i]
+                    if m==0:
+                        trends1 = trends1_tmp
+                        trends2 = trends2_tmp
                     else:
-                        # Inter-ensemble correlations considering all members of all scenarios
-                        for m in range(num_expt):
-                            trends1_tmp = trends_1d[m]
-                            trends2_tmp = trends_2d[m][v,:,j,i]
-                            if m==0:
-                                trends1 = trends1_tmp
-                                trends2 = trends2_tmp
-                            else:
-                                trends1 = np.concatenate((trends1, trends1_tmp))
-                                trends2 = np.concatenate((trends2, trends2_tmp))
-                    # Now get the correlation between these two sets of trends
-                    slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
-                    correlations[v,n,j,i] = r_value
-                    p_values[v,n,j,i] = p_value
-    correlations = np.ma.masked_where(p_values > p0_weak, correlations)
+                        trends1 = np.concatenate((trends1, trends1_tmp))
+                        trends2 = np.concatenate((trends2, trends2_tmp))
+                # Now get the correlation between these two sets of trends
+                slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
+                correlations[v,j,i] = r_value
+                p_values[v,j,i] = p_value
+    correlations_strong = np.ma.masked_where(p_values > p0, correlations)
     
     # Set up figure
-    fig = plt.figure(figsize=(9,7.5))
-    gs = plt.GridSpec(num_forcing, num_expt+1)
-    gs.update(left=0.02, right=0.98, bottom=0.08, top=0.86, hspace=0.4, wspace=0.05)
-    cax = fig.add_axes([0.2, 0.035, 0.6, 0.025])
+    fig = plt.figure(figsize=(10,5))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.05, right=0.98, bottom=0.15, top=0.8, wspace=0.05)
+    cax = fig.add_axes([0.3, 0.05, 0.4, 0.04])
     for v in range(num_forcing):
-        for n in range(num_expt+1):
-            ax = plt.subplot(gs[v,n])
-            img = latlon_plot(mask_land_ice(correlations[v,n,:], grid), grid, ax=ax, make_cbar=False, vmin=-1, vmax=1, ctype='plusminus', include_shelf=False)
-            ax.contour(grid.lon_2d, grid.lat_2d, mask_land_ice(p_values[v,n,:],grid), levels=[p0], colors=('black'), linewidths=1, linestyles='solid')
-            txt = plt.text(0.97, 0.97, expt_names[n], ha='right', va='top', fontsize=12, transform=ax.transAxes)
-            txt.set_path_effects([pthe.withStroke(linewidth=1.5, foreground='w')])
+        if v==0:
+            ax = plt.subplot(gs[0,v])
+            # Vector plot of winds
+            # Start with an empty plot
+            data_empty = np.ma.masked_where(correlations<2, correlations)
+            latlon_plot(data_empty, grid, ax=ax, make_cbar=False, include_shelf=False)
+            contour_shelf_break(grid, ax, colour='magenta', z_shelf=z_shelf)
+            # Average blocks before checking significance
+            chunk_x = 24
+            chunk_y = 12
+            lon_plot, lat_plot, correlations_u, correlations_v = average_blocks(grid.lon_2d, grid.lat_2d, correlations[v,:], correlations[v+1,:], chunk_x, chunk_y)
+            p_values_u, p_values_v = average_blocks(grid.lon_2d, grid.lat_2d, p_values[v,:], p_values[v+1,:], chunk_x, chunk_y)[2:]
+            # Overlay vectors in grey regardless of significance
+            ax.quiver(lon_plot, lat_plot, correlations_u, correlations_v, scale=10, color=(0.6,0.6,0.6))
+            # Overlay vectors in black where at least one component is significant at 95% level
+            neither_sig = (p_values_u > p0)*(p_values_v > p0)
+            correlations_u_strong = np.ma.msked_where(neither_sig, correlations_u)
+            correlations_v_strong = np.ma.masked_where(neither_sig, correlations_v)
+            ax.quiver(lon_plot, lat_plot, correlations_u_strong, correlations_v_strong, scale=10, color='black')
+        elif v==1:
+            # Already dealt with the second wind component
+            pass
+        else:
+            ax = plt.subplot(gs[0,v-1])
+            # Contour plot of thermodynamics
+            img = latlon_plot(mask_land_ice(correlations_strong[v,:], grid), grid, ax=ax, make_cbar=False, vmin=-1, vmax=1, ctype='plusminus', include_shelf=False)
             ax.set_xticks([])
             ax.set_yticks([])
-        plt.text(0.5, 0.895-0.21*v, forcing_var_titles[v], ha='center', va='top', fontsize=15, transform=fig.transFigure)
+        ax.set_title(forcing_var_titles[v], fontsize=15)
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle(main_title, fontsize=18)
     finished_plot(fig, fig_name=fig_name)
