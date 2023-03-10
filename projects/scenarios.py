@@ -4515,8 +4515,8 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     # Set up figure
     fig = plt.figure(figsize=(10,4))
     gs = plt.GridSpec(1,3)
-    gs.update(left=0.05, right=0.98, bottom=0.18, top=0.78, wspace=0.05)
-    cax = fig.add_axes([0.3, 0.07, 0.4, 0.04])
+    gs.update(left=0.05, right=0.98, bottom=0.18, top=0.75, wspace=0.05)
+    cax = fig.add_axes([0.475, 0.07, 0.4, 0.04])
     for v in range(num_forcing):
         if v==0:
             ax = plt.subplot(gs[0,v])
@@ -4530,7 +4530,7 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
             chunk_y = 20
             headwidth = 6
             headlength = 7
-            lon_plot, lat_plot, correlations_u, correlations_v = average_blocks(grid.lon_2d, grid.lat_2d, correlations[v,:], correlations[v+1,:], chunk_x, chunk_y, 'avg')
+            lon_plot, lat_plot, correlations_u, correlations_v = average_blocks(grid.lon_2d, grid.lat_2d, mask_land_ice(correlations[v,:],grid), mask_land_ice(correlations[v+1,:],grid), chunk_x, chunk_y, 'avg')
             p_values_u, p_values_v = average_blocks(grid.lon_2d, grid.lat_2d, p_values[v,:], p_values[v+1,:], chunk_x, chunk_y, 'avg')[2:]
             # Overlay vectors in grey regardless of significance
             ax.quiver(lon_plot, lat_plot, correlations_u, correlations_v, scale=10, color=(0.6,0.6,0.6), headwidth=headwidth, headlength=headlength)
@@ -4538,10 +4538,14 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
             neither_sig = (p_values_u > p0)*(p_values_v > p0)
             correlations_u_strong = np.ma.masked_where(neither_sig, correlations_u)
             correlations_v_strong = np.ma.masked_where(neither_sig, correlations_v)
-            ax.quiver(lon_plot, lat_plot, correlations_u_strong, correlations_v_strong, scale=10, color='black', headwidth=headwidth, headlength=headlength)
+            q = ax.quiver(lon_plot, lat_plot, correlations_u_strong, correlations_v_strong, scale=10, color='black', headwidth=headwidth, headlength=headlength)
+            ax.quiverkey(q, X=0.5, Y=-0.2, U=1, label='1', labelpos='E')
+            labels = ax.xaxis.get_ticklabels()
+            for label in labels[1::2]:
+                label.set_visible(False)
         elif v==1:
             # Already dealt with the second wind component
-            pass
+            continue
         else:
             ax = plt.subplot(gs[0,v-1])
             # Contour plot of thermodynamics
@@ -4551,7 +4555,7 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
         ax.set_title(forcing_var_titles[v], fontsize=15)
     plt.colorbar(img, cax=cax, orientation='horizontal')
     plt.suptitle(main_title, fontsize=18)
-    finished_plot(fig, fig_name=fig_name)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
 # 2 supplementary figures showing example of OBCS correction
