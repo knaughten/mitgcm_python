@@ -4446,8 +4446,6 @@ def plot_correlation_map (var_2d='EXFuwind', var_1d='amundsen_shelf_temp_btw_200
 # Supplementary figure
 def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
 
-    import matplotlib.patheffects as pthe
-
     forcing_var_names = ['EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']
     forcing_var_titles = [r'$\bf{a}$. Winds', None, r'$\bf{b}$. Surface air temperature', r'$\bf{c}$. Precipitation']
     num_forcing = len(forcing_var_names)
@@ -4515,30 +4513,32 @@ def forcing_temp_correlation_maps (base_dir='./', fig_name=None):
     correlations_strong = np.ma.masked_where(p_values > p0, correlations)
     
     # Set up figure
-    fig = plt.figure(figsize=(10,5))
+    fig = plt.figure(figsize=(10,4))
     gs = plt.GridSpec(1,3)
-    gs.update(left=0.05, right=0.98, bottom=0.15, top=0.8, wspace=0.05)
-    cax = fig.add_axes([0.3, 0.05, 0.4, 0.04])
+    gs.update(left=0.05, right=0.98, bottom=0.18, top=0.78, wspace=0.05)
+    cax = fig.add_axes([0.3, 0.07, 0.4, 0.04])
     for v in range(num_forcing):
         if v==0:
             ax = plt.subplot(gs[0,v])
             # Vector plot of winds
             # Start with an empty plot
-            data_empty = np.ma.masked_where(correlations<2, correlations)
+            data_empty = np.ma.masked_where(correlations[v,:]<2, correlations[v,:])
             latlon_plot(data_empty, grid, ax=ax, make_cbar=False, include_shelf=False)
             contour_shelf_break(grid, ax, colour='magenta', z_shelf=z_shelf)
             # Average blocks before checking significance
             chunk_x = 24
-            chunk_y = 12
-            lon_plot, lat_plot, correlations_u, correlations_v = average_blocks(grid.lon_2d, grid.lat_2d, correlations[v,:], correlations[v+1,:], chunk_x, chunk_y)
-            p_values_u, p_values_v = average_blocks(grid.lon_2d, grid.lat_2d, p_values[v,:], p_values[v+1,:], chunk_x, chunk_y)[2:]
+            chunk_y = 20
+            headwidth = 6
+            headlength = 7
+            lon_plot, lat_plot, correlations_u, correlations_v = average_blocks(grid.lon_2d, grid.lat_2d, correlations[v,:], correlations[v+1,:], chunk_x, chunk_y, 'avg')
+            p_values_u, p_values_v = average_blocks(grid.lon_2d, grid.lat_2d, p_values[v,:], p_values[v+1,:], chunk_x, chunk_y, 'avg')[2:]
             # Overlay vectors in grey regardless of significance
-            ax.quiver(lon_plot, lat_plot, correlations_u, correlations_v, scale=10, color=(0.6,0.6,0.6))
+            ax.quiver(lon_plot, lat_plot, correlations_u, correlations_v, scale=10, color=(0.6,0.6,0.6), headwidth=headwidth, headlength=headlength)
             # Overlay vectors in black where at least one component is significant at 95% level
             neither_sig = (p_values_u > p0)*(p_values_v > p0)
-            correlations_u_strong = np.ma.msked_where(neither_sig, correlations_u)
+            correlations_u_strong = np.ma.masked_where(neither_sig, correlations_u)
             correlations_v_strong = np.ma.masked_where(neither_sig, correlations_v)
-            ax.quiver(lon_plot, lat_plot, correlations_u_strong, correlations_v_strong, scale=10, color='black')
+            ax.quiver(lon_plot, lat_plot, correlations_u_strong, correlations_v_strong, scale=10, color='black', headwidth=headwidth, headlength=headlength)
         elif v==1:
             # Already dealt with the second wind component
             pass
