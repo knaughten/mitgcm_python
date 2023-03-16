@@ -3907,6 +3907,22 @@ def plot_salt_trend_slice (trend_dir='precomputed_trends/', grid_dir='PAS_grid/'
     slice_plot(mean_trend, grid, lon0=lon0, hmin=hmin, hmax=hmax, zmin=zmin, zmax=zmax, ctype='plusminus', fig_name=fig_name)
 
 
+def extract_temp_data_for_jan (out_file='temp_max_below_400m_last10y_avg.nc', temp_avg_file='temp_last10y_avg.nc', grid_dir='PAS_grid/'):
+
+    grid = Grid(grid_dir)
+    z0 = -400
+    z_3d = z_to_xyz(grid.z, grid)
+    temp = mask_3d(np.squeeze(read_netcdf(temp_avg_file, 'THETA')), grid)
+    # Mask everything above 400m    
+    temp = np.ma.masked_where(z_3d >= z0, temp)
+    # Now take depth-maximum of remaining data
+    temp_max = np.amax(temp, axis=0)
+    # Write to file
+    ncfile = NCfile(out_file, grid, 'xy')
+    ncfile.add_variable('THETA', temp_max, 'xy', long_name='temp_max_below_400m_1994-2013_avg', units='degC')
+    ncfile.close()
+
+
 
 
 
