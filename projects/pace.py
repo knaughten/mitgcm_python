@@ -3917,8 +3917,14 @@ def extract_temp_data_for_jan (out_file='temp_max_below_400m_last10y_avg.nc', te
     temp = np.ma.masked_where(z_3d >= z0, temp)
     # Now take depth-maximum of remaining data
     temp_max = np.amax(temp, axis=0)
+    # Get polar stereographic coordinates - note reference latitude to match PAS bathy setup
+    x, y = polar_stereo(grid.lon_2d, grid.lat_2d, lat_c=-70)
     # Write to file
     ncfile = NCfile(out_file, grid, 'xy')
+    ncfile.add_variable('cartesian_x', x, 'xy', long_name='Cartesian_polar_stereographic_x-coordinate', units='m')
+    ncfile.add_variable('cartesian_y', y, 'xy', long_name='Cartesian_polar_stereographic_y-coordinate', units='m')
+    ncfile.add_variable('land_mask', grid.land_mask.astype(float), 'xy')
+    ncfile.add_variable('iceshelf_mask', grid.ice_mask.astype(float), 'xy')
     ncfile.add_variable('THETA', temp_max, 'xy', long_name='temp_max_below_400m_1994-2013_avg', units='degC')
     ncfile.close()
 
