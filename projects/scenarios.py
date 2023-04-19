@@ -3564,6 +3564,9 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
         # Now get mean and std over last 20 years and all ensemble members
         mean_profiles[n,:] = np.mean(expt_annual_means[:,-final_period:,:], axis=(0,1))
         std_profiles[n,:] = np.std(expt_annual_means[:,-final_period:,:], axis=(0,1))
+        if n==0:
+            mean_profile_beg = np.mean(expt_annual_means[:,:final_period,:], axis=(0,1))
+            std_profile_beg = np.std(expt_annual_means[:,:final_period,:], axis=(0,1))
         # Calculate ensemble mean trend and test significance
         mean_trend = np.mean(expt_trends, axis=0)
         p_val = ttest_1samp(expt_trends, 0, axis=0)[1]
@@ -3577,13 +3580,16 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     gs = plt.GridSpec(1,3)
     gs.update(left=0.1, right=0.95, bottom=0.18, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
+    data_plot_beg = [mean_profile_beg, std_profile_beg]
     titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
         ax = plt.subplot(gs[0,v])
         for n in range(num_expt): #[0, 2, 5, 3, 1, 4]:
-            ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])     
+            ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])
+            if n==0 and v < 2:
+                ax.plot(data_plot_beg, depth, color=colours[n], linewidth=1.5, linestyle='dotted')
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
         ax.set_ylim([0, None])
