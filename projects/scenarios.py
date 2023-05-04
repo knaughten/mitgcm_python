@@ -3589,7 +3589,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
         for n in range(num_expt): #[0, 2, 5, 3, 1, 4]:
             ax.plot(data_plot[v][n,:], depth, color=colours[n], linewidth=1.5, label=expt_names[n])
             if n==0 and v < 2:
-                ax.plot(data_plot_beg, depth, color=colours[n], linewidth=1.5, linestyle='dotted')
+                ax.plot(data_plot_beg[v], depth, color=colours[n], linewidth=1.5, linestyle='dotted')
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
         ax.set_ylim([0, None])

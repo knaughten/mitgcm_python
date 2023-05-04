@@ -96,7 +96,8 @@ region_bounds = {
     'bear_ridge_S': [-110.35, -110.35, -74.35, -73.8791],
     'bear_ridge_N': [-112.05, -109.05, -73.8791, -72.7314],
     'PAS_shelf1': [-140, -100, -75.6, -70],
-    'PAS_shelf2': [-100, -80, -75.6, -69]
+    'PAS_shelf2': [-100, -80, -75.6, -69],
+    'Kat_shelf': [-130, -100, -75, -70]
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot', 'PAS_shelf']
@@ -113,7 +114,8 @@ region_bathy_bounds = {
     'filchner_trough_cavity': [None, -1000],
     'amundsen_shelf': [-1750, None],
     'bear_ridge_N': [-300, None],
-    'PAS_shelf': [-1750, None]
+    'PAS_shelf': [-1750, None],
+    'Kat_shelf': [-1500, None]
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {
@@ -166,7 +168,8 @@ region_names = {
     'amundsen_shelf': 'Amundsen Sea continental shelf',
     'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove',
     'amundsen_sea': 'Amundsen Sea',
-    'PAS_shelf': 'Continental shelf'
+    'PAS_shelf': 'Continental shelf',
+    'Kat_shelf': 'Katherine version of shelf'
 }    
 
 # Resolution of SOSE grid in degrees
