@@ -15,14 +15,14 @@ import itertools
 from ..plot_1d import read_plot_timeseries_ensemble
 from ..plot_latlon import latlon_plot
 from ..plot_slices import make_slice_plot, slice_plot
-from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask, index_year_end
+from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask, index_year_end, select_bottom
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year, region_bounds, rho_fw
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
-from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label
+from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label, latlon_axes
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries, shade_background, average_blocks
 from ..plot_misc import ts_binning, hovmoller_plot
@@ -4675,7 +4675,7 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
     finished_plot(fig, fig_name=fig_name_ts_space, dpi=300)
 
 
-# Quick plot for reviewer
+# Quick plot for reviewers
 def shelf_bathy_histogram (grid_path='PAS_grid/', fig_name=None):
 
     num_bins = 50
@@ -4685,18 +4685,78 @@ def shelf_bathy_histogram (grid_path='PAS_grid/', fig_name=None):
     bathy = np.abs(np.ma.masked_where(np.invert(mask), grid.bathy))
     bin_edges = np.linspace(np.amin(bathy)-eps, np.amax(bathy)+eps, num=num_bins+1)
     bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
-    area = np.zeros(bin_centres)
+    bin_width = bin_edges[1] - bin_edges[0]
+    area = np.zeros(num_bins)
 
     for bathy_val, dA_val in zip(bathy[mask], grid.dA[mask]):
         bin_index = np.nonzero(bin_edges > bathy_val)[0][0]-1
-        area[bin_index] += dA_val*1e-6
+        area[bin_index] += dA_val*1e-9
 
-    fig, ax = plt.subplot()
-    ax.bar(bin_centres, area)
+    fig, ax = plt.subplots()
+    ax.bar(bin_centres, area, width=bin_width)
     ax.grid(linestyle='dotted')
     ax.set_xlabel('Depth (m)')
-    ax.set_ylabel(r'Area of shelf (km$^2$)')
+    ax.set_ylabel(r'Area of shelf (10$^3$ km$^2$)')
     plt.title('Bathymetry on Amundsen Sea continental shelf')
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Quick plot for reviewer
+def coastline_compare_mit_forcing (grid_path='PAS_grid/', fig_name=None, option='CESM'):
+
+    grid = Grid('PAS_grid/')
+    mit_mask = (grid.land_mask + grid.ice_mask).astype(float)
+    cesm_file = find_cesm_file('LENS', 'TEMP', 'oce', 'monthly', 1, 2006)[0]
+    cesm_mask = (read_netcdf(cesm_file, 'TEMP', time_index=0)[0,:].mask).astype(float)
+    cesm_lon, cesm_lat = read_pop_grid(cesm_file)[:2]
+    era5_file = '/data/oceans_input/raw_input_data/ERA5_monthly/era5_monthly_sst_1979_2021.nc'
+    era5_mask = (read_netcdf(era5_file, 'sst', time_index=0).mask).astype(float)
+    era5_lon = fix_lon_range(read_netcdf(era5_file, 'longitude'))
+    era5_lat = read_netcdf(era5_file, 'latitude')
+    era5_lon, era5_lat = np.meshgrid(era5_lon, era5_lat)
+
+    fig, ax = plt.subplots(figsize=(8,4))
+    # Plot land points in red and ocean points in blue
+    if option == 'CESM':
+        ax.plot(cesm_lon[cesm_mask==1], cesm_lat[cesm_mask==1], 'o', color='red', markersize=2, label='CESM land points')
+        ax.plot(cesm_lon[cesm_mask==0], cesm_lat[cesm_mask==0], 'o', color='blue', markersize=2, label='CESM ocean points')
+    elif option == 'ERA5':
+        ax.plot(era5_lon[era5_mask==1], era5_lat[era5_mask==1], 'o', color='red', markersize=2, label='ERA5 land points')
+        ax.plot(era5_lon[era5_mask==0], era5_lat[era5_mask==0], 'o', color='blue', markersize=2, label='ERA5 ocean points')
+    # Contour MITgcm coastline in black
+    cs = ax.contour(grid.lon_2d, grid.lat_2d, mit_mask, levels=[0.5], colors=('black'), linestyles='solid')
+    cs.collections[0].set_label('MITgcm coastline')
+    latlon_axes(ax, grid.lon_1d, grid.lat_1d, ymax=-71)
+    plt.legend(loc='upper left', framealpha=1)
+    plt.tight_layout()
+    finished_plot(fig, fig_name=fig_name)
+
+
+# Quick plot for reviewer
+def std_bwtemp_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
+
+    file_head = real_dir(base_dir) + 'PAS_LENS'
+    num_ens = 10
+    start_year = 1920
+    end_year = 2005
+    num_years = end_year-start_year+1
+    file_mid = '_O/output/'
+    file_tail = '01/MITgcm/output.nc'
+    grid = Grid(grid_dir)
+    bwtemp = np.ma.empty([num_years*num_ens, grid.ny, grid.nx])
+
+    for n in range(num_ens):
+        for year in range(start_year, end_year+1):
+            print ('Reading '+str(year)+' from member '+str(n+1))
+            file_path = file_head + str(n+1).zfill(3) + file_mid + str(year) + file_tail
+            temp = read_netcdf(file_path, 'THETA')
+            temp = average_12_months(temp, calendar='noleap')
+            temp = mask_3d(temp, grid)
+            bwtemp[n*num_years+(year-start_year),:] = select_bottom(temp)
+    bwtemp = np.std(bwtemp, axis=0)
+
+    fig, ax = latlon_plot(bwtemp, grid, include_shelf=False, ymax=-71, figsize=(8,4), return_fig=True)
+    plt.tight_layout()
     finished_plot(fig, fig_name=fig_name)
     
             
