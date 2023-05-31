@@ -18,7 +18,7 @@ from ..plot_slices import make_slice_plot, slice_plot
 from ..utils import real_dir, fix_lon_range, add_time_dim, days_per_month, xy_to_xyz, z_to_xyz, index_year_start, var_min_max, polar_stereo, mask_3d, moving_average, index_period, mask_land, mask_except_ice, mask_land_ice, distance_to_grounding_line, apply_mask, index_year_end, select_bottom
 from ..grid import Grid, read_pop_grid, read_cice_grid, CAMGrid
 from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_hfac_bdry, read_correct_cesm_ts_space, read_correct_cesm_non_ts, get_fill_mask
-from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile
+from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile, average_12_months
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year, region_bounds, rho_fw
 from ..plot_utils.windows import set_panels, finished_plot
 from ..plot_utils.colours import set_colours, get_extend
@@ -3272,7 +3272,7 @@ def warming_melting_trend_map (fig_name=None):
     lon_bdry = np.concatenate((np.ones(50)*grid.lon_1d[0], grid.lon_1d, np.ones(50)*grid.lon_1d[-1], np.flip(grid.lon_1d, axis=0)))
     lat_bdry = np.concatenate((np.linspace(grid.lat_1d[0], lat_max, num=50), np.ones(grid.nx)*lat_max, np.linspace(lat_max, grid.lat_1d[0], num=50), np.ones(grid.nx)*grid.lat_1d[0]))
     map.plot(lon_bdry, lat_bdry, color='red', latlon=True, linewidth=1)    
-    ax.set_title('Ocean warming and ice shelf melting in '+expt_title+' scenario', fontsize=18)
+    ax.set_title('Ocean warming and ice shelf melting trends in '+expt_title+' scenario', fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
@@ -4758,6 +4758,36 @@ def std_bwtemp_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
     fig, ax = latlon_plot(bwtemp, grid, include_shelf=False, ymax=-71, figsize=(8,4), return_fig=True)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_name)
+
+
+# Calculate change in RCP 8.5 mass loss using conventions of Jourdain 2022
+def compare_jourdain_massloss (base_dir='./'):
+
+    file_head = real_dir(base_dir) + 'PAS_LENS'
+    num_ens = 10
+    file_tail = '_O/output/timeseries.nc'
+    var_name = 'all_massloss'
+    period1 = [1989, 2009]
+    period2 = [2080, 2100]
+
+    # Calculate time-mean mass loss over the given time period
+    def calc_mean_massloss (period):
+        massloss_annual_means = np.zeros([num_ens, period[1]-period[0]+1])
+        for n in range(num_ens):
+            file_path = file_head + str(n+1).zfill(3) + file_tail
+            time = netcdf_time(file_path, monthly=False)
+            massloss = read_netcdf(file_path, var_name)
+            for year in range(period[0], period[1]+1):
+                t_start, t_end = index_period(time, year, year)
+                massloss_annual_means[n, year-period[0]] = average_12_months(massloss[t_start:t_end], calendar='noleap')
+        return np.mean(massloss_annual_means, axis=1)
+
+    massloss_present = calc_mean_massloss(period1)
+    massloss_future = calc_mean_massloss(period2)
+    massloss_factor = massloss_future/massloss_present
+    print('Mass loss increases by a factor of '+str(np.amin(massloss_factor))+' to '+str(np.amax(massloss_factor))+' depending on ensemble member, mean '+str(np.mean(massloss_factor)))
+        
+        
     
             
                 
