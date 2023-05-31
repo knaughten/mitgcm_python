@@ -3581,7 +3581,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     gs.update(left=0.1, right=0.95, bottom=0.18, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
     data_plot_beg = [mean_profile_beg, std_profile_beg]
-    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
+    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Ensemble std\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
