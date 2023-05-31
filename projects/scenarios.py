@@ -4673,6 +4673,32 @@ def plot_obcs_correction (fig_name_physical_space=None, fig_name_ts_space=None):
         plt.text(0.5, 0.885-0.2925*n, titles[n], fontsize=16, transform=fig.transFigure, ha='center', va='center')
     plt.suptitle(main_title_ts_space, fontsize=18)
     finished_plot(fig, fig_name=fig_name_ts_space, dpi=300)
+
+
+# Quick plot for reviewer
+def shelf_bathy_histogram (grid_path='PAS_grid/', fig_name=None):
+
+    num_bins = 50
+    eps = 0.1
+    grid = Grid(real_dir(grid_path))
+    mask = grid.get_region_mask('amundsen_shelf')
+    bathy = np.abs(np.ma.masked_where(np.invert(mask), grid.bathy))
+    bin_edges = np.linspace(np.amin(bathy)-eps, np.amax(bathy)+eps, num=num_bins+1)
+    bin_centres = 0.5*(bin_edges[:-1] + bin_edges[1:])
+    area = np.zeros(bin_centres)
+
+    for bathy_val, dA_val in zip(bathy[mask], grid.dA[mask]):
+        bin_index = np.nonzero(bin_edges > bathy_val)[0][0]-1
+        area[bin_index] += dA_val*1e-6
+
+    fig, ax = plt.subplot()
+    ax.bar(bin_centres, area)
+    ax.grid(linestyle='dotted')
+    ax.set_xlabel('Depth (m)')
+    ax.set_ylabel(r'Area of shelf (km$^2$)')
+    plt.title('Bathymetry on Amundsen Sea continental shelf')
+    finished_plot(fig, fig_name=fig_name)
+    
             
                 
 
