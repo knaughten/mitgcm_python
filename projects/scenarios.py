@@ -4060,7 +4060,7 @@ def sfc_forcing_trends (var, fig_name=None):
 
 
 # Test if the trends in the given variable are distinct between the given two scenarios over their common time period.
-def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc', timeseries_file_pace='timeseries_final.nc'):
+def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc', timeseries_file_pace='timeseries_final.nc', start_year=None):
 
     p0 = 0.05
     smooth = 24
@@ -4073,23 +4073,27 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
         expt_tail = '_O'
         prec = 3
         num_ens = 10
-        start_year = 2006
+        if start_year is None:
+            start_year = 2006
         end_year = 2100
         ts_file = timeseries_file
         if expt_name == 'Historical':
-            start_year = 1920
+            if start_year is None:
+                start_year = 1920
             end_year = 2005
         elif expt_name == 'Historical fixed BCs':
             expt_tail = '_noOBC'
             num_ens = 5
-            start_year = 1920
+            if start_year is None:
+                start_year = 1920
             end_year = 2005
         elif expt_name == 'PACE':
             expt_head = '../mitgcm/PAS_PACE'
             expt_tail = ''
             prec = 2
             num_ens = 20
-            start_year = 1920
+            if start_year is None:
+                start_year = 1920
             end_year = 2013
             ts_file = timeseries_file_pace
         elif expt_name == 'Paris 1.5C':
