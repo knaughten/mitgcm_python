@@ -4067,7 +4067,7 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
     # Note no need to calculate mass loss as percent of baseline, as linear transformation will not change significance of trends
 
     # For the given experiment name, return a list of paths to timeseries files, and years to consider.
-    def expt_name_setup (expt_name):
+    def expt_name_setup (expt_name, start_year):
         # Defaults
         expt_head = 'PAS_LENS'
         expt_tail = '_O'
@@ -4112,8 +4112,8 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
         file_paths = [expt_head+str(n+1).zfill(prec)+expt_tail+'/output/'+ts_file for n in range(num_ens)]
         return file_paths, start_year, end_year
 
-    file_paths_1, start_year_1, end_year_1 = expt_name_setup(expt_name_1)
-    file_paths_2, start_year_2, end_year_2 = expt_name_setup(expt_name_2)
+    file_paths_1, start_year_1, end_year_1 = expt_name_setup(expt_name_1, start_year)
+    file_paths_2, start_year_2, end_year_2 = expt_name_setup(expt_name_2, start_year)
     start_year = max(start_year_1, start_year_2)
     end_year = min(end_year_1, end_year_2)
 
@@ -4148,20 +4148,20 @@ def all_trends_distinct ():
     for var in var_names:
         # All combinations of historical scenarios
         # Historical with and without transient BCs
-        trend_scenarios_distinct(var, expt_names[0], expt_names[1])
+        #trend_scenarios_distinct(var, expt_names[0], expt_names[1])
         # Historical vs PACE
-        trend_scenarios_distinct(var, expt_names[0], expt_names[-1])
+        #trend_scenarios_distinct(var, expt_names[0], expt_names[-1])
         # Historical with fixed BCs vs PACE
-        trend_scenarios_distinct(var, expt_names[1], expt_names[-1])
+        #trend_scenarios_distinct(var, expt_names[1], expt_names[-1])
         
         # All combinations of future scenarios with transient BCs
         for n1 in range(2, 5+1):
             for n2 in range(n1+1, 5+1):
                 if n1 == n2:
                     continue
-                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
+                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2], start_year=2045)
         # RCP 8.5 with and without transient BCs
-        trend_scenarios_distinct(var, expt_names[5], expt_names[6])
+        trend_scenarios_distinct(var, expt_names[5], expt_names[6], start_year=2045)
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
