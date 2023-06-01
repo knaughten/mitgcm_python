@@ -4060,41 +4060,45 @@ def sfc_forcing_trends (var, fig_name=None):
 
 
 # Test if the trends in the given variable are distinct between the given two scenarios over their common time period.
-def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc', timeseries_file_pace='timeseries_final.nc', start_year=None):
+def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_file='timeseries.nc', timeseries_file_pace='timeseries_final.nc', start_year=None, end_year=None):
 
     p0 = 0.05
     smooth = 24
     # Note no need to calculate mass loss as percent of baseline, as linear transformation will not change significance of trends
 
     # For the given experiment name, return a list of paths to timeseries files, and years to consider.
-    def expt_name_setup (expt_name, start_year):
+    def expt_name_setup (expt_name, start_year, end_year):
         # Defaults
         expt_head = 'PAS_LENS'
         expt_tail = '_O'
         prec = 3
         num_ens = 10
         if start_year is None:
-            start_year = 2006
-        end_year = 2100
+            start_year0 = 2006
+        if end_year is None:
+            end_year0 = 2100
         ts_file = timeseries_file
         if expt_name == 'Historical':
             if start_year is None:
-                start_year = 1920
-            end_year = 2005
+                start_year0 = 1920
+            if end_year is None:
+                end_year0 = 2005
         elif expt_name == 'Historical fixed BCs':
             expt_tail = '_noOBC'
             num_ens = 5
             if start_year is None:
-                start_year = 1920
-            end_year = 2005
+                start_year0 = 1920
+            if end_year is None:
+                end_year0 = 2005
         elif expt_name == 'PACE':
             expt_head = '../mitgcm/PAS_PACE'
             expt_tail = ''
             prec = 2
             num_ens = 20
             if start_year is None:
-                start_year = 1920
-            end_year = 2013
+                start_year0 = 1920
+            if end_year is None:
+                end_year0 = 2013
             ts_file = timeseries_file_pace
         elif expt_name == 'Paris 1.5C':
             expt_head = 'PAS_LW1.5_'
@@ -4103,20 +4107,20 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
             expt_head = 'PAS_LW2.0_'
         elif expt_name == 'RCP 4.5':
             expt_head = 'PAS_MENS_'
-            end_year = 2080
+            if end_year is None:
+                end_year0 = 2080
         elif expt_name == 'RCP 8.5':
             pass
         elif expt_name == 'RCP 8.5 fixed BCs':
             expt_tail = '_noOBC'
             num_ens = 5
         file_paths = [expt_head+str(n+1).zfill(prec)+expt_tail+'/output/'+ts_file for n in range(num_ens)]
-        return file_paths, start_year, end_year
+        return file_paths, start_year0, end_year0
 
     file_paths_1, start_year_1, end_year_1 = expt_name_setup(expt_name_1, start_year)
     file_paths_2, start_year_2, end_year_2 = expt_name_setup(expt_name_2, start_year)
     start_year = max(start_year_1, start_year_2)
     end_year = min(end_year_1, end_year_2)
-    print('Calculating trends over '+str(start_year)+'-'+str(end_year))
 
     # Calculate the trend in all the given files
     def calc_expt_trends (file_paths):
