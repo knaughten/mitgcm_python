@@ -37,13 +37,13 @@ from ..calculus import area_average, vertical_integral
 # Update the timeseries calculations from wherever they left off before.
 def update_lens_timeseries (num_ens=5, base_dir='./', sim_dir=None):
 
-    timeseries_types = ['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans', 'getz_massloss', 'dotson_massloss', 'crosson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss'] #, 'getz_iceshelf_area', 'dotson_iceshelf_area', 'crosson_iceshelf_area', 'thwaites_iceshelf_area', 'pig_iceshelf_area', 'cosgrove_iceshelf_area', 'abbot_iceshelf_area', 'venable_iceshelf_area']
+    timeseries_types = ['amundsen_shelf_isotherm_0.5C_below_100m'] #['amundsen_shelf_break_uwind_avg', 'all_massloss', 'amundsen_shelf_temp_btw_200_700m', 'amundsen_shelf_salt_btw_200_700m', 'amundsen_shelf_sst_avg', 'amundsen_shelf_sss_avg', 'dotson_to_cosgrove_massloss', 'amundsen_shelf_isotherm_0.5C_below_100m', 'eta_avg', 'seaice_area', 'PITE_trans', 'getz_massloss', 'dotson_massloss', 'crosson_massloss', 'thwaites_massloss', 'pig_massloss', 'cosgrove_massloss', 'abbot_massloss', 'venable_massloss'] #, 'getz_iceshelf_area', 'dotson_iceshelf_area', 'crosson_iceshelf_area', 'thwaites_iceshelf_area', 'pig_iceshelf_area', 'cosgrove_iceshelf_area', 'abbot_iceshelf_area', 'venable_iceshelf_area']
     base_dir = real_dir(base_dir)
     if sim_dir is None:
         sim_dir = [base_dir + 'PAS_LENS' + str(n+1).zfill(3) + '_O/output/' for n in range(num_ens)]
     else:
         num_ens = len(sim_dir)
-    timeseries_file = 'timeseries.nc'
+    timeseries_file = 'timeseries_isotherm.nc' #'timeseries.nc'
 
     for n in range(num_ens):
         if not os.path.isfile(sim_dir[n]+timeseries_file):
@@ -3117,7 +3117,7 @@ def plot_warming_trend_profiles (region, fig_name=None):
 def trend_box_plot (fig_name=None):
 
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
-    var_titles = ['Trend over continental shelf,\n200-700m ', 'Basal mass loss trend\nfrom Dotson to Cosgrove']
+    var_titles = ['Temperature trend over continental shelf,\n200-700m ', 'Ice shelf basal mass loss trend\nfrom Dotson to Cosgrove']
     units = [deg_string+'C/century', '%/century']
     expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
     num_expt = len(expt_names)
@@ -3176,22 +3176,34 @@ def trend_box_plot (fig_name=None):
             var_trends.append(trends)
         all_trends.append(var_trends)
 
-    # Make the box plot - just show warming trends
-    fig = plt.figure(figsize=(7.5,5))
+    # Make the box plot
+    fig = plt.figure(figsize=(8,5))
     gs = plt.GridSpec(1,1)
-    gs.update(left=0.14, right=0.97, bottom=0.1, top=0.9)
-    ax = plt.subplot(gs[0,0])
-    bplot = ax.boxplot(all_trends[0], positions=range(num_expt), showmeans=True, whis='range', medianprops=dict(color='blue'), meanprops=dict(markeredgecolor='black', markerfacecolor='black', marker='*'), patch_artist=True)
+    gs.update(left=0.105, right=0.9, bottom=0.1, top=0.9)
+    ax = plt.subplot(gs[0,0])        
+    bplot = ax.boxplot(all_trends[0], positions=np.arange(num_expt)-0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='black', marker='*'), patch_artist=True)
     for patch in bplot['boxes']:
         patch.set_facecolor('LightCoral')
     ax.grid(linestyle='dotted')
-    ax.set_ylabel(var_titles[0]+'('+units[0]+')', fontsize=11)
-    ax.set_xticklabels(expt_names, fontsize=11)
+    ax.set_ylabel(var_titles[0]+'('+units[0]+')', fontsize=11, color='DarkRed')
+    ax.yaxis.set_label_coords(-0.07, 0.5)
+    ax.tick_params(axis='y', colors='DarkRed')
     ax.axhline(color='black', linewidth=1, linestyle='dashed')
     ax.axvline(1.5, color='black', linewidth=1)
     plt.text(-0.4, 1.75, 'Historical\nscenarios', fontsize=14, ha='left', va='top')
     plt.text(1.6, 1.75, 'Future\nscenarios', fontsize=14, ha='left', va='top')
-    ax.set_title('Ocean temperature trends in each scenario', fontsize=16)
+    # Second y-axis for mass loss trends
+    ax2 = ax.twinx()
+    bplot2 = ax2.boxplot(all_trends[1], positions=np.arange(num_expt)+0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='black', marker='*'), patch_artist=True)
+    for patch in bplot2['boxes']:
+        patch.set_facecolor('LightBlue')
+    ax2.set_xlim([-0.5, num_expt-0.5])
+    ax2.set_xticks(np.arange(num_expt))
+    ax2.set_xticklabels(expt_names, fontsize=11)
+    ax2.set_ylabel(var_titles[1]+'('+units[1]+')\n', fontsize=11, color='DarkBlue', rotation=-90)
+    ax2.yaxis.set_label_coords(1.12, 0.5)
+    ax2.tick_params(axis='y', colors='DarkBlue')
+    plt.title('Warming and melting trends in each scenario', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
     
 
@@ -3590,7 +3602,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     gs.update(left=0.1, right=0.95, bottom=0.18, top=0.82, wspace=0.05)
     data_plot = [mean_profiles, std_profiles, trend_profiles]
     data_plot_beg = [mean_profile_beg, std_profile_beg]
-    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Ensemble std\n(last 20y)', r'$\bf{c}$. '+'Trend']
+    titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
     units = [deg_string+'C']*2 + [deg_string+'C/century']
     depth = -grid.z
     for v in range(3):
@@ -4751,8 +4763,8 @@ def convection_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
 
     file_head = real_dir(base_dir) + 'PAS_LENS'
     num_ens = 10
-    start_year = 1920
-    end_year = 2005
+    start_year = 2006 #1920
+    end_year = 2100 #2005
     num_years = end_year-start_year+1
     file_mid = '_O/output/'
     file_tail = '01/MITgcm/output.nc'
@@ -4774,10 +4786,12 @@ def convection_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
     # Percentage of years below threshold value
     data_plot = np.sum(bwtemp < temp0, axis=0)/np.size(bwtemp, 0)*1e2
     data_plot = mask_land_ice(data_plot, grid)
+    data_plot = np.ma.masked_where(grid.bathy > -500, data_plot)
+    data_plot = np.ma.masked_where(grid.bathy < -1750, data_plot)
     
-    fig, ax = latlon_plot(data_plot, grid, include_shelf=False, ymax=-71, figsize=(8,4), return_fig=True)    
+    fig, ax = latlon_plot(data_plot, grid, ymax=-71, figsize=(9,4), return_fig=True, vmax=100)    
     #plt.title('Standard deviation of bottom water temperature\nin historical ensemble ('+deg_string+'C)', fontsize=15)
-    plt.title('Percentage of years with bottom water temperature below '+str(temp0)+deg_string+'C', fontsize=15)
+    plt.title('% years with bottom water temperature below '+str(temp0)+deg_string+'C (RCP 8.5)', fontsize=15)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_name)
 
