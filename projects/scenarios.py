@@ -4116,6 +4116,7 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
     file_paths_2, start_year_2, end_year_2 = expt_name_setup(expt_name_2, start_year)
     start_year = max(start_year_1, start_year_2)
     end_year = min(end_year_1, end_year_2)
+    print('Calculating trends over '+str(start_year)+'-'+str(end_year))
 
     # Calculate the trend in all the given files
     def calc_expt_trends (file_paths):
