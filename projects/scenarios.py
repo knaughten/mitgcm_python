@@ -3277,15 +3277,20 @@ def warming_melting_trend_map (fig_name=None):
 
 
 # Calculate year at which RCP 8.5 diverges from rest of scenarios, to print onto timeseries figure 
-def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
+def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_paris_divergence=False):
 
     var_name = 'amundsen_shelf_temp_btw_200_700m'
-    file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
+    if test_paris_divergence:
+        file_head = ['PAS_LW2.0_', 'PAS_LW1.5_']
+        num_ens = [10, 5]
+        end_year = 2100
+    else:
+        file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
+        num_ens = [10, 10, 10, 5]
+        end_year = 2080
     file_tail = '_O/output/timeseries.nc'
-    num_ens = [10, 10, 10, 5]
     num_expt = len(file_head)
     start_year = 2006
-    end_year = 2080
     num_years = end_year - start_year + 1
     p0 = 0.05
 
@@ -3303,12 +3308,16 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
             all_data[e,:] = data
         return all_data, time
 
-    data_rcp85, time = read_process_expt(0)
-    data_other = np.empty([np.sum(num_ens[1:]), num_years])
-    e0 = 0
-    for n in range(1, num_expt):
-        data_other[e0:e0+num_ens[n],:] = read_process_expt(n)[0]
-        e0 += num_ens[n]
+    if test_paris_divergence:
+        data_scenario, time = read_process_expt(1)
+        data_other = read_process_expt(0)[0]
+    else:
+        data_scenario, time = read_process_expt(0)
+        data_other = np.empty([np.sum(num_ens[1:]), num_years])
+        e0 = 0
+        for n in range(1, num_expt):
+            data_other[e0:e0+num_ens[n],:] = read_process_expt(n)[0]
+            e0 += num_ens[n]
     # Now compare the two samples over each window
     radius = (window-1)//2
     time = time[radius:-radius]
@@ -3320,7 +3329,7 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
     max2_vals = []
     mean2_vals = []
     for t in range(radius, num_years-radius):
-        sample1 = data_rcp85[:,t-radius:t+radius+1].ravel()
+        sample1 = data_scenario[:,t-radius:t+radius+1].ravel()
         sample2 = data_other[:,t-radius:t+radius+1].ravel()
         if use_ttest:
             t_val, p_val = ttest_ind(sample1, sample2, equal_var=False)
@@ -3339,10 +3348,10 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
             max2_vals.append(max2)
             mean2_vals.append(mean2)
     if not distinct[-1]:
-        print('RCP 8.5 never diverges for good')
+        print('Scenario never diverges for good')
     else:
         t0 = np.where(np.invert(distinct))[0][-1] + 1
-        print('RCP 8.5 diverges for good at '+str(time[t0]))
+        print('Scenario diverges for good at '+str(time[t0]))
         if return_year:
             return time[t0].year
     if use_ttest:
@@ -3352,15 +3361,15 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True):
                 colour = 'IndianRed'
             else:
                 colour = 'DodgerBlue'
-            ax.barh('RCP 8.5', 1, left=t, color=colour)
+            ax.barh('Scenario', 1, left=t, color=colour)
         plt.title('Distinct = red, not distinct = blue')
         fig.show()
     else:
         fig, ax = plt.subplots()
         ax.fill_between(time, min1_vals, max1_vals, color='red', alpha=0.3)
-        ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='RCP 8.5')
+        ax.plot(time, mean1_vals, color='red', linewidth=1.5, label='Scenario')
         ax.fill_between(time, min2_vals, max2_vals, color='blue', alpha=0.3)
-        ax.plot(time, mean2_vals, color='blue', linewidth=1.5, label='Other scenarios')
+        ax.plot(time, mean2_vals, color='blue', linewidth=1.5, label='Others')
         ax.legend(loc='upper left')
         ax.grid(linestyle='dotted')
         fig.show()
@@ -3638,6 +3647,9 @@ def velocity_trends (fig_name=None):
     region_labels = ['DG', 'PITE']
     label_x = [-116, -107]
     label_y = [-71.8, -71.34]
+    shelf_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A']
+    shelf_x = [-120, -112.3, -110.5, -106, -100.3, -100.5, -102]
+    shelf_y = [-74.2, -74.38, -75, -75.1, -75.1, -73.55, -72.5]
 
     grid = Grid(grid_dir)
 
@@ -3683,6 +3695,8 @@ def velocity_trends (fig_name=None):
             for m in range(len(region_labels)):
                 txt = plt.text(label_x[m], label_y[m], region_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='blue')
                 txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
+            for m in range(len(shelf_labels)):
+                plt.text(shelf_x[m], shelf_y[m], shelf_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='black')
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
@@ -4733,7 +4747,7 @@ def coastline_compare_mit_forcing (grid_path='PAS_grid/', fig_name=None, option=
 
 
 # Quick plot for reviewer
-def std_bwtemp_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
+def convection_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
 
     file_head = real_dir(base_dir) + 'PAS_LENS'
     num_ens = 10
@@ -4744,7 +4758,9 @@ def std_bwtemp_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
     file_tail = '01/MITgcm/output.nc'
     grid = Grid(grid_dir)
     bwtemp = np.ma.empty([num_years*num_ens, grid.ny, grid.nx])
+    temp0 = 0.5
 
+    # Get annually averaged bottom water temperature for each year and ensemble member
     for n in range(num_ens):
         for year in range(start_year, end_year+1):
             print ('Reading '+str(year)+' from member '+str(n+1))
@@ -4753,9 +4769,15 @@ def std_bwtemp_map (base_dir='./', grid_dir='PAS_grid/', fig_name=None):
             temp = average_12_months(temp, calendar='noleap')
             temp = mask_3d(temp, grid)
             bwtemp[n*num_years+(year-start_year),:] = select_bottom(temp)
-    bwtemp = np.std(bwtemp, axis=0)
-
-    fig, ax = latlon_plot(bwtemp, grid, include_shelf=False, ymax=-71, figsize=(8,4), return_fig=True)
+    # Standard deviation of bottom water temperature
+    #data_plot = np.std(bwtemp, axis=0)
+    # Percentage of years below threshold value
+    data_plot = np.sum(bwtemp < temp0, axis=0)/np.size(bwtemp, 0)*1e2
+    data_plot = mask_land_ice(data_plot, grid)
+    
+    fig, ax = latlon_plot(data_plot, grid, include_shelf=False, ymax=-71, figsize=(8,4), return_fig=True)    
+    #plt.title('Standard deviation of bottom water temperature\nin historical ensemble ('+deg_string+'C)', fontsize=15)
+    plt.title('Percentage of years with bottom water temperature below '+str(temp0)+deg_string+'C', fontsize=15)
     plt.tight_layout()
     finished_plot(fig, fig_name=fig_name)
 
@@ -4786,6 +4808,35 @@ def compare_jourdain_massloss (base_dir='./'):
     massloss_future = calc_mean_massloss(period2)
     massloss_factor = massloss_future/massloss_present
     print('Mass loss increases by a factor of '+str(np.amin(massloss_factor))+' to '+str(np.amax(massloss_factor))+' depending on ensemble member, mean '+str(np.mean(massloss_factor)))
+
+
+# Supplementary plot
+def bathy_draft_map (grid_dir='PAS_grid/', fig_name=None):
+
+    grid = Grid(grid_dir)
+    bathy = np.abs(mask_land(grid.bathy, grid))
+    draft = np.abs(mask_except_ice(grid.draft, grid))
+    data_plot = [bathy, draft]
+    titles = [r'$\bf{a}$. Bathymetry (m)', r'$\bf{b}$. Ice shelf draft (m)']
+    vmax = [1500, 1000]
+    ymax = [-69, -71.5]
+    suptitle = 'Topography of Amundsen Sea continental shelf'
+    ctype = 'plusminus_r'
+
+    fig = plt.figure(figsize=(7,6))
+    gs = plt.GridSpec(5,1)
+    gs.update(left=0.07, right=0.88, bottom=0.05, top=0.88, hspace=1)
+    handles = [gs[:3,0], gs[3:,0]]
+    cbar_bottom = [0.45, 0.06]
+    cbar_height = [0.4, 0.25]
+    for n in range(2):
+        ax = plt.subplot(handles[n])
+        img = latlon_plot(data_plot[n], grid, ax=ax, ctype=ctype, ymax=ymax[n], title=titles[n], titlesize=14, make_cbar=False, vmax=vmax[n])            
+        cax = fig.add_axes([0.9, cbar_bottom[n], 0.02, cbar_height[n]])
+        plt.colorbar(img, cax=cax, extend='max')
+    plt.suptitle(suptitle, fontsize=16)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+        
         
         
     
