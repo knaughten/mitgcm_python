@@ -4075,8 +4075,12 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
         num_ens = 10
         if start_year is None:
             start_year0 = 2006
+        else:
+            start_year0 = start_year
         if end_year is None:
             end_year0 = 2100
+        else:
+            end_year0 = end_year
         ts_file = timeseries_file
         if expt_name == 'Historical':
             if start_year is None:
