@@ -3293,16 +3293,15 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
 
     var_name = 'amundsen_shelf_temp_btw_200_700m'
     if test_paris_divergence:
-        file_head = ['PAS_LW2.0_', 'PAS_LW1.5_']
-        num_ens = [10, 5]
-        end_year = 2100
+        file_head = ['PAS_LW1.5_', 'PAS_LW2.0_', 'PAS_MENS_']
+        num_ens = [5, 10, 10]
     else:
         file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
         num_ens = [10, 10, 10, 5]
-        end_year = 2080
     file_tail = '_O/output/timeseries.nc'
     num_expt = len(file_head)
     start_year = 2006
+    end_year = 2080
     num_years = end_year - start_year + 1
     p0 = 0.05
 
@@ -3320,16 +3319,12 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
             all_data[e,:] = data
         return all_data, time
 
-    if test_paris_divergence:
-        data_scenario, time = read_process_expt(1)
-        data_other = read_process_expt(0)[0]
-    else:
-        data_scenario, time = read_process_expt(0)
-        data_other = np.empty([np.sum(num_ens[1:]), num_years])
-        e0 = 0
-        for n in range(1, num_expt):
-            data_other[e0:e0+num_ens[n],:] = read_process_expt(n)[0]
-            e0 += num_ens[n]
+    data_scenario, time = read_process_expt(0)
+    data_other = np.empty([np.sum(num_ens[1:]), num_years])
+    e0 = 0
+    for n in range(1, num_expt):
+        data_other[e0:e0+num_ens[n],:] = read_process_expt(n)[0]
+        e0 += num_ens[n]
     # Now compare the two samples over each window
     radius = (window-1)//2
     time = time[radius:-radius]
@@ -4168,9 +4163,9 @@ def all_trends_distinct ():
             for n2 in range(n1+1, 5+1):
                 if n1 == n2:
                     continue
-                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2], end_year=2045)
+                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2], start_year=2045)
         # RCP 8.5 with and without transient BCs
-        trend_scenarios_distinct(var, expt_names[5], expt_names[6], end_year=2045)
+        trend_scenarios_distinct(var, expt_names[5], expt_names[6], start_year=2045)
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
