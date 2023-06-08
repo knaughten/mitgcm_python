@@ -4872,10 +4872,11 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
     num_ens = [10, 10, 10, 5]
     start_year = 2006
     end_years = [2100, 2080, 2100, 2100]
-    ens_colours = choose_n_colours(10)
+    ens_colours = choose_n_colours(10, base_cmap='Paired')
     timeseries_file = 'timeseries.nc'
     num_expt = len(expt_names)
     smooth = 24
+    p0 = 0.05
     base_dir = real_dir(base_dir)
 
     # Calculate all the trends for a given ensemble over the given timespan
@@ -4886,29 +4887,30 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
             trends[e] = read_calc_trend(var_name, file_path, start_year=start_year, end_year=end_year, smooth=smooth)[0]
         return trends        
 
-    fig = plt.figure(figsize=(8,6))
+    fig = plt.figure(figsize=(9,6))
     gs = plt.GridSpec(2,3)
-    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.9, wspace=0.1, hspace=0.1)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.87, wspace=0.2, hspace=0.3)
     posn = 0
     for n1 in range(num_expt):
-        for n2 in range(expt1+1, num_expt):
+        for n2 in range(n1+1, num_expt):
             # Choose the correct time range and ensemble size to calculate the trend over
             end_year = min(end_years[n1], end_years[n2])
             ens_size = min(num_ens[n1], num_ens[n2])
             trends1 = get_ensemble_trends(n1, ens_size, end_year)
             trends2 = get_ensemble_trends(n2, ens_size, end_year)
             ax = plt.subplot(gs[posn//3, posn%3])
+            ax.grid(linestyle='dotted')
             for e in range(ens_size):
                 ax.plot(trends1[e], trends2[e], 'o', color=ens_colours[e])            
             slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
-            [x0, x1] = ax.get_xlim()
-            [y0, y1] = slope*np.array([x0, x1]) + intercept
-            ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
-            ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2, 3))+', p='+str(round_to_decimals(p_value, 3)), ha='left', va='top', fontsize=10, transform=ax.transAxes)
-            ax.set_xlabel(expt_titles[n1])
-            ax.set_ylabel(expt_titles[n2])
+            if p_value < p0:
+                [x0, x1] = ax.get_xlim()
+                [y0, y1] = slope*np.array([x0, x1]) + intercept
+                ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+            ax.text(0.02, 0.98, 'r$^2$='+str(round_to_decimals(r_value**2, 3))+', p='+str(round_to_decimals(p_value, 3)), ha='left', va='top', fontsize=10, transform=ax.transAxes)
+            ax.set_title(expt_titles[n1]+' vs '+expt_titles[n2])
             posn +=1
-    plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)')
+    plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)', fontsize=16)
     finished_plot(fig, fig_name=fig_name)
         
         

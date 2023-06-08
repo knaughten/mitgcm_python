@@ -275,9 +275,9 @@ def get_extend (vmin=None, vmax=None):
     elif vmin is not None and vmax is not None:
         return 'both'
 
-# Evenly choose n colours from the 'jet' colourmap.
-def choose_n_colours (n):
+# Evenly choose n colours from the given colourmap.
+def choose_n_colours (n, base_cmap='jet'):
 
-    cmap = plt.get_cmap('jet')
+    cmap = plt.get_cmap(base_cmap)
     loc = np.linspace(0, 1, num=n)
     return cmap(loc)
