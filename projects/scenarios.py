@@ -21,7 +21,7 @@ from ..ics_obcs import find_obcs_boundary, trim_slice_to_grid, trim_slice, get_h
 from ..file_io import read_netcdf, read_binary, netcdf_time, write_binary, find_cesm_file, NCfile, average_12_months
 from ..constants import deg_string, months_per_year, Tf_ref, region_names, Cp_sw, rhoConst, sec_per_day, rho_ice, sec_per_year, region_bounds, rho_fw
 from ..plot_utils.windows import set_panels, finished_plot
-from ..plot_utils.colours import set_colours, get_extend
+from ..plot_utils.colours import set_colours, get_extend, choose_n_colours
 from ..plot_utils.labels import reduce_cbar_labels, lon_label, round_to_decimals, slice_axes, lat_label, latlon_axes
 from ..plot_utils.slices import slice_patches, slice_values
 from ..plot_utils.latlon import overlay_vectors, shade_land, contour_iceshelf_front, cell_boundaries, shade_mask, cell_boundaries, shade_background, average_blocks
@@ -4858,7 +4858,58 @@ def bathy_draft_map (grid_dir='PAS_grid/', fig_name=None):
         plt.colorbar(img, cax=cax, extend='max')
     plt.suptitle(suptitle, fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
-        
+
+    
+# Quick analysis/plot for reviewer
+def test_member_trend_correlation (base_dir='./', fig_name=None):
+
+    var_name = 'amundsen_shelf_temp_btw_200_700m'
+    var_title = 'continental shelf temperature'
+    var_units = deg_string+'C'
+    expt_names = ['LENS', 'MENS', 'LW2.0', 'LW1.5']
+    expt_mid = ['', '_', '_', '_']
+    expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
+    num_ens = [10, 10, 10, 5]
+    start_year = 2006
+    end_years = [2100, 2080, 2100, 2100]
+    ens_colours = choose_n_colours(10)
+    timeseries_file = 'timeseries.nc'
+    num_expt = len(expt_names)
+    smooth = 24
+    base_dir = real_dir(base_dir)
+
+    # Calculate all the trends for a given ensemble over the given timespan
+    def get_ensemble_trends (n, ens_size, end_year):
+        trends = np.empty([ens_size])
+        for e in range(ens_size):
+            file_path = base_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(3) + '_O/output/' + timeseries_file
+            trends[e] = read_calc_trend(var_name, file_path, start_year=start_year, end_year=end_year, smooth=smooth)[0]
+        return trends        
+
+    fig = plt.figure(figsize=(8,6))
+    gs = plt.GridSpec(2,3)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.9, wspace=0.1, hspace=0.1)
+    posn = 0
+    for n1 in range(num_expt):
+        for n2 in range(expt1+1, num_expt):
+            # Choose the correct time range and ensemble size to calculate the trend over
+            end_year = min(end_years[n1], end_years[n2])
+            ens_size = min(num_ens[n1], num_ens[n2])
+            trends1 = get_ensemble_trends(n1, ens_size, end_year)
+            trends2 = get_ensemble_trends(n2, ens_size, end_year)
+            ax = plt.subplot(gs[posn//3, posn%3])
+            for e in range(ens_size):
+                ax.plot(trends1[e], trends2[e], 'o', color=ens_colours[e])            
+            slope, intercept, r_value, p_value, std_err = linregress(trends1, trends2)
+            [x0, x1] = ax.get_xlim()
+            [y0, y1] = slope*np.array([x0, x1]) + intercept
+            ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
+            ax.text(0.05, 0.95, 'r$^2$='+str(round_to_decimals(r_value**2, 3))+', p='+str(round_to_decimals(p_value, 3)), ha='left', va='top', fontsize=10, transform=ax.transAxes)
+            ax.set_xlabel(expt_titles[n1])
+            ax.set_ylabel(expt_titles[n2])
+            posn +=1
+    plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)')
+    finished_plot(fig, fig_name=fig_name)
         
         
     
