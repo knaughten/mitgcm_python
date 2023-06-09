@@ -441,7 +441,7 @@ def set_update_file (precomputed_file, grid, dimensions, rho=None):
     if os.path.isfile(precomputed_file):
         # Open it
         id = nc.Dataset(precomputed_file, 'a')
-        if (rho is not None) and not (id.variables['rho'][:] == rho_centres).all():
+        if (rho is not None) and not (id.variables['rho'][:] == rho).all():
             print('Error (set_update_file): the density axis has changed.')
             sys.exit()
         return id
@@ -1726,7 +1726,6 @@ def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_
             volume[t,index] += dV_val
     temp_rho = np.ma.masked_where(volume==0, temp_rho/volume)
     salt_rho = np.ma.masked_where(volume==0, salt_rho/volume)
-    volume = np.ma.masked_where(volume==0, volume)
     data_save = [temp_rho, salt_rho, volume]
     for n in range(len(data_save)):
         set_update_var(id, num_time_old, data_save[n], 'rt', loc+'_'+var[n], region_names[loc]+' '+titles[n], units[n])
