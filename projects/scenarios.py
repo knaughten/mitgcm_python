@@ -31,7 +31,7 @@ from ..postprocess import precompute_timeseries_coupled, make_trend_file
 from ..diagnostics import potential_density
 from ..make_domain import latlon_points
 from ..timeseries import monthly_to_annual, calc_annual_averages
-from ..calculus import area_average, vertical_integral
+from ..calculus import area_average, vertical_integral, vertical_average
 
 
 # Update the timeseries calculations from wherever they left off before.
@@ -4135,13 +4135,23 @@ def trend_scenarios_distinct (var_name, expt_name_1, expt_name_2, timeseries_fil
     trends2 = calc_expt_trends(file_paths_2)
     p_val = ttest_ind(trends1, trends2, equal_var=False)[1]
     distinct = p_val < p0
+    # For reviewer, also test 1-sample t-test on member-wise diffferences
+    num_ens = min(trends1.size, trends2.size)
+    trends_diff = trends2[:num_ens] - trends1[:num_ens]
+    p_val2 = ttest_1samp(trends_diff, 0)[1]
+    distinct2 = p_val2 < p0    
     print('Trends in '+var_name+' over '+str(start_year)+'-'+str(end_year)+':')
     for expt_name, trends in zip([expt_name_1, expt_name_2], [trends1, trends2]):
         print(expt_name+': mean trend '+str(np.mean(trends)))
-    if distinct:
-        print('They are distinct\n')
-    else:
-        print('They are not distinct\n')
+    print('p_vals: '+str(p_val)+', '+str(p_val2))
+    if distinct and distinct2:
+        print('They are distinct under both tests\n')
+    elif (not distinct) and (not distinct2):
+        print('They are not distinct under both tests\n')
+    elif distinct and (not distinct2):
+        print('They are distinct under 2-sample t-test only\n')
+    elif (not distinct) and distinct2:
+        print('They are distinct under 1-sample t-test only\n')
 
 
 # Call the above function for all the sensible combinations of trends in table
@@ -4152,20 +4162,20 @@ def all_trends_distinct ():
     for var in var_names:
         # All combinations of historical scenarios
         # Historical with and without transient BCs
-        #trend_scenarios_distinct(var, expt_names[0], expt_names[1])
+        trend_scenarios_distinct(var, expt_names[0], expt_names[1])
         # Historical vs PACE
-        #trend_scenarios_distinct(var, expt_names[0], expt_names[-1])
+        trend_scenarios_distinct(var, expt_names[0], expt_names[-1])
         # Historical with fixed BCs vs PACE
-        #trend_scenarios_distinct(var, expt_names[1], expt_names[-1])
+        trend_scenarios_distinct(var, expt_names[1], expt_names[-1])
         
         # All combinations of future scenarios with transient BCs
         for n1 in range(2, 5+1):
             for n2 in range(n1+1, 5+1):
                 if n1 == n2:
                     continue
-                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2], start_year=2045)
+                trend_scenarios_distinct(var, expt_names[n1], expt_names[n2])
         # RCP 8.5 with and without transient BCs
-        trend_scenarios_distinct(var, expt_names[5], expt_names[6], start_year=2045)
+        trend_scenarios_distinct(var, expt_names[5], expt_names[6])
 
 
 # Plot a scatterplot of the trends in any 2 variables across all ensemble members and future scenarios
@@ -4872,7 +4882,7 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
     num_ens = [10, 10, 10, 5]
     start_year = 2006
     end_years = [2100, 2080, 2100, 2100]
-    ens_colours = choose_n_colours(10, base_cmap='Paired')
+    ens_colours = choose_n_colours(10, base_cmap='tab10')
     timeseries_file = 'timeseries.nc'
     num_expt = len(expt_names)
     smooth = 24
@@ -4907,7 +4917,7 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
                 [x0, x1] = ax.get_xlim()
                 [y0, y1] = slope*np.array([x0, x1]) + intercept
                 ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
-            ax.text(0.02, 0.98, 'r$^2$='+str(round_to_decimals(r_value**2, 3))+', p='+str(round_to_decimals(p_value, 3)), ha='left', va='top', fontsize=10, transform=ax.transAxes)
+            ax.text(0.02, 0.98, 'p='+str(round_to_decimals(p_value, 3))+', r$^2$='+str(round_to_decimals(r_value**2, 3)), ha='left', va='top', fontsize=10, transform=ax.transAxes)
             ax.set_title(expt_titles[n1]+' vs '+expt_titles[n2])
             posn +=1
     plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)', fontsize=16)

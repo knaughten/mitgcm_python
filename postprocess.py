@@ -14,7 +14,7 @@ from .timeseries import calc_timeseries, calc_special_timeseries, set_parameters
 from .utils import real_dir, days_per_month, str_is_int, mask_3d, mask_except_ice, mask_land, mask_land_ice, select_top, select_bottom, mask_outside_box, var_min_max, add_time_dim, apply_mask, convert_ismr, mask_2d_to_3d, xy_to_xyz, z_to_xyz, depth_of_isoline
 from .constants import deg_string, region_names
 from .calculus import area_average, vertical_average
-from .diagnostics import density, thermocline, adv_heat_wrt_freezing
+from .diagnostics import density, thermocline, adv_heat_wrt_freezing, potential_density
 from .interpolation import interp_grid
 
 
@@ -437,13 +437,17 @@ def plot_seaice_annual (file_path, grid_path='../grid/', fig_dir='.', monthly=Tr
 # Helper functions for precompute_timeseries and precompute_hovmoller:
 
 # Check if the precomputed file already exists, and either open it or create it.
-def set_update_file (precomputed_file, grid, dimensions):
+def set_update_file (precomputed_file, grid, dimensions, rho=None):
     if os.path.isfile(precomputed_file):
         # Open it
-        return nc.Dataset(precomputed_file, 'a')
+        id = nc.Dataset(precomputed_file, 'a')
+        if (rho is not None) and not (id.variables['rho'][:] == rho_centres).all():
+            print('Error (set_update_file): the density axis has changed.')
+            sys.exit()
+        return id
     else:
         # Create it
-        return NCfile(precomputed_file, grid, dimensions)
+        return NCfile(precomputed_file, grid, dimensions, rho=rho)
 
 # Define or update the time axis.
 def set_update_time (id, mit_file, monthly=True, time_average=False):
@@ -463,14 +467,11 @@ def set_update_time (id, mit_file, monthly=True, time_average=False):
         # Append to file
         id.variables['time'][num_time:] = time
         return num_time
-    elif isinstance(id, NCfile):
+    else:
         # File is new
         # Add the time variable to the file
         id.add_time(time, units=time_units, calendar=calendar)
         return 0
-    else:
-        print('Error (set_update_time): unknown id type')
-        sys.exit()
 
 # Define or update non-time variables.
 def set_update_var (id, num_time, data, dimensions, var_name, title, units):
@@ -1662,6 +1663,86 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
     ncfile.add_time(np.arange(num_ens)+1, units='ensemble member')
     ncfile.add_variable(var_name+'_trend', trends, file_dim, gtype=gtype, long_name='trend in '+long_name, units=units+'/y')
     ncfile.close()
+
+
+# Precompute Hovmoller file for T and S in density space. Only works for a single location at a time.
+def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_shelf', monthly=True, rho_bounds=[998,1028]):
+
+    var = ['temp', 'salt']
+    var_names = ['THETA', 'SALT']
+    titles = ['Temperature', 'Salinity']
+    units = ['degC', 'psu']
+    num_bins = 100
+    # Set up density axis
+    rho_edges = np.linspace(rho_bounds[0], rho_bounds[1], num=num_bins+1)
+    rho_centres = 0.5*(rho_edges[:-1] + rho_edges[1:])
+    grid = Grid(mit_file)
+
+    def read_mask_data (var_name):
+        data_full = read_netcdf(mit_file, var_name)
+        if netcdf_time(mit_file).size == 1:
+            # Need a dummy time dimension
+            data_full = add_time_dim(data_full, 1)
+        # Mask land/ice shelves
+        data_full = mask_3d(data_full, grid, time_dependent=True)
+        # Mask to region
+        if loc == 'filchner_front':
+            mask = grid.get_icefront_mask(shelf='filchner')
+        else:
+            mask = grid.get_region_mask(loc)
+        data = apply_mask(data_full, np.invert(mask), time_dependent=True, depth_dependent=True)
+        return data, mask
+
+    # Read temperature and salinity
+    temp, mask = read_mask_data(var_names[0])
+    salt = read_mask_data(var_names[1])[1]
+    num_time = np.shape(temp)[0]
+    # Calculate potential density
+    rho = potential_density('MDJWF', salt, temp)
+
+    # Set up or update the file and time axis
+    id = set_update_file(hovmoller_file, grid, 'rt', rho=rho_centres)
+    num_time = set_update_time(id, mit_file, monthly=monthly)
+
+    # Now volume-average temperature and salinity in each bin
+    temp_rho = np.zeros([num_time, num_bins])
+    salt_rho = np.zeros([num_time, num_bins])
+    volume = np.zeros([num_time, num_bins])
+    for t in range(num_time):
+        temp_tmp = temp[t,:]
+        salt_tmp = salt[t,:]
+        rho_tmp = rho[t,:]
+        for temp_val, salt_val, rho_val, dV_val in zip(temp_tmp[mask], salt_tmp[mask], rho_tmp[mask], grid.dV[mask]):
+            index = np.nonzero(rho_edges > rho_val)[0][0]-1
+            temp_rho[t,index] += temp_val
+            salt_rho[t,index] += salt_val
+            volume[t,:] += dV_val
+    volume = np.ma.masked_where(volume==0, volume)
+    temp_rho /= volume
+    salt_rho /= volume
+    data_save = [temp_rho, salt_rho]
+    for n in range(len(data_save)):
+        set_update_var(id, num_time, data_save[n], 'rt', loc+'_'+var[n], region_names[loc]+' '+titles[n], units[n])
+
+     # Finished
+    if isinstance(id, nc.Dataset):
+        id.close()
+    elif isinstance(id, NCfile):
+        id.close()
+
+
+# Call it for every segment
+def precompute_hovmoller_density_space_all_coupled (output_dir='./', hovmoller_file='hovmoller_density_space.nc', file_name='output.nc', segment_dir=None, loc='amundsen_shelf', rho_bounds=[998,1028]):
+
+    output_dir = real_dir(output_dir)
+    if segment_dir is None and os.path.isfile(output_dir+hovmoller_file):
+        print(('Error (precompute_hovmoller_density_space_all_coupled): since ' + hovmoller_file + ' exists, you must specify segment_dir'))
+        sys.exit()
+    segment_dir = check_segment_dir(output_dir, segment_dir)
+    file_paths = segment_file_paths(output_dir, segment_dir, file_name)
+    for file_path in file_paths:
+        precompute_hovmoller_density_space(file_path, output_dir+hovmoller_file, loc=loc, rho_bounds=rho_bounds)
+    
 
 
 

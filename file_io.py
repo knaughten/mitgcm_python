@@ -314,7 +314,7 @@ class NCfile:
     # filename: name for desired NetCDF file
     # grid: Grid object
     # dimensions: string containing dimension characters in any order, eg 'xyz' or 'xyt'. Include all the dimensions (from x, y, z, t) that any of the variables in the file will need.
-    def __init__ (self, filename, grid, dimensions):
+    def __init__ (self, filename, grid, dimensions, rho=None):
 
         import netCDF4 as nc
 
@@ -334,6 +334,15 @@ class NCfile:
             self.id.createVariable('Zl', 'f8', ('Zl'))
             self.id.variables['Zl'].long_name = 'vertical coordinate of upper cell interface'
             self.id.variables['Zl'].units = 'm'
+        if 'r' in dimensions:
+            if rho is None:
+                print('Error (NCfile): need to specify rho axis')
+                sys.exit()
+            self.id.createDimension('rho', rho.size)
+            self.id.createVariable('rho', 'f8', ('rho'))
+            self.id.variables['rho'].long_name = 'potential density'
+            self.id.variables['rho'].units = 'kg/m^3'
+            self.id.variables['rho'][:] = rho
         if 'y' in dimensions:
             self.id.createDimension('Y', grid.ny)
             self.id.createVariable('Y', 'f8', ('Y'))
@@ -383,6 +392,8 @@ class NCfile:
                 shape.append('Zl')
             else:
                 shape.append('Z')
+        if 'r' in dimensions:
+            shape.append('rho')
         if 'y' in dimensions:
             if gtype in ['v', 'psi']:
                 shape.append('Yp1')
