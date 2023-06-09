@@ -1666,12 +1666,12 @@ def make_trend_file (var_name, region, sim_dir, grid_dir, out_file, dim=3, gtype
 
 
 # Precompute Hovmoller file for T and S in density space. Only works for a single location at a time.
-def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_shelf', monthly=True, rho_bounds=[998,1028]):
+def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_shelf', monthly=True, rho_bounds=[24,29]):
 
-    var = ['temp', 'salt']
+    var = ['temp', 'salt', 'volume']
     var_names = ['THETA', 'SALT']
-    titles = ['Temperature', 'Salinity']
-    units = ['degC', 'psu']
+    titles = ['Temperature', 'Salinity', 'Volume']
+    units = ['degC', 'psu', 'm^3']
     num_bins = 100
     # Set up density axis
     rho_edges = np.linspace(rho_bounds[0], rho_bounds[1], num=num_bins+1)
@@ -1691,18 +1691,19 @@ def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_
         else:
             mask = grid.get_region_mask(loc)
         data = apply_mask(data_full, np.invert(mask), time_dependent=True, depth_dependent=True)
-        return data, mask
+        return data
 
     # Read temperature and salinity
-    temp, mask = read_mask_data(var_names[0])
-    salt = read_mask_data(var_names[1])[1]
+    temp = read_mask_data(var_names[0])
+    salt = read_mask_data(var_names[1])
     num_time = np.shape(temp)[0]
     # Calculate potential density
-    rho = potential_density('MDJWF', salt, temp)
+    rho = potential_density('MDJWF', salt, temp)-1e3
+    rho = np.ma.masked_where(temp.mask, rho)
 
     # Set up or update the file and time axis
     id = set_update_file(hovmoller_file, grid, 'rt', rho=rho_centres)
-    num_time = set_update_time(id, mit_file, monthly=monthly)
+    num_time_old = set_update_time(id, mit_file, monthly=monthly)
 
     # Now volume-average temperature and salinity in each bin
     temp_rho = np.zeros([num_time, num_bins])
@@ -1712,17 +1713,23 @@ def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_
         temp_tmp = temp[t,:]
         salt_tmp = salt[t,:]
         rho_tmp = rho[t,:]
+        mask = np.invert(temp_tmp.mask)
         for temp_val, salt_val, rho_val, dV_val in zip(temp_tmp[mask], salt_tmp[mask], rho_tmp[mask], grid.dV[mask]):
-            index = np.nonzero(rho_edges > rho_val)[0][0]-1
-            temp_rho[t,index] += temp_val
-            salt_rho[t,index] += salt_val
-            volume[t,:] += dV_val
+            if rho_val < rho_edges[0]:
+                index = 0
+            elif rho_val > rho_edges[-1]:
+                index = -1
+            else:
+                index = np.nonzero(rho_edges > rho_val)[0][0]-1
+            temp_rho[t,index] += temp_val*dV_val
+            salt_rho[t,index] += salt_val*dV_val
+            volume[t,index] += dV_val
+    temp_rho = np.ma.masked_where(volume==0, temp_rho/volume)
+    salt_rho = np.ma.masked_where(volume==0, salt_rho/volume)
     volume = np.ma.masked_where(volume==0, volume)
-    temp_rho /= volume
-    salt_rho /= volume
-    data_save = [temp_rho, salt_rho]
+    data_save = [temp_rho, salt_rho, volume]
     for n in range(len(data_save)):
-        set_update_var(id, num_time, data_save[n], 'rt', loc+'_'+var[n], region_names[loc]+' '+titles[n], units[n])
+        set_update_var(id, num_time_old, data_save[n], 'rt', loc+'_'+var[n], region_names[loc]+' '+titles[n], units[n])
 
      # Finished
     if isinstance(id, nc.Dataset):
@@ -1732,7 +1739,7 @@ def precompute_hovmoller_density_space (mit_file, hovmoller_file, loc='amundsen_
 
 
 # Call it for every segment
-def precompute_hovmoller_density_space_all_coupled (output_dir='./', hovmoller_file='hovmoller_density_space.nc', file_name='output.nc', segment_dir=None, loc='amundsen_shelf', rho_bounds=[998,1028]):
+def precompute_hovmoller_density_space_all_coupled (output_dir='./', hovmoller_file='hovmoller_density_space.nc', file_name='output.nc', segment_dir=None, loc='amundsen_shelf', rho_bounds=[24,29]):
 
     output_dir = real_dir(output_dir)
     if segment_dir is None and os.path.isfile(output_dir+hovmoller_file):
@@ -1741,6 +1748,7 @@ def precompute_hovmoller_density_space_all_coupled (output_dir='./', hovmoller_f
     segment_dir = check_segment_dir(output_dir, segment_dir)
     file_paths = segment_file_paths(output_dir, segment_dir, file_name)
     for file_path in file_paths:
+        print('Processing '+file_path)
         precompute_hovmoller_density_space(file_path, output_dir+hovmoller_file, loc=loc, rho_bounds=rho_bounds)
     
 
