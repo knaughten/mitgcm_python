@@ -3498,11 +3498,13 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
 
 
 # Main text figure with option for supplementary figure to show extra simulations
-def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
+def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf', density_space=False, var='temp'):
 
     if region == 'amundsen_shelf':
         hovmoller_file_main = '/output/hovmoller_shelf.nc'
         hovmoller_file_pace = '/output/hovmoller3.nc'
+        if density_space:
+            hovmoller_file_main = '/output/hovmoller_density_space.nc'
     elif region == 'pine_island_bay':
         hovmoller_file_main = '/output/hovmoller.nc'
         hovmoller_file_pace = '/output/hovmoller1.nc'
@@ -3539,6 +3541,15 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     smooth = 24
     p0 = 0.05
     ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
+    if var == 'temp':
+        var_title = 'Temperature'
+        var_units = deg_string+'C'
+    elif var == 'salt':
+        var_title = 'Salinity'
+        var_units = 'psu'
+    elif var == 'volume':
+        var_title = 'Volume'
+        var_units = r'm$^3$'
 
     # Get mask of all ice front points
     #icefront_mask = grid.get_icefront_mask()
@@ -3550,11 +3561,16 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     #draft_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.draft)
     #bathy_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.bathy)
     #mean_draft = area_average(draft_icefront, grid)
-    #mean_bathy = area_average(bathy_icefront, grid)   
+    #mean_bathy = area_average(bathy_icefront, grid)
 
-    mean_profiles = np.ma.empty([num_expt, grid.nz])
-    std_profiles = np.ma.empty([num_expt, grid.nz])
-    trend_profiles = np.ma.empty([num_expt, grid.nz])
+    if density_space:
+        rho = read_netcdf(expt_dir_heads[0]+expt_dir_mids[0]+'001'+expt_dir_tails[0]+hovmoller_file[0], 'rho')
+        nz = rho.size
+    else:
+        nz = grid.nz
+    mean_profiles = np.ma.empty([num_expt, nz])
+    std_profiles = np.ma.empty([num_expt, nz])
+    trend_profiles = np.ma.empty([num_expt, nz])
     # Loop over experiments
     for n in range(num_expt):
         num_years = end_years[n] - start_years[n] + 1
@@ -3565,7 +3581,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
             # Read the data
             file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + hovmoller_file[n]
             time = netcdf_time(file_path, monthly=False)
-            temp = read_netcdf(file_path, region+'_temp')
+            temp = read_netcdf(file_path, region+'_'+var)
             # Trim to correct years
             t0, tf = index_period(time, start_years[n], end_years[n])
             time = time[t0:tf]
@@ -3603,8 +3619,13 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     data_plot = [mean_profiles, std_profiles, trend_profiles]
     data_plot_beg = [mean_profile_beg, std_profile_beg]
     titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
-    units = [deg_string+'C']*2 + [deg_string+'C/century']
-    depth = -grid.z
+    units = [var_units]*2 + [var_units+'/century']
+    if density_space:
+        depth = rho
+        ylabel = r'potential density (kg/m$^3$)'
+    else:
+        depth = -grid.z
+        ylabel = 'depth (m)'
     for v in range(3):
         ax = plt.subplot(gs[0,v])
         for n in range(num_expt): #[0, 2, 5, 3, 1, 4]:
@@ -3613,12 +3634,15 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
                 #ax.plot(data_plot_beg[v], depth, color=colours[n], linewidth=1.5, linestyle='dotted')
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
-        ax.set_ylim([0, None])
+        if density_space:
+            ax.set_ylim([rho[0], rho[-1]])
+        else:
+            ax.set_ylim([0, None])
         ax.invert_yaxis()
         ax.set_title(titles[v], fontsize=14)
         ax.set_xlabel(units[v], fontsize=12)
         if v==0:
-            ax.set_ylabel('depth (m)', fontsize=12)
+            ax.set_ylabel(ylabel, fontsize=12)
         else:
             ax.set_yticklabels([])
         ax.axhline(200, color='black', linestyle='dashed', linewidth=1)
@@ -3628,7 +3652,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     else:
         legend_fontsize = 12
     ax.legend(loc='lower center', bbox_to_anchor=(-0.65,-0.25), fontsize=legend_fontsize, ncol=num_expt)
-    plt.suptitle('Temperature profiles over '+region_names[region], fontsize=18)
+    plt.suptitle(var_title+' profiles over '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
