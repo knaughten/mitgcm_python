@@ -3574,8 +3574,8 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf', density_s
     # Loop over experiments
     for n in range(num_expt):
         num_years = end_years[n] - start_years[n] + 1
-        expt_annual_means = np.ma.empty([num_ens[n], num_years, grid.nz])
-        expt_trends = np.ma.empty([num_ens[n], grid.nz])
+        expt_annual_means = np.ma.empty([num_ens[n], num_years, nz])
+        expt_trends = np.ma.empty([num_ens[n], nz])
         # Loop over ensemble members
         for e in range(num_ens[n]):
             # Read the data
@@ -3592,7 +3592,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf', density_s
             # Calculate trend per century of smoothed data at each depth
             time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
             temp_smoothed, time_smoothed = moving_average(temp, smooth, time=time_cent)
-            for k in range(grid.nz):
+            for k in range(nz):
                 slope, intercept, r_value, p_value, std_err = linregress(time_smoothed, temp_smoothed[:,k])
                 if p_value < p0:
                     expt_trends[e,k] = slope
@@ -3635,7 +3635,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf', density_s
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
         if density_space:
-            ax.set_ylim([rho[0], rho[-1]])
+            ax.set_ylim([27, 28])
         else:
             ax.set_ylim([0, None])
         ax.invert_yaxis()
@@ -4951,6 +4951,68 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
             posn +=1
     plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)', fontsize=16)
     finished_plot(fig, fig_name=fig_name)
+
+
+def trends_ex_convection ():
+
+    var_name_temp = 'amundsen_shelf_temp_btw_200_700m'
+    timeseries_file_temp = 'timeseries.nc'
+    var_name_iso = 'amundsen_shelf_isotherm_0.5C_below_100m'
+    timeseries_file_iso = 'timeseries_isotherm.nc'
+    z0 = -440
+    expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
+    num_expt = len(expt_names)
+    expt_dir_heads = ['PAS_']*num_expt
+    expt_dir_mids = ['LENS', 'LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS']
+    expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC']
+    num_ens = [10, 5, 5, 10, 10, 10, 5]
+    start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100]
+    smooth = 24
+    p0 = 0.05
+
+    for n in range(num_expt):
+        trends = np.zeros(num_ens[n])
+        trends_noconv = np.zeros(num_ens[n])
+        for e in range(num_ens[n]):
+            output_dir = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tails[n] + '/output/'
+            file_path_temp = output_dir + timeseries_file_temp
+            time = netcdf_time(file_path_temp, monthly=False)            
+            temp = read_netcdf(file_path_temp, var_name_temp)
+            iso_depth = read_netcdf(file_path_iso, var_name_iso)
+            if iso_depth.size != temp.size:
+                print('Error (trends_ex_convection): isotherm timeseries does not match temperature timeseries')
+                sys.exit()
+            t0, tf = index_period(time, start_years[n], end_years[n])
+            time = time[t0:tf]
+            temp = temp[t0:tf]
+            iso_depth = iso_depth[t0:tf]
+            time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+            time = time_sec/(365*sec_per_day*100)
+            temp_smooth, time_smooth = moving_average(temp, smooth, time=time)
+            iso_depth_smooth = moving_average(iso_depth, smooth)
+            # Calculate baseline trend
+            trends[n] = linregress(time_smooth, temp_smooth)[0]
+            # Calculate trend with convective periods excluded
+            index = iso_depth_smooth >= z0
+            trends_noconv[n] = linregress(time_smooth[index], temp_smooth[index])[0]
+        mean_trend = np.mean(trends)
+        p_val = ttest_1samp(trends, 0)[1]
+        mean_trend_noconv = np.mean(trends_noconv)
+        p_val_noconv = ttest_1samp(trends_noconv)[1]
+        percent_change = (mean_trend_noconv - mean_trend)/mean_trend*1e2
+        print(expt_names[n])
+        if p_val < p0:
+            print('Baseline trend '+str(mean_trend))
+            if p_val_no_conv < p0:
+                print('Trend without convection '+str(mean_trend_noconv))
+                print('Changes trend by '+str(percent_change)+'%')
+            else:
+                print('Without convection, trend is no longer significant')
+        else:
+            print('No significant trend')
+    
+    
         
         
     
