@@ -4320,26 +4320,44 @@ def hovmoller_anomaly_std (fig_name=None):
     contours_std = 0.2
     smooth = 12
     grid = Grid(grid_dir)
+    timeseries_iso_file = 'timeseries_isotherm.nc'
+    iso_var = region+'_isotherm_0.5C_below_100m'
+    z0 = -440
 
     time_plot = []
     anom_plot = []
     std_plot = []
+    time_conv_plot = []
+    conv_plot = []
     for n in range(num_expt):
         for e in range(num_ens):
-            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + hovmoller_file
+            output_dir = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail
+            file_path = output_dir + hovmoller_file
+            iso_file_path = output_dir + timeseries_iso_file
             time = netcdf_time(file_path, monthly=False)
             data = read_netcdf(file_path, region+'_'+var)
+            iso_depth = read_netcdf(iso_file_path, iso_var)
+            if time.size != iso_depth.size:
+                print('Error: isotherm timeseries file does not match Hovmollers time axis')
+                sys.exit()
             t_start, t_end = index_period(time, start_years[n], end_years[n])
             data = data[t_start:t_end,:]
             time = time[t_start:t_end]
+            iso_depth = iso_depth[t_start:t_end]
+            iso_depth_smooth, time_smooth = moving_average(iso_depth, smooth, time=time)
+            conv = (iso_depth_smooth < z0).astype(float)
             if e==0:
                 time_plot.append(time)
                 data_ens = np.ma.empty([num_ens, time.size, grid.nz])
+                time_conv_plot.append(time_smooth)
+                conv_ens = np.ma.zeros([time_smooth.size])
             data_ens[e,:] = data
+            conv_ens += conv
         if n==0:
             data_baseline = np.ma.mean(data_ens, axis=(0,1))
         anom_plot.append(np.ma.mean(data_ens, axis=0) - data_baseline[None,:])
         std_plot.append(np.ma.std(data_ens, axis=0))
+        conv_plot.append(conv_ens/num_ens*1e2)
 
     fig = plt.figure(figsize=(8,8))
     gs = plt.GridSpec(num_expt,2)
@@ -4357,6 +4375,12 @@ def hovmoller_anomaly_std (fig_name=None):
         for m in range(2):
             ax = plt.subplot(gs[n,m])
             img = hovmoller_plot(data_plot[m][n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[m], vmax=vmax[m], ctype=ctype[m], contours=contours[m])
+            '''if m==1:
+                # Plot percentage of members convecting
+                ax2 = ax.twinx()
+                ax2.plot_date(time_conv_plot[n], conv_plot[n], '-', color='green', linewidth=2)
+                ax2.set_ylim([0, 100])
+                ax2.set_ylabel('% ensemble convecting', fontsize=12)'''
             ax.set_xlim([datetime.date(start_years[n], 1, 1), datetime.date(end_years[n]-1, 12, 31)])
             if n==0 and m==1:
                 ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_years[n]+20, end_years[n], 20)])
@@ -4977,6 +5001,7 @@ def trends_ex_convection ():
         for e in range(num_ens[n]):
             output_dir = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tails[n] + '/output/'
             file_path_temp = output_dir + timeseries_file_temp
+            file_path_iso = output_dir + timeseries_file_iso
             time = netcdf_time(file_path_temp, monthly=False)            
             temp = read_netcdf(file_path_temp, var_name_temp)
             iso_depth = read_netcdf(file_path_iso, var_name_iso)
@@ -4992,19 +5017,19 @@ def trends_ex_convection ():
             temp_smooth, time_smooth = moving_average(temp, smooth, time=time)
             iso_depth_smooth = moving_average(iso_depth, smooth)
             # Calculate baseline trend
-            trends[n] = linregress(time_smooth, temp_smooth)[0]
+            trends[e] = linregress(time_smooth, temp_smooth)[0]
             # Calculate trend with convective periods excluded
             index = iso_depth_smooth >= z0
-            trends_noconv[n] = linregress(time_smooth[index], temp_smooth[index])[0]
+            trends_noconv[e] = linregress(time_smooth[index], temp_smooth[index])[0]
         mean_trend = np.mean(trends)
         p_val = ttest_1samp(trends, 0)[1]
         mean_trend_noconv = np.mean(trends_noconv)
-        p_val_noconv = ttest_1samp(trends_noconv)[1]
+        p_val_noconv = ttest_1samp(trends_noconv, 0)[1]
         percent_change = (mean_trend_noconv - mean_trend)/mean_trend*1e2
-        print(expt_names[n])
+        print('\n'+expt_names[n])
         if p_val < p0:
             print('Baseline trend '+str(mean_trend))
-            if p_val_no_conv < p0:
+            if p_val_noconv < p0:
                 print('Trend without convection '+str(mean_trend_noconv))
                 print('Changes trend by '+str(percent_change)+'%')
             else:
