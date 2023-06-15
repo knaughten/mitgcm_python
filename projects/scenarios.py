@@ -3117,7 +3117,7 @@ def plot_warming_trend_profiles (region, fig_name=None):
 def trend_box_plot (fig_name=None):
 
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
-    var_titles = ['Temperature trend over continental shelf,\n200-700m ', 'Ice shelf basal mass loss trend\nfrom Dotson to Cosgrove']
+    var_titles = ['Temperature trend over continental shelf,\n200-700m ', 'Ice shelf basal mass loss trend\nfrom Dotson to Cosgrove ']
     units = [deg_string+'C/century', '%/century']
     expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
     num_expt = len(expt_names)
