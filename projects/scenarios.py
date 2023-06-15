@@ -4219,7 +4219,10 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
         expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
         start_year = 2006
-        end_year = 2080
+        if num_MENS == 0:
+            end_year = 2100
+        else:
+            end_year = 2080
     elif option == 'historical':
         num_ens = [num_LENS, num_noOBC, num_PACE]
         expt_names = ['LENS', 'LENS', 'PACE']
@@ -4998,6 +5001,8 @@ def trends_ex_convection ():
     for n in range(num_expt):
         trends = np.zeros(num_ens[n])
         trends_noconv = np.zeros(num_ens[n])
+        conv_t = 0
+        total_t = 0
         for e in range(num_ens[n]):
             output_dir = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tails[n] + '/output/'
             file_path_temp = output_dir + timeseries_file_temp
@@ -5019,14 +5024,19 @@ def trends_ex_convection ():
             # Calculate baseline trend
             trends[e] = linregress(time_smooth, temp_smooth)[0]
             # Calculate trend with convective periods excluded
-            index = iso_depth_smooth >= z0
+            index = iso_depth_smooth >= z0  # Indices which are not convecting
             trends_noconv[e] = linregress(time_smooth[index], temp_smooth[index])[0]
+            # Integrate number of time indices convecting
+            conv_t += np.sum(np.invert(index).astype(float))
+            total_t += iso_depth_smooth.size
         mean_trend = np.mean(trends)
         p_val = ttest_1samp(trends, 0)[1]
         mean_trend_noconv = np.mean(trends_noconv)
         p_val_noconv = ttest_1samp(trends_noconv, 0)[1]
         percent_change = (mean_trend_noconv - mean_trend)/mean_trend*1e2
+        percent_conv = conv_t/total_t*1e2
         print('\n'+expt_names[n])
+        print('Convects '+str(percent_conv)+'% of the time')
         if p_val < p0:
             print('Baseline trend '+str(mean_trend))
             if p_val_noconv < p0:
