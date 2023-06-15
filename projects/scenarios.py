@@ -3207,7 +3207,7 @@ def trend_box_plot (fig_name=None):
     inv = ax2.transData.inverted()
     dy = inv.transform((0, 0)) - inv.transform((0, y1-y2))
     miny, maxy = ax2.get_ylim()
-    ax2.set_ylim([miny+dy, maxy+dy)
+    ax2.set_ylim([miny+dy, maxy+dy])
     ax2.set_ylabel(var_titles[1]+'('+units[1]+')\n', fontsize=11, color='DarkBlue', rotation=-90)
     ax2.yaxis.set_label_coords(1.12, 0.5)
     ax2.tick_params(axis='y', colors='DarkBlue')
