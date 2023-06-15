@@ -3200,6 +3200,14 @@ def trend_box_plot (fig_name=None):
     ax2.set_xlim([-0.5, num_expt-0.5])
     ax2.set_xticks(np.arange(num_expt))
     ax2.set_xticklabels(expt_names, fontsize=11)
+    # Align zeros at y-axis
+    # Following https://stackoverflow.com/questions/10481990/matplotlib-axis-with-two-scales-shared-origin
+    y1 = ax.transData.transform((0, 0))[1]
+    y2 = ax2.transData.transform((0, 0))[1]
+    inv = ax2.transData.inverted()
+    dy = inv.transform((0, 0)) - inv.transform((0, y1-y2))
+    miny, maxy = ax2.get_ylim()
+    ax2.set_ylim([miny+dy, maxy+dy)
     ax2.set_ylabel(var_titles[1]+'('+units[1]+')\n', fontsize=11, color='DarkBlue', rotation=-90)
     ax2.yaxis.set_label_coords(1.12, 0.5)
     ax2.tick_params(axis='y', colors='DarkBlue')
@@ -4261,11 +4269,8 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
                     file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files_expt[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_year, smooth=smooth)
-                if sig:
-                    both_trends.append(trend_tmp)
-                else:
-                    both_trends.append(0)
+                trend_tmp = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_year, smooth=smooth)[0]
+                both_trends.append(trend_tmp)
             trend1.append(both_trends[0])
             trend2.append(both_trends[1])
             if expt_titles[n] not in labels:
@@ -4286,9 +4291,10 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         [y0, y1] = slope*np.array([x0, x1]) + intercept
         ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
         trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
-        print('r='+str(r_value))
+        print('r^2='+str(r_value**2))
     else:
         trend_title = 'no significant relationship'
+        print('p='+str(p_value)+', r^2='+str(r_value**2))
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
     ax.set_xlabel(var1, fontsize=14)
     ax.set_ylabel(var2, fontsize=14)
