@@ -3117,7 +3117,7 @@ def plot_warming_trend_profiles (region, fig_name=None):
 def trend_box_plot (fig_name=None):
 
     var_names = ['amundsen_shelf_temp_btw_200_700m', 'dotson_to_cosgrove_massloss']
-    var_titles = ['Temperature trend over continental shelf,\n200-700m ', 'Ice shelf basal mass loss trend\nfrom Dotson to Cosgrove']
+    var_titles = ['Temperature trend over continental shelf,\n200-700m ', 'Ice shelf basal mass loss trend\nfrom Dotson to Cosgrove ']
     units = [deg_string+'C/century', '%/century']
     expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
     num_expt = len(expt_names)
@@ -3200,6 +3200,14 @@ def trend_box_plot (fig_name=None):
     ax2.set_xlim([-0.5, num_expt-0.5])
     ax2.set_xticks(np.arange(num_expt))
     ax2.set_xticklabels(expt_names, fontsize=11)
+    # Align zeros at y-axis
+    # Following https://stackoverflow.com/questions/10481990/matplotlib-axis-with-two-scales-shared-origin
+    y1 = ax.transData.transform((0, 0))[1]
+    y2 = ax2.transData.transform((0, 0))[1]
+    inv = ax2.transData.inverted()
+    dy = (inv.transform((0, 0)) - inv.transform((0, y1-y2)))[1]
+    miny, maxy = ax2.get_ylim()
+    ax2.set_ylim([miny+dy, maxy+dy])
     ax2.set_ylabel(var_titles[1]+'('+units[1]+')\n', fontsize=11, color='DarkBlue', rotation=-90)
     ax2.yaxis.set_label_coords(1.12, 0.5)
     ax2.tick_params(axis='y', colors='DarkBlue')
@@ -3509,11 +3517,13 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
 
 
 # Main text figure with option for supplementary figure to show extra simulations
-def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
+def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf', density_space=False, var='temp'):
 
     if region == 'amundsen_shelf':
         hovmoller_file_main = '/output/hovmoller_shelf.nc'
         hovmoller_file_pace = '/output/hovmoller3.nc'
+        if density_space:
+            hovmoller_file_main = '/output/hovmoller_density_space.nc'
     elif region == 'pine_island_bay':
         hovmoller_file_main = '/output/hovmoller.nc'
         hovmoller_file_pace = '/output/hovmoller1.nc'
@@ -3550,6 +3560,15 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     smooth = 24
     p0 = 0.05
     ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
+    if var == 'temp':
+        var_title = 'Temperature'
+        var_units = deg_string+'C'
+    elif var == 'salt':
+        var_title = 'Salinity'
+        var_units = 'psu'
+    elif var == 'volume':
+        var_title = 'Volume'
+        var_units = r'm$^3$'
 
     # Get mask of all ice front points
     #icefront_mask = grid.get_icefront_mask()
@@ -3561,22 +3580,27 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     #draft_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.draft)
     #bathy_icefront = np.ma.masked_where(np.invert(icefront_mask), grid.bathy)
     #mean_draft = area_average(draft_icefront, grid)
-    #mean_bathy = area_average(bathy_icefront, grid)   
+    #mean_bathy = area_average(bathy_icefront, grid)
 
-    mean_profiles = np.ma.empty([num_expt, grid.nz])
-    std_profiles = np.ma.empty([num_expt, grid.nz])
-    trend_profiles = np.ma.empty([num_expt, grid.nz])
+    if density_space:
+        rho = read_netcdf(expt_dir_heads[0]+expt_dir_mids[0]+'001'+expt_dir_tails[0]+hovmoller_file[0], 'rho')
+        nz = rho.size
+    else:
+        nz = grid.nz
+    mean_profiles = np.ma.empty([num_expt, nz])
+    std_profiles = np.ma.empty([num_expt, nz])
+    trend_profiles = np.ma.empty([num_expt, nz])
     # Loop over experiments
     for n in range(num_expt):
         num_years = end_years[n] - start_years[n] + 1
-        expt_annual_means = np.ma.empty([num_ens[n], num_years, grid.nz])
-        expt_trends = np.ma.empty([num_ens[n], grid.nz])
+        expt_annual_means = np.ma.empty([num_ens[n], num_years, nz])
+        expt_trends = np.ma.empty([num_ens[n], nz])
         # Loop over ensemble members
         for e in range(num_ens[n]):
             # Read the data
             file_path = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(expt_ens_prec[n]) + expt_dir_tails[n] + hovmoller_file[n]
             time = netcdf_time(file_path, monthly=False)
-            temp = read_netcdf(file_path, region+'_temp')
+            temp = read_netcdf(file_path, region+'_'+var)
             # Trim to correct years
             t0, tf = index_period(time, start_years[n], end_years[n])
             time = time[t0:tf]
@@ -3587,7 +3611,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
             # Calculate trend per century of smoothed data at each depth
             time_cent = np.array([(t-time[0]).total_seconds() for t in time])/(365*sec_per_day*100)
             temp_smoothed, time_smoothed = moving_average(temp, smooth, time=time_cent)
-            for k in range(grid.nz):
+            for k in range(nz):
                 slope, intercept, r_value, p_value, std_err = linregress(time_smoothed, temp_smoothed[:,k])
                 if p_value < p0:
                     expt_trends[e,k] = slope
@@ -3614,8 +3638,13 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     data_plot = [mean_profiles, std_profiles, trend_profiles]
     data_plot_beg = [mean_profile_beg, std_profile_beg]
     titles = [r'$\bf{a}$. '+'Ensemble mean\n(last 20y)', r'$\bf{b}$. '+'Standard deviation\n(last 20y)', r'$\bf{c}$. '+'Trend']
-    units = [deg_string+'C']*2 + [deg_string+'C/century']
-    depth = -grid.z
+    units = [var_units]*2 + [var_units+'/century']
+    if density_space:
+        depth = rho
+        ylabel = r'potential density (kg/m$^3$)'
+    else:
+        depth = -grid.z
+        ylabel = 'depth (m)'
     for v in range(3):
         ax = plt.subplot(gs[0,v])
         for n in range(num_expt): #[0, 2, 5, 3, 1, 4]:
@@ -3624,12 +3653,15 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
                 #ax.plot(data_plot_beg[v], depth, color=colours[n], linewidth=1.5, linestyle='dotted')
         ax.tick_params(direction='in')
         ax.grid(linestyle='dotted')
-        ax.set_ylim([0, None])
+        if density_space:
+            ax.set_ylim([27, 28])
+        else:
+            ax.set_ylim([0, None])
         ax.invert_yaxis()
         ax.set_title(titles[v], fontsize=14)
         ax.set_xlabel(units[v], fontsize=12)
         if v==0:
-            ax.set_ylabel('depth (m)', fontsize=12)
+            ax.set_ylabel(ylabel, fontsize=12)
         else:
             ax.set_yticklabels([])
         ax.axhline(200, color='black', linestyle='dashed', linewidth=1)
@@ -3639,7 +3671,7 @@ def temp_profiles (fig_name=None, supp=False, region='amundsen_shelf'):
     else:
         legend_fontsize = 12
     ax.legend(loc='lower center', bbox_to_anchor=(-0.65,-0.25), fontsize=legend_fontsize, ncol=num_expt)
-    plt.suptitle('Temperature profiles over '+region_names[region], fontsize=18)
+    plt.suptitle(var_title+' profiles over '+region_names[region], fontsize=18)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
@@ -4206,7 +4238,10 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         expt_titles = ['RCP 8.5', 'RCP 4.5', 'Paris 2C', 'Paris 1.5C']
         expt_colours = ['DarkGrey', 'IndianRed', 'MediumSeaGreen', 'DodgerBlue']
         start_year = 2006
-        end_year = 2080
+        if num_MENS == 0:
+            end_year = 2100
+        else:
+            end_year = 2080
     elif option == 'historical':
         num_ens = [num_LENS, num_noOBC, num_PACE]
         expt_names = ['LENS', 'LENS', 'PACE']
@@ -4245,11 +4280,8 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
                     file_path = base_dir + 'cesm_sat_timeseries/' + expt_names[n] + '_' + str(e+1).zfill(expt_prec) + '_TS_global_mean.nc'
                 else:
                     file_path = head_dir + 'PAS_' + expt_names[n] + expt_mid[n] + str(e+1).zfill(expt_prec) + expt_tail[n] + '/output/' + timeseries_files_expt[k]
-                trend_tmp, sig = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_year, smooth=smooth)
-                if sig:
-                    both_trends.append(trend_tmp)
-                else:
-                    both_trends.append(0)
+                trend_tmp = read_calc_trend(var, file_path, p0=p0, start_year=start_year, end_year=end_year, smooth=smooth)[0]
+                both_trends.append(trend_tmp)
             trend1.append(both_trends[0])
             trend2.append(both_trends[1])
             if expt_titles[n] not in labels:
@@ -4270,9 +4302,10 @@ def trend_scatterplots (var1, var2, base_dir='./', timeseries_file='timeseries.n
         [y0, y1] = slope*np.array([x0, x1]) + intercept
         ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1, zorder=0)
         trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
-        print('r='+str(r_value))
+        print('r^2='+str(r_value**2))
     else:
         trend_title = 'no significant relationship'
+        print('p='+str(p_value)+', r^2='+str(r_value**2))
     ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=12, transform=ax.transAxes)
     ax.set_xlabel(var1, fontsize=14)
     ax.set_ylabel(var2, fontsize=14)
@@ -4307,26 +4340,44 @@ def hovmoller_anomaly_std (fig_name=None):
     contours_std = 0.2
     smooth = 12
     grid = Grid(grid_dir)
+    timeseries_iso_file = 'timeseries_isotherm.nc'
+    iso_var = region+'_isotherm_0.5C_below_100m'
+    z0 = -440
 
     time_plot = []
     anom_plot = []
     std_plot = []
+    time_conv_plot = []
+    conv_plot = []
     for n in range(num_expt):
         for e in range(num_ens):
-            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + hovmoller_file
+            output_dir = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail
+            file_path = output_dir + hovmoller_file
+            iso_file_path = output_dir + timeseries_iso_file
             time = netcdf_time(file_path, monthly=False)
             data = read_netcdf(file_path, region+'_'+var)
+            iso_depth = read_netcdf(iso_file_path, iso_var)
+            if time.size != iso_depth.size:
+                print('Error: isotherm timeseries file does not match Hovmollers time axis')
+                sys.exit()
             t_start, t_end = index_period(time, start_years[n], end_years[n])
             data = data[t_start:t_end,:]
             time = time[t_start:t_end]
+            iso_depth = iso_depth[t_start:t_end]
+            iso_depth_smooth, time_smooth = moving_average(iso_depth, smooth, time=time)
+            conv = (iso_depth_smooth < z0).astype(float)
             if e==0:
                 time_plot.append(time)
                 data_ens = np.ma.empty([num_ens, time.size, grid.nz])
+                time_conv_plot.append(time_smooth)
+                conv_ens = np.ma.zeros([time_smooth.size])
             data_ens[e,:] = data
+            conv_ens += conv
         if n==0:
             data_baseline = np.ma.mean(data_ens, axis=(0,1))
         anom_plot.append(np.ma.mean(data_ens, axis=0) - data_baseline[None,:])
         std_plot.append(np.ma.std(data_ens, axis=0))
+        conv_plot.append(conv_ens/num_ens*1e2)
 
     fig = plt.figure(figsize=(8,8))
     gs = plt.GridSpec(num_expt,2)
@@ -4344,6 +4395,12 @@ def hovmoller_anomaly_std (fig_name=None):
         for m in range(2):
             ax = plt.subplot(gs[n,m])
             img = hovmoller_plot(data_plot[m][n], time_plot[n], grid, smooth=smooth, ax=ax, make_cbar=False, vmin=vmin[m], vmax=vmax[m], ctype=ctype[m], contours=contours[m])
+            '''if m==1:
+                # Plot percentage of members convecting
+                ax2 = ax.twinx()
+                ax2.plot_date(time_conv_plot[n], conv_plot[n], '-', color='green', linewidth=2)
+                ax2.set_ylim([0, 100])
+                ax2.set_ylabel('% ensemble convecting', fontsize=12)'''
             ax.set_xlim([datetime.date(start_years[n], 1, 1), datetime.date(end_years[n]-1, 12, 31)])
             if n==0 and m==1:
                 ax.set_xticks([datetime.date(year, 1, 1) for year in np.arange(start_years[n]+20, end_years[n], 20)])
@@ -4938,6 +4995,76 @@ def test_member_trend_correlation (base_dir='./', fig_name=None):
             posn +=1
     plt.suptitle('Correlation in trends of '+var_title+' ('+var_units+'/century)', fontsize=16)
     finished_plot(fig, fig_name=fig_name)
+
+
+def trends_ex_convection ():
+
+    var_name_temp = 'amundsen_shelf_temp_btw_200_700m'
+    timeseries_file_temp = 'timeseries.nc'
+    var_name_iso = 'amundsen_shelf_isotherm_0.5C_below_100m'
+    timeseries_file_iso = 'timeseries_isotherm.nc'
+    z0 = -440
+    expt_names = ['Historical', 'Historical\nFixed BCs', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5', 'RCP 8.5\nFixed BCs']
+    num_expt = len(expt_names)
+    expt_dir_heads = ['PAS_']*num_expt
+    expt_dir_mids = ['LENS', 'LENS', 'LW1.5_', 'LW2.0_', 'MENS_', 'LENS', 'LENS']
+    expt_dir_tails = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC']
+    num_ens = [10, 5, 5, 10, 10, 10, 5]
+    start_years = [1920, 1920, 2006, 2006, 2006, 2006, 2006]
+    end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100]
+    smooth = 24
+    p0 = 0.05
+
+    for n in range(num_expt):
+        trends = np.zeros(num_ens[n])
+        trends_noconv = np.zeros(num_ens[n])
+        conv_t = 0
+        total_t = 0
+        for e in range(num_ens[n]):
+            output_dir = expt_dir_heads[n] + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tails[n] + '/output/'
+            file_path_temp = output_dir + timeseries_file_temp
+            file_path_iso = output_dir + timeseries_file_iso
+            time = netcdf_time(file_path_temp, monthly=False)            
+            temp = read_netcdf(file_path_temp, var_name_temp)
+            iso_depth = read_netcdf(file_path_iso, var_name_iso)
+            if iso_depth.size != temp.size:
+                print('Error (trends_ex_convection): isotherm timeseries does not match temperature timeseries')
+                sys.exit()
+            t0, tf = index_period(time, start_years[n], end_years[n])
+            time = time[t0:tf]
+            temp = temp[t0:tf]
+            iso_depth = iso_depth[t0:tf]
+            time_sec = np.array([(t-time[0]).total_seconds() for t in time])
+            time = time_sec/(365*sec_per_day*100)
+            temp_smooth, time_smooth = moving_average(temp, smooth, time=time)
+            iso_depth_smooth = moving_average(iso_depth, smooth)
+            # Calculate baseline trend
+            trends[e] = linregress(time_smooth, temp_smooth)[0]
+            # Calculate trend with convective periods excluded
+            index = iso_depth_smooth >= z0  # Indices which are not convecting
+            trends_noconv[e] = linregress(time_smooth[index], temp_smooth[index])[0]
+            # Integrate number of time indices convecting
+            conv_t += np.sum(np.invert(index).astype(float))
+            total_t += iso_depth_smooth.size
+        mean_trend = np.mean(trends)
+        p_val = ttest_1samp(trends, 0)[1]
+        mean_trend_noconv = np.mean(trends_noconv)
+        p_val_noconv = ttest_1samp(trends_noconv, 0)[1]
+        percent_change = (mean_trend_noconv - mean_trend)/mean_trend*1e2
+        percent_conv = conv_t/total_t*1e2
+        print('\n'+expt_names[n])
+        print('Convects '+str(percent_conv)+'% of the time')
+        if p_val < p0:
+            print('Baseline trend '+str(mean_trend))
+            if p_val_noconv < p0:
+                print('Trend without convection '+str(mean_trend_noconv))
+                print('Changes trend by '+str(percent_change)+'%')
+            else:
+                print('Without convection, trend is no longer significant')
+        else:
+            print('No significant trend')
+    
+    
         
         
     
