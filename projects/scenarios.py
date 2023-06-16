@@ -3301,6 +3301,7 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
         file_head = ['PAS_LENS', 'PAS_LENS']
         num_ens = [10, 5]
         file_tail = ['_O/output/timeseries.nc', '_noOBC/output/timeseries.nc']
+        start_year = 1920
         end_year = 2100
     else:
         file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
@@ -3308,7 +3309,6 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
         file_tail = ['_O/output/timeseries.nc']*len(file_head)
         end_year = 2080
     num_expt = len(file_head)
-    start_year = 2006
     num_years = end_year - start_year + 1
     p0 = 0.05
 
@@ -3363,6 +3363,8 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
             mean2_vals.append(mean2)
     if not distinct[-1]:
         print('Scenario never diverges for good')
+    elif np.all(distinct):
+        print('Scenarios are always distinct')
     else:
         t0 = np.where(np.invert(distinct))[0][-1] + 1
         print('Scenario diverges for good at '+str(time[t0]))
@@ -3393,16 +3395,16 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
 def timeseries_shelf_temp (fig_name=None, supp=False):
 
     if supp:
-        expt_names = ['Historical', 'Historical Fixed BCs', 'RCP 8.5', 'RCP 8.5 Fixed BCs']
+        expt_names = ['Transient BCs', 'Fixed BCs']
         num_expt = len(expt_names)
-        num_ens = [10, 5, 10, 5]
-        start_year = [1920, 1920, 2006, 2006]
-        end_year = [2005, 2005, 2100, 2100]
+        num_ens = [10, 5]
+        start_year = [1920, 1920]
+        end_year = [2100, 2100]
         expt_file_head = ['PAS_']*num_expt
-        expt_file_mid = ['LENS', 'LENS', 'LENS', 'LENS']
+        expt_file_mid = ['LENS']*num_expt
         expt_ens_prec = [3]*num_expt
-        expt_dir_tail = ['_O', '_noOBC', '_O', '_noOBC']
-        colours = [(0.6,0.6,0.6), (0,0.45,0.7), (0.8,0.47,0.65), (0.9,0.62,0)]
+        expt_dir_tail = ['_O', '_noOBC']
+        colours = [(0.8,0.47,0.65), 'Teal']
         expt_file_tail = ['/output/timeseries.nc']*num_expt
     else:
         expt_names = ['Historical', 'Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
@@ -3441,7 +3443,7 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
                 t_end = index_year_end(time_raw, end_year[n])
                 time_hist_noBC = np.copy(time_raw[:t_end])
                 data_hist_noBC = np.copy(data_raw[:t_end])
-            elif expt_names[n] != 'PACE':
+            elif expt_names[n] != 'PACE' and not supp:
                 # Concatenate with historical data for smoothing
                 if expt_names[n] == 'RCP 8.5 fixed BCs':
                     time_raw = np.concatenate((time_hist_noBC, time_raw))
@@ -3479,21 +3481,30 @@ def timeseries_shelf_temp (fig_name=None, supp=False):
         ax.fill_between(time[n], data_min[n], data_max[n], color=colours[n], alpha=0.3)
         # Plot ensemble mean as solid line
         ax.plot(time[n], data_mean[n], color=colours[n], label=expt_names[n], linewidth=1.5)
-        if n == num_expt-1: # and not supp:
-            # Label beginning of future scenarios
-            ax.axvline(time[n][0], color=colours[0], linestyle='dashed')
-            plt.text(datetime.date(2008,1,1), -0.8, 'Future\nscenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
+        if n == num_expt-1:
             if not supp:
-                # Label year of RCP 8.5 divergence
-                ax.axvline(datetime.date(rcp85_div_year,1,1), color=colours[n], linestyle='dashed')
-                plt.text(datetime.date(rcp85_div_year+2,1,1), -0.5, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=colours[n], ha='left', va='bottom', weight='bold')
+                # Label beginning of future scenarios
+                ax.axvline(time[n][0], color=colours[0], linestyle='dashed')
+                plt.text(datetime.date(2008,1,1), -0.8, 'Future\nscenarios', fontsize=13, color=colours[0], ha='left', va='bottom', weight='bold')
+            # Label year of RCP 8.5 divergence
+            if supp:
+                div_colour = 'black'
+                plt.text(datetime.date(rcp85_div_year+2,1,1), 0.6, str(rcp85_div_year)+':\nSimulations\ndiverge', fontsize=13, color=div_colour, ha='left', va='bottom')
+            else:
+                div_colour = colours[n]
+                plt.text(datetime.date(rcp85_div_year+2,1,1), -0.5, str(rcp85_div_year)+':\nRCP 8.5\ndiverges', fontsize=13, color=div_colour, ha='left', va='bottom', weight='bold')
+            ax.axvline(datetime.date(rcp85_div_year,1,1), color=div_colour, linestyle='dashed')
     ax.grid(linestyle='dotted')
     ax.set_xlim([datetime.date(start_year[0],1,1), np.amax(time[-1])])
     ax.set_xticks([datetime.date(year,1,1) for year in np.arange(start_year[0], end_year[-1], 20)])
     ax.set_xlabel('Year', fontsize=12)
     ax.set_ylabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
-    ax.set_title('Evolution of ocean temperature', fontsize=17)
-    ax.legend(loc='upper left', fontsize=11)
+    if supp:
+        ax.set_title('Ocean temperature (Historical and RCP 8.5)', fontsize=17)
+        ax.legend(loc='upper center', fontsize=11)
+    else:
+        ax.set_title('Evolution of ocean temperature', fontsize=17)
+        ax.legend(loc='upper left', fontsize=11)
     finished_plot(fig, fig_name=fig_name, dpi=300)
 
 
