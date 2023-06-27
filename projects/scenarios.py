@@ -5071,13 +5071,12 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
     import netCDF4 as nc
 
     grid = Grid(grid_path)
-    mask = grid.get_region_mask(region)
+    mask = grid.get_region_mask(region, is_3d=True)
     num_years = end_year-start_year+1
     volume = np.zeros([num_years, num_bins, num_bins])
 
     def read_bound_data (file_path, var_name, vmin, vmax):
         data = read_netcdf(file_path, var_name, time_average=True)
-        data = mask_3d(data, grid)
         data = apply_mask(data, np.invert(mask), depth_dependent=True)
         if np.amin(data) < vmin:
             print('Warning: minimum is '+str(np.amin(data))+'; '+str(np.count_nonzero(data < vmin))+' instances below previous min')
