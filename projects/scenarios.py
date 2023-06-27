@@ -5098,18 +5098,20 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
     print('Writing to file')
     id = nc.Dataset(output_dir+fname_out, 'w')
     id.createDimension('time', None)
+    id.createVariable('time', 'f8', ('time'))
+    id.variables['time'].units = 'year'
+    id.variables['time'][:] = np.arange(start_year, end_year+1)
     def add_dimension (var_name, data, units):
         id.createDimension(var_name, data.size)
         id.createVariable(var_name, 'f8', (var_name))
-        id.variables[var_name] = data
         id.variables[var_name].units = units
+        id.variables[var_name][:] = data
     add_dimension('temp_centres', temp_centres, 'degC')
     add_dimension('temp_edges', temp_edges, 'degC')
     add_dimension('salt_centres', salt_centres, 'psu')
     add_dimension('salt_edges', salt_edges, 'psu')
     id.createVariable('volume', 'f8', ('time', 'temp_centres', 'salt_centres'))
     id.variables['volume'] = volume
-    id.variables['volume'].units = 'm^3'
     id.close()
                       
     
