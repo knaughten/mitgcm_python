@@ -5066,7 +5066,7 @@ def trends_ex_convection ():
     
 
 # Precompute trends in T/S space (over bins) for the given experiment
-def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen_shelf', start_year=2006, end_year=2100, tmin=-1.91, tmax=2.05, smin=33.25, smax=34.75, num_bins=1000, grid_path='PAS_grid/'):
+def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen_shelf', start_year=2006, end_year=2100, tmin=-1.95, tmax=2.1, smin=33, smax=34.75, num_bins=1000, grid_path='PAS_grid/'):
 
     import netCDF4 as nc
 
@@ -5093,6 +5093,7 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
         temp = read_bound_data(file_path, 'THETA', tmin, tmax)
         salt = read_bound_data(file_path, 'SALT', smin, smax)
         volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+        volume_tmp[volume_tmp.mask] = 0
         volume[year-start_year,:] = volume_tmp
 
     print('Writing to file')
@@ -5111,7 +5112,7 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
     add_dimension('salt_centres', salt_centres, 'psu')
     add_dimension('salt_edges', salt_edges, 'psu')
     id.createVariable('volume', 'f8', ('time', 'temp_centres', 'salt_centres'))
-    id.variables['volume'] = volume
+    id.variables['volume'][:] = volume
     id.close()
                       
     
