@@ -40,7 +40,17 @@ def ts_binning (temp, salt, grid, mask, time_dependent=False, num_bins=1000, tmi
             print('Error (ts_binning): must set dV_bdry if bdry=True')
             sys.exit()
     else:
-        dV = grid.dV            
+        dV = grid.dV
+
+    # Weird typing precision error issue
+    if tmin is not None:
+        tmin = np.float32(tmin)
+    if tmax is not None:
+        tmax = np.float32(tmax)
+    if smin is not None:
+        smin = np.float32(smin)
+    if smax is not None:
+        smax = np.float32(smax)
 
     # Inner function to get min and max values in region
     def get_vmin_vmax (data):
