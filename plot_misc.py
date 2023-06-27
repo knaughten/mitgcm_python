@@ -169,12 +169,16 @@ def ts_distribution_plot (file_path, region='all', grid=None, time_index=None, t
     # Choose the plotting bounds if not set
     if tmin is None:
         tmin = temp_edges[0]
+        print(tmin)
     if tmax is None:
         tmax = temp_edges[-1]
+        print(tmax)
     if smin is None:
         smin = salt_edges[0]
+        print(smin)
     if smax is None:
         smax = salt_edges[-1]
+        print(smax)
     if vmin is None:
         vmin = np.log(np.amin(volume))
         print(vmin)

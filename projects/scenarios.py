@@ -5064,8 +5064,54 @@ def trends_ex_convection ():
         else:
             print('No significant trend')
     
+
+# Precompute trends in T/S space (over bins) for the given experiment
+def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen_shelf', start_year=2006, end_year=2100, tmin=-1.91, tmax=2.05, smin=33.25, smax=34.75, num_bins=1000, grid_path='PAS_grid/'):
+
+    import netCDF4 as nc
+
+    grid = Grid(grid_path)
+    mask = grid.get_region_mask(region)
+    num_years = end_year-start_year+1
+    volume = np.zeros([num_years, num_bins, num_bins])
+
+    def enforce_bounds (data, vmin, vmax):
+        if np.amin(data) < vmin:
+            print('Warning: minimum is '+str(np.amin(data)))
+            data[data < vmin] = vmin
+        if np.amax(data) > max:
+            print('Warning: maximum is '+str(np.amax(data)))
+            data[data > vmax] = vmax
+        return data
     
-        
+    for year in range(start_year, end_year+1):
+        print('Processing '+str(year))
+        file_path = output_dir + str(year) + '01/MITgcm/output.nc'
+        temp = read_netcdf(file_path, 'THETA', time_average=True)
+        temp = enforce_bounds(temp, tmin, tmax)
+        salt = read_netcdf(file_path, 'SALT', time_average=True)
+        salt = enforce_bounds(salt, smin, smax)
+        volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
+        volume[year-start_year,:] = volume_tmp
+
+    print('Writing to file')
+    id = nc.Dataset(output_dir+fname_out, 'w')
+    id.createDimension('time', None)
+    def add_dimension (var_name, data, units):
+        id.createDimension(var_name, data.size)
+        id.createVariable(var_name, 'f8', (var_name))
+        id.variables[var_name] = data
+        id.variables[var_name].units = units
+    add_dimension('temp_centres', temp_centres, 'degC')
+    add_dimension('temp_edges', temp_edges, 'degC')
+    add_dimension('salt_centres', salt_centres, 'psu')
+    add_dimension('salt_edges', salt_edges, 'psu')
+    id.createVariable('volume', 'f8', ('time', 'temp_centres', 'salt_centres'))
+    id.variables['volume'] = volume
+    id.variables['volume'].units = 'm^3'
+    id.close()
+                      
+    
         
     
             
