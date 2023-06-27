@@ -5075,22 +5075,23 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
     num_years = end_year-start_year+1
     volume = np.zeros([num_years, num_bins, num_bins])
 
-    def enforce_bounds (data, vmin, vmax):
+    def read_bound_data (file_path, var_name, vmin, vmax):
+        data = read_netcdf(file_path, var_name, time_average=True)
+        data = mask_3d(data, grid)
+        data = apply_mask(data, np.invert(mask), depth_dependent=True)
         if np.amin(data) < vmin:
-            print('Warning: minimum is '+str(np.amin(data)))
+            print('Warning: minimum is '+str(np.amin(data))+'; '+str(np.count_nonzero(data < vmin))+' instances below previous min')
             data[data < vmin] = vmin
-        if np.amax(data) > max:
-            print('Warning: maximum is '+str(np.amax(data)))
+        if np.amax(data) > vmax:
+            print('Warning: maximum is '+str(np.amax(data))+'; '+str(np.count_nonzero(data > vmax))+' instances above previous max')
             data[data > vmax] = vmax
         return data
     
     for year in range(start_year, end_year+1):
         print('Processing '+str(year))
         file_path = output_dir + str(year) + '01/MITgcm/output.nc'
-        temp = read_netcdf(file_path, 'THETA', time_average=True)
-        temp = enforce_bounds(temp, tmin, tmax)
-        salt = read_netcdf(file_path, 'SALT', time_average=True)
-        salt = enforce_bounds(salt, smin, smax)
+        temp = read_bound_data(file_path, 'THETA', tmin, tmax)
+        salt = read_bound_data(file_path, 'SALT', smin, smax)
         volume_tmp, temp_centres, salt_centres, temp_edges, salt_edges = ts_binning(temp, salt, grid, mask, num_bins=num_bins, tmin=tmin, tmax=tmax, smin=smin, smax=smax)
         volume[year-start_year,:] = volume_tmp
 
