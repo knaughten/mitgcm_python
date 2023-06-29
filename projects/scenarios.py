@@ -5068,8 +5068,8 @@ def trends_ex_convection ():
             print('No significant trend')
     
 
-# Precompute trends in T/S space (over bins) for the given experiment
-def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen_shelf', start_year=2006, end_year=2100, tmin=-1.95, tmax=2.1, smin=33, smax=34.75, num_bins=1000, grid_path='PAS_grid/'):
+# Precompute volumes in T/S space (over bins) for the given experiment
+def precompute_ts_volumes (output_dir, fname_out='TS_volume.nc', region='amundsen_shelf', start_year=2006, end_year=2100, tmin=-1.95, tmax=2.1, smin=33, smax=34.75, num_bins=1000, grid_path='PAS_grid/'):
 
     import netCDF4 as nc
 
@@ -5119,59 +5119,82 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
                       
 
 # Supplementary figure
-def volume_trends_ts_space (bin_size=2, fig_name=None):
+def volume_changes_ts_space (bin_size=5, fig_name=None):
 
     file_head = 'PAS_LW2.0_'
     num_ens = 10
-    file_tail = '_O/output/TS_trends.nc'
-    p0 = 0
+    file_tail = '_O/output/TS_volume.nc'
+    p0 = 0.05
+    num_years = 2100-2006+1
 
     for n in range(num_ens):
+        print('Processing ensemble member '+str(n+1))
         file_path = file_head + str(n+1).zfill(3) + file_tail
         if n==0:
-            # Trim the edges as these contained any volumes beyond the limits
-            temp_centres = read_netcdf(file_path, 'temp_centres')[1:-1]
-            salt_centres = read_netcdf(file_path, 'salt_centres')[1:-1]
-            num_bins_old = temp_centres.size
-            num_bins_new = int(np.floor(num_bins_old/bin_size))
-            trends_all = np.zeros([num_ens, num_bins_new, num_bins_new])
-        volume = read_netcdf(file_path, 'volume')[:,1:-1, 1:-1]
+            temp_centres_old = read_netcdf(file_path, 'temp_centres')
+            salt_centres_old = read_netcdf(file_path, 'salt_centres')
+            num_bins_old = temp_centres_old.size
+            num_bins_new = int(np.ceil(num_bins_old/bin_size))
+            temp_centres = np.zeros([num_bins_new])
+            salt_centres = np.zeros([num_bins_new])
+            volume_binned = np.zeros([num_years, num_ens, num_bins_new, num_bins_new])
+            data_plot = np.zeros([2, num_bins_new, num_bins_new])
+        volume = read_netcdf(file_path, 'volume')
         num_time = volume.shape[0]
-        # Combine the bins into larger bins for plotting visibility, and calculate the trend of volume over time in each new bin
-        trends = np.zeros([num_bins_new, num_bins_new])
-        zero_volume = np.zeros([num_bins_new, num_bins_new])
+        # Combine the bins into larger bins for plotting visibility
         for j in range(num_bins_new):
             start_j = j*bin_size
             end_j = min((j+1)*bin_size, num_bins_old)
+            if n==0:
+                temp_centres[j] = np.mean(temp_centres_old[start_j:end_j])
+                salt_centres[j] = np.mean(salt_centres_old[start_j:end_j])
             for i in range(num_bins_new):
                 start_i = i*bin_size
                 end_i = min((i+1)*bin_size, num_bins_old)
-                volume_binned = np.sum(volume[:,start_j:end_j, start_i:end_i], axis=(1,2))
-                # Now have a timeseries of annual averages of volume at this T/S bin.
-                if (volume_binned==0).all():
-                    # Volume is always zero
-                    zero_volume[j,i] = 1
-                else:
-                    # Calculate the trend per century
-                    slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_time)*1e-2, volume_binned)
-                    trends[j,i] = slope
-        # Mask where the volume is always zero
-        trends = np.ma.masked_where(zero_volume==1, trends)
-        trends_all[n,:] = trends
-    # Get ensemble mean trend
-    mean_trends = np.mean(trends_all, axis=0)
-    # Set to zero where not significant
-    p_val = ttest_1samp(trends_all, 0, axis=0)[1]
-    mean_trends[p_val > p0] = 0
+                volume_binned[:,n,j,i] = np.sum(volume[:,start_j:end_j, start_i:end_i], axis=(1,2))
+    # Get ensemble mean over first and last 10 years
+    data_plot[0,:] = np.mean(volume_binned[:10,:,:,:], axis=(0,1))
+    data_plot[1,:] = np.mean(volume_binned[-10:,:,:,:], axis=(0,1))
+    # Get on a log scale
+    data_plot = np.log(data_plot)
+    data_diff = data_plot[1,:]-data_plot[0,:]
+    # Mask bins with zero volume
+    data_plot = np.ma.masked_where(data_plot==0, data_plot)
+    data_diff = np.ma.masked_where((data_plot[0,:]==0)*(data_plot[1,:]==0), data_diff)
+    # Calculate potential density to overlay contours
+    salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
+    density = potential_density('MDJWF', salt_2d, temp_2d)
 
     # Plot
+    fig = plt.figure(figsize=(10,4))
+    gs = plt.GridSpec(1,3)
+    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.87)
+    cax1 = fig.add_axes([0.05, 0.3, 0.05, 0.4])
+    cax2 = fig.add_axes([0.95, 0.3, 0.05, 0.4])
+    cmap, vmin, vmax = set_colours(data_plot, ctype='parula')
+    cmap_diff, vmin_diff, vmax_diff = set_colours(data_diff, ctype='plusminus')
+    titles = ['2006-2015', '2091-2100', 'Difference']
     fig, ax = plt.subplots(figsize=(8,6))
-    img = plt.pcolor(salt_centres, temp_centres, mean_trends, cmap='RdBu_r')
-    plt.colorbar(img)
-    plt.xlabel('Salinity (psu)')
-    plt.ylabel('Temperature ('+deg_string+'C)')
-    plt.title(r'Trends in water mass volumes, Paris 2'+deg_string+'C', fontsize=16)
-    plt.text(.9, .6, r'kg/m$^3$/century', ha='center', rotation=-90, transform=fig.transFigure)
+    for n in range(3):
+        ax = plt.subplot(gs[0,n])
+        ax.contour(salt_2d, temp_2d, density, colors='DarkGrey', linestyles='dotted')
+        if n < 2:
+            img = ax.pcolor(salt_centres, temp_centres, data_plot[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
+        else:
+            img = ax.pcolor(salt_centres, temp_centres, data_diff, cmap=cmap_diff, vmin=vmin_diff, vmax=vmax_diff)
+        ax.tick_params(direction='in')
+        if n == 0:
+            ax.set_xlabel('Salinity (psu)', fontsize=12)
+            ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+            plt.colorbar(img, cax=cax1)
+            plt.text(.05, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
+        else:
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+        if n == 2:
+            plt.colorbar(img, cax=cax2)
+        ax.set_title(titles[n], fontsize=14)
+    plt.suptitle('Water masses in Paris 2'+deg_string+'C', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
                     
                     
