@@ -4911,8 +4911,8 @@ def compare_jourdain_massloss (base_dir='./'):
 
     massloss_present = calc_mean_massloss(period1)
     massloss_future = calc_mean_massloss(period2)
-    massloss_factor = massloss_future/massloss_present
-    print('Mass loss increases by a factor of '+str(np.amin(massloss_factor))+' to '+str(np.amax(massloss_factor))+' depending on ensemble member, mean '+str(np.mean(massloss_factor)))
+    massloss_percent = (massloss_future-massloss_present)/massloss_present*1e2
+    print('Mass loss increases by '+str(np.amin(massloss_percent))+' to '+str(np.amax(massloss_percent))+' depending on ensemble member, mean '+str(np.mean(massloss_percent)))
 
 
 # Supplementary plot
