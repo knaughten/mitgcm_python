@@ -5119,80 +5119,60 @@ def precompute_ts_volumes (output_dir, fname_out='TS_volume.nc', region='amundse
                       
 
 # Supplementary figure
-def volume_changes_ts_space (bin_size=5, fig_name=None):
+def volume_changes_ts_space (fig_name=None):
 
     file_head = 'PAS_LW2.0_'
     num_ens = 10
     file_tail = '_O/output/TS_volume.nc'
     p0 = 0.05
     num_years = 2100-2006+1
+    salt_bounds = [33, 34.8]
+    temp_bounds = [-1.95, 2.2]
 
     for n in range(num_ens):
         print('Processing ensemble member '+str(n+1))
         file_path = file_head + str(n+1).zfill(3) + file_tail
         if n==0:
-            temp_centres_old = read_netcdf(file_path, 'temp_centres')
-            salt_centres_old = read_netcdf(file_path, 'salt_centres')
-            num_bins_old = temp_centres_old.size
-            num_bins_new = int(np.ceil(num_bins_old/bin_size))
-            temp_centres = np.zeros([num_bins_new])
-            salt_centres = np.zeros([num_bins_new])
-            volume_binned = np.zeros([num_years, num_ens, num_bins_new, num_bins_new])
-            data_plot = np.zeros([2, num_bins_new, num_bins_new])
-        volume = read_netcdf(file_path, 'volume')
-        num_time = volume.shape[0]
-        # Combine the bins into larger bins for plotting visibility
-        for j in range(num_bins_new):
-            start_j = j*bin_size
-            end_j = min((j+1)*bin_size, num_bins_old)
-            if n==0:
-                temp_centres[j] = np.mean(temp_centres_old[start_j:end_j])
-                salt_centres[j] = np.mean(salt_centres_old[start_j:end_j])
-            for i in range(num_bins_new):
-                start_i = i*bin_size
-                end_i = min((i+1)*bin_size, num_bins_old)
-                volume_binned[:,n,j,i] = np.sum(volume[:,start_j:end_j, start_i:end_i], axis=(1,2))
+            temp_centres = read_netcdf(file_path, 'temp_centres')
+            salt_centres = read_netcdf(file_path, 'salt_centres')
+            num_bins = temp_centres.size
+            volume_all = np.zeros([num_years, num_ens, num_bins, num_bins])
+            data_plot = np.zeros([2, num_bins, num_bins])
+        volume_all[:,n,:] = read_netcdf(file_path, 'volume')
     # Get ensemble mean over first and last 10 years
-    data_plot[0,:] = np.mean(volume_binned[:10,:,:,:], axis=(0,1))
-    data_plot[1,:] = np.mean(volume_binned[-10:,:,:,:], axis=(0,1))
+    data_plot[0,:] = np.mean(volume_all[:10,:,:,:], axis=(0,1))
+    data_plot[1,:] = np.mean(volume_all[-10:,:,:,:], axis=(0,1))
     # Get on a log scale
-    data_plot = np.log(data_plot)
-    data_diff = data_plot[1,:]-data_plot[0,:]
+    data_plot_log = np.log(data_plot)
+    data_plot_log[data_plot==0] = 0
     # Mask bins with zero volume
-    data_plot = np.ma.masked_where(data_plot==0, data_plot)
-    data_diff = np.ma.masked_where((data_plot[0,:]==0)*(data_plot[1,:]==0), data_diff)
+    data_plot_log = np.ma.masked_where(data_plot_log==0, data_plot_log)
     # Calculate potential density to overlay contours
-    salt_2d, temp_2d = np.meshgrid(salt_centres, temp_centres)
+    salt_2d, temp_2d = np.meshgrid(np.linspace(salt_bounds[0], salt_bounds[1]), np.linspace(temp_bounds[0], temp_bounds[1]))
     density = potential_density('MDJWF', salt_2d, temp_2d)
 
     # Plot
-    fig = plt.figure(figsize=(10,4))
-    gs = plt.GridSpec(1,3)
-    gs.update(left=0.05, right=0.95, bottom=0.05, top=0.87)
-    cax1 = fig.add_axes([0.05, 0.3, 0.05, 0.4])
-    cax2 = fig.add_axes([0.95, 0.3, 0.05, 0.4])
-    cmap, vmin, vmax = set_colours(data_plot, ctype='parula')
-    cmap_diff, vmin_diff, vmax_diff = set_colours(data_diff, ctype='plusminus')
-    titles = ['2006-2015', '2091-2100', 'Difference']
-    fig, ax = plt.subplots(figsize=(8,6))
-    for n in range(3):
+    fig = plt.figure(figsize=(8,5))
+    gs = plt.GridSpec(1,2)
+    gs.update(left=0.1, right=0.88, bottom=0.1, top=0.87, wspace=0.01)
+    cax = fig.add_axes([0.9, 0.18, 0.03, 0.6])
+    cmap, vmin, vmax = set_colours(data_plot_log, ctype='parula')
+    titles = ['2006-2015', '2091-2100']
+    for n in range(2):
         ax = plt.subplot(gs[0,n])
-        ax.contour(salt_2d, temp_2d, density, colors='DarkGrey', linestyles='dotted')
-        if n < 2:
-            img = ax.pcolor(salt_centres, temp_centres, data_plot[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
-        else:
-            img = ax.pcolor(salt_centres, temp_centres, data_diff, cmap=cmap_diff, vmin=vmin_diff, vmax=vmax_diff)
+        ax.contour(salt_2d, temp_2d, density, 12, colors='black', linestyles='dotted', linewidths=1)
+        img = ax.pcolor(salt_centres, temp_centres, data_plot_log[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
         ax.tick_params(direction='in')
+        ax.set_xlim(salt_bounds)
+        ax.set_ylim(temp_bounds)
         if n == 0:
             ax.set_xlabel('Salinity (psu)', fontsize=12)
             ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=12)
-            plt.colorbar(img, cax=cax1)
-            plt.text(.05, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
-        else:
+        elif n==1:
             ax.set_xticklabels([])
             ax.set_yticklabels([])
-        if n == 2:
-            plt.colorbar(img, cax=cax2)
+            plt.colorbar(img, cax=cax)
+            plt.text(.98, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
         ax.set_title(titles[n], fontsize=14)
     plt.suptitle('Water masses in Paris 2'+deg_string+'C', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
