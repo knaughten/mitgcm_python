@@ -5117,14 +5117,67 @@ def precompute_ts_trends (output_dir, fname_out='TS_trends.nc', region='amundsen
     id.variables['volume'][:] = volume
     id.close()
                       
-    
-        
-    
-            
-                
 
-            
-    
+# Supplementary figure
+def volume_trends_ts_space (bin_size=2, fig_name=None):
+
+    file_head = 'PAS_LW2.0_'
+    num_ens = 10
+    file_tail = '_O/output/TS_trends.nc'
+    p0 = 0
+
+    for n in range(num_ens):
+        file_path = file_head + str(n+1).zfill(3) + file_tail
+        if n==0:
+            # Trim the edges as these contained any volumes beyond the limits
+            temp_centres = read_netcdf(file_path, 'temp_centres')[1:-1]
+            salt_centres = read_netcdf(file_path, 'salt_centres')[1:-1]
+            num_bins_old = temp_centres.size
+            num_bins_new = int(np.floor(num_bins_old/bin_size))
+            trends_all = np.zeros([num_ens, num_bins_new, num_bins_new])
+        volume = read_netcdf(file_path, 'volume')[:,1:-1, 1:-1]
+        num_time = volume.shape[0]
+        # Combine the bins into larger bins for plotting visibility, and calculate the trend of volume over time in each new bin
+        trends = np.zeros([num_bins_new, num_bins_new])
+        zero_volume = np.zeros([num_bins_new, num_bins_new])
+        for j in range(num_bins_new):
+            start_j = j*bin_size
+            end_j = min((j+1)*bin_size, num_bins_old)
+            for i in range(num_bins_new):
+                start_i = i*bin_size
+                end_i = min((i+1)*bin_size, num_bins_old)
+                volume_binned = np.sum(volume[:,start_j:end_j, start_i:end_i], axis=(1,2))
+                # Now have a timeseries of annual averages of volume at this T/S bin.
+                if (volume_binned==0).all():
+                    # Volume is always zero
+                    zero_volume[j,i] = 1
+                else:
+                    # Calculate the trend per century
+                    slope, intercept, r_value, p_value, std_err = linregress(np.arange(num_time)*1e-2, volume_binned)
+                    trends[j,i] = slope
+        # Mask where the volume is always zero
+        trends = np.ma.masked_where(zero_volume==1, trends)
+        trends_all[n,:] = trends
+    # Get ensemble mean trend
+    mean_trends = np.mean(trends_all, axis=0)
+    # Set to zero where not significant
+    p_val = ttest_1samp(trends_all, 0, axis=0)[1]
+    mean_trends[p_val > p0] = 0
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(8,6))
+    img = plt.pcolor(salt_centres, temp_centres, mean_trends, cmap='RdBu_r')
+    plt.colorbar(img)
+    plt.xlabel('Salinity (psu)')
+    plt.ylabel('Temperature ('+deg_string+'C)')
+    plt.title(r'Trends in water mass volumes, Paris 2'+deg_string+'C', fontsize=16)
+    plt.text(.9, .6, r'kg/m$^3$/century', ha='center', rotation=-90, transform=fig.transFigure)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+                    
+                    
+                    
+                
+                
 
     
 
