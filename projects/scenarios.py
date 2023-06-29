@@ -3702,9 +3702,6 @@ def velocity_trends (fig_name=None):
     region_labels = ['DG', 'PITE']
     label_x = [-116, -107]
     label_y = [-71.8, -71.34]
-    shelf_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A']
-    shelf_x = [-120, -112.3, -110.5, -106, -100.3, -100.5, -102]
-    shelf_y = [-74.2, -74.38, -75, -75.1, -75.1, -73.55, -72.5]
 
     grid = Grid(grid_dir)
 
@@ -3750,8 +3747,6 @@ def velocity_trends (fig_name=None):
             for m in range(len(region_labels)):
                 txt = plt.text(label_x[m], label_y[m], region_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='blue')
                 txt.set_path_effects([pthe.withStroke(linewidth=2, foreground='w')])
-            for m in range(len(shelf_labels)):
-                plt.text(shelf_x[m], shelf_y[m], shelf_labels[m], fontsize=10, ha='center', va='center', weight='bold', color='black')
         else:
             # Second and third panels: velocity slices
             trend = read_single_trend(trend_var[n], dim=3, gtype=gtypes[n])
@@ -3775,6 +3770,7 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
+    #import matplotlib.patheffects as pthe
 
     grid_dir = 'PAS_grid/'
     trend_dir='precomputed_trends/'
@@ -3794,6 +3790,9 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
     ymax = -71.5
     n_subgrid = 10
     test_distinct = group1 is not None and group2 is not None
+    shelf_labels = ['G', 'D', 'Cr', 'T', 'P', 'Co', 'A']
+    shelf_x = [-124, -112.4, -111.5, -105, -98, -97.5, -94]
+    shelf_y = [-75.1, -74, -75.5, -75.5, -75.15, -73.7, -72.1]
     
     grid = Grid(grid_dir)
     ice_mask = grid.get_ice_mask(shelf=shelf)
@@ -3976,6 +3975,10 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         # Shade negative values in light blue
         neg_mask = bin_quantity < 0
         shade_mask(ax, neg_mask, grid, colour='PowderBlue')
+        # Label ice shelves
+        for m in range(len(shelf_labels)):
+            txt = plt.text(shelf_x[m], shelf_y[m], shelf_labels[m], fontsize=8, ha='center', va='center', weight='bold', color='black')
+            #txt.set_path_effects([pthe.withStroke(linewidth=1, foreground='w')])
         ytick_labels = ax.get_yticklabels()
         for label in ytick_labels[1::2]:
             label.set_visible(False)
