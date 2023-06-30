@@ -5119,7 +5119,7 @@ def precompute_ts_volumes (output_dir, fname_out='TS_volume.nc', region='amundse
                       
 
 # Supplementary figure
-def volume_changes_ts_space (fig_name=None):
+def volume_ts_space (fig_name=None):
 
     file_head = 'PAS_LW2.0_'
     num_ens = 10
@@ -5128,6 +5128,9 @@ def volume_changes_ts_space (fig_name=None):
     num_years = 2100-2006+1
     salt_bounds = [33, 34.8]
     temp_bounds = [-1.95, 2.2]
+    wm_labels = ['WW', 'CDW']
+    wm_x = [34.25, 34.5]
+    wm_y = [-1.25, 1.5]
 
     for n in range(num_ens):
         print('Processing ensemble member '+str(n+1))
@@ -5149,7 +5152,13 @@ def volume_changes_ts_space (fig_name=None):
     data_plot_log = np.ma.masked_where(data_plot_log==0, data_plot_log)
     # Calculate potential density to overlay contours
     salt_2d, temp_2d = np.meshgrid(np.linspace(salt_bounds[0], salt_bounds[1]), np.linspace(temp_bounds[0], temp_bounds[1]))
-    density = potential_density('MDJWF', salt_2d, temp_2d)
+    density = potential_density('MDJWF', salt_2d, temp_2d)-1e3
+
+    def fmt(x):
+        s = f"{x:.2f}"
+        if s.endswith("0"):
+            s = f"{x:.1f}"
+        return f"{s}"
 
     # Plot
     fig = plt.figure(figsize=(8,5))
@@ -5157,24 +5166,27 @@ def volume_changes_ts_space (fig_name=None):
     gs.update(left=0.1, right=0.88, bottom=0.1, top=0.87, wspace=0.01)
     cax = fig.add_axes([0.9, 0.18, 0.03, 0.6])
     cmap, vmin, vmax = set_colours(data_plot_log, ctype='parula')
-    titles = ['2006-2015', '2091-2100']
+    titles = [r'$\bf{a}$. 2006-2015', r'$\bf{b}$. 2091-2100']
     for n in range(2):
         ax = plt.subplot(gs[0,n])
-        ax.contour(salt_2d, temp_2d, density, 12, colors='black', linestyles='dotted', linewidths=1)
+        cs = ax.contour(salt_2d, temp_2d, density, 12, colors='black', linestyles='dotted', linewidths=1)
+        if n==1:
+            ax.clabel(cs, cs.levels, inline=True, fontsize=8, fmt=fmt)
         img = ax.pcolor(salt_centres, temp_centres, data_plot_log[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
         ax.tick_params(direction='in')
         ax.set_xlim(salt_bounds)
         ax.set_ylim(temp_bounds)
-        if n == 0:
+        if n == 0:            
             ax.set_xlabel('Salinity (psu)', fontsize=12)
             ax.set_ylabel('Temperature ('+deg_string+'C)', fontsize=12)
+            for i in range(len(wm_labels)):
+                plt.text(wm_x[i], wm_y[i], wm_labels[i], ha='center', va='center', fontsize=12, weight='bold', color='black')            
         elif n==1:
-            ax.set_xticklabels([])
             ax.set_yticklabels([])
             plt.colorbar(img, cax=cax)
             plt.text(.98, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
         ax.set_title(titles[n], fontsize=14)
-    plt.suptitle('Water masses in Paris 2'+deg_string+'C', fontsize=16)
+    plt.suptitle('Water masses on continental shelf (Paris 2'+deg_string+'C)', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
                     
                     
