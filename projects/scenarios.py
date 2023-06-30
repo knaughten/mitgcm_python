@@ -5121,6 +5121,8 @@ def precompute_ts_volumes (output_dir, fname_out='TS_volume.nc', region='amundse
 # Supplementary figure
 def volume_ts_space (fig_name=None):
 
+    import matplotlib.colors as cl
+
     file_head = 'PAS_LW2.0_'
     num_ens = 10
     file_tail = '_O/output/TS_volume.nc'
@@ -5173,6 +5175,10 @@ def volume_ts_space (fig_name=None):
         if n==1:
             ax.clabel(cs, cs.levels, inline=True, fontsize=8, fmt=fmt)
         img = ax.pcolor(salt_centres, temp_centres, data_plot_log[n,:], cmap=cmap, vmin=vmin, vmax=vmax)
+        # Shade in grey the bins that exist in the other panel but not this one
+        missing_bins = ((data_plot[1-n,:] != 0)*(data_plot[n,:] == 0)).astype(float)
+        missing_bins = np.ma.masked_where(missing_bins==0, missing_bins)
+        ax.pcolor(salt_centres, temp_centres, missing_bins, cmap=cl.ListedColormap(['DarkGrey']))
         ax.tick_params(direction='in')
         ax.set_xlim(salt_bounds)
         ax.set_ylim(temp_bounds)
@@ -5184,7 +5190,7 @@ def volume_ts_space (fig_name=None):
         elif n==1:
             ax.set_yticklabels([])
             plt.colorbar(img, cax=cax)
-            plt.text(.98, .6, 'log of volume', ha='center', rotation=-90, transform=fig.transFigure)
+            plt.text(.98, .6, r'log of volume (m$^3$)', ha='center', rotation=-90, transform=fig.transFigure)
         ax.set_title(titles[n], fontsize=14)
     plt.suptitle('Water masses on continental shelf (Paris 2'+deg_string+'C)', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
