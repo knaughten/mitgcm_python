@@ -232,6 +232,8 @@ def process_trend_var (var_name, fixed_BCs=True):
     for n in range(num_expt):
         if expt_names[n].endswith('FixedBCs') and not fixed_BCs:
             continue
+        if var_name.endswith('bottom100m') and expt_names[n] in ['Historical', 'Paris1.5C']:
+            continue
         print('...'+expt_names[n])
         dir_tmp_expt = dir_tmp + expt_names[n] + '/'
         if dir_tmp_expt not in dir_used:
