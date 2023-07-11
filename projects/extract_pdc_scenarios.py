@@ -14,7 +14,7 @@ end_years = [2005, 2005, 2100, 2100, 2080, 2100, 2100]
 spinup_year0 = 1890
 months_per_year = 12
 expt_dir_1 = '/data/oceans_output/shelf/kaight/archer2_mitgcm/PAS_'
-expt_dir_2 = ['LENS', 'LENS', 'LW_1.5', 'LW2.0', 'MENS', 'LENS', 'LENS']
+expt_dir_2 = ['LENS', 'LENS', 'LW1.5', 'LW2.0', 'MENS', 'LENS', 'LENS']
 expt_dir_3 = ['', '', '_', '_', '_', '', '']
 expt_dir_4 = ['_O', '_noOBC', '_O', '_O', '_O', '_O', '_noOBC']
 expt_dir_5 = '/output/'
@@ -50,7 +50,7 @@ def add_attributes (fname, expt_index, lon_min, lon_max, lat_min, lat_max, zmin,
     elif expt_index == 'topo':
         f.write('ncatted -a title,global,o,c,"Amundsen Sea MITgcm model topography." '+fname+'\n')
     else:
-        f.write('ncatted -a title,global,o,c,"Amundsen Sea MITgcm model output forced with CESM1 '+expt_cesm_descriptions[expt_index]+obcs_descriptions[expt_index]+', '+start_years[expt_index]+'-'+end_years[expt_index]+'" '+fname+'\n')
+        f.write('ncatted -a title,global,o,c,"Amundsen Sea MITgcm model output forced with CESM1 '+expt_cesm_descriptions[expt_index]+obcs_descriptions[expt_index]+', '+str(start_years[expt_index])+'-'+str(end_years[expt_index])+'" '+fname+'\n')
     f.write('ncatted -a summary,global,o,c,"This dataset provides model output for 20th and 21st-century ice-ocean simulations in the Amundsen Sea. The simulations are performed with the MITgcm model at 1/10 degree resolution, including components for the ocean, sea ice, and ice shelf thermodynamics. Atmospheric forcing is provided by the CESM1 climate model for the historical period (1920-2005) and four future scenarios (2006-2100), using 5-10 ensemble members each. The open ocean boundaries are forced by either the corresponding CESM1 simulation or a present-day climatology. The simulations were completed in 2022 by Kaitlin Naughten at the British Antarctic Survey (Polar Oceans team)." '+fname+'\n')
     f.write('ncatted -a keywords,global,o,c,"Antarctica,Amundsen Sea,ocean,ice shelves,sea ice,modelling" '+fname+'\n')
     f.write('ncatted -a Conventions,global,o,c,"ACDD-1.3" '+fname+'\n')
@@ -70,7 +70,10 @@ def add_attributes (fname, expt_index, lon_min, lon_max, lat_min, lat_max, zmin,
             f.write('ncatted -a geospatial_vertical_min,global,o,f,'+str(zmin)+' '+fname+'\n')
         if zmax is not None:
             f.write('ncatted -a geospatial_vertical_max,global,o,f,'+str(zmax)+' '+fname+'\n')
-    if expt_names[expt_index].startswith('Historical'):
+    if expt_index in ['Ua', 'topo']:
+        f.write('ncatted -a time_coverage_start,global,o,c,1920-01-01 '+fname+'\n')
+        f.write('ncatted -a time_coverage_end,global,o,c,2100-12-31 '+fname+'\n')    
+    elif expt_names[expt_index].startswith('Historical'):
         f.write('ncatted -a time_coverage_start,global,o,c,1920-01-01 '+fname+'\n')
         f.write('ncatted -a time_coverage_end,global,o,c,2005-12-31 '+fname+'\n')
     else:
@@ -110,7 +113,7 @@ def process_timeseries_var (var_name):
         new_var = 'ocean_volume_y_transport'
     for n in range(num_expt):
         print('...'+expt_names[n])
-        dir_tmp_expt = dir_tmp + expt_names[n]
+        dir_tmp_expt = dir_tmp + expt_names[n] + '/'
         if dir_tmp_expt not in dir_used:
             f.write('mkdir '+dir_tmp_expt+'\n')
             dir_used.append(dir_tmp_expt)
@@ -120,7 +123,7 @@ def process_timeseries_var (var_name):
             ts_file = 'timeseries.nc'
         for e in range(num_ens[n]):
             fname_in = expt_dir_head[n] + str(e+1).zfill(3) + expt_dir_tail[n] + ts_file
-            fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+start_years[n]+'-'+end_years[n]+'_'+new_var+depth_str+expt_names[n]+'_ens'+str(e+1).zfill(3)+'.nc'
+            fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+str(start_years[n])+'-'+str(end_years[n])+'_'+new_var+depth_str+expt_names[n]+'_ens'+str(e+1).zfill(3)+'.nc'
             # Extract the right years into the new file
             first_year = netcdf_time(fname_in, monthly=False)[0].year
             if first_year == start_years[n]:
@@ -133,7 +136,7 @@ def process_timeseries_var (var_name):
             # Now rename the variable
             f.write('ncrename -v '+var_name+','+new_var+' '+fname_out+'\n')
             if var_name == 'PITE_trans':
-                f.write('ncatted -c scale_factor,'+new_var+',o,f,-1 '+fname+'\n')
+                f.write('ncatted -c scale_factor,'+new_var+',o,f,-1 '+fname_out+'\n')
             # Add some attributes
             add_attributes(fname_out, n, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
             f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
@@ -158,13 +161,13 @@ def process_hovmoller_var (var_name, hov_file='hovmoller_shelf.nc'):
         new_var = 'sea_water_potential_temperature'
     for n in range(num_expt):
         print('...'+expt_names[n])
-        dir_tmp_expt = dir_tmp + expt_names[n]
+        dir_tmp_expt = dir_tmp + expt_names[n] + '/'
         if dir_tmp_expt not in dir_used:
             f.write('mkdir '+dir_tmp_expt+'\n')
             dir_used.append(dir_tmp_expt)
         for e in range(num_ens[n]):
             fname_in = expt_dir_head[n] + str(e+1).zfill(3) + expt_dir_tail[n] + hov_file
-            fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+start_years[n]+'-'+end_years[n]+'_'+new_var+'_'+expt_names[n]+'_ens'+str(e+1).zfill(3)+'.nc'
+            fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+str(start_years[n])+'-'+str(end_years[n])+'_'+new_var+'_'+expt_names[n]+'_ens'+str(e+1).zfill(3)+'.nc'
             first_year = netcdf_time(fname_in, monthly=False)[0].year
             if first_year == start_years[n]:
                 f.write('ncks -v '+var_name+' '+fname_in+' '+fname_out+'\n')
@@ -195,6 +198,8 @@ def process_trend_var (var_name):
     elif var_name.endswith('bottom100m'):
         depth = 'bottom_100m'
         depth_str = '_'+depth+'_'
+        zmin = None
+        zmax = None
     else:
         depth = '2D'
         zmin = None
@@ -224,7 +229,7 @@ def process_trend_var (var_name):
         new_var = 'precipitation_flux'
     for n in range(num_expt):
         print('...'+expt_names[n])
-        dir_tmp_expt = dir_tmp + expt_names[n]
+        dir_tmp_expt = dir_tmp + expt_names[n] + '/'
         if dir_tmp_expt not in dir_used:
             f.write('mkdir '+dir_tmp_expt+'\n')
             dir_used.append(dir_tmp_expt)
@@ -234,9 +239,11 @@ def process_trend_var (var_name):
         fname_in = in_dir + var_name + '_trend_'
         if expt_names[n].startswith('Historical'):
             fname_in += 'historical.nc'
+        elif expt_names[n] == 'RCP8.5_FixedBCs':
+            fname_in += 'future.nc'
         else:
             fname_in += expt_dir_2[n] + '.nc'
-        fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+start_years[n]+'-'+end_years[n]+'_'+new_var+depth_str+expt_names[n]+'.nc'
+        fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+str(start_years[n])+'-'+str(end_years[n])+'_'+new_var+depth_str+expt_names[n]+'.nc'
         # Copy the file
     f.write('cp '+fname_in+' '+fname_out+'\n')
     # Rename the variable
