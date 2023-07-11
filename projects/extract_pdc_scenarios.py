@@ -266,6 +266,8 @@ def process_latlon_var (var_name):
         new_var = 'seafloor_depth'
     elif var_name == 'draft':
         new_var = 'ice_shelf_draft'
+    elif var_name == 'BFRN':
+        new_var = 'buttressing_flux_response_number'
     dir_tmp = main_outdir+latlon_dir
     if dir_tmp not in dir_used:
         f.write('mkdir '+dir_tmp+'\n')
@@ -277,13 +279,15 @@ def process_latlon_var (var_name):
     # Rename it
     f.write('ncrename -v '+var_name+','+new_var+' '+fname_out+'\n')
     # Add some attributes
-    add_attributes(fname_out, 'topo', lon_min, lon_max, lat_min, lat_max, zmin, zmax)
+    if var_name == 'BFRN':
+        flag = 'Ua'
+    else:
+        flag = 'topo'
+    add_attributes(fname_out, flag, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
     f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
 
-for var in ['bathy', 'draft']:
+for var in ['bathy', 'draft', 'BFRN']:
     process_latlon_var(var)
 
-# BFRN field
-
-
+    
 f.close()
