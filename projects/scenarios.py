@@ -3766,7 +3766,7 @@ def velocity_trends (fig_name=None):
 
 
 # Main text figure
-def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False, use_ttest=True):
+def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classes=False, num_bins=40, group1=None, group2=None, plot_distinct=False, use_ttest=True, out_file=None):
 
     from scipy.io import loadmat
     import matplotlib.colors as cl
@@ -3814,6 +3814,10 @@ def melt_trend_buttressing (fig_name=None, shelf='all', supp=False, depth_classe
         # Now interpolate to MITgcm grid
         bin_quantity = interp_reg_xy(x_ua, y_ua, buttressing_fill, x_mit, y_mit, fill_value=0)
         bin_quantity = np.ma.masked_where(np.invert(ice_mask), bin_quantity)
+        if out_file is not None:
+            ncfile = NCfile(out_file, grid, 'xy')
+            ncfile.add_variable('BFRN', bin_quantity, 'xy')
+            ncfile.close()
 
     if depth_classes:
         bin_edges = np.linspace(np.amin(bin_quantity), np.amax(bin_quantity), num=num_bins+1)

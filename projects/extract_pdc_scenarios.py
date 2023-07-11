@@ -181,10 +181,109 @@ def process_hovmoller_var (var_name, hov_file='hovmoller_shelf.nc'):
 
 process_hovmoller_var('amundsen_shelf_temp')
 
-# Trend maps (note special naming convections including no_OBCS)
-# temp 200-700m, ismr, UVEL, VVEL, u bottom 100m, v bottom 100m, uwind, vwind, atemp, precip
+# Trend maps (note special naming conventions including no_OBCS)
+f.write('mkdir '+main_outdir+trend_dir+'\n')
+dir_used.append(main_outdir+trend_dir)
+def process_trend_var (var_name):
+    print('Processing '+var_name)
+    region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    dir_tmp = main_outdir+trend_dir
+    if var_name.endswith('200_700m'):
+        depth = '200-700m'
+        zmin = -700
+        zmax = -200
+    elif var_name.endswith('bottom100m'):
+        depth = 'bottom_100m'
+        depth_str = '_'+depth+'_'
+    else:
+        depth = '2D'
+        zmin = None
+        zmax = None
+        depth_str = '_'
+    if depth != '2D':
+        depth_str = '_'+depth+'_'
+        dir_tmp += depth+'/'
+        if dir_tmp not in dir_used:
+            f.write('mkdir '+dir_tmp+'\n')
+            dir_used.append(dir_tmp)
+    if var_name.startswith('temp'):
+        new_var = 'sea_water_potential_temperature'
+    elif var_name == 'ismr':
+        new_var = 'ice_shelf_basal_melt_flux'
+    elif var_name in ['UVEL', 'u_bottom100m']:
+        new_var = 'eastward_sea_water_velocity'
+    elif var_name in ['VVEL', 'v_bottom100m']:
+        new_var = 'northward_sea_water_velocity'
+    elif var_name == 'EXFuwind':
+        new_var = 'eastward_wind'
+    elif var_name == 'EXFvwind':
+        new_var = 'northward_wind'
+    elif var_name == 'EXFatemp':
+        new_var = 'air_temperature'
+    elif var_name == 'EXFpreci':
+        new_var = 'precipitation_flux'
+    for n in range(num_expt):
+        print('...'+expt_names[n])
+        dir_tmp_expt = dir_tmp + expt_names[n]
+        if dir_tmp_expt not in dir_used:
+            f.write('mkdir '+dir_tmp_expt+'\n')
+            dir_used.append(dir_tmp_expt)
+        in_dir = trend_indir
+        if expt_names[n].endswith('FixedBCs'):
+            in_dir += 'no_obcs/'
+        fname_in = in_dir + var_name + '_trend_'
+        if expt_names[n].startswith('Historical'):
+            fname_in += 'historical.nc'
+        else:
+            fname_in += expt_dir_2[n] + '.nc'
+        fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+start_years[n]+'-'+end_years[n]+'_'+new_var+depth_str+expt_names[n]+'.nc'
+        # Copy the file
+    f.write('cp '+fname_in+' '+fname_out+'\n')
+    # Rename the variable
+    f.write('ncrename -v '+var_name+'_trend,'+new_var+' '+fname_out+'\n')
+    # Rename the time axis and variable (fudge from before)
+    f.write('ncks -3 -O '+fname_out+' tmp.nc\n')
+    f.write('ncrename -d time,ensemble_member '+fname_out+'\n')
+    f.write('ncks -4 -O tmp.nc '+fname_out+'\n')
+    f.write('ncrename -v time,ensemble_member '+fname_out+'\n')
+    # Add some attributes
+    add_attributes(fname_out, n, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
+    f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
 
-# Lat-lon fields
-# bathy, draft
+for var in ['temp_btw_200_700m', 'ismr', 'UVEL', 'VVEL', 'u_bottom100m', 'v_bottom100m', 'EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']:
+    process_trend_var(var)
+
+    
+# Lat-lon fields (constant in time)
+f.write('mkdir '+main_outdir+latlon_dir+'\n')
+dir_used.append(main_outdir+latlon_dir)
+def process_latlon_var (var_name):
+    print('Processing '+var_name+' lat-lon')
+    region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
+    zmin = None
+    zmax = None
+    if var_name == 'bathy':
+        new_var = 'seafloor_depth'
+    elif var_name == 'draft':
+        new_var = 'ice_shelf_draft'
+    dir_tmp = main_outdir+latlon_dir
+    if dir_tmp not in dir_used:
+        f.write('mkdir '+dir_tmp+'\n')
+        dir_used.append(dir_tmp)
+    fname_in = 'PAS_'+var_name+'.nc'
+    fname_out = dir_tmp+'MITgcm_'+region+'_'+new_var+'.nc'
+    # Extract the variable
+    f.write('ncks -v '+var_name+' '+fname_in+' '+fname_out+'\n')
+    # Rename it
+    f.write('ncrename -v '+var_name+','+new_var+' '+fname_out+'\n')
+    # Add some attributes
+    add_attributes(fname_out, 'topo', lon_min, lon_max, lat_min, lat_max, zmin, zmax)
+    f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
+
+for var in ['bathy', 'draft']:
+    process_latlon_var(var)
 
 # BFRN field
+
+
+f.close()
