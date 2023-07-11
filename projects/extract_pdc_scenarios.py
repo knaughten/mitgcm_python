@@ -187,7 +187,7 @@ process_hovmoller_var('amundsen_shelf_temp')
 # Trend maps (note special naming conventions including no_OBCS)
 f.write('mkdir '+main_outdir+trend_dir+'\n')
 dir_used.append(main_outdir+trend_dir)
-def process_trend_var (var_name):
+def process_trend_var (var_name, fixed_BCs=True):
     print('Processing '+var_name)
     region, lon_min, lon_max, lat_min, lat_max = get_region(var_name)
     dir_tmp = main_outdir+trend_dir
@@ -228,6 +228,8 @@ def process_trend_var (var_name):
     elif var_name == 'EXFpreci':
         new_var = 'precipitation_flux'
     for n in range(num_expt):
+        if expt_names[n].endswith('FixedBCs') and not fixed_BCs:
+            continue
         print('...'+expt_names[n])
         dir_tmp_expt = dir_tmp + expt_names[n] + '/'
         if dir_tmp_expt not in dir_used:
@@ -257,8 +259,10 @@ def process_trend_var (var_name):
     add_attributes(fname_out, n, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
     f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
 
-for var in ['temp_btw_200_700m', 'ismr', 'UVEL', 'VVEL', 'u_bottom100m', 'v_bottom100m', 'EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']:
+for var in ['temp_btw_200_700m', 'ismr', 'UVEL', 'VVEL']:
     process_trend_var(var)
+for var in ['u_bottom100m', 'v_bottom100m', 'EXFuwind', 'EXFvwind', 'EXFatemp', 'EXFpreci']:
+    process_trend_var(var, fixed_BCs=False)
 
     
 # Lat-lon fields (constant in time)
