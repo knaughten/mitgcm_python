@@ -200,17 +200,19 @@ def process_trend_var (var_name, fixed_BCs=True):
         depth_str = '_'+depth+'_'
         zmin = None
         zmax = None
+    elif var_name in ['UVEL', 'VVEL']:
+        depth = '3D'
+        zmin = None
+        zmax = None
     else:
         depth = '2D'
         zmin = None
         zmax = None
-        depth_str = '_'
-    if depth != '2D':
-        depth_str = '_'+depth+'_'
-        dir_tmp += depth+'/'
-        if dir_tmp not in dir_used:
-            f.write('mkdir '+dir_tmp+'\n')
-            dir_used.append(dir_tmp)
+    depth_str = '_'+depth+'_'
+    dir_tmp += depth+'/'
+    if dir_tmp not in dir_used:
+        f.write('mkdir '+dir_tmp+'\n')
+        dir_used.append(dir_tmp)
     if var_name.startswith('temp'):
         new_var = 'sea_water_potential_temperature'
     elif var_name == 'ismr':
@@ -247,17 +249,17 @@ def process_trend_var (var_name, fixed_BCs=True):
             fname_in += expt_dir_2[n] + '.nc'
         fname_out = dir_tmp_expt+'MITgcm_'+region+'_'+str(start_years[n])+'-'+str(end_years[n])+'_'+new_var+depth_str+expt_names[n]+'.nc'
         # Copy the file
-    f.write('cp '+fname_in+' '+fname_out+'\n')
-    # Rename the variable
-    f.write('ncrename -v '+var_name+'_trend,'+new_var+' '+fname_out+'\n')
-    # Rename the time axis and variable (fudge from before)
-    f.write('ncks -3 -O '+fname_out+' tmp.nc\n')
-    f.write('ncrename -d time,ensemble_member '+fname_out+'\n')
-    f.write('ncks -4 -O tmp.nc '+fname_out+'\n')
-    f.write('ncrename -v time,ensemble_member '+fname_out+'\n')
-    # Add some attributes
-    add_attributes(fname_out, n, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
-    f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
+        f.write('cp '+fname_in+' '+fname_out+'\n')
+        # Rename the variable
+        f.write('ncrename -v '+var_name+'_trend,'+new_var+' '+fname_out+'\n')
+        # Rename the time axis and variable (fudge from before)
+        f.write('ncks -3 -O '+fname_out+' tmp.nc\n')
+        f.write('ncrename -d time,ensemble_member '+fname_out+'\n')
+        f.write('ncks -4 -O tmp.nc '+fname_out+'\n')
+        f.write('ncrename -v time,ensemble_member '+fname_out+'\n')
+        # Add some attributes
+        add_attributes(fname_out, n, lon_min, lon_max, lat_min, lat_max, zmin, zmax)
+        f.write('ncatted -a standard_name,'+new_var+',o,c,'+new_var+' '+fname_out+'\n')
 
 for var in ['temp_btw_200_700m', 'ismr', 'UVEL', 'VVEL']:
     process_trend_var(var)
