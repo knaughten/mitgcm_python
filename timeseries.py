@@ -1228,6 +1228,12 @@ def set_parameters (var):
         title = 'Total freshwater flux over ' + region_names[region]
         units = r'10$^3$ m$^3$/s'
         factor = 1e-6
+    elif var.endswith('heatflx'):
+        option = 'int_sfc'
+        var_name = 'oceQnet'
+        region = var[:var.index('_heatflx')]
+        title = 'Net heat flux over '+region_names[region]
+        units = 'W'
     elif 'salt_adv' in var:
         var_name = 'ADVx_SLT'
         region = var[:var.index('_salt_adv')]
