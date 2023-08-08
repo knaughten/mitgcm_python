@@ -5198,6 +5198,64 @@ def volume_ts_space (fig_name=None):
         ax.set_title(titles[n], fontsize=14)
     plt.suptitle('Water masses on continental shelf (Paris 2'+deg_string+'C)', fontsize=16)
     finished_plot(fig, fig_name=fig_name, dpi=300)
+
+
+# Plot annual means of undercurrent strength vs continental shelf temp, and a correlation.
+def undercurrent_temp_scatterplot (base_dir='./', fig_name=None):
+
+    var_names = ['amundsen_shelf_temp_btw_200_700m', 'PITE_trans']
+    expt_dir_head = base_dir+'PAS_'
+    num_ens = [5, 10, 10, 10]
+    expt_dir_mids = ['LW1.5_', 'LW2.0_', 'MENS_', 'LENS']
+    expt_dir_tail = '_O/output/'
+    timeseries_file = 'timeseries.nc'
+    start_year = 2006
+    end_years = [2100, 2100, 2080, 2100]
+    expt_titles = ['Paris 1.5'+deg_string+'C', 'Paris 2'+deg_string+'C', 'RCP 4.5', 'RCP 8.5']
+    expt_colours = [(0,0.45,0.7), (0,0.62,0.45), (0.9,0.62,0), (0.8,0.47,0.65)]
+    num_expt = len(expt_titles)
+    ndays = [days_per_month(t+1, 1979) for t in range(months_per_year)]
+    p0 = 0.05
+
+    all_temp = []
+    all_trans = []
+    fig, ax = plt.subplots()
+    for n in range(num_expt):
+        for e in range(num_ens[n]):
+            file_path = expt_dir_head + expt_dir_mids[n] + str(e+1).zfill(3) + expt_dir_tail + timeseries_file
+            time = netcdf_time(file_path, monthly=False)
+            t0, tf = index_period(time, start_year, end_years[n])
+            time = time[t0:tf]
+            temp = read_netcdf(file_path, var_names[0])[t0:tf]
+            trans = read_netcdf(file_path, var_names[1])[t0:tf]
+            # Calculate annual means
+            num_years = end_years[n] - start_year + 1
+            for t in range(num_years):
+                temp0 = np.ma.average(temp[t*months_per_year:(t+1)*months_per_year], weights=ndays)
+                trans0 = np.ma.average(trans[t*months_per_year:(t+1)*months_per_year], weights=ndays)
+                # Plot each point as we go
+                ax.plot(temp0, trans0, 'o', color=expt_colours[n], markersize=3, label=expt_titles[n] if e==0 and t==0 else None)
+                # Save to master array for correlating later
+                all_temp.append(temp0)
+                all_trans.append(trans0)
+    ax.grid(linestyle='dotted')
+    slope, intercept, r_value, p_value, std_err = linregress(np.array(all_temp), np.array(all_trans))
+    if p_value < p0:
+        trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
+        ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=11, transform=ax.transAxes)
+        [x0, x1] = ax.get_xlim()
+        [y0, y1] = slope*np.array([x0, x1]) + intercept
+        ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1)
+        ax.set_xlim([x0, x1])
+    ax.set_xlabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
+    ax.set_ylabel('Transport through PITE Trough (Sv)', fontsize=12)
+    ax.set_title('Undercurrent strength vs. shelf temperature', fontsize=14)
+    plt.legend(loc='lower right', fontsize=11)
+    finished_plot(fig, fig_name=fig_name, dpi=300)
+    
+    
+    
+    
                     
                     
                     
