@@ -5234,12 +5234,12 @@ def undercurrent_temp_scatterplot (base_dir='./', fig_name=None):
                 temp0 = np.ma.average(temp[t*months_per_year:(t+1)*months_per_year], weights=ndays)
                 trans0 = np.ma.average(trans[t*months_per_year:(t+1)*months_per_year], weights=ndays)
                 # Plot each point as we go
-                ax.plot(temp0, trans0, 'o', color=expt_colours[n], markersize=3, label=expt_titles[n] if e==0 and t==0 else None)
+                ax.plot(trans0, temp0, 'o', color=expt_colours[n], markersize=3, label=expt_titles[n] if e==0 and t==0 else None)
                 # Save to master array for correlating later
                 all_temp.append(temp0)
                 all_trans.append(trans0)
     ax.grid(linestyle='dotted')
-    slope, intercept, r_value, p_value, std_err = linregress(np.array(all_temp), np.array(all_trans))
+    slope, intercept, r_value, p_value, std_err = linregress(np.array(all_trans), np.array(all_temp))
     if p_value < p0:
         trend_title = 'r$^2$='+str(round_to_decimals(r_value**2, 3))
         ax.text(0.05, 0.95, trend_title, ha='left', va='top', fontsize=11, transform=ax.transAxes)
@@ -5247,9 +5247,9 @@ def undercurrent_temp_scatterplot (base_dir='./', fig_name=None):
         [y0, y1] = slope*np.array([x0, x1]) + intercept
         ax.plot([x0, x1], [y0, y1], '-', color='black', linewidth=1)
         ax.set_xlim([x0, x1])
-    ax.set_xlabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
-    ax.set_ylabel('Transport through PITE Trough (Sv)', fontsize=12)
-    ax.set_title('Undercurrent strength vs. shelf temperature', fontsize=14)
+    ax.set_ylabel('Temperature on continental shelf, 200-700m ('+deg_string+'C)', fontsize=12)
+    ax.set_xlabel('Transport through PITE Trough (Sv)', fontsize=12)
+    ax.set_title('Temperature on shelf vs. undercurrent strength', fontsize=14)
     plt.legend(loc='lower right', fontsize=11)
     finished_plot(fig, fig_name=fig_name, dpi=300)
     
