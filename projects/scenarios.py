@@ -3181,7 +3181,7 @@ def trend_box_plot (fig_name=None):
     gs = plt.GridSpec(1,1)
     gs.update(left=0.105, right=0.9, bottom=0.1, top=0.9)
     ax = plt.subplot(gs[0,0])        
-    bplot = ax.boxplot(all_trends[0], positions=np.arange(num_expt)-0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='white', marker='*', markersize=8), patch_artist=True, zorder=0)
+    bplot = ax.boxplot(all_trends[0], positions=np.arange(num_expt)-0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='white', marker='*', markersize=8, zorder=300), patch_artist=True, zorder=0)
     for patch in bplot['boxes']:
         patch.set_facecolor('LightCoral')
     # Plot individual points
@@ -3197,7 +3197,7 @@ def trend_box_plot (fig_name=None):
     plt.text(1.6, 1.75, 'Future\nscenarios', fontsize=14, ha='left', va='top')
     # Second y-axis for mass loss trends
     ax2 = ax.twinx()
-    bplot2 = ax2.boxplot(all_trends[1], positions=np.arange(num_expt)+0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='white', marker='*', markersize=8), patch_artist=True, zorder=0)
+    bplot2 = ax2.boxplot(all_trends[1], positions=np.arange(num_expt)+0.17, widths=0.3, showmeans=True, whis='range', medianprops=dict(color='DarkGreen'), meanprops=dict(markeredgecolor='black', markerfacecolor='white', marker='*', markersize=8, zorder=300), patch_artist=True, zorder=0)
     for patch in bplot2['boxes']:
         patch.set_facecolor('LightBlue')
     for n in range(num_expt):
