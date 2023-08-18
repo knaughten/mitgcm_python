@@ -3304,6 +3304,7 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
         file_head = ['PAS_LW1.5_', 'PAS_LW2.0_', 'PAS_MENS_']
         num_ens = [5, 10, 10]
         file_tail = ['_O/output/timeseries.nc']*len(file_head)
+        start_year = 2006
         end_year = 2080
     elif vs_fixed_BCs:
         file_head = ['PAS_LENS', 'PAS_LENS']
@@ -3315,6 +3316,7 @@ def calc_rcp85_divergence (window=11, return_year=False, use_ttest=True, test_pa
         file_head = ['PAS_LENS', 'PAS_MENS_', 'PAS_LW2.0_', 'PAS_LW1.5_']
         num_ens = [10, 10, 10, 5]
         file_tail = ['_O/output/timeseries.nc']*len(file_head)
+        start_year = 2006
         end_year = 2080
     num_expt = len(file_head)
     num_years = end_year - start_year + 1
