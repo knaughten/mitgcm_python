@@ -3137,8 +3137,8 @@ def trend_box_plot (fig_name=None):
     for var in var_names:
         var_trends = []
         print('\nTrends in '+var+':')
-        for n in range(1, num_expt):
-            if var == 'dotson_to_cosgrove_massloss': # and expt_names[n] == 'Historical':
+        for n in range(num_expt):
+            if var == 'dotson_to_cosgrove_massloss' and expt_names[n] == 'Historical':
                 # Calculate baseline for massloss: historical ensemble mean over 1920-1950
                 massloss_baseline = 0
                 for e in range(num_ens[n]):
@@ -3151,7 +3151,7 @@ def trend_box_plot (fig_name=None):
                     data_annual = monthly_to_annual(data, time)[0]
                     massloss_baseline += np.mean(data_annual)
                 massloss_baseline /= num_ens[n]
-                print('(using baseline of '+str(massloss_baseline)+' Gt/y) for '+expt_names[n])
+                print('(using baseline of '+str(massloss_baseline)+' Gt/y)')
             percent = (var == 'dotson_to_cosgrove_massloss')
             if percent:
                 baseline = massloss_baseline
