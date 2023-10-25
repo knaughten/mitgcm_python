@@ -3172,7 +3172,7 @@ def trend_box_plot (fig_name=None):
             if p_val < p0:
                 print(expt_names[n]+': '+str(mean_trend)+' +/- '+str(std_trend))
             else:
-                print(expt_names[n]+': no significant trend')
+                print(expt_names[n]+': no significant trend; value is '+str(mean_trend)+' +/- '+str(std_trend)+' with p='+str(p_val))
             var_trends.append(trends)
         all_trends.append(var_trends)
 
