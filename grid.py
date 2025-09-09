@@ -1161,7 +1161,7 @@ class ISMIP7Grid:
     def __init__ (self):
         self.nx = 761
         self.ny = self.nx
-        self.dx = 8  # km
+        self.dx = 8e3 # m
         self.dy = self.dx
         self.x = self.dx*np.arange(-(self.nx-1)//2, (self.nx-1)//2 + 1)
         self.y = self.dy*np.arange(-(self.ny-1)//2, (self.ny-1)//2 + 1)
