@@ -12,7 +12,7 @@ import sys
 import os
 
 from .file_io import read_netcdf, find_cmip6_files
-from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d, connected_mask
+from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d, connected_mask, polar_stereo_inv
 from .constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -1153,6 +1153,19 @@ def read_cice_grid (file_path, return_ugrid=False, return_dA=False):
             return lon, lat, nx, ny, dA
         else:
             return lon, lat, nx, ny
+
+
+# ISMIP7 standard grid, converted to lat/lon points for interpolation
+class ISMIP7Grid:
+
+    def __init__ (self):
+        self.nx = 761
+        self.ny = self.nx
+        self.dx = 8  # km
+        self.dy = self.dx
+        self.x = self.dx*np.arange(-(self.nx-1)//2, (self.nx-1)//2 + 1)
+        self.y = self.dy*np.arange(-(self.ny-1)//2, (self.ny-1)//2 + 1)
+        self.lon, self.lat = polar_stereo_inv(self.x, self.y)
         
         
 
