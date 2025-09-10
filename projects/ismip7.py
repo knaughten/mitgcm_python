@@ -94,9 +94,10 @@ def process_PAS (ens, out_dir='./'):
     end_year = 2100
     file_tail = '01/MITgcm/output.nc'
     calendar = 'noleap'
+    ens = int(ens)
     
     # Set up file
-    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens+1).zfill(2) + '.nc'
+    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'
     print('Creating '+out_file)
     ds = None
     # Loop over years
