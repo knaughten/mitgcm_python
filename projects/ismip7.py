@@ -131,7 +131,6 @@ def process_WSFRIS (expt, year, out_dir='./'):
         ds_old.close()
     ds.to_netcdf(out_file, mode='w')
     ds.close()
-    gc.collect()
 
                 
     
