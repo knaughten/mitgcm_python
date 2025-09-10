@@ -97,7 +97,6 @@ def process_PAS (ens, out_dir='./'):
     calendar = 'noleap'
     ens = int(ens)
     
-    # Set up file
     out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'
     # Loop over years
     for year in range(start_year, end_year+1):
@@ -123,6 +122,22 @@ def process_WSFRIS (expt, out_dir='./'):
         raise Exception('Invalid experiment '+expt)
     in_dir = '/gws/nopw/j04/bas_pog/kaight/2timescale/'
     dir_head = sim_name + '/output/'
+    start_year = 1850
+    end_year = 2049
+    file_tail = '01/MITgcm/output.nc'
+    calendar = '360-day'
+
+    out_file = out_dir + 'MITgcm_WS_'+expt+'.nc'
+    for year in range(start_year, end_year+1):
+        print(str(year))
+        in_file = in_dir + dir_head + str(year) + file_tail
+        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
+        if os.path.isfile(out_file):
+            ds_old = xr.open_dataset(out_file)
+            ds = xr.concat([ds_old, ds], dim='time')
+            ds_old.close()
+        ds.to_netcdf(out_file, mode='w')
+        ds.close()
 
                 
     
