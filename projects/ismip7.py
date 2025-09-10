@@ -1,5 +1,6 @@
 import xarray as xr
 import numpy as np
+import os
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask
@@ -98,19 +99,31 @@ def process_PAS (ens, out_dir='./'):
     
     # Set up file
     out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'
-    print('Creating '+out_file)
-    ds = None
     # Loop over years
     for year in range(start_year, end_year+1):
-        print('...'+str(year))
+        print(str(year))        
         in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
-        ds_year = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        if ds is None:
-            ds = ds_year
-        else:
-            ds = xr.concat([ds, ds_year], dim='time')
-    # Write to file
-    ds.to_netcdf(out_file)
+        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
+        if os.path.isfile(out_file):
+            ds_old = xr.open_dataset(out_file)
+            ds = xr.concat([ds_old, ds], dim='time')
+            ds_old.close()
+        ds.to_netcdf(out_file, mode='w')
+        ds.close()
+
+
+# Process one experiment of 2021 Weddell Sea MITgcm simulations ('abrupt-4xCO2' or '1pctCO2').
+def process_WSFRIS (expt, out_dir='./'):
+
+    if expt == 'abrupt-4xCO2':
+        sim_name = 'WSFRIS_abIO'
+    elif expt == '1pctCO2':
+        sim_name = 'WSFRIS_1pIO'
+    else:
+        raise Exception('Invalid experiment '+expt)
+    in_dir = '/gws/nopw/j04/bas_pog/kaight/2timescale/'
+    dir_head = sim_name + '/output/'
+
                 
     
             
