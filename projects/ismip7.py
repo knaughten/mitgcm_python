@@ -94,6 +94,7 @@ def process_PAS (ens, year, out_dir='./'):
     file_tail = '01/MITgcm/output.nc'
     calendar = 'noleap'
     ens = int(ens)
+    year = int(year)
     
     in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
     ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
@@ -119,6 +120,7 @@ def process_WSFRIS (expt, year, out_dir='./'):
     dir_head = sim_name + '/output/'
     file_tail = '01/MITgcm/output.nc'
     calendar = '360-day'
+    year = int(year)
 
     in_file = in_dir + dir_head + str(year) + file_tail
     ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
