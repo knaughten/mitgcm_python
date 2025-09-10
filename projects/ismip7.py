@@ -1,7 +1,6 @@
 import xarray as xr
 import numpy as np
 import os
-import gc
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask
@@ -83,9 +82,6 @@ def interp_year (file_path, calendar='noleap'):
             ds_out = xr.Dataset({var_out[v]:data_out})
         else:
             ds_out = ds_out.assign({var_out[v]:data_out})
-        del data_in
-    del grid_in
-    gc.collect()
     return ds_out
 
 
@@ -101,14 +97,14 @@ def process_PAS (ens, out_dir='./'):
     start_year = 2006
     end_year = 2100
 
-    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'
+    out_subdir = out_dir + 'RCP85_ens' + str(ens).zfill(2) + '/'
+    if not os.path.isdir(out_subdir):
+        os.mkdir(out_subdir)
+
     for year in range(start_year, end_year+1):
         in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
         ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        if os.path.isfile(out_file):
-            ds_old = xr.open_dataset(out_file)
-            ds = xr.concat([ds_old, ds], dim='time')
-            ds_old.close()
+        out_file = out_subdir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
 
@@ -129,14 +125,14 @@ def process_WSFRIS (expt, out_dir='./'):
     start_year = 1850
     end_year = 2049
 
-    out_file = out_dir + 'MITgcm_WS_'+expt+'.nc'
+    out_subdir = out_dir + expt + '/'
+    if not os.path.isdir(out_subdir):
+        os.mkdir(out_subdir)
+
     for year in range(start_year, end_year+1):
         in_file = in_dir + dir_head + str(year) + file_tail
         ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        if os.path.isfile(out_file):
-            ds_old = xr.open_dataset(out_file)
-            ds = xr.concat([ds_old, ds], dim='time')
-            ds_old.close()
+        out_file = out_subdir + 'MITgcm_WS_'+expt+'.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
 
