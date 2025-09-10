@@ -84,8 +84,8 @@ def interp_year (file_path, calendar='noleap'):
         else:
             ds_out = ds_out.assign({var_out[v]:data_out})
         del data_in
-        del grid_in
-        gc.collect()
+    del grid_in
+    gc.collect()
     return ds_out
 
 
