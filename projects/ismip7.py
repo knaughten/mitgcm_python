@@ -5,6 +5,7 @@ from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy
 from ..utils import convert_ismr, days_per_month
 from ..constants import months_per_year
+from ..file_io import read_netcdf
 
 # Interpolate the output of WSFRIS 2021 paper (two_timescale.py) and PAS 2023 paper (scenarios.py) to the ISMIP7 grid for sharing
 
@@ -45,20 +46,20 @@ def interp_year (file_path, calendar='noleap'):
     # Interpolate masks
     land_mask = np.round(interp_var(grid_in.land_mask))
     ice_mask = np.round(interp_var(grid_in.ice_mask))
-    mask_3d = np.round(interp_var(grid_in.mask, is_3d=True))
+    mask_3d = np.round(interp_var(grid_in.hfac==0, is_3d=True))
 
     ds_out = None
     for v in range(len(var_in)):
         data_in = read_netcdf(file_path, var_in[v])
-        is_3d = len(data_in.shape)==3
         # Annual average
-        data_in = np.average(data_in, axis=0, weights=ndays)        
+        data_in = np.average(data_in, axis=0, weights=ndays)
+        is_3d = len(data_in.shape)==3
         if var_in[v] == 'SHIfwFlx':
             # Unit conversion for ice shelf melting
             data_in = convert_ismr(data_in)
         # Extend into mask a few times to prevent interpolation artifacts near coast
         if is_3d:
-            data_in = np.ma.masked_where(grid_in.mask, data_in)
+            data_in = np.ma.masked_where(grid_in.hfac==0, data_in)
         else:
             data_in = np.ma.masked_where(grid_in.land_mask, data_in)
             if var_in[v] == 'SHIfwFlx':

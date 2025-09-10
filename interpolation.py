@@ -196,7 +196,7 @@ def extend_into_mask (data, missing_val=-9999, masked=False, use_1d=False, use_3
                 
     if masked:
         # Remask the MaskedArray
-        data = ma.masked_where(data==missing_val, data)
+        data = np.ma.masked_where(data==missing_val, data)
 
     return data    
 
