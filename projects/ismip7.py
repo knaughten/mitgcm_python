@@ -84,34 +84,32 @@ def interp_year (file_path, calendar='noleap'):
     return ds_out
 
 
-def process_PAS (out_dir='./'):
+# Process one ensemble member of 2023 Amundsen Sea MITgcm simulations (10 total)
+def process_PAS (ens, out_dir='./'):
 
     in_dir = '/gws/nopw/j04/bas_pog/kaight/CESM_scenarios/'
     dir_head = 'PAS_LENS'
-    num_ens = 10
     dir_mid = '_O/output/'
     start_year = 2006
     end_year = 2100
     file_tail = '01/MITgcm/output.nc'
     calendar = 'noleap'
-
-    # Loop over ensemble members
-    for n in range(num_ens):
-        # Set up file
-        out_file = out_dir + 'ens' + str(n+1).zfill(2) + '.nc'
-        print('Creating '+out_file)
-        ds = None
-        # Loop over years
-        for year in range(start_year, end_year+1):
-            print('...'+str(year))
-            in_file = in_dir + dir_head + str(n+1).zfill(3) + dir_mid + str(year) + file_tail
-            ds_year = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-            if ds is None:
-                ds = ds_year
-            else:
-                ds = xr.concat([ds, ds_year], dim='time')
-        # Write to file
-        ds.to_netcdf(out_file)
+    
+    # Set up file
+    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(n+1).zfill(2) + '.nc'
+    print('Creating '+out_file)
+    ds = None
+    # Loop over years
+    for year in range(start_year, end_year+1):
+        print('...'+str(year))
+        in_file = in_dir + dir_head + str(n+1).zfill(3) + dir_mid + str(year) + file_tail
+        ds_year = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
+        if ds is None:
+            ds = ds_year
+        else:
+            ds = xr.concat([ds, ds_year], dim='time')
+    # Write to file
+    ds.to_netcdf(out_file)
                 
     
             
