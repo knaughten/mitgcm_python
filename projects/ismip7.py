@@ -103,7 +103,7 @@ def process_PAS (ens, out_dir='./'):
     # Loop over years
     for year in range(start_year, end_year+1):
         print('...'+str(year))
-        in_file = in_dir + dir_head + str(n+1).zfill(3) + dir_mid + str(year) + file_tail
+        in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
         ds_year = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
         if ds is None:
             ds = ds_year
