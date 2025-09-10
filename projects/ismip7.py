@@ -132,7 +132,7 @@ def process_WSFRIS (expt, out_dir='./'):
     for year in range(start_year, end_year+1):
         in_file = in_dir + dir_head + str(year) + file_tail
         ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        out_file = out_subdir + 'MITgcm_WS_'+expt+'.nc'
+        out_file = out_subdir + 'MITgcm_WS_' + expt + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
 
