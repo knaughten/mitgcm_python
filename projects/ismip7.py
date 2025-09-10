@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 
 from ..grid import ISMIP7Grid, Grid
-from ..interpolation import interp_reg_xy
+from ..interpolation import interp_reg_xy, extend_into_mask
 from ..utils import convert_ismr, days_per_month
 from ..constants import months_per_year
 from ..file_io import read_netcdf
@@ -46,7 +46,7 @@ def interp_year (file_path, calendar='noleap'):
     # Interpolate masks
     land_mask = np.round(interp_var(grid_in.land_mask))
     ice_mask = np.round(interp_var(grid_in.ice_mask))
-    mask_3d = np.round(interp_var(grid_in.hfac==0, is_3d=True))
+    mask_3d = np.round(interp_var(grid_in.hfac!=0, is_3d=True))
 
     ds_out = None
     for v in range(len(var_in)):
@@ -60,10 +60,10 @@ def interp_year (file_path, calendar='noleap'):
         # Extend into mask a few times to prevent interpolation artifacts near coast
         if is_3d:
             data_in = np.ma.masked_where(grid_in.hfac==0, data_in)
+        elif var_in[v] == 'SHIfwFlx':
+            data_in = np.ma.masked_where(grid_in.ice_mask==0, data_in)
         else:
             data_in = np.ma.masked_where(grid_in.land_mask, data_in)
-            if var_in[v] == 'SHIfwFlx':
-                data_in = np.ma.masked_where(grid_in.ice_mask, data_in)
         data_in = extend_into_mask(data_in, masked=True, use_3d=is_3d, num_iters=3)
         # Interpolate to model grid
         data_out = interp_var(data_in, is_3d=is_3d)
@@ -72,16 +72,48 @@ def interp_year (file_path, calendar='noleap'):
         # Mask as needed
         if is_3d:
             data_out = data_out.where(mask_3d>0)
+        elif var_out[v] == 'basal_melt':
+            data_out = data_out.where(ice_mask>0)
         else:
-            data_out = data_out.where(land_mask>0)
-            if var_out[v] == 'basal_melt':
-                data_out = data_out.where(ice_mask>0)
+            data_out = data_out.where(land_mask<0)
         # Save variable to the Dataset
         if ds_out is None:
             ds_out = xr.Dataset({var_out[v]:data_out})
         else:
             ds_out = ds_out.assign({var_out[v]:data_out})
     return ds_out
+
+
+def process_PAS (out_dir='./'):
+
+    in_dir = '/gws/nopw/j04/bas_pog/kaight/CESM_scenarios/'
+    dir_head = 'PAS_LENS'
+    num_ens = 10
+    dir_mid = '_O/output/'
+    start_year = 2006
+    end_year = 2100
+    file_tail = '01/MITgcm/output.nc'
+    calendar = 'noleap'
+
+    # Loop over ensemble members
+    for n in range(num_ens):
+        # Set up file
+        out_file = out_dir + 'ens' + str(n+1).zfill(2) + '.nc'
+        print('Creating '+out_file)
+        ds = None
+        # Loop over years
+        for year in range(start_year, end_year+1):
+            print('...'+str(year))
+            in_file = in_dir + dir_head + str(n+1).zfill(3) + dir_mid + str(year) + file_tail
+            ds_year = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
+            if ds is None:
+                ds = ds_year
+            else:
+                ds = xr.concat([ds, ds_year], dim='time')
+        # Write to file
+        ds.to_netcdf(out_file)
+                
+    
             
         
 
