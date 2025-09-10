@@ -1,6 +1,7 @@
 import xarray as xr
 import numpy as np
 import os
+import gc
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask
@@ -109,6 +110,7 @@ def process_PAS (ens, out_dir='./'):
             ds_old.close()
         ds.to_netcdf(out_file, mode='w')
         ds.close()
+        gc.collect()
 
 
 # Process one experiment of 2021 Weddell Sea MITgcm simulations ('abrupt-4xCO2' or '1pctCO2').
@@ -138,6 +140,7 @@ def process_WSFRIS (expt, out_dir='./'):
             ds_old.close()
         ds.to_netcdf(out_file, mode='w')
         ds.close()
+        gc.collect()
 
                 
     
