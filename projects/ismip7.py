@@ -137,11 +137,8 @@ def process_WSFRIS (expt, out_dir='./'):
             ds_old = xr.open_dataset(out_file)
             ds = xr.concat([ds_old, ds], dim='time')
             ds_old.close()
-            del ds_old
         ds.to_netcdf(out_file, mode='w')
         ds.close()
-        del ds
-        gc.collect()
 
                 
     
