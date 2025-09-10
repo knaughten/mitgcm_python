@@ -1,7 +1,6 @@
 import xarray as xr
 import numpy as np
 import os
-import gc
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask
@@ -86,35 +85,29 @@ def interp_year (file_path, calendar='noleap'):
     return ds_out
 
 
-# Process one ensemble member of 2023 Amundsen Sea MITgcm simulations (10 total)
-def process_PAS (ens, out_dir='./'):
+# Process one year of one ensemble member of 2023 Amundsen Sea MITgcm simulations (10 ensemble members, 2006-2100)
+def process_PAS (ens, year, out_dir='./'):
 
     in_dir = '/gws/nopw/j04/bas_pog/kaight/CESM_scenarios/'
     dir_head = 'PAS_LENS'
     dir_mid = '_O/output/'
-    start_year = 2006
-    end_year = 2100
     file_tail = '01/MITgcm/output.nc'
     calendar = 'noleap'
     ens = int(ens)
     
-    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'
-    # Loop over years
-    for year in range(start_year, end_year+1):
-        print(str(year))        
-        in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
-        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        if os.path.isfile(out_file):
-            ds_old = xr.open_dataset(out_file)
-            ds = xr.concat([ds_old, ds], dim='time')
-            ds_old.close()
-        ds.to_netcdf(out_file, mode='w')
-        ds.close()
-        gc.collect()
+    in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
+    ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
+    out_file = out_dir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '.nc'   
+    if os.path.isfile(out_file):
+        ds_old = xr.open_dataset(out_file)
+        ds = xr.concat([ds_old, ds], dim='time')
+        ds_old.close()
+    ds.to_netcdf(out_file, mode='w')
+    ds.close()
 
 
-# Process one experiment of 2021 Weddell Sea MITgcm simulations ('abrupt-4xCO2' or '1pctCO2').
-def process_WSFRIS (expt, out_dir='./'):
+# Process one year of one experiment of 2021 Weddell Sea MITgcm simulations ('abrupt-4xCO2' or '1pctCO2', 1850-2049).
+def process_WSFRIS (expt, year, out_dir='./'):
 
     if expt == 'abrupt-4xCO2':
         sim_name = 'WSFRIS_abIO'
@@ -124,23 +117,19 @@ def process_WSFRIS (expt, out_dir='./'):
         raise Exception('Invalid experiment '+expt)
     in_dir = '/gws/nopw/j04/bas_pog/kaight/2timescale/'
     dir_head = sim_name + '/output/'
-    start_year = 1850
-    end_year = 2049
     file_tail = '01/MITgcm/output.nc'
     calendar = '360-day'
 
+    in_file = in_dir + dir_head + str(year) + file_tail
+    ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
     out_file = out_dir + 'MITgcm_WS_'+expt+'.nc'
-    for year in range(start_year, end_year+1):
-        print(str(year))
-        in_file = in_dir + dir_head + str(year) + file_tail
-        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
-        if os.path.isfile(out_file):
-            ds_old = xr.open_dataset(out_file)
-            ds = xr.concat([ds_old, ds], dim='time')
-            ds_old.close()
-        ds.to_netcdf(out_file, mode='w')
-        ds.close()
-        gc.collect()
+    if os.path.isfile(out_file):
+        ds_old = xr.open_dataset(out_file)
+        ds = xr.concat([ds_old, ds], dim='time')
+        ds_old.close()
+    ds.to_netcdf(out_file, mode='w')
+    ds.close()
+    gc.collect()
 
                 
     
