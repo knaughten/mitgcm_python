@@ -36,11 +36,8 @@ def interp_year (file_path, calendar='noleap'):
     # Inner function to interpolate a variable to the ISMIP7 grid
     def interp_var(data_in, is_3d=False):
         if is_3d:
-            # 3D variable - interpolate once for each depth index
-            data_out = np.empty([grid_in.nz, grid_out.ny, grid_out.nx])
-            for k in range(grid_in.nz):
-                data_out[k,:] = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in[k,:], grid_out.lon, grid_out.lat, fill_value=fill_value)
-            data_out = xr.DataArray(data_out, coords={'z':grid_in.z, 'y':grid_out.y, 'x':grid_out.x})
+            data_out = interp_reg_xyz(grid_in.lon_1d, grid_in.lat_1d, grid_in.z, data_in, grid_out.lon, grid_out.lat, grid_out.z, fill_value=fill_value)
+            data_out = xr.DataArray(data_out, coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
         else:
             # 2D variable - interpolate once
             data_out = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in, grid_out.lon, grid_out.lat, fill_value=fill_value)
@@ -143,9 +140,13 @@ def process_WSFRIS (expt, out_dir='./'):
 
 # Interpolate the output of FESOM 2018 paper.
 def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
-
+ 
     var_in = ['temp', 'salt', 'wnet']
     file_tail = ['.oce.mean.nc', '.oce.mean.nc', '.forcing.diag.nc']
+    var_out = ['temperature', 'salinity', 'basal_melt']
+    units = ['degC', 'psu', 'm/y']
+    long_name = ['potential temperature (EOS80)', 'practical salinity (EOS80)', 'ice shelf basal melt rate, positive means melting']
+    num_var = len(var_in)
     grid_out = ISMIP7Grid()
     xmin = np.amin(grid_out.x)
     xmax = np.amax(grid_out.x)
@@ -155,17 +156,21 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
     # Get the variables we want into a Dataset, and set up empty Dataset for output
     ds_in = None
     ds_out = None
-    for v in range(len(var_in)):
+    for v in range(num_var):
         file_path = file_head + file_tail[v]
         ds = xr.open_dataset(file_path)
         data_in = ds[var_in[v]]
+        is_3d = 'nodes_3d' in data_in.dims
         # Annually average - equal 5-day intervals
         data_in = data_in.mean(dim='T')
         if var_in[v] == 'wnet':
             # Unit conversion (m/s to m/y)
             data_in *= sec_per_year
-        # To do: how to handle 3D case with hybrid vertical coordinates?
-        data_out = xr.DataArray(np.zeros([grid_out.ny, grid_out.nx]), coords={'y':grid_out.y, 'x':grid_out.x})
+        # To do: add vertical dimension of correct size to ISMIP7 grid: grid.z, grid.nz
+        if is_3d:
+            data_out = xr.DataArray(np.zeros([grid_out.nz, grid_out.ny, grid_out.nx]), coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
+        else:
+            data_out = xr.DataArray(np.zeros([grid_out.ny, grid_out.nx]), coords={'y':grid_out.y, 'x':grid_out.x})
         if ds_in is None:
             ds_in = xr.Dataset({var_in[v]:data_in})
             ds_out = xr.Dataset({var_out[v]:data_out})
@@ -220,22 +225,33 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
                     area2 = triangle_area([x0, elm.x[0], elm.x[1]], [y0, elm.y[0], elm.y[1]])
                     # Find fractional area of each
                     cff = np.array([area0/area, area1/area, area2/area])
-                    # Barycentric interpolation to x0, y0
-                    for n in range(3):
-                        ds_tmp = cff[n]*ds_in.isel(nodes_2d=elm.nodes[n].id)
-                        if n == 0:
-                            ds_pt = ds_tmp
+                    for v in range(num_var):
+                        is_3d = 'nodes_3d' in ds_in[var_in[v]].dims
+                        if is_3d:
+                            # Interpolate to each depth value
+                            for k in range(grid_out.nz):
+                                # Find each corner of the triangular element, interpolated to this depth
+                                corners = []
+                                for n in range(3):
+                                    id1, id2, coeff1, coeff2 = elm.nodes[n].find_depth(grid.z[k])
+                                    if any(np.isnan([id1, id2, coeff1, coeff2])):
+                                        # Seafloor or ice shelf
+                                        corners.append(np.nan)
+                                    else:
+                                        corners.append(coeff1*ds_in[var_in[v]].isel(nodes_3d=id1) + coeff2*ds_in[var_in[v]].isel(nodes_3d=id2))
+                                if any(np.isnan(corners)):
+                                    pass
+                                else:
+                                    # Barycentric interpolation to (x0, y0)
+                                    ds_out[var_out[v]] = xr.where((ds.coords['x']==i)*(ds.coords['y']==j)*(ds_coords['z']==k), np.sum(cff*corners), ds_out[var_out[v]])
                         else:
-                            ds_pt += ds_tmp
-                    # Map variables
-                    for v in range(len(var_in)):
-                        # This use of isel will not work - fix later
-                        ds_out[var_out[v]].isel(x=i, y=j) = ds_pt[var_in[v]]
-                    valid_mask.isel(x=i, y=j) += 1                 
+                            corners = [ds_in[var_in[v]].isel(nodes_2d=elm.nodes[n].id) for n in range(3)]
+                            ds_out[var_out[v]] = xr.where((ds.coords['x']==i)*(ds.coords['y']==j), np.sum(cff*corners), ds_out[var_out[v]])
+                    valid_mask.isel(x=i, y=j) += 1
+    # Mask out anywhere that had nothing to interpolate to
+    ds_out = ds_out.where(valid_mask > 0)
+    return ds_out            
                     
-            
-    
-
 
 # Process one experiment of 2018 FESOM simulations ('RCP8.5_MMM' or 'RCP8.5_ACCESS')
 def process_FESOM (expt, out_dir='./'):
@@ -247,17 +263,8 @@ def process_FESOM (expt, out_dir='./'):
 
     # Build FESOM mesh
     nodes, elements = fesom_grid(mesh_dir, return_nodes=True)
-    # Count the number of 2D nodes
-    f = open(mesh_dir+'nod2d.out', 'r')
-    n2d = int(f.readline())
-    f.close()
     # Read the cavity mask
-    f = open(mesh_dir+'cavity_flag_nod2d.out', 'r')
-    cavity = []
-    for line in f:
-        cavity.append(int(line))
-    f.close()
-    cavity = np.array(cavity)
+    cavity = np.fromfile(mesh_dir+'cavity_flag_nod2d.out', dtype=int)
 
     out_subdir = out_dir + expt + '/'
     if not os.path.isdir(out_subdir):
@@ -265,7 +272,7 @@ def process_FESOM (expt, out_dir='./'):
 
     for year in range(start_year, end_year+1):
         in_file_head = in_dir + 'MK44005.' + str(year)
-        ds = interp_year_fesom(in_file_head, nodes, elements, n2d, cavity).expand_dims({'time':[year]})
+        ds = interp_year_fesom(in_file_head, nodes, elements, cavity).expand_dims({'time':[year]})
         out_file = out_subdir + 'FESOM_' + expt + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
