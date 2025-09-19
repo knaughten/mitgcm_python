@@ -2,6 +2,7 @@ import xarray as xr
 import numpy as np
 import os
 import scipy
+from tqdm import tqdm
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask, interp_reg_xyz
@@ -174,8 +175,9 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
     salt_out = np.zeros([grid_out.nz, grid_out.ny, grid_out.nx])
     ismr_out = np.zeros([grid_out.ny, grid_out.nx])
     valid_mask = np.zeros([grid_out.ny, grid_out.nx])
+    
     # Loop over elements
-    for m in range(len(elements)):
+    for m in tqdm(range(len(elements))):
         elm = elements[m]
         # Check if we are within domain of regular grid (just check northern boundary)
         if np.amin(elm.lat) > np.amax(grid_out.lat):
@@ -214,7 +216,6 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
                 lon0 = grid_out.lon[j,i]
                 lat0 = grid_out.lat[j,i]
                 if in_triangle(elm, lon0, lat0):
-                    print('found '+str(m))
                     # Get area of entire triangle
                     area = triangle_area(elm.lon, elm.lat)
                     # Get area of each sub-triangle formed by (x0, y0)
@@ -238,7 +239,7 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
                             else:
                                 temp_corners.append(coeff1*temp_in.isel(nodes_3d=id1) + coeff2*temp_in.isel(nodes_3d=id2))
                                 salt_corners.append(coeff1*salt_in.isel(nodes_3d=id1) + coeff2*salt_in.isel(nodes_3d=id2))
-                        if any(np.isnan(corners)):
+                        if any(np.isnan(temp_corners)):
                             temp_out[k,j,i] = np.nan
                             salt_out[k,j,i] = np.nan
                         else:
@@ -260,13 +261,13 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
     return ds_out            
                     
 
-# Process one experiment of 2018 FESOM simulations ('RCP8.5_MMM' or 'RCP8.5_ACCESS')
-def process_FESOM (expt, out_dir='./'):
+# Process one experiment of 2018 FESOM simulations ('RCP8.5_MMM' or 'RCP8.5_ACCESS') over the given year range (from 2006-2100)
+def process_FESOM (expt, start_year=2006, end_year=2100, out_dir='./'):
 
     in_dir = '/gws/nopw/j04/bas_pog/kaight/PhD/future_projections/'+expt+'/'
     mesh_dir = '/gws/nopw/j04/bas_pog/kaight/PhD/FESOM_mesh/high_res/'
-    start_year = 2006
-    end_year = 2100
+    start_year = int(start_year)
+    end_year = int(end_year)
 
     # Build FESOM mesh
     nodes, elements = fesom_grid(mesh_dir, return_nodes=True)
