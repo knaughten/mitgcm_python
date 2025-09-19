@@ -13,6 +13,7 @@ from fesomtools.in_triangle import *
 from fesomtools.triangle_area import *
 
 grid_path = '/gws/nopw/j04/bas_pog/kaight/ismip7_interp/ismip_8km_60m_grid.nc'
+grid_out = ISMIP7Grid(grid_path)
 
 # Interpolate the output of WSFRIS 2021 paper (two_timescale.py) and PAS 2023 paper (scenarios.py) to the ISMIP7 grid for sharing
 
@@ -25,7 +26,6 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
     fill_value = 9999
     
     grid_in = Grid(file_path)
-    grid_out = ISMIP7Grid(grid_path)
 
     # Prepare for annual averaging
     if calendar == '360-day':
@@ -53,7 +53,8 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
     # Interpolate masks
     land_mask = np.round(interp_var(grid_in.land_mask))
     ice_mask = np.round(interp_var(grid_in.ice_mask))
-    mask_3d, interpolant = np.round(interp_var(grid_in.hfac!=0, is_3d=True, interpolant=interpolant, return_interpolant=True))
+    mask_3d, interpolant = interp_var(grid_in.hfac!=0, is_3d=True, interpolant=interpolant, return_interpolant=True)
+    mask_3d = np.round(mask_3d)
 
     ds_out = None
     for v in range(len(var_in)):
@@ -154,7 +155,6 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
     units = ['degC', 'psu', 'm/y']
     long_name = ['potential temperature (EOS80)', 'practical salinity (EOS80)', 'ice shelf basal melt rate, positive means melting']
     num_var = len(var_in)
-    grid_out = ISMIP7Grid(grid_path)
     xmin = np.amin(grid_out.x)
     xmax = np.amax(grid_out.x)
     ymin = np.amin(grid_out.y)
