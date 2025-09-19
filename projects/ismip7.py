@@ -5,7 +5,7 @@ import scipy
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask, interp_reg_xyz
-from ..utils import convert_ismr, days_per_month
+from ..utils import convert_ismr, days_per_month, polar_stereo, polar_stereo_inv
 from ..constants import months_per_year, sec_per_year
 from ..file_io import read_netcdf
 
@@ -148,7 +148,7 @@ def process_WSFRIS (expt, out_dir='./'):
 
 
 # Interpolate the output of FESOM 2018 paper.
-def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
+def interp_year_fesom (file_head, nodes, elements, cavity):
  
     var_in = ['temp', 'salt', 'wnet']
     file_tail = ['.oce.mean.nc', '.oce.mean.nc', '.forcing.diag.nc']
@@ -188,32 +188,32 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
 
     # Interpolate all at once
     valid_mask = xr.DataArray(np.zeros([grid_out.ny, grid_out.nx]), coords={'y':grid_out.y, 'x':grid_out.x})
-    for elm in elements:        
+    for elm in elements:
         # Check if we are within domain of regular grid (just check northern boundary)
         if np.amin(elm.lat) > np.amax(grid_out.lat):
             continue
         # Convert element coordinates to polar stereo
         elm_x, elm_y = polar_stereo(elm.lon, elm.lat)
         # Check if we are within domain of regular grid
-        if np.amax(elm_x) < xmin or np.amin(elm_x) > xmax or np.amax(elm.y) < ymin or np.amin(elm.y) > ymax:
+        if np.amax(elm_x) < xmin or np.amin(elm_x) > xmax or np.amax(elm_y) < ymin or np.amin(elm_y) > ymax:
             continue
         # Find bounds on ISMIP7 coordinates around element
-        tmp = np.nonzero(grid_out.x > np.amin(elm.x))[0]
+        tmp = np.nonzero(grid_out.x > np.amin(elm_x))[0]
         if len(tmp) == 0:
             i0 = 0
         else:
             i0 = tmp[0] - 1
-        tmp = np.nonzero(grid_out.x > np.amax(elm.x))[0]
+        tmp = np.nonzero(grid_out.x > np.amax(elm_x))[0]
         if len(tmp) == 0:
             i1 = grid_out.nx
         else:
             i1 = tmp[0]
-        tmp = np.nonzero(grid_out.y > np.amin(elm.y))[0]
+        tmp = np.nonzero(grid_out.y > np.amin(elm_y))[0]
         if len(tmp) == 0:
             j0 = 0
         else:
             j0 = tmp[0] - 1
-        tmp = np.nonzero(grid_out.y > np.amax(elm.y))[0]
+        tmp = np.nonzero(grid_out.y > np.amax(elm_y))[0]
         if len(tmp) == 0:
             j1 = grid_out.ny
         else:
@@ -223,13 +223,15 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
                 # There is a chance that the ISMIP7 gridpoint at (i,j) lies within this element
                 x0 = grid_out.x[i]
                 y0 = grid_out.y[j]
-                if in_triangle(elm, x0, y0):
+                lon0 = grid_out.lon[j,i]
+                lat0 = grid_out.lat[j,i]
+                if in_triangle(elm, lon0, lat0):
                     # Get area of entire triangle
-                    area = triangle_area(elm.x, elm.y)
+                    area = triangle_area(elm.lon, elm.lat)
                     # Get area of each sub-triangle formed by (x0, y0)
-                    area0 = triangle_area([x0, elm.x[1], elm.x[2]], [y0, elm.y[1], elm.y[2]])
-                    area1 = triangle_area([x0, elm.x[0], elm.x[2]], [y0, elm.y[0], elm.y[2]])
-                    area2 = triangle_area([x0, elm.x[0], elm.x[1]], [y0, elm.y[0], elm.y[1]])
+                    area0 = triangle_area([lon0, elm.lon[1], elm.lon[2]], [lat0, elm.lat[1], elm.lat[2]])
+                    area1 = triangle_area([lon0, elm.lon[0], elm.lon[2]], [lat0, elm.lat[0], elm.lat[2]])
+                    area2 = triangle_area([lon0, elm.lon[0], elm.lon[1]], [lat0, elm.lat[0], elm.lat[1]])
                     # Find fractional area of each
                     cff = np.array([area0/area, area1/area, area2/area])
                     for v in range(num_var):
@@ -240,7 +242,7 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
                                 # Find each corner of the triangular element, interpolated to this depth
                                 corners = []
                                 for n in range(3):
-                                    id1, id2, coeff1, coeff2 = elm.nodes[n].find_depth(grid.z[k])
+                                    id1, id2, coeff1, coeff2 = elm.nodes[n].find_depth(grid_out.z[k])
                                     if any(np.isnan([id1, id2, coeff1, coeff2])):
                                         # Seafloor or ice shelf
                                         corners.append(np.nan)
@@ -271,7 +273,7 @@ def process_FESOM (expt, out_dir='./'):
     # Build FESOM mesh
     nodes, elements = fesom_grid(mesh_dir, return_nodes=True)
     # Read the cavity mask
-    cavity = np.fromfile(mesh_dir+'cavity_flag_nod2d.out', dtype=int)
+    cavity = np.loadtxt(mesh_dir+'cavity_flag_nod2d.out', dtype=int)
 
     out_subdir = out_dir + expt + '/'
     if not os.path.isdir(out_subdir):
