@@ -25,7 +25,7 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
     fill_value = 9999
     
     grid_in = Grid(file_path)
-    grid_out = ISMIP7Grid(grid_path)u
+    grid_out = ISMIP7Grid(grid_path)
 
     # Prepare for annual averaging
     if calendar == '360-day':
