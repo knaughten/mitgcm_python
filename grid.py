@@ -1158,14 +1158,16 @@ def read_cice_grid (file_path, return_ugrid=False, return_dA=False):
 # ISMIP7 standard grid, converted to lat/lon points for interpolation
 class ISMIP7Grid:
 
-    def __init__ (self):
-        self.nx = 761
-        self.ny = self.nx
-        self.dx = 8e3 # m
-        self.dy = self.dx
-        self.x = self.dx*np.arange(-(self.nx-1)//2, (self.nx-1)//2 + 1)
-        self.y = self.dy*np.arange(-(self.ny-1)//2, (self.ny-1)//2 + 1)
-        self.lon, self.lat = polar_stereo_inv(self.x, self.y)
+    def __init__ (self, file_path='/gws/nopw/j04/bas_pog/kaight/ismip7_interp/ismip_8km_60m_grid.nc'):
+
+        self.x = read_netcdf(file_path, 'x')
+        self.nx = np.size(self.x)
+        self.y = read_netcdf(file_path, 'y')
+        self.ny = np.size(self.y)
+        self.lon = read_netcdf(file_path, 'lon')
+        self.lat = read_netcdf(file_path, 'lat')
+        self.z = read_netcdf(file_path, 'z_extrap')
+        self.nz = np.size(self.nz)
         
         
 

@@ -12,6 +12,8 @@ from fesomtools.fesom_grid import *
 from fesomtools.in_triangle import *
 from fesomtools.triangle_area import *
 
+grid_path = '/gws/nopw/j04/bas_pog/kaight/ismip7_interp/ismip_8km_60m_grid.nc'
+
 # Interpolate the output of WSFRIS 2021 paper (two_timescale.py) and PAS 2023 paper (scenarios.py) to the ISMIP7 grid for sharing
 
 def interp_year (file_path, calendar='noleap'):
@@ -23,7 +25,7 @@ def interp_year (file_path, calendar='noleap'):
     fill_value = 9999
     
     grid_in = Grid(file_path)
-    grid_out = ISMIP7Grid()
+    grid_out = ISMIP7Grid(grid_path)
 
     # Prepare for annual averaging
     if calendar == '360-day':
@@ -147,7 +149,7 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
     units = ['degC', 'psu', 'm/y']
     long_name = ['potential temperature (EOS80)', 'practical salinity (EOS80)', 'ice shelf basal melt rate, positive means melting']
     num_var = len(var_in)
-    grid_out = ISMIP7Grid()
+    grid_out = ISMIP7Grid(grid_path)
     xmin = np.amin(grid_out.x)
     xmax = np.amax(grid_out.x)
     ymin = np.amin(grid_out.y)
@@ -166,7 +168,6 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
         if var_in[v] == 'wnet':
             # Unit conversion (m/s to m/y)
             data_in *= sec_per_year
-        # To do: add vertical dimension of correct size to ISMIP7 grid: grid.z, grid.nz
         if is_3d:
             data_out = xr.DataArray(np.zeros([grid_out.nz, grid_out.ny, grid_out.nx]), coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
         else:
