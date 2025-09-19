@@ -248,7 +248,7 @@ def interp_year_fesom (file_head, nodes, elements, n2d, cavity):
                         else:
                             corners = [ds_in[var_in[v]].isel(nodes_2d=elm.nodes[n].id) for n in range(3)]
                             ds_out[var_out[v]] = xr.where((ds.coords['x']==i)*(ds.coords['y']==j), np.sum(cff*corners), ds_out[var_out[v]])
-                    valid_mask.isel(x=i, y=j) += 1
+                    valid_mask = xr.where((ds.coords['x']==i)*(ds.coords['y']==j), 1, valid_mask)
     # Mask out anywhere that had nothing to interpolate to
     ds_out = ds_out.where(valid_mask > 0)
     return ds_out            
