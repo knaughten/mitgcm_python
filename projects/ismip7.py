@@ -177,7 +177,7 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
     valid_mask = np.zeros([grid_out.ny, grid_out.nx])
     
     # Loop over elements
-    for m in tqdm(range(len(elements))):
+    for m in range(len(elements)):
         elm = elements[m]
         # Check if we are within domain of regular grid (just check northern boundary)
         if np.amin(elm.lat) > np.amax(grid_out.lat):
