@@ -161,34 +161,22 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
     ymin = np.amin(grid_out.y)
     ymax = np.amax(grid_out.y)
 
-    # Get the variables we want into a Dataset, and set up empty Dataset for output
-    ds_in = None
-    ds_out = None
-    for v in range(num_var):
-        file_path = file_head + file_tail[v]
-        ds = xr.open_dataset(file_path)
-        data_in = ds[var_in[v]]
-        is_3d = 'nodes_3d' in data_in.dims
-        # Annually average - equal 5-day intervals
-        data_in = data_in.mean(dim='T')
-        if var_in[v] == 'wnet':
-            # Unit conversion (m/s to m/y)
-            data_in *= sec_per_year
-        if is_3d:
-            data_out = xr.DataArray(np.zeros([grid_out.nz, grid_out.ny, grid_out.nx]), coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
-        else:
-            data_out = xr.DataArray(np.zeros([grid_out.ny, grid_out.nx]), coords={'y':grid_out.y, 'x':grid_out.x})
-        if ds_in is None:
-            ds_in = xr.Dataset({var_in[v]:data_in})
-            ds_out = xr.Dataset({var_out[v]:data_out})
-        else:
-            ds_in = ds_in.assign({var_in[v]:data_in})
-            ds_out = ds_out.assign({var_out[v]:data_out})
-        ds.close()
-
-    # Interpolate all at once
-    valid_mask = xr.DataArray(np.zeros([grid_out.ny, grid_out.nx]), coords={'y':grid_out.y, 'x':grid_out.x})
-    for elm in elements:
+    # Have hard-coded the 3 variables because that's the most efficient way to interpolate.
+    # Read the data and annually average
+    ds_3d = xr.open_dataset(file_head+file_tail[0])
+    temp_in = ds_3d[var_in[0]].mean(dim='T')
+    salt_in = ds_3d[var_in[1]].mean(dim='T')
+    ds_3d.close()
+    ds_2d = xr.open_dataset(file_head+file_tail[2])
+    ismr_in = ds_2d[var_in[2]].mean(dim='T')*sec_per_year  # Convert m/s to m/y
+    ds_2d.close()
+    temp_out = np.zeros([grid_out.nz, grid_out.ny, grid_out.nx])
+    salt_out = np.zeros([grid_out.nz, grid_out.ny, grid_out.nx])
+    ismr_out = np.zeros([grid_out.ny, grid_out.nx])
+    valid_mask = np.zeros([grid_out.ny, grid_out.nx])
+    # Loop over elements
+    for m in range(len(elements)):
+        elm = elements[m]
         # Check if we are within domain of regular grid (just check northern boundary)
         if np.amin(elm.lat) > np.amax(grid_out.lat):
             continue
@@ -226,6 +214,7 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
                 lon0 = grid_out.lon[j,i]
                 lat0 = grid_out.lat[j,i]
                 if in_triangle(elm, lon0, lat0):
+                    print('found '+str(m))
                     # Get area of entire triangle
                     area = triangle_area(elm.lon, elm.lat)
                     # Get area of each sub-triangle formed by (x0, y0)
@@ -234,31 +223,40 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
                     area2 = triangle_area([lon0, elm.lon[0], elm.lon[1]], [lat0, elm.lat[0], elm.lat[1]])
                     # Find fractional area of each
                     cff = np.array([area0/area, area1/area, area2/area])
-                    for v in range(num_var):
-                        is_3d = 'nodes_3d' in ds_in[var_in[v]].dims
-                        if is_3d:
-                            # Interpolate to each depth value
-                            for k in range(grid_out.nz):
-                                # Find each corner of the triangular element, interpolated to this depth
-                                corners = []
-                                for n in range(3):
-                                    id1, id2, coeff1, coeff2 = elm.nodes[n].find_depth(grid_out.z[k])
-                                    if any(np.isnan([id1, id2, coeff1, coeff2])):
-                                        # Seafloor or ice shelf
-                                        corners.append(np.nan)
-                                    else:
-                                        corners.append(coeff1*ds_in[var_in[v]].isel(nodes_3d=id1) + coeff2*ds_in[var_in[v]].isel(nodes_3d=id2))
-                                if any(np.isnan(corners)):
-                                    pass
-                                else:
-                                    # Barycentric interpolation to (x0, y0)
-                                    ds_out[var_out[v]] = xr.where((ds.coords['x']==i)*(ds.coords['y']==j)*(ds_coords['z']==k), np.sum(cff*corners), ds_out[var_out[v]])
+                    # First interpolate both 3D variables to each depth value
+                    for k in range(grid_out.nz):
+                        z0 = grid_out.z[k]
+                        # Find each corner of the triangular element, interpolated to this depth
+                        temp_corners = []
+                        salt_corners = []
+                        for n in range(3):
+                            id1, id2, coeff1, coeff2 = elm.nodes[n].find_depth(-z0)
+                            if any(np.isnan([id1, id2, coeff1, coeff2])):
+                                # Seafloor or ice shelf
+                                temp_corners.append(np.nan)
+                                salt_corners.append(np.nan)
+                            else:
+                                temp_corners.append(coeff1*temp_in.isel(nodes_3d=id1) + coeff2*temp_in.isel(nodes_3d=id2))
+                                salt_corners.append(coeff1*salt_in.isel(nodes_3d=id1) + coeff2*salt_in.isel(nodes_3d=id2))
+                        if any(np.isnan(corners)):
+                            temp_out[k,j,i] = np.nan
+                            salt_out[k,j,i] = np.nan
                         else:
-                            corners = [ds_in[var_in[v]].isel(nodes_2d=elm.nodes[n].id) for n in range(3)]
-                            ds_out[var_out[v]] = xr.where((ds.coords['x']==i)*(ds.coords['y']==j), np.sum(cff*corners), ds_out[var_out[v]])
-                    valid_mask = xr.where((ds.coords['x']==i)*(ds.coords['y']==j), 1, valid_mask)
-    # Mask out anywhere that had nothing to interpolate to
+                            # Barycentric interpolation to (x0, y0)
+                            temp_out[k,j,i] = np.sum(cff*temp_corners)
+                            salt_out[k,j,i] = np.sum(cff*salt_corners)
+                    # Now interpolate 2D variable
+                    ismr_corners = [ismr_in.isel(nodes_2d=elm.nodes[n].id) for n in range(3)]
+                    ismr_out[j,i] = np.sum(cff*ismr_corners)
+                    valid_mask[j,i] += 1
+    valid_mask = xr.DataArray(valid_mask, coords={'y':grid_out.y, 'x':grid_out.x})
+    # Now set up output dataset
+    temp_out = xr.DataArray(temp_out, coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
+    salt_out = xr.DataArray(salt_out, coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
+    ismr_out = xr.DataArray(ismr_out, coords={'y':grid_out.y, 'x':grid_out.x})
+    ds_out = xr.Dataset({var_out[0]:temp_out, var_out[1]:salt_out, var_out[2]:ismr_out})
     ds_out = ds_out.where(valid_mask > 0)
+        
     return ds_out            
                     
 
