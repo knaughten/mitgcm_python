@@ -43,16 +43,15 @@ def interp_year (file_path, calendar='noleap'):
             data_tmp = np.empty([grid_in.nz, grid_out.ny, grid_out.nx])
             for k in range(grid_in.nz):
                 data_tmp[k,:] = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in[k,:], grid_out.lon, grid_out.lat, fill_value=fill_value)
-            data_tmp = np.ma.masked_where(data_tmp==fill_value, data_tmp)
             # Now interpolate in the vertical
-            interpolant = scipy.interpolate.interp1d(grid_in.z, data_tmp, axis=0)
-            data_out = interpolant(grid_out.z)
+            interpolant = scipy.interpolate.interp1d(grid_in.z, data_tmp, axis=0, fill_value=fill_value)
+            data_out = interpolant(grid_out.z.data)
             data_out = xr.DataArray(data_out, coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
         else:
             # 2D variable - interpolate once
             data_out = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in, grid_out.lon, grid_out.lat, fill_value=fill_value)
             data_out = xr.DataArray(data_out, coords={'y':grid_out.y, 'x':grid_out.x})
-            data_out = data_out.where(data_out != fill_value)
+        data_out = data_out.where(data_out != fill_value)
         return data_out
 
     # Interpolate masks
