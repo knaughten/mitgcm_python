@@ -1,6 +1,7 @@
 import xarray as xr
 import numpy as np
 import os
+import scipy
 
 from ..grid import ISMIP7Grid, Grid
 from ..interpolation import interp_reg_xy, extend_into_mask, interp_reg_xyz
@@ -17,7 +18,7 @@ grid_out = ISMIP7Grid(grid_path)
 
 # Interpolate the output of WSFRIS 2021 paper (two_timescale.py) and PAS 2023 paper (scenarios.py) to the ISMIP7 grid for sharing
 
-def interp_year (file_path, calendar='noleap', interpolant=None):
+def interp_year (file_path, calendar='noleap'):
 
     var_in = ['THETA', 'SALT', 'SHIfwFlx']
     var_out = ['temperature', 'salinity', 'basal_melt']
@@ -36,25 +37,28 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
         raise Exception('Unsupported calendar '+calendar)
 
     # Inner function to interpolate a variable to the ISMIP7 grid
-    def interp_var(data_in, is_3d=False, interpolant=None, return_interpolant=False):
+    def interp_var(data_in, is_3d=False):
         if is_3d:
-            data_out, interpolant = interp_reg_xyz(grid_in.lon_1d, grid_in.lat_1d, grid_in.z, data_in, grid_out.lon, grid_out.lat, grid_out.z, fill_value=fill_value, interpolant=interpolant, return_interpolant=True)
+            # First interpolate in the horizontal, once for each depth index on the native grid
+            data_tmp = np.empty([grid_in.nz, grid_out.ny, grid_out.nx])
+            for k in range(grid_in.nz):
+                data_tmp[k,:] = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in[k,:], grid_out.lon, grid_out.lat, fill_value=fill_value)
+            data_tmp = np.ma.masked_where(data_tmp==fill_value, data_tmp)
+            # Now interpolate in the vertical
+            interpolant = scipy.interpolate.interp1d(grid_in.z, data_tmp, axis=0)
+            data_out = interpolant(grid_out.z)
             data_out = xr.DataArray(data_out, coords={'z':grid_out.z, 'y':grid_out.y, 'x':grid_out.x})
         else:
             # 2D variable - interpolate once
             data_out = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, data_in, grid_out.lon, grid_out.lat, fill_value=fill_value)
             data_out = xr.DataArray(data_out, coords={'y':grid_out.y, 'x':grid_out.x})
-        data_out = data_out.where(data_out != fill_value)
-        if return_interpolant:
-            return data_out, interpolant
-        else:
-            return data_out
+            data_out = data_out.where(data_out != fill_value)
+        return data_out
 
     # Interpolate masks
     land_mask = np.round(interp_var(grid_in.land_mask))
     ice_mask = np.round(interp_var(grid_in.ice_mask))
-    mask_3d, interpolant = interp_var(grid_in.hfac!=0, is_3d=True, interpolant=interpolant, return_interpolant=True)
-    mask_3d = np.round(mask_3d)
+    mask_3d = np.round(interp_var(grid_in.hfac!=0, is_3d=True))
 
     ds_out = None
     for v in range(len(var_in)):
@@ -74,7 +78,7 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
             data_in = np.ma.masked_where(grid_in.land_mask, data_in)
         data_in = extend_into_mask(data_in, masked=True, use_3d=is_3d, num_iters=3)
         # Interpolate to model grid
-        data_out = interp_var(data_in, is_3d=is_3d, interpolant=interpolant)
+        data_out = interp_var(data_in, is_3d=is_3d)
         # Attach attributes
         data_out = data_out.assign_attrs(description=long_name[v], units=units[v])
         # Mask as needed
@@ -89,7 +93,7 @@ def interp_year (file_path, calendar='noleap', interpolant=None):
             ds_out = xr.Dataset({var_out[v]:data_out})
         else:
             ds_out = ds_out.assign({var_out[v]:data_out})
-    return ds_out, interpolant
+    return ds_out
 
 
 # Process one ensemble member of 2023 Amundsen Sea MITgcm simulations (10 ensemble members)
@@ -108,10 +112,9 @@ def process_PAS (ens, out_dir='./'):
     if not os.path.isdir(out_subdir):
         os.mkdir(out_subdir)
 
-    interpolant = None
     for year in range(start_year, end_year+1):
         in_file = in_dir + dir_head + str(ens).zfill(3) + dir_mid + str(year) + file_tail
-        ds, interpolant = interp_year(in_file, calendar=calendar, interpolant=interpolant).expand_dims({'time':[year]})
+        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
         out_file = out_subdir + 'MITgcm_ASE_RCP85_ens' + str(ens).zfill(2) + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
@@ -137,10 +140,9 @@ def process_WSFRIS (expt, out_dir='./'):
     if not os.path.isdir(out_subdir):
         os.mkdir(out_subdir)
 
-    interpolant = None
     for year in range(start_year, end_year+1):
         in_file = in_dir + dir_head + str(year) + file_tail
-        ds, interpolant = interp_year(in_file, calendar=calendar, interpolant=interpolant).expand_dims({'time':[year]})
+        ds = interp_year(in_file, calendar=calendar).expand_dims({'time':[year]})
         out_file = out_subdir + 'MITgcm_WS_' + expt + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
