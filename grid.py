@@ -1167,7 +1167,7 @@ class ISMIP7Grid:
         self.lon = read_netcdf(file_path, 'lon')
         self.lat = read_netcdf(file_path, 'lat')
         self.z = read_netcdf(file_path, 'z_extrap')
-        self.nz = np.size(self.nz)
+        self.nz = np.size(self.z)
         
         
 
