@@ -170,6 +170,7 @@ def interp_year_fesom (file_head, nodes, elements, cavity):
     ds_3d.close()
     ds_2d = xr.open_dataset(file_head+file_tail[2])
     ismr_in = ds_2d[var_in[2]].mean(dim='T')*sec_per_year  # Convert m/s to m/y
+    ismr_in[cavity==0] = 0
     ds_2d.close()
     temp_out = np.zeros([grid_out.nz, grid_out.ny, grid_out.nx])
     salt_out = np.zeros([grid_out.nz, grid_out.ny, grid_out.nx])
