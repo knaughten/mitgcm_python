@@ -4,7 +4,7 @@
 
 import numpy as np
 import netCDF4 as nc
-import shutil
+import subprocess
 
 from ..file_io import read_netcdf, NCfile
 from ..interpolation import discard_and_fill
@@ -20,7 +20,7 @@ def extend_moholdt_data (old_file, new_file, ua_mesh_file):
 
     var_name = 'basalMassBalance'
     # Make a copy of the original data
-    shutil.copy(old_file, new_file)
+    subprocess.check_call(['rsync', '-avzP', old_file, new_file])
 
     # Read melt data
     x = read_netcdf(new_file, 'x')

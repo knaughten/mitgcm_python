@@ -5,7 +5,7 @@
 import numpy as np
 from scipy.io import loadmat
 import sys
-import shutil
+import subprocess
 
 from .constants import deg2rad, bedmap_dim, bedmap_bdry, bedmap_res, bedmap_missing_val, region_bounds, region_bathy_bounds
 from .file_io import write_binary, NCfile_basiclatlon, read_netcdf, read_binary
@@ -551,7 +551,7 @@ def edit_mask (nc_in, nc_out, key='WSK'):
     imask[index] = 0
 
     # Copy the NetCDF file to a new name
-    shutil.copyfile(nc_in, nc_out)
+    subprocess.check_call(['rsync', '-avzP', nc_in, nc_out])
     # Update the variables
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
@@ -837,7 +837,7 @@ def remove_grid_problems (nc_in, nc_out, dz_file, hFacMin=0.1, hFacMinDr=20., co
     plot_tmp_domain(lon_2d, lat_2d, np.ma.masked_where(omask==0, draft-draft_orig), title='Change in ice shelf draft (m)\ndue to zapping')
 
     # Copy the NetCDF file to a new name
-    shutil.copyfile(nc_in, nc_out)
+    subprocess.check_call(['rsync', '-avzP', nc_in, nc_out])
     # Update the variables
     update_nc_grid(nc_out, bathy, draft, omask, imask)
 
@@ -889,7 +889,7 @@ def swap_ua_topo (nc_file, ua_file, dz_file, out_file, hFacMin=0.1, hFacMinDr=20
     draft = do_zapping(draft, draft!=0, dz, z_edges, hFacMinDr=hFacMinDr, only_grow=True)[0]
 
     # Write results
-    shutil.copyfile(nc_file, out_file)
+    subprocess.check_call(['rsync', '-avzP', nc_file, out_file])
     update_nc_grid(out_file, bathy, draft, omask, imask)
 
     print('Finished swapping out Ua geometry. Take a look and then call write_topo_files.')
