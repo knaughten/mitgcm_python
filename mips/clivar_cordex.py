@@ -1,7 +1,54 @@
 import xarray as xr
+import cftime
 from ..grid import Grid
 
-def process_expt (expt_dir, historical=False):
+def process_expt (expt_dir, out_dir='./', historical=False):
+
+    missval = 1e20
+    # Dictionary of dictionaries of standard variable attributes
+    var_attrs = {'lon': {'standard_name':'longitude',
+                         'long_name':'longitude',
+                         'units':'degrees_east'},
+                 'lat': {'standard_name':'latitude',
+                         'long_name':'latitude',
+                         'units':'degrees_north'},
+                 'zos': {'standard_name':'sea_surface_height_above_geoid',
+                         'long_name':'Sea Surface Height Above Geoid',
+                         'units':'m',
+                         'cell_methods':'area: mean where sea time: mean',
+                         '_FillValue':missval,
+                         'missing_value':missval,
+                         'coordinates':'lat lon'},
+                 'tos': {'standard_name':'sea_surface_temperature',
+                         'long_name':'Sea Surface Temperature',
+                         'units':'degC',
+                         'cell_methods':'area: mean where sea time: mean',
+                         '_FillValue':missval,
+                         'missing_value':missval,
+                         'coordinates':'lat lon'},
+                 'sos': {'standard_name':'sea_surface_salinity',
+                         'long_name':'Sea Surface Salinity',
+                         'units':'0.001',
+                         'cell_methods':'area: mean where sea time: mean',
+                         '_FillValue':missval,
+                         'missing_value':missval,
+                         'coordinates':'lat lon'},
+                 'siconc': {'standard_name':'sea_ice_area_fraction',
+                            'long_name':'Sea-Ice Area Percentage (Ocean Grid)',
+                            'units':'%',
+                            'cell_methods':'area: mean where sea time: mean',
+                            '_FillValue':missval,
+                            'missing_value':missval,
+                            'coordinates':'lat lon'},
+                 'areacello': {'standard_name':'sea_floor_depth_below_geoid',
+                               'long_name':'Sea Floor Depth Below Geoid',
+                               'units':'m',
+                               'cell_methods':'area: mean where sea',
+                               '_FillValue':missval,
+                               'missing_value':missval,
+                               'coordinates':'lat lon'}
+                 }
+    
 
     # Set file naming conventions
     domain_id = 'AMU_04'  # Amundsen Sea approx 4km
@@ -55,9 +102,44 @@ def process_expt (expt_dir, historical=False):
         # Select the variables we want
         # TODO: confirm if EOS80 is ok or if I need to convert to TEOS10
         ds_out = xr.Dataset({'lon':lon, 'lat':lat, 'zos':ds['ETAN'], 'tos':ds['THETA'].isel(Z=0), 'sos':ds['SALT'].isel(Z=0), 'siconc':ds['SIarea'], 'areacello':ds['rA'], 'deptho':bathy})
+        # Fill land mask (identically zero) with missing value
+        for var in ds_out:
+            if var in ['lon', 'lat', 'areacello']:
+                continue
+            ds_out[var] = xr.where(ds_out['sos']==0, missval, ds_out[var])
         # Now fix the dimensions
         ds_out = ds_out.rename({'XC':'x', 'YC':'y'})
-        time_new = 
+        # Time should be midpoints of each month
+        time_new = []
+        for month in range(1, 12+1):
+            time_start = cftime.DatetimeNoLeap(year, month, 1)
+            if month == 12:
+                time_end = cftime.DatetimeNoLeap(year+1, 1, 1)
+            else:
+                time_end = cftime.DatetimeNoLeap(year, month+1, 1)
+            time_new.append(time_start + (time_end - time_start)/2)
+        ds_out['time'] = time_new
+        if expt_name=='LENS' and historical:
+            time_units = 'days since 1850-01-01'
+        else:
+            time_units = 'days since 1950-01-01'
+        ds_out['time'] = ds_out['time'].assign_attrs(long_name='time', units=time_units, calendar='365_day')
+        # Loop over the other variables and overwrite their attributes
+        for var in var_attrs:
+            ds_out[var].attrs = var_attrs[var]
+        # Now loop over data variables and write to file
+        for var in ds_out:
+            if var in ['lon', 'lat', 'time']:
+                continue
+            data = ds_out[var].assign_coords(lon=lon, lat=lat)
+            # Construct standard file name
+            file_path = out_dir+var+'_'+domain_id+'_'+driving_source_id+'_'+driving_experiment_id+'_'+driving_variant_label+'_'+institution_id+'_'+source_id+'_'+version_realization+'_'+frequency+'_'+str(year)+'01-'+str(year)+'12.nc'
+            print('Writing '+file_path)
+            ds_out.to_netcdf(file_path)
+            
+            
+        
+        
         
         
         
