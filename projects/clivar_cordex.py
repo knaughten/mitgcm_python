@@ -2,7 +2,7 @@ import xarray as xr
 import cftime
 from ..grid import Grid
 
-def process_expt (expt_dir, out_dir='./', historical=False):
+def process_expt (expt_dir, out_dir='output/', historical=False):
 
     missval = 1e20
     # Dictionary of dictionaries of standard variable attributes
@@ -51,7 +51,7 @@ def process_expt (expt_dir, out_dir='./', historical=False):
     
 
     # Set file naming conventions
-    domain_id = 'AMU_04'  # Amundsen Sea approx 4km
+    domain_id = 'AMU_04'  # Amundsen Sea approx 4km; TODO confirm this is ok
     driving_source_id = 'CESM1'
     if 'LW1.5' in expt_dir:
         expt_name = 'LW1.5_' # Just for extracting ensemble member later
