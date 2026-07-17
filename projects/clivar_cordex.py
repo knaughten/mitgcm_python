@@ -1,10 +1,11 @@
 import xarray as xr
 import cftime
+import numpy as np
 from ..grid import Grid
 
 def process_expt (expt_dir, out_dir='output/', historical=False):
 
-    missval = 1e20
+    missval = np.float32(1e20)
     # Dictionary of dictionaries of standard variable attributes
     var_attrs = {'lon': {'standard_name':'longitude',
                          'long_name':'longitude',
@@ -16,35 +17,30 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
                          'long_name':'Sea Surface Height Above Geoid',
                          'units':'m',
                          'cell_methods':'area: mean where sea time: mean',
-                         '_FillValue':missval,
                          'missing_value':missval,
                          'coordinates':'lat lon'},
                  'tos': {'standard_name':'sea_surface_temperature',
                          'long_name':'Sea Surface Temperature',
                          'units':'degC',
                          'cell_methods':'area: mean where sea time: mean',
-                         '_FillValue':missval,
                          'missing_value':missval,
                          'coordinates':'lat lon'},
                  'sos': {'standard_name':'sea_surface_salinity',
                          'long_name':'Sea Surface Salinity',
                          'units':'0.001',
                          'cell_methods':'area: mean where sea time: mean',
-                         '_FillValue':missval,
                          'missing_value':missval,
                          'coordinates':'lat lon'},
                  'siconc': {'standard_name':'sea_ice_area_fraction',
                             'long_name':'Sea-Ice Area Percentage (Ocean Grid)',
                             'units':'%',
                             'cell_methods':'area: mean where sea time: mean',
-                            '_FillValue':missval,
                             'missing_value':missval,
                             'coordinates':'lat lon'},
                  'areacello': {'standard_name':'sea_floor_depth_below_geoid',
                                'long_name':'Sea Floor Depth Below Geoid',
                                'units':'m',
                                'cell_methods':'area: mean where sea',
-                               '_FillValue':missval,
                                'missing_value':missval,
                                'coordinates':'lat lon'}
                  }
@@ -89,7 +85,7 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
 
     # Loop over years
     for year in range(start_year, end_year+1):
-        file_path = expt_dir+'/output/MITgcm/'+str(year)+'01/output.nc'
+        file_path = expt_dir+'/output/'+str(year)+'01/MITgcm/output.nc'
         print('Processing '+file_path)
         ds = xr.open_dataset(file_path)
         if bathy is None:
@@ -118,24 +114,30 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
             else:
                 time_end = cftime.DatetimeNoLeap(year, month+1, 1)
             time_new.append(time_start + (time_end - time_start)/2)
-        ds_out['time'] = time_new
         if expt_name=='LENS' and historical:
             time_units = 'days since 1850-01-01'
         else:
             time_units = 'days since 1950-01-01'
-        ds_out['time'] = ds_out['time'].assign_attrs(long_name='time', units=time_units, calendar='365_day')
+        time_new = xr.DataArray(cftime.date2num(time_new, units=time_units, calendar='365_day'), dims=['time'], attrs={'units':time_units, 'calendar':'365_day', 'long_name':'time'})
+        ds_out = ds_out.assign_coords(time=time_new)        
         # Loop over the other variables and overwrite their attributes
         for var in var_attrs:
-            ds_out[var].attrs = var_attrs[var]
+            ds_out[var].attrs = var_attrs[var]            
         # Now loop over data variables and write to file
         for var in ds_out:
             if var in ['lon', 'lat', 'time']:
                 continue
-            data = ds_out[var].assign_coords(lon=lon, lat=lat)
+            data = ds_out[var].assign_coords({'lon':ds_out['lon'], 'lat':ds_out['lat']})
+            for coord in data.coords:
+                if coord not in ['time', 'y', 'x', 'lat', 'lon']:
+                    data = data.drop_vars(coord)
+            encoding = {var:{'_FillValue':missval}}
+            for coord_name in data.coords:
+                encoding[coord_name] = {'_FillValue':None}
             # Construct standard file name
             file_path = out_dir+var+'_'+domain_id+'_'+driving_source_id+'_'+driving_experiment_id+'_'+driving_variant_label+'_'+institution_id+'_'+source_id+'_'+version_realization+'_'+frequency+'_'+str(year)+'01-'+str(year)+'12.nc'
-            print('Writing '+file_path)
-            ds_out.to_netcdf(file_path)
+            print('Writing '+file_path)            
+            data.to_netcdf(file_path, encoding=encoding, unlimited_dims=('time' if 'time' in data.coords else None))
             
             
         
