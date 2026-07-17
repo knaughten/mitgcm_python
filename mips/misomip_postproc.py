@@ -28,11 +28,13 @@ for fname in os.listdir('./'):
                 factor = 1e3
             ds['wfosicor'] = factor*ds['wfosicor']
             print('...overwriting file')
-            ds.to_netcdf(fname)
+            ds.to_netcdf(fname+'.tmp')
+            ds.close()
+            os.rename(fname+'.tmp', fname)
         else:
             # If wfoatrli is already NaN everywhere, this script was run before (or the file was created using the fixed code)
             print('...wfoatrli and wfosicor corrected previously')
-        ds.close()
+            ds.close()
 
     # Fix naming convention: MITgcm labels timestamps with the first day after the time period (eg 197902-198001), we want the first day of the time period (197901-197912)    
     # Extract date strings from filename
