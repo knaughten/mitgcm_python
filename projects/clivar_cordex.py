@@ -37,12 +37,17 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
                             'cell_methods':'area: mean where sea time: mean',
                             'missing_value':missval,
                             'coordinates':'lat lon'},
-                 'areacello': {'standard_name':'sea_floor_depth_below_geoid',
-                               'long_name':'Sea Floor Depth Below Geoid',
-                               'units':'m',
-                               'cell_methods':'area: mean where sea',
-                               'missing_value':missval,
-                               'coordinates':'lat lon'}
+                 'areacello': {'standard_name':'cell_area',
+                               'long_name':'Grid-Cell Area for Ocean Variables',
+                               'units':'m^2',
+                               'cell_methods':'area: sum',
+                               'coordinates':'lat lon'},
+                 'deptho': {'standard_name':'sea_floor_depth_below_geoid',
+                           'long_name':'Sea Floor Depth Below Geoid',
+                           'units':'m',
+                           'cell_methods':'area: mean where sea',
+                           'missing_value':missval,
+                           'coordinates':'lat lon'}
                  }
     
 
@@ -96,13 +101,15 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
             # Also prepare 2D lon and lat arrays
             lat, lon = xr.broadcast(ds['YC'], ds['XC'])
         # Select the variables we want
-        # TODO: confirm if EOS80 is ok or if I need to convert to TEOS10
         ds_out = xr.Dataset({'lon':lon, 'lat':lat, 'zos':ds['ETAN'], 'tos':ds['THETA'].isel(Z=0), 'sos':ds['SALT'].isel(Z=0), 'siconc':ds['SIarea'], 'areacello':ds['rA'], 'deptho':bathy})
+        # Unit conversions
+        ds_out['siconc'] = ds_out['siconc']*1e2
+        # TODO: confirm if EOS80 is ok or if I need to convert to TEOS10
         # Fill land mask (identically zero) with missing value
         for var in ds_out:
             if var in ['lon', 'lat', 'areacello']:
                 continue
-            ds_out[var] = xr.where(ds_out['sos']==0, missval, ds_out[var])
+            ds_out[var] = xr.where(ds['SALT'].isel(Z=0,time=0)==0, missval, ds_out[var])
         # Now fix the dimensions
         ds_out = ds_out.rename({'XC':'x', 'YC':'y'})
         # Time should be midpoints of each month
