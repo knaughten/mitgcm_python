@@ -14,7 +14,7 @@ from fesomtools.fesom_grid import *
 from fesomtools.in_triangle import *
 from fesomtools.triangle_area import *
 
-grid_path = '/gws/nopw/j04/bas_pog/kaight/ismip7_interp/ismip_8km_60m_grid.nc'
+grid_path = '/gws/ssde/j25a/bas_pog/kaight/ismip7_interp/ismip_8km_60m_grid.nc'
 grid_out = ISMIP7Grid(grid_path)
 
 # Interpolate the output of WSFRIS 2021 paper (two_timescale.py) and PAS 2023 paper (scenarios.py) to the ISMIP7 grid for sharing
@@ -285,6 +285,20 @@ def process_FESOM (expt, start_year=2006, end_year=2100, out_dir='./'):
         out_file = out_subdir + 'FESOM_' + expt + '_' + str(year) + '.nc'
         ds.to_netcdf(out_file, mode='w')
         ds.close()
+
+
+# Save the MITgcm ice mask interpolated to the ISMIP7 grid with no rounding.
+def interp_mask (out_file='mitgcm_mask.nc'):
+
+    fill_value = 9999
+    grid_in = Grid('/gws/ssde/j25a/bas_pog/kaight/PAS_grid/')
+    ice_mask_interp = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, grid_in.ice_mask, grid_out.lon, grid_out.lat, fill_value=fill_value)
+    ice_mask_interp = xr.DataArray(ice_mask_interp, coords={'y':grid_out.y, 'x':grid_out.x})
+    ice_mask_interp =  ice_mask_interp.where(ice_mask_interp != fill_value)
+    ice_mask_interp.to_netcdf(out_file)
+    
+    
+
 
     
 
