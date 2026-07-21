@@ -295,7 +295,8 @@ def interp_mask (out_file='mitgcm_mask.nc'):
     ice_mask_interp = interp_reg_xy(grid_in.lon_1d, grid_in.lat_1d, grid_in.ice_mask, grid_out.lon, grid_out.lat, fill_value=fill_value)
     ice_mask_interp = xr.DataArray(ice_mask_interp, coords={'y':grid_out.y, 'x':grid_out.x})
     ice_mask_interp =  ice_mask_interp.where(ice_mask_interp != fill_value)
-    ice_mask_interp.to_netcdf(out_file)
+    ds = xr.Dataset({'ice_mask':ice_mask_interp})
+    ds.to_netcdf(out_file)
     
     
 
