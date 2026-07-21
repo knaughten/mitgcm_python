@@ -11,14 +11,16 @@ for EXPT in "${EXPTS[@]}"; do
 	NUM_ENS=10
     fi
     for ENS in $(seq -f "%03g" 1 $NUM_ENS); do
-	# Extract experiment from archive
-	tar xzvf ../archive/scenarios/${EXPT}"$ENS"_O.tar.gz
+	if [ ! -d ${EXPT}"$ENS"_O ]; then
+	    # Extract experiment from archive
+	    tar xzvf ../archive/scenarios/${EXPT}"$ENS"_O.tar.gz
+	fi
 	# Call the python script
 	if [ "$EXPT" = "PAS_LENS" ]; then
 	    # Call an extra time for historical
-	    python -c 'from mitgcm_python.projects.clivar_cordex import *; process_expt("'${EXPT}"$ENS"_0/'", historical=True)'
+	    python -c 'from mitgcm_python.projects.clivar_cordex import *; process_expt("'${EXPT}"$ENS"_O/'", historical=True)'
 	fi
-	python -c 'from mitgcm_python.projects.clivar_cordex import *; process_expt("'${EXPT}"$ENS"_0/'")'
+	python -c 'from mitgcm_python.projects.clivar_cordex import *; process_expt("'${EXPT}"$ENS"_O/'")'
 	# Remove the extracted directory
 	rm -rf ${EXPT}"$ENS"_O
     done
