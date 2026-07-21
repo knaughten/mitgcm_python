@@ -104,7 +104,6 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
         ds_out = xr.Dataset({'lon':lon, 'lat':lat, 'zos':ds['ETAN'], 'tos':ds['THETA'].isel(Z=0), 'sos':ds['SALT'].isel(Z=0), 'siconc':ds['SIarea'], 'areacello':ds['rA'], 'deptho':bathy})
         # Unit conversions
         ds_out['siconc'] = ds_out['siconc']*1e2
-        # TODO: confirm if EOS80 is ok or if I need to convert to TEOS10
         # Fill land mask (identically zero) with missing value
         for var in ds_out:
             if var in ['lon', 'lat', 'areacello']:
