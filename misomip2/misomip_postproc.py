@@ -20,13 +20,14 @@ for fname in os.listdir('./'):
             # We didn't actually have all the freshwater flux fields that we needed to calculate this
             ds['wfoatrli'] = ds['wfoatrli'].where(False)
             print('...fixing units for wfosicor')
+            missval = ds['ficeshelf'].max()
             if 'OceanA-hind' in fname:
                 # Swap sign on sea ice fluxes
                 factor = -1
             elif 'OceanW-hind' in fname:
                 # Multiply by density of freshwater (m/s -> kg/m^2/s)
                 factor = 1e3
-            ds['wfosicor'] = factor*ds['wfosicor']
+            ds['wfosicor'] = xr.where(ds['wfosicor']==missval, missval, factor*ds['wfosicor'])
             print('...overwriting file')
             ds.to_netcdf(fname+'.tmp')
             ds.close()
