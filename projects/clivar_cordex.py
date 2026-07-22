@@ -52,7 +52,7 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
     
 
     # Set file naming conventions
-    domain_id = 'AMU_04'  # Amundsen Sea approx 4km; TODO confirm this is ok
+    domain_id = 'ANT_04'  # Part of Antarctica, approx 4km
     driving_source_id = 'CESM1'
     if 'LW1.5' in expt_dir:
         expt_name = 'LW1.5_' # Just for extracting ensemble member later
