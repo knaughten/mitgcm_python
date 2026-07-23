@@ -81,12 +81,13 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
     # Get range of years to process
     if expt_name == 'LENS' and historical:
         start_year = 1920
+        end_year = 2005
     else:
         start_year = 2006
-    if 'MENS' in expt_dir:
-        end_year = 2080
-    else:
-        end_year = 2100
+        if 'MENS' in expt_dir:
+            end_year = 2080
+        else:
+            end_year = 2100
 
     # Loop over years
     for year in range(start_year, end_year+1):
