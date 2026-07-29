@@ -52,7 +52,7 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
     
 
     # Set file naming conventions
-    domain_id = 'ANT_04'  # Part of Antarctica, approx 4km
+    domain_id = 'ANT-04'  # Part of Antarctica, approx 4km
     driving_source_id = 'CESM1'
     if 'LW1.5' in expt_dir:
         expt_name = 'LW1.5_' # Just for extracting ensemble member later
@@ -134,6 +134,10 @@ def process_expt (expt_dir, out_dir='output/', historical=False):
         for var in ds_out:
             if var in ['lon', 'lat', 'time']:
                 continue
+            if var in ['deptho', 'areacello']:
+                # Only need to process these once
+                if (not historical) or driving_variant_label != 'ens001':
+                    continue
             data = ds_out[var].assign_coords({'lon':ds_out['lon'], 'lat':ds_out['lat']})
             for coord in data.coords:
                 if coord not in ['time', 'y', 'x', 'lat', 'lon']:
