@@ -97,7 +97,8 @@ region_bounds = {
     'bear_ridge_N': [-112.05, -109.05, -73.8791, -72.7314],
     'PAS_shelf1': [-140, -100, -75.6, -70],
     'PAS_shelf2': [-100, -80, -75.6, -69],
-    'Kat_shelf': [-130, -100, -75, -70]
+    'Kat_shelf': [-130, -100, -75, -70],
+    'PIT_trough': [-111, -100, -76, -72],
 }
 # Regions that are in two parts
 region_split = ['fris', 'abbot', 'PAS_shelf']
@@ -115,7 +116,8 @@ region_bathy_bounds = {
     'amundsen_shelf': [-1750, None],
     'bear_ridge_N': [-300, None],
     'PAS_shelf': [-1750, None],
-    'Kat_shelf': [-1500, None]
+    'Kat_shelf': [-1500, None],
+    'PIT_trough': [None, -600],
 }
 # Depth bounds for 3D regions
 region_depth_bounds = {
