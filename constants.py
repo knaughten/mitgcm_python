@@ -123,6 +123,10 @@ region_bathy_bounds = {
 region_depth_bounds = {
     'wdw_core': [-1000, -250]
 }
+# Target points for connectivity for some regions
+region_point0 = {
+    'PIT_trough': [-106, -74]
+}
 # Names corresponding to some keys (used for plotting)
 region_names = {
     'fris': 'Filchner-Ronne Ice Shelf',
@@ -171,7 +175,8 @@ region_names = {
     'dotson_to_cosgrove': 'Ice shelves between Dotson and Cosgrove',
     'amundsen_sea': 'Amundsen Sea',
     'PAS_shelf': 'Continental shelf',
-    'Kat_shelf': 'Katherine version of shelf'
+    'Kat_shelf': 'Katherine version of shelf',
+    'PIT_trough': 'Pine Island Thwaites Trough',
 }    
 
 # Resolution of SOSE grid in degrees
