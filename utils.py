@@ -1067,6 +1067,50 @@ def distance_to_grounding_line (grid, pinning_points=False, verbose=False):
     # Mask out any remaining points which are -1 (corresponds to the open ocean mask)
     min_dist = np.ma.masked_where(min_dist==-1, min_dist)
     return min_dist
+
+
+# Find the (y,x) coordinates of the closest model point to the given (lon, lat) coordinates. Pass a Grid object and a target point (lon0, lat0).
+def closest_point (grid, target):
+
+    [lon0, lat0] = target
+    # Calculate distance of every model point to the target
+    dist = np.sqrt((grid.lon_2d-lon0)**2 + (grid.lat_2d-lat0)**2)
+    # Find the indices of the minimum distance
+    point0 = np.unravel_index(np.argmin(dist), dist.shape)
+    return point0
+
+
+# Given a mask (numpy array, 1='land', 0='ocean') and point0 (j,i) on the "mainland", remove any disconnected "islands" from the mask and return.
+def remove_disconnected (mask, point0):
+
+    if not mask[point0]:
+        raise Exception('point0 is not on the mainland')
+
+    connected = np.zeros(mask.shape)
+    connected[point0] = 1
+    ny = mask.shape[0]
+    nx = mask.shape[1]
+
+    queue = [point0]
+    while len(queue) > 0:
+        (j,i) = queue.pop(0)
+        neighbours = []
+        if j > 0:
+            neighbours.append((j-1,i))
+        if j < ny-1:
+            neighbours.append((j+1,i))
+        if i > 0:
+            neighbours.append((j,i-1))
+        if i < nx-1:
+            neighbours.append((j,i+1))
+        for point in neighbours:
+            if connected[point]:
+                continue
+            if mask[point]:
+                connected[point] = True
+                queue.append(point)
+
+    return connected
     
 
     

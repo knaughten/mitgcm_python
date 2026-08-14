@@ -12,7 +12,7 @@ import sys
 import os
 
 from .file_io import read_netcdf, find_cmip6_files
-from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d, connected_mask, polar_stereo_inv
+from .utils import fix_lon_range, real_dir, split_longitude, xy_to_xyz, z_to_xyz, bdry_from_hfac, select_bottom, ice_shelf_front_points, wrap_periodic, mask_2d_to_3d, connected_mask, polar_stereo_inv, remove_disconnected, closest_point
 from .constants import region_bounds, region_split, region_bathy_bounds, region_depth_bounds, sose_res, rEarth, deg2rad
 
 
@@ -289,7 +289,8 @@ class Grid:
     # 2. within the isobaths defining the region (optional),
     # 3. not ice shelf or land points (unless the region ends with "cavity", in which case only consider ice shelf points)
     # If is_3d=True, will return a 3D mask within the depth bounds of the given region.
-    def get_region_mask(self, region, gtype='t', is_3d=False, include_iceberg=False):
+    # If point0=(lon0,lat0), will remove any points which are not connected to this point in the mask in 2D.
+    def get_region_mask(self, region, gtype='t', is_3d=False, include_iceberg=False, point0=None):
 
         land_mask = self.get_land_mask(gtype=gtype)
         ice_mask = self.get_ice_mask(gtype=gtype)
@@ -319,6 +320,9 @@ class Grid:
             [xmin, xmax, ymin, ymax] = region_bounds['a23a']
             index = (self.lon_2d >= xmin)*(self.lon_2d <= xmax)*(self.lat_2d >= ymin)*(self.lat_2d <= ymax)*(self.land_mask)
             mask[index] = True
+
+        if point0 is not None:
+            mask = remove_disconnected(mask, closest_point(self, point0))
 
         if is_3d:
             # Add a depth dimension and restrict to depth bounds
