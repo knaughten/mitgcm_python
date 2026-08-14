@@ -59,7 +59,7 @@ def forcing_to_netcdf (ens, out_dir='./'):
     # Read all the LENS files
     ds_out = None
     ds_out_corr = None
-    for year in range(start_year, end_year):
+    for year in range(start_year, end_year+1):
         print('Processing '+str(year))
         # Create daily time axis
         time_daily = xr.date_range(start=str(year)+'-01-01', end=str(year)+'-12-31', freq='D', calendar='noleap', use_cftime=True)
