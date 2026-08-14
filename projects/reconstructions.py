@@ -1,9 +1,12 @@
 import xesmf as xe
+import xarray as xr
+import numpy as np
 
 from ..grid import Grid, CAMGrid
 from ..file_io import read_binary
 
 # Read one LENS historical ensemble member and save monthly averages of the forcing to NetCDF (corrected and uncorrected; MITgcm grid)
+# Before running this on BAS workstations, do "conda activate xe"
 def forcing_to_netcdf (ens, out_dir='./'):
 
     in_dir = '/data/oceans_input/processed_input_data/CESM/LENS/'
