@@ -1,6 +1,8 @@
 import xesmf as xe
 import xarray as xr
 import numpy as np
+import warnings
+warnings.filterwarnings('ignore', module='xesmf')
 
 from ..grid import Grid, CAMGrid
 from ..file_io import read_binary
@@ -25,31 +27,34 @@ def forcing_to_netcdf (ens, out_dir='./'):
 
     # Read grids and compute regridding weights
     cesm_grid = CAMGrid()
-    ds_cesm_grid = xr.Dataset({'lat':(['lat'],cesm_grid.lat), 'lon':(['lon'],cesm_grid.lon)})
+    cesm_lon, cesm_lat = cesm_grid.get_lon_lat(dim=1)
+    ds_cesm_grid = xr.Dataset({'lat':(['lat'],cesm_lat), 'lon':(['lon'],cesm_lon)})
     mit_grid = Grid(grid_dir)
     ds_mit_grid = xr.Dataset({'lat':(['lat'],mit_grid.lat_1d), 'lon':(['lon'],mit_grid.lon_1d)})
     regridder = xe.Regridder(ds_cesm_grid, ds_mit_grid, method='bilinear', periodic=True)
+    land_mask = xr.DataArray(mit_grid.land_mask+mit_grid.ice_mask, dims=ds_mit_grid.dims, coords=ds_mit_grid.coords)
 
     # Read bias correction fields
     ds_bias = None
-    def read_add_bias (var, file_path, factor=1):
-        data = read_binary(file_path, [mit_grid.nx, mit_grid.ny], 'xy')*factor
+    def read_add_bias (ds_bias, var, file_path, factor=1):
+        data = read_binary(file_path, [mit_grid.nx, mit_grid.ny], 'xy', prec=64)*factor
         data = xr.DataArray(data, coords={'lat':mit_grid.lat_1d, 'lon':mit_grid.lon_1d})
         if ds_bias is None:
             ds_bias = xr.Dataset({var:data})
         else:
             ds_bias = ds_bias.assign({var:data})
+        return ds_bias
     for var in var_names_bias:
         if var is not None:
             file_path = bias_dir+var+file_tail_bias
             if var in ['swdown', 'lwdown']:
                 # Swap sign on radiation fluxes for MITgcm
-                read_add_bias(var, file_path, factor=-1)
+                ds_bias = read_add_bias(ds_bias, var, file_path, factor=-1)
             else:
-                read_add_bias(var, file_path)                        
+                ds_bias = read_add_bias(ds_bias, var, file_path)                        
     for var in var_names_wind_bias:
         file_path = bias_dir+file_head_wind_bias+var+file_tail_wind_bias
-        read_add_bias(var, file_path)
+        ds_bias = read_add_bias(ds_bias, var, file_path)
 
     # Read all the LENS files
     ds_out = None
@@ -57,9 +62,9 @@ def forcing_to_netcdf (ens, out_dir='./'):
     for year in range(start_year, end_year):
         print('Processing '+str(year))
         # Create daily time axis
-        time_daily = xr.date_range(start=(year,1,1), end=(year,12,31), freq='D', calendar='noleap', use_cftime=True)
+        time_daily = xr.date_range(start=str(year)+'-01-01', end=str(year)+'-12-31', freq='D', calendar='noleap', use_cftime=True)
         # Also need monthly time axis for radiation
-        time_monthly = time_daily.resample(time='1MS').mean()
+        time_monthly = xr.date_range(start=str(year)+'-01', end=str(year)+'-12', freq='MS', calendar='noleap', use_cftime=True)
         ds_year = None
         ds_year_corr = None
         for n in range(len(var_names)):
@@ -67,15 +72,19 @@ def forcing_to_netcdf (ens, out_dir='./'):
             data = read_binary(file_path, [cesm_grid.nx, cesm_grid.ny], 'xyt')
             if var_names[n] in ['FSDS', 'FLDS']:
                 # Monthly data
-                data = xr.DataArray(data, coords={'time':time_monthly, 'lat':mit_grid.lat_1d, 'lon':mit_grid.lon_1d}).assign_attrs(long_name=long_names[n], units=units[n])
+                data = xr.DataArray(data, coords={'time':time_monthly, 'lat':cesm_lat, 'lon':cesm_lon}).assign_attrs(long_name=long_names[n], units=units[n])
             else:
                 # Daily data
-                data = xr.DataArray(data, coords={'time':time_daily, 'lat':mit_grid.lat_1d, 'lon':mit_grid.lon_1d}).assign_attrs(long_name=long_names[n], units=units[n])          
+                data = xr.DataArray(data, coords={'time':time_daily, 'lat':cesm_lat, 'lon':cesm_lon}).assign_attrs(long_name=long_names[n], units=units[n])
+            # Interpolate to MITgcm grid
+            data = regridder(data)
+            # Mask land
+            data = data.where(~land_mask)
             if var_names[n] == 'UBOT':
                 # Save for VBOT
                 data_u = data
             elif var_names[n] == 'VBOT':
-                # Correct winds before time-averaging
+                # Bias-correct winds before time-averaging
                 data_v = data
                 magnitude = np.sqrt(data_u**2 + data_v**2)
                 angle = np.arctan2(data_v, data_u)
@@ -92,13 +101,13 @@ def forcing_to_netcdf (ens, out_dir='./'):
             # Now bias-correct
             if var_names[n] == 'UBOT':
                 # Processed in VBOT
-                continue
+                pass
             elif var_names[n] == 'VBOT':
                 # Already corrected; time-average both u and v then save
                 data_u_corr = data_u_corr.resample(time='1MS').mean()
                 data_v_corr = data_v_corr.resample(time='1MS').mean()
                 # ds_year_corr will already exist from a previous variable
-                ds_year_corr = ds_year.assign({'UBOT':data_u_corr, 'VBOT':data_u_corr})
+                ds_year_corr = ds_year_corr.assign({'UBOT':data_u_corr, 'VBOT':data_v_corr})
             else:
                 # Constant correction
                 if var_names_bias[n] is None:
