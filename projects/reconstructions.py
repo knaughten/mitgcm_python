@@ -36,8 +36,8 @@ def forcing_to_netcdf (ens, out_dir='./'):
 
     # Read bias correction fields
     ds_bias = None
-    def read_add_bias (ds_bias, var, file_path, factor=1):
-        data = read_binary(file_path, [mit_grid.nx, mit_grid.ny], 'xy', prec=64)*factor
+    def read_add_bias (ds_bias, var, file_path):
+        data = read_binary(file_path, [mit_grid.nx, mit_grid.ny], 'xy', prec=64)
         data = xr.DataArray(data, coords={'lat':mit_grid.lat_1d, 'lon':mit_grid.lon_1d})
         if ds_bias is None:
             ds_bias = xr.Dataset({var:data})
@@ -47,11 +47,7 @@ def forcing_to_netcdf (ens, out_dir='./'):
     for var in var_names_bias:
         if var is not None:
             file_path = bias_dir+var+file_tail_bias
-            if var in ['swdown', 'lwdown']:
-                # Swap sign on radiation fluxes for MITgcm
-                ds_bias = read_add_bias(ds_bias, var, file_path, factor=-1)
-            else:
-                ds_bias = read_add_bias(ds_bias, var, file_path)                        
+            ds_bias = read_add_bias(ds_bias, var, file_path)                    
     for var in var_names_wind_bias:
         file_path = bias_dir+file_head_wind_bias+var+file_tail_wind_bias
         ds_bias = read_add_bias(ds_bias, var, file_path)
