@@ -1105,14 +1105,15 @@ def calc_ice_prod (file_path, out_file, monthly=True):
 
 
 # Precompute Hovmoller plots (time x depth) for each of the given variables (default temperature and salinity), area-averaged over each of the given regions (default boxes in Pine Island Bay and in front of Dotson).
-def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break'], var=['temp', 'salt'], monthly=True):
+def precompute_hovmoller (mit_file, hovmoller_file, loc=['pine_island_bay', 'dotson_bay', 'amundsen_west_shelf_break'], var=['temp', 'salt'], monthly=True, grid=None):
 
     if isinstance(loc, str):
         # Make it a list
         loc = [loc]
 
-    # Build the grid
-    grid = Grid(mit_file)
+    if grid is None:
+        # Build the grid
+        grid = Grid(mit_file)
 
     # Set up or update the file and time axis
     id = set_update_file(hovmoller_file, grid, 'zt')
