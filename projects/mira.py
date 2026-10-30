@@ -15,7 +15,7 @@ def pitt_hovmollers (out_dir='./'):
     for expt in expts:
         expt_dir = in_dir + expt_head + expt + '/'
         fnames = os.listdir(expt_dir)
-        fnames = [f for f in fnames if f.startswith(expt_head+expt) and f.endswith('.nc')]
+        fnames = [f for f in fnames if expt in f and f.endswith('.nc')]
         fnames.sort()
         for f in fnames:
             file_path = expt_dir + f
